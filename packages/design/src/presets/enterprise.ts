@@ -73,7 +73,7 @@ export const enterprise = defineTheme({
     font: {
       family: {
         sans: '"IBM Plex Sans", "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif',
-        mono: '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+        mono: '"IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
       },
       size: {
         xs: '0.6875rem',
