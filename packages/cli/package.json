@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/cli",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "The mariachi binary: init, generate, validate, db (generate, check, migrate, seed), design and explore.",
   "mariachi": {
     "category": "tooling",

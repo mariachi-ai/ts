@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/auth-gotrue",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "GoTrue (Supabase Auth) JWT verification through its JWKS (ES256), and its signed hooks (Standard Webhooks).",
   "mariachi": {
     "category": "security",

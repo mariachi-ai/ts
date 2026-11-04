@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/auth-workos",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "WorkOS (AuthKit) JWT verification through its JWKS, signed webhooks, and an IdentityClient for headless sign-in.",
   "mariachi": {
     "category": "security",
