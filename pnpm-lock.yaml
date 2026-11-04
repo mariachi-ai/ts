@@ -615,7 +615,7 @@ importers:
         specifier: workspace:*
         version: link:../design
       '@mariachi/explorer':
-        specifier: workspace:*
+        specifier: workspace:>=0.0.5 <1
         version: link:../explorer
       commander:
         specifier: ^13

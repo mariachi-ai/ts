@@ -53,8 +53,8 @@
     "zod": "^3.24"
   },
   "peerDependencies": {
-    "@mariachi/database": "workspace:*",
-    "@mariachi/database-postgres": "workspace:*",
+    "@mariachi/database": "workspace:>=0.0.5 <1",
+    "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
     "drizzle-orm": "^0.38"
   },
   "peerDependenciesMeta": {

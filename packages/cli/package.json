@@ -50,7 +50,7 @@
     "@mariachi/design": "workspace:*"
   },
   "peerDependencies": {
-    "@mariachi/explorer": "workspace:*"
+    "@mariachi/explorer": "workspace:>=0.0.5 <1"
   },
   "peerDependenciesMeta": {
     "@mariachi/explorer": {
