@@ -78,8 +78,8 @@ Each package's status is listed in the [catalog](packages/core/docs/packages.md)
   scoped overrides work; DTCG and Tailwind v4 exports; an optional behaviours script.
 - `@mariachi/explorer` (alpha): packages, docs, API (from built declarations), error codes (AST scan),
   CLI, tables, dependency graph and the design library in one searchable site, generated at build
-  time. `mariachi explore` serves it; CI publishes it to GitHub Pages and runs axe, behaviour and
-  visual-regression tests on it.
+  time. `mariachi explore` serves it; CI runs axe, behaviour and visual-regression tests on it,
+  and a manual workflow publishes it to GitHub Pages.
 
 **CLI and docs.**
 - `mariachi init` generates a working project, and `mariachi generate entity|service|controller|job|integration` fills it in.

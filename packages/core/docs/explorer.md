@@ -15,8 +15,8 @@ pnpm explore:build           # in this repo: builds every package, then the site
 ```
 
 `mariachi explore` needs `@mariachi/explorer` installed (`pnpm add -D @mariachi/explorer`). It serves
-the prebuilt site on `http://127.0.0.1:4321/` (`--port`, `--host`, `--open`). CI also publishes the
-explorer for `main` to GitHub Pages.
+the prebuilt site on `http://127.0.0.1:4321/` (`--port`, `--host`, `--open`). The Explorer Pages
+workflow publishes `main`'s explorer to GitHub Pages when it is run by hand (`workflow_dispatch`).
 
 ## What's in it
 
