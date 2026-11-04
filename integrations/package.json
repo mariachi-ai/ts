@@ -1,6 +1,7 @@
 {
   "name": "@mariachi/integrations-workspace",
   "version": "0.0.5",
+  "private": true,
   "type": "module",
   "scripts": {
     "build": "tsup",
