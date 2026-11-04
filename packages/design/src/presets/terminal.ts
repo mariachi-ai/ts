@@ -70,8 +70,8 @@ export const terminal = defineTheme({
     },
     font: {
       family: {
-        sans: '"JetBrains Mono", "Berkeley Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
-        mono: '"JetBrains Mono", "Berkeley Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+        sans: '"JetBrains Mono", "Berkeley Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
+        mono: '"JetBrains Mono", "Berkeley Mono", "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace',
         serif: 'var(--m-font-family-mono)',
       },
       size: { md: '0.9375rem', '3xl': '1.625rem', '4xl': '2rem' },
