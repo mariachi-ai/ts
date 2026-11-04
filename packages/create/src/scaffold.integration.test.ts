@@ -1,13 +1,18 @@
-import { execFile } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { readFile, rm, writeFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import { type AddressInfo, createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { startPostgres, startRedis, stopAll } from '../../../test/setup';
 import { createProject, generateController, generateEntity, generateIntegration, generateJob, generateService, validate } from './index';
 
 const run = promisify(execFile);
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// Vitest's own TypeScript runner, so a generated entry point runs the way `tsx` runs it, without another dependency.
+const viteNode = join(dirname(createRequire(createRequire(import.meta.url).resolve('vitest/package.json')).resolve('vite-node/package.json')), 'vite-node.mjs');
 // Inside this package so `@mariachi/*`, zod, drizzle-orm and @types/node resolve from its node_modules.
 const workDir = join(pkgRoot, '.scaffold-test');
 const project = join(workDir, 'app');
@@ -26,6 +31,44 @@ async function sh(bin: string, args: string[], cwd = project) {
   }
 }
 
+function freePort(): Promise<number> {
+  return new Promise((ok, fail) => {
+    const server = createServer().once('error', fail);
+    server.listen(0, '127.0.0.1', () => {
+      const { port } = server.address() as AddressInfo;
+      server.close(() => ok(port));
+    });
+  });
+}
+
+/** Runs a project's `src/main.ts` until `/api/health/ready` answers, then stops it. `status` is null if it exited or never answered. */
+async function bootReady(cwd: string, env: Record<string, string>): Promise<{ status: number | null; output: string }> {
+  const port = await freePort();
+  const child = spawn(process.execPath, [viteNode, 'src/main.ts'], {
+    cwd,
+    env: { ...process.env, ...env, PORT: String(port), FORCE_COLOR: '0', NO_COLOR: '1' },
+  });
+  let output = '';
+  const collect = (chunk: Buffer) => {
+    output += chunk;
+  };
+  child.stdout.on('data', collect);
+  child.stderr.on('data', collect);
+  const exited = new Promise<'exited'>((ok) => child.once('exit', () => ok('exited')));
+  const wait = (ms: number) => new Promise<'waited'>((ok) => setTimeout(() => ok('waited'), ms));
+  try {
+    for (const deadline = Date.now() + 60_000; Date.now() < deadline; ) {
+      if ((await Promise.race([exited, wait(250)])) === 'exited') return { status: null, output };
+      const res = await fetch(`http://127.0.0.1:${port}/api/health/ready`).catch(() => null);
+      if (res) return { status: res.status, output };
+    }
+    return { status: null, output };
+  } finally {
+    child.kill('SIGTERM');
+    if ((await Promise.race([exited, wait(10_000)])) === 'waited') child.kill('SIGKILL');
+  }
+}
+
 describe('generated project', () => {
   beforeAll(async () => {
     await rm(workDir, { recursive: true, force: true });
@@ -38,7 +81,10 @@ describe('generated project', () => {
     await generateIntegration({ name: 'acme', projectRoot: project });
   }, 30_000);
 
-  afterAll(() => rm(workDir, { recursive: true, force: true }));
+  afterAll(async () => {
+    await rm(workDir, { recursive: true, force: true });
+    await stopAll();
+  });
 
   it('registers generated pieces in the registry files', async () => {
     const services = await readFile(join(project, 'src/services/index.ts'), 'utf-8');
@@ -67,6 +113,18 @@ describe('generated project', () => {
     const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', project]);
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
   }, 120_000);
+
+  it('boots its main.ts against Postgres and Redis and answers ready', async () => {
+    const { status, output } = await bootReady(project, {
+      SERVICE_NAME: 'scaffold-app',
+      NODE_ENV: 'development',
+      DATABASE_URL: await startPostgres(),
+      REDIS_URL: await startRedis(),
+      JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
+    });
+    expect(output).not.toContain('database/not-connected');
+    expect({ status, output }).toMatchObject({ status: 200 });
+  }, 180_000);
 
   it('passes mariachi validate with no findings', async () => {
     const result = await validate(project);
