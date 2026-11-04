@@ -212,6 +212,8 @@ async function main(): Promise<void> {
   // One communication layer per process: handlers register on it, controllers call through it.
   const communication = createCommunication({}, instrumentation);
   container.register(KEYS.Communication, communication);
+  // Repositories take the Drizzle client when they're built, so connect first (the startup connect is then a no-op).
+  await database.connect();
   registerServices(communication, { db: database.db, jobs });
 
   const api = createApiServer({
