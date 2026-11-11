@@ -61,6 +61,12 @@ export const fennel = extendTheme(minimal, {
         fg: { light: '#9fe870', dark: '#163300' },
         text: forest,
       },
+      // The signature bright lime, with forest-green text: hero bands, brand panels, the logo tile
+      brand: {
+        default: '#9fe870',
+        fg: '#163300',
+        subtle: { light: '#e2f6d5', dark: '#1d2d12' },
+      },
       success: {
         bg: { light: '#e2f6d5', dark: '#054d28' },
         fg: { light: '#054d28', dark: '#cef1b8' },

@@ -61,6 +61,12 @@ export const ember = extendTheme(minimal, {
         fg: '#ffffff',
         text: blueText,
       },
+      // The signature hot coral, with navy text (white on coral is 3.3:1): the account card, plan names
+      brand: {
+        default: '#ff4f40',
+        fg: '#091723',
+        subtle: { light: '#ffe6e3', dark: '#3a1a1d' },
+      },
       // Money in and positive moments are a clear green
       success: {
         bg: { light: '#e9f7ee', dark: '#0e2f22' },

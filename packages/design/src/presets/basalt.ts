@@ -53,6 +53,12 @@ export const basalt = extendTheme(minimal, {
         fg: { light: '#ffffff', dark: '#1a1919' },
         text: { light: '#1a1919', dark: '#f4f2f0' },
       },
+      // The signature electric lime, with ink text: hero bands, brand panels
+      brand: {
+        default: '#e4f222',
+        fg: '#1a1919',
+        subtle: { light: '#feffe1', dark: '#2c2e10' },
+      },
       success: {
         bg: { light: '#e4f2e7', dark: '#15301e' },
         fg: { light: '#26763b', dark: '#7fd49a' },
