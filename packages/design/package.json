@@ -36,6 +36,7 @@
     "./tokens/*.json": "./dist/tokens/*.json",
     "./tailwind.css": "./dist/css/tailwind.css",
     "./catalog.json": "./dist/catalog.json",
+    "./archetypes/*": "./dist/archetypes/*",
     "./behaviors": {
       "types": "./dist/behaviors.d.ts",
       "import": "./dist/behaviors.js"
