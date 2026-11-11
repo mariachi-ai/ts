@@ -112,7 +112,7 @@ const shell = (
       <a href="#" style="${heavy}; font-size: var(--m-font-size-xl); color: var(--m-color-fg-default); text-decoration: none; padding-inline: var(--m-space-4)">tally</a>
       <div class="m-cluster" data-gap="2" style="padding-inline: var(--m-space-2)">
         <span class="m-avatar">PS</span>
-        <button type="button" class="m-button" data-variant="secondary" data-size="sm">Upgrade</button>
+        <button type="button" class="m-button" data-variant="secondary" data-size="sm">See plans</button>
       </div>
       <div class="m-sidebar-section">
         <ul>
@@ -189,7 +189,7 @@ ${months.map(([m, v], i) => `              <rect x="${i * 50 + 12}" y="${100 - v
 const category = (tone: string, name: string, value: string) =>
   `<li class="m-cluster" data-justify="between"><span class="m-cluster" data-gap="2"><span aria-hidden="true" style="inline-size: 0.625rem; block-size: 0.625rem; border-radius: 9999px; background: ${tone}"></span>${name}</span><span style="${num}">${value}</span></li>`;
 
-const pot = (name: string, saved: string, of: string, pct: number, last = false) =>
+const goal = (name: string, saved: string, of: string, pct: number, last = false) =>
   `                <li class="m-cluster" data-gap="3" style="flex-wrap: nowrap">${tile(I.pot, 'accent')}<span class="m-stack" data-gap="1" style="flex: 1; padding-block: var(--m-space-3)${last ? '' : `; ${hair}`}"><span class="m-cluster" data-justify="between"><span>${name}</span><span style="${num}">${saved}</span></span><progress class="m-progress" value="${pct}" max="100" aria-label="${name}: ${pct}% of ${of}">${pct}%</progress><span style="${label}">of ${of}</span></span></li>`;
 
 const dashboard = shell(
@@ -197,10 +197,10 @@ const dashboard = shell(
   `      <div class="m-stack" data-gap="6">
         <h1 style="${pageTitle}">Morning, Priya</h1>
         <div class="m-grid" style="--m-layout-grid-min: 9.5rem; --m-layout-grid-gap: var(--m-space-3)">
-${spotlight(I.bank, gbp('1,345', '88'), 'Personal balance', `<span style="${label}">Account and pots</span>`)}
-${spotlight(I.calendar, gbp('123', '45'), 'Total upcoming', `<span style="${label}">3 payments this week</span>`)}
-${spotlight(I.trends, gbp('567', '89'), 'Left to spend', '<meter class="m-meter" min="0" max="100" low="20" high="60" optimum="100" value="64" aria-label="64% of your budget left">64%</meter>', `; ${gain}`)}
-${spotlight(I.pot, gbp('2,140', '00'), 'In savings pots', `<span style="${label}">3 pots</span>`)}
+${spotlight(I.bank, gbp('2,318', '04'), 'Across accounts', `<span style="${label}">Current and savings</span>`)}
+${spotlight(I.calendar, gbp('96', '10'), 'Due this week', `<span style="${label}">Rent is next</span>`)}
+${spotlight(I.trends, gbp('412', '66'), 'Budget left', '<meter class="m-meter" min="0" max="100" low="20" high="60" optimum="100" value="64" aria-label="64% of your budget left">64%</meter>', `; ${gain}`)}
+${spotlight(I.pot, gbp('1,705', '00'), 'Saved for goals', `<span style="${label}">3 goals</span>`)}
         </div>
         <div class="m-grid" style="--m-layout-grid-min: 22rem; --m-layout-grid-gap: var(--m-space-4); align-items: start">
           <div class="m-stack" data-gap="4">
@@ -210,15 +210,15 @@ ${spotlight(I.pot, gbp('2,140', '00'), 'In savings pots', `<span style="${label}
                 <div class="m-cluster" data-justify="between" data-align="start">
                   <h2 id="em-acct" style="${heavy}; font-size: var(--m-font-size-xl)">Current account</h2>
                   <div class="m-stack" data-gap="0" style="text-align: end">
-                    <span style="${figure}; font-size: var(--m-font-size-3xl); line-height: 1">${gbp('1,234', '56')}</span>
-                    <span style="font-size: var(--m-font-size-sm); opacity: 0.85">Balance</span>
+                    <span style="${figure}; font-size: var(--m-font-size-3xl); line-height: 1">${gbp('3,079', '42')}</span>
+                    <span style="font-size: var(--m-font-size-sm); opacity: 0.85">Available</span>
                   </div>
                 </div>
-                <span class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-sm); opacity: 0.85; ${num}">${icon(I.bank, 16)} 04-00-04 · 12345678</span>
+                <span class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-sm); opacity: 0.85; ${num}">${icon(I.bank, 16)} 60-14-22 · 48291736</span>
                 <div class="m-cluster" data-justify="between">
                   <div class="m-cluster" data-gap="2">
-                    <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.plusCircle, 18)} Add money</button>
-                    <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.card, 18)} Card</button>
+                    <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.plusCircle, 18)} Top up</button>
+                    <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.card, 18)} Card settings</button>
                   </div>
                   <button type="button" class="m-button" data-variant="secondary" data-size="sm" data-icon-only aria-label="More for this account">${icon(I.more, 18)}</button>
                 </div>
@@ -227,20 +227,20 @@ ${spotlight(I.pot, gbp('2,140', '00'), 'In savings pots', `<span style="${label}
             <section class="m-card" aria-labelledby="em-activity">
               <div class="m-card-body m-stack" data-gap="2">
                 <div class="m-cluster" data-justify="between">
-                  <h2 id="em-activity" style="${cardTitle}">Activity</h2>
-                  <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Activity options">${icon(I.more, 18)}</button>
+                  <h2 id="em-activity" style="${cardTitle}">Latest</h2>
+                  <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Options for latest">${icon(I.more, 18)}</button>
                 </div>
                 <a href="#" class="m-cluster" data-justify="between" data-gap="3" style="flex-wrap: nowrap; padding: var(--m-space-3); border-radius: 12px; background: var(--m-color-bg-sunken); color: inherit; text-decoration: none">
-                  <span class="m-cluster" data-gap="3" style="flex-wrap: nowrap">${tile(I.calendar, 'accent')}<span class="m-stack" data-gap="0"><span>3 upcoming payments</span><span style="${label}">Tomorrow</span></span></span>
-                  <span style="${num}; font-size: var(--m-font-size-lg); color: var(--m-color-fg-muted)">${amt('47', '83')}</span>
+                  <span class="m-cluster" data-gap="3" style="flex-wrap: nowrap">${tile(I.calendar, 'accent')}<span class="m-stack" data-gap="0"><span>2 bills due soon</span><span style="${label}">Thursday</span></span></span>
+                  <span style="${num}; font-size: var(--m-font-size-lg); color: var(--m-color-fg-muted)">${amt('58', '20')}</span>
                 </a>
                 <ul class="m-stack" data-gap="0" style="padding: 0; list-style: none">
-${activity(merchant('GC', 'accent'), 'Greenline Cabs', '', amt('26', '00'))}
-${activity(merchant('MT', 'info'), 'Metro Transit', 'Travel charge for Monday, 9 Nov', amt('5', '80'))}
-${activity(merchant('SL', 'success'), 'Sam Lee', 'Thanks for dinner', `+${amt('12', '49')}`, true)}
-${activity(merchant('BB', 'warning'), 'Bean &amp; Barley', 'Coffee', amt('3', '40'), false, true)}
+${activity(merchant('PL', 'accent'), 'Pinewood Lane Garage', 'Fuel', amt('41', '37'))}
+${activity(merchant('CB', 'info'), 'Citybike Hire', 'Two hours, Riverside dock', amt('3', '25'))}
+${activity(merchant('JP', 'success'), 'Jo Park', 'Concert tickets', `+${amt('38', '00')}`, true)}
+${activity(merchant('BB', 'warning'), 'Bean &amp; Barley', 'Flat white and a bun', amt('6', '15'), false, true)}
                 </ul>
-                <div><a class="m-button" data-variant="ghost" data-size="sm" href="#" style="padding-inline: 0">See all</a></div>
+                <div><a class="m-button" data-variant="ghost" data-size="sm" href="#" style="padding-inline: 0">View everything</a></div>
               </div>
             </section>
           </div>
@@ -263,16 +263,16 @@ ${activity(merchant('BB', 'warning'), 'Bean &amp; Barley', 'Coffee', amt('3', '4
                 </ul>
               </div>
             </section>
-            <section class="m-card" aria-labelledby="em-pots">
+            <section class="m-card" aria-labelledby="em-goals">
               <div class="m-card-body m-stack" data-gap="1">
                 <div class="m-cluster" data-justify="between">
-                  <h2 id="em-pots" style="${cardTitle}">Pots</h2>
-                  <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.plus, 16)} New pot</button>
+                  <h2 id="em-goals" style="${cardTitle}">Goals</h2>
+                  <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.plus, 16)} New goal</button>
                 </div>
                 <ul class="m-stack" data-gap="0" style="padding: 0; list-style: none">
-${pot('Holiday', '£420.00', '£1,200', 35)}
-${pot('Rainy day', '£1,500.00', '£2,000', 75)}
-${pot('New laptop', '£220.00', '£900', 24, true)}
+${goal('Summer trip', '£640.00', '£1,600', 40)}
+${goal('Emergency fund', '£910.00', '£1,500', 61)}
+${goal('Road bike', '£155.00', '£1,100', 14, true)}
                 </ul>
               </div>
             </section>
@@ -310,26 +310,26 @@ const listDetail = shell(
               <button type="button" class="m-tab" role="tab" aria-selected="true">All</button>
               <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Money in</button>
               <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Money out</button>
-              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Pots</button>
+              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Savings</button>
             </div></div>
           </div>
 ${day(
   'Today',
-  '−£35.20',
+  '−£23.75',
   [
-    tx(merchant('GC', 'accent'), 'Greenline Cabs', 'Transport · 18:42', amt('26', '00'), false, false, true),
-    tx(merchant('BB', 'warning'), 'Bean &amp; Barley', 'Eating out · 08:15', amt('3', '40')),
-    tx(merchant('MT', 'info'), 'Metro Transit', 'Travel charge for Monday, 9 Nov', amt('5', '80'), false, true),
+    tx(merchant('CT', 'accent'), 'Cobalt Taxis', 'Transport · 21:07', amt('14', '35'), false, false, true),
+    tx(merchant('BB', 'warning'), 'Bean &amp; Barley', 'Eating out · 08:15', amt('6', '15')),
+    tx(merchant('CB', 'info'), 'Citybike Hire', 'Two hours, Riverside dock', amt('3', '25'), false, true),
   ].join('\n'),
 )}
 ${day(
   'Yesterday',
-  '+£1,962.30',
+  '+£2,137.66',
   [
-    tx(merchant('NW', 'success'), 'Northwind Studio', 'Salary', `+${amt('2,050', '00')}`, true),
-    tx(merchant('SL', 'success'), 'Sam Lee', 'Thanks for dinner', `+${amt('12', '49')}`, true),
-    tx(merchant('HM'), 'Harbour Market', 'Groceries', amt('64', '19')),
-    tx(merchant('HL', 'accent'), 'Holiday pot', 'Moved to a pot', amt('36', '00'), false, true),
+    tx(merchant('HM', 'success'), 'Halden &amp; Moss', 'Monthly pay', `+${amt('2,240', '00')}`, true),
+    tx(merchant('JP', 'success'), 'Jo Park', 'Concert tickets', `+${amt('38', '00')}`, true),
+    tx(merchant('OG'), 'Orchard Grocer', 'Groceries', amt('71', '84')),
+    tx(merchant('ST', 'accent'), 'Summer trip goal', 'Moved to savings', amt('68', '50'), false, true),
   ].join('\n'),
 )}
         </div>
@@ -338,16 +338,16 @@ ${day(
         <section class="m-stack" data-gap="4" aria-labelledby="em-tx-title">
           <div class="m-card">
             <div class="m-card-body m-stack" data-gap="4" data-align="center" style="text-align: center; padding-block: var(--m-space-8)">
-              <span class="m-avatar" data-size="lg" style="border-radius: 16px; background: var(--m-color-accent-subtle); color: var(--m-color-accent-text)" aria-hidden="true">GC</span>
+              <span class="m-avatar" data-size="lg" style="border-radius: 16px; background: var(--m-color-accent-subtle); color: var(--m-color-accent-text)" aria-hidden="true">CT</span>
               <div class="m-stack" data-gap="1">
-                <h2 id="em-tx-title" style="${heavy}; font-size: var(--m-font-size-xl)">Greenline Cabs</h2>
-                <span style="${label}">Today at 18:42 · London</span>
+                <h2 id="em-tx-title" style="${heavy}; font-size: var(--m-font-size-xl)">Cobalt Taxis</h2>
+                <span style="${label}">Today at 21:07 · Leeds</span>
               </div>
-              <span style="${figure}; font-size: var(--m-font-size-3xl); line-height: 1">${gbp('26', '00')}</span>
+              <span style="${figure}; font-size: var(--m-font-size-3xl); line-height: 1">${gbp('14', '35')}</span>
               <div class="m-cluster" data-gap="2" data-justify="center">
-                <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.split, 16)} Split bill</button>
-                <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.receipt, 16)} Add receipt</button>
-                <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.note, 16)} Add note</button>
+                <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.split, 16)} Share the cost</button>
+                <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.receipt, 16)} Attach receipt</button>
+                <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.note, 16)} Write a note</button>
               </div>
             </div>
           </div>
@@ -355,7 +355,7 @@ ${day(
             <div class="m-card-body">
               <ul class="m-stack" data-gap="0" style="padding: 0; list-style: none">
 ${detailRow(tile(I.train, 'info'), `<span class="m-stack" data-gap="0"><span>Category</span><span style="${label}">Transport</span></span><span style="color: var(--m-color-fg-subtle); display: inline-flex">${icon(I.right, 18)}</span>`)}
-${detailRow(tile(I.tag, 'accent'), `<span class="m-stack" data-gap="0"><span>Add tags</span><span style="${label}">#work #travel</span></span><span style="color: var(--m-color-fg-subtle); display: inline-flex">${icon(I.right, 18)}</span>`)}
+${detailRow(tile(I.tag, 'accent'), `<span class="m-stack" data-gap="0"><span>Add tags</span><span style="${label}">#commute</span></span><span style="color: var(--m-color-fg-subtle); display: inline-flex">${icon(I.right, 18)}</span>`)}
 ${detailRow(tile(I.trends, 'accent'), `<label for="em-exclude" style="flex: 1">Leave out of budget</label><input class="m-switch" id="em-exclude" type="checkbox" role="switch">`, true)}
               </ul>
             </div>
@@ -363,13 +363,13 @@ ${detailRow(tile(I.trends, 'accent'), `<label for="em-exclude" style="flex: 1">L
           <div class="m-card" style="padding-block: var(--m-space-2)">
             <div class="m-card-body">
               <dl class="m-stack" data-gap="0">
-                <div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-3); ${hair}"><dt style="color: var(--m-color-fg-muted)">Card</dt><dd>Personal debit ··4417</dd></div>
+                <div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-3); ${hair}"><dt style="color: var(--m-color-fg-muted)">Card</dt><dd>Everyday debit ··7302</dd></div>
                 <div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-3); ${hair}"><dt style="color: var(--m-color-fg-muted)">Status</dt><dd><span class="m-badge" data-tone="success">Paid</span></dd></div>
-                <div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-3)"><dt style="color: var(--m-color-fg-muted)">Reference</dt><dd style="font-family: var(--m-font-family-mono); font-size: var(--m-font-size-sm)">GLC-88213-UK</dd></div>
+                <div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-3)"><dt style="color: var(--m-color-fg-muted)">Reference</dt><dd style="font-family: var(--m-font-family-mono); font-size: var(--m-font-size-sm)">CBT-40517-LS</dd></div>
               </dl>
             </div>
           </div>
-          <div><a class="m-button" data-variant="ghost" href="#">${icon(I.help, 18)} Something wrong with this payment?</a></div>
+          <div><a class="m-button" data-variant="ghost" href="#">${icon(I.help, 18)} Report a problem with this payment</a></div>
         </section>
       </div>`,
 );
@@ -409,15 +409,15 @@ const onboarding = `<main class="m-container" data-size="sm" style="padding-bloc
         <div class="m-field">
           <label class="m-field-label" for="em-onb-email">Email</label>
           <input class="m-input" id="em-onb-email" type="email" placeholder="you@example.com" aria-describedby="em-onb-email-hint">
-          <p class="m-field-hint" id="em-onb-email-hint">We'll send you a secure link to finish signing up.</p>
+          <p class="m-field-hint" id="em-onb-email-hint">We'll email you once to confirm it's yours.</p>
         </div>
         <button type="submit" class="m-button" data-variant="primary" style="inline-size: 100%">Continue</button>
-        <p style="text-align: center">Already have an account? <a href="#" style="color: var(--m-color-accent-text); font-weight: var(--m-font-weight-bold); text-decoration: none">Log in</a></p>
+        <p style="text-align: center">Have an account already? <a href="#" style="color: var(--m-color-accent-text); font-weight: var(--m-font-weight-bold); text-decoration: none">Log in</a></p>
       </div>
     </form>
     <div class="m-alert" data-tone="info" role="note">
       <span class="m-alert-icon">${icon(I.info, 20)}</span>
-      <div class="m-alert-content"><div class="m-alert-body">Your money is protected up to £85,000 by the deposit guarantee scheme.</div></div>
+      <div class="m-alert-content"><div class="m-alert-body">Deposits are covered by the national deposit guarantee, up to the legal limit.</div></div>
     </div>
   </div>
 </main>`;
@@ -449,7 +449,7 @@ const settings = shell(
             <span class="m-avatar" data-size="lg">PS</span>
             <div class="m-stack" data-gap="1" style="flex: 1">
               <span style="${heavy}; font-size: var(--m-font-size-xl)">Priya Shah</span>
-              <span style="${label}; ${num}">Personal account · 04-00-04 · 12345678</span>
+              <span style="${label}; ${num}">Everyday account · 60-14-22 · 48291736</span>
             </div>
             <button type="button" class="m-button" data-variant="secondary" data-size="sm">${icon(I.copy, 16)} Copy details</button>
           </div>
@@ -478,9 +478,9 @@ ${group(
     setRow(
       I.snowflake,
       'info',
-      '<label for="em-sw-freeze">Freeze card</label>',
-      'Stops card payments until you unfreeze it',
-      toggle('em-sw-freeze', false, 'Freeze card'),
+      '<label for="em-sw-freeze">Pause card</label>',
+      'Blocks new card payments until you switch it back',
+      toggle('em-sw-freeze', false, 'Pause card'),
       true,
     ),
   ].join('\n'),
@@ -499,9 +499,9 @@ ${group(
     setRow(
       I.calendar,
       'accent',
-      '<label for="em-sw-upcoming">Upcoming payments</label>',
+      '<label for="em-sw-upcoming">Bill reminders</label>',
       'A day before a bill leaves',
-      toggle('em-sw-upcoming', true, 'Upcoming payments'),
+      toggle('em-sw-upcoming', true, 'Bill reminders'),
       true,
     ),
   ].join('\n'),
@@ -512,14 +512,14 @@ ${group(
               <ul class="m-stack" data-gap="0" style="padding: 0; list-style: none" role="radiogroup" aria-labelledby="em-set-theme">
 ${theme('light', 'Light', '')}
 ${theme('dark', 'Dark', '')}
-${theme('device', 'Use device settings', 'Follows the light or dark setting on your device', true, true)}
+${theme('device', 'Automatic', "Matches your phone or computer's appearance", true, true)}
               </ul>
             </div>
           </section>
         <section class="m-card" aria-labelledby="em-close">
           <div class="m-card-body m-stack" data-gap="3">
             <h2 id="em-close" style="${cardTitle}">Close your account</h2>
-            <p class="m-muted">Move your balance of £1,234.56 out first. We'll cancel your card and any regular payments. You can't undo this.</p>
+            <p class="m-muted">Move your £3,079.42 out first. We'll cancel your card and any regular payments. You can't undo this.</p>
             <div class="m-cluster" data-gap="2">
               <button type="button" class="m-button" data-variant="danger">Close account</button>
               <a class="m-button" data-variant="ghost" href="#">${icon(I.logout, 18)} Log out</a>
@@ -537,11 +537,11 @@ const emptyState = shell(
         <section class="m-card" data-size="lg" aria-labelledby="em-empty">
           <div class="m-card-body m-stack" data-gap="4" data-align="center" style="text-align: center; padding-block: var(--m-space-12)">
             <span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 6rem; block-size: 6rem; border-radius: 9999px; background: var(--m-color-accent-subtle); color: var(--m-color-accent-text)">${icon(I.pot, 44)}</span>
-            <h2 id="em-empty" style="${heavy}; font-size: var(--m-font-size-xl)">No pots yet</h2>
-            <p class="m-muted" style="max-inline-size: 26rem">Pots keep money for something apart from your spending, like a holiday or a rainy day. Set a goal and watch it fill.</p>
+            <h2 id="em-empty" style="${heavy}; font-size: var(--m-font-size-xl)">No savings goals yet</h2>
+            <p class="m-muted" style="max-inline-size: 26rem">Give a goal a name and a target, and we'll keep that money apart from your spending until you're ready.</p>
             <div class="m-cluster" data-gap="2" data-justify="center">
-              <button type="button" class="m-button" data-variant="primary">${icon(I.plus, 18)} Create a pot</button>
-              <button type="button" class="m-button" data-variant="secondary">How pots work</button>
+              <button type="button" class="m-button" data-variant="primary">${icon(I.plus, 18)} Start a goal</button>
+              <button type="button" class="m-button" data-variant="secondary">How goals work</button>
             </div>
           </div>
         </section>
@@ -581,8 +581,8 @@ const cmpGroup = (title: string) =>
 const pricing = `<header class="m-navbar">
   <a class="m-navbar-brand" href="#">tally</a>
   <nav class="m-navbar-nav" aria-label="Main">
-    <a class="m-navbar-link" href="#" aria-current="page">${icon(I.user, 18)} Personal</a>
-    <a class="m-navbar-link" href="#">${icon(I.card, 18)} Business</a>
+    <a class="m-navbar-link" href="#" aria-current="page">${icon(I.sparkles, 18)} Plans</a>
+    <a class="m-navbar-link" href="#">${icon(I.help, 18)} Help</a>
   </nav>
   <div class="m-navbar-actions">
     <a class="m-button" data-variant="secondary" href="#">Log in</a>
@@ -592,49 +592,49 @@ const pricing = `<header class="m-navbar">
 <main class="m-container" style="padding-block: var(--m-space-12) var(--m-space-16)">
   <div class="m-stack" data-gap="16">
     <div class="m-stack" data-gap="4" style="max-inline-size: 40rem">
-      <h1 style="${heavy}; font-size: var(--m-font-size-4xl)">Make your account work a bit harder</h1>
-      <p style="font-size: var(--m-font-size-lg)">Everyday banking is free. Add a plan for more tools, cashback and cover. Change or cancel any time in the app.</p>
-      <p style="${label}">UK residents aged 18+. Terms apply.</p>
+      <h1 style="${heavy}; font-size: var(--m-font-size-4xl)">More from your account, only if you want it</h1>
+      <p style="font-size: var(--m-font-size-lg)">The basic account costs nothing. Plans add reports, cashback and cover on top, and you can drop one whenever you like.</p>
+      <p style="${label}">Plans and prices here are examples.</p>
     </div>
     <div class="m-grid" style="--m-layout-grid-min: 18rem; --m-layout-grid-gap: var(--m-space-4); align-items: stretch">
-${plan('Everyday', 'Free', 'Aged 16+', 'The account, the card and the app, with no monthly fee.', ['Instant spending notifications', 'Pots for saving', 'Fee-free spending abroad', 'Split bills with anyone'])}
-${plan('Plus', '£3 a month', 'Aged 18+', 'Tools to see all your money in one place, and save more of it.', ['Everything in Everyday', 'Connect your other banks', 'Custom spending categories', 'Higher interest on savings'], true)}
-${plan('Premier', '£15 a month', 'Aged 18 to 69', 'Worldwide travel and phone cover, plus everything in Plus.', ['Everything in Plus', 'Worldwide travel insurance', 'Phone insurance', 'Priority support'])}
+${plan('Basic', 'Free', 'No minimum', 'A current account, a debit card and the app.', ['Payment alerts the moment you spend', 'Three savings goals', 'Round-ups into a goal', 'Share costs with friends'])}
+${plan('Plus', '£4.50 a month', 'Cancel any time', 'Weekly reports and cashback, to keep more of what you earn.', ['Everything in Basic', 'A spending report every Sunday', 'Cashback at partner shops', 'Up to 20 savings goals'], true)}
+${plan('Premier', '£12 a month', 'Billed monthly', 'Gadget cover and lounge passes, with everything in Plus.', ['Everything in Plus', 'Gadget cover up to £1,000', 'Four lounge passes a year', 'A named support team'])}
     </div>
     <section class="m-stack" data-gap="6" aria-labelledby="em-compare">
       <div class="m-stack" data-gap="2" style="text-align: center">
-        <h2 id="em-compare" style="${heavy}; font-size: var(--m-font-size-3xl)">Compare the plans</h2>
-        <p class="m-muted">Every plan, side by side.</p>
+        <h2 id="em-compare" style="${heavy}; font-size: var(--m-font-size-3xl)">Plans, feature by feature</h2>
+        <p class="m-muted">What each one includes.</p>
       </div>
       <div class="m-table-wrap">
         <table class="m-table">
           <thead>
             <tr><th scope="col" style="inline-size: 34%"><span class="m-sr-only">Feature</span></th>
-${['Everyday', 'Plus', 'Premier'].map((n, i) => `              <th scope="col" style="text-align: center"><div class="m-stack" data-gap="2" data-align="center"><a class="m-button" data-variant="primary" data-size="sm" href="#">Get ${n}</a><span style="font-weight: var(--m-font-weight-regular)">${['Free', '£3 a month', '£15 a month'][i]}</span></div></th>`).join('\n')}
+${['Basic', 'Plus', 'Premier'].map((n, i) => `              <th scope="col" style="text-align: center"><div class="m-stack" data-gap="2" data-align="center"><a class="m-button" data-variant="primary" data-size="sm" href="#">Get ${n}</a><span style="font-weight: var(--m-font-weight-regular)">${['Free', '£4.50 a month', '£12 a month'][i]}</span></div></th>`).join('\n')}
             </tr>
           </thead>
           <tbody>
-${cmpGroup('Everyday banking')}
-${cmp('A current account and card', [yes, yes, yes])}
-${cmp('Fee-free spending abroad', [yes, yes, yes])}
-${cmp('Savings pots', [yes, yes, yes])}
-${cmpGroup('Money tools')}
-${cmp('Connected banks and cards', ['One', yes, yes])}
-${cmp('Custom categories', [no, yes, yes])}
-${cmp('Virtual cards', [no, yes, yes])}
-${cmpGroup('Cover')}
-${cmp('Worldwide travel insurance', [no, no, yes])}
-${cmp('Phone insurance', [no, no, yes])}
+${cmpGroup('The basics')}
+${cmp('Current account and debit card', [yes, yes, yes])}
+${cmp('Payment alerts', [yes, yes, yes])}
+${cmp('Round-ups', [yes, yes, yes])}
+${cmpGroup('Insight and rewards')}
+${cmp('Savings goals', ['3', '20', 'No limit'])}
+${cmp('Weekly spending report', [no, yes, yes])}
+${cmp('Partner cashback', [no, yes, yes])}
+${cmpGroup('Extras')}
+${cmp('Gadget cover', [no, no, yes])}
+${cmp('Lounge passes', [no, no, yes])}
           </tbody>
         </table>
       </div>
     </section>
     <section class="m-stack" data-gap="4" aria-labelledby="em-faq" style="max-inline-size: 45rem; margin-inline: auto; inline-size: 100%">
-      <h2 id="em-faq" style="${heavy}; font-size: var(--m-font-size-2xl)">Common questions</h2>
+      <h2 id="em-faq" style="${heavy}; font-size: var(--m-font-size-2xl)">Before you choose</h2>
       <div class="m-accordion" data-variant="separated">
-        <details class="m-accordion-item" name="em-faq" open><summary>Can I change plans later?</summary><div class="m-accordion-content">Yes. Upgrade any time and it starts straight away; downgrade and your plan runs to the end of the month you've paid for.</div></details>
-        <details class="m-accordion-item" name="em-faq"><summary>Is there a minimum term?</summary><div class="m-accordion-content">Everyday and Plus are monthly. Premier has a three-month minimum, because the insurance starts as soon as you join.</div></details>
-        <details class="m-accordion-item" name="em-faq"><summary>What happens to my pots if I downgrade?</summary><div class="m-accordion-content">Nothing. Your pots and the money in them stay exactly where they are.</div></details>
+        <details class="m-accordion-item" name="em-faq" open><summary>Can I switch plans?</summary><div class="m-accordion-content">Whenever you like. A bigger plan starts the same day; a smaller one starts when your current month ends.</div></details>
+        <details class="m-accordion-item" name="em-faq"><summary>Do I pay up front?</summary><div class="m-accordion-content">No. Plans are billed monthly from your account, on the day you joined.</div></details>
+        <details class="m-accordion-item" name="em-faq"><summary>What if I have more goals than a smaller plan allows?</summary><div class="m-accordion-content">They all stay, money included. You just can't start a new one until you're under the limit.</div></details>
       </div>
     </section>
   </div>
@@ -676,23 +676,23 @@ const errors = `<main class="m-container" data-size="md" style="padding-block: v
         </div>
         <div class="m-field">
           <label class="m-field-label" for="em-err-name">Name on the account</label>
-          <input class="m-input" id="em-err-name" value="Sam Lee">
+          <input class="m-input" id="em-err-name" value="Jo Park">
         </div>
         <div class="m-grid" style="--m-layout-grid-min: 12rem; --m-layout-grid-gap: var(--m-space-4)">
           <div class="m-field">
             <label class="m-field-label" for="em-err-sort">Sort code</label>
-            <input class="m-input" id="em-err-sort" value="04-00-0" aria-invalid="true" aria-describedby="em-err-sort-e" style="${num}">
-            <p class="m-field-error" id="em-err-sort-e">Sort codes have 6 digits, like 04-00-04.</p>
+            <input class="m-input" id="em-err-sort" value="60-14-2" aria-invalid="true" aria-describedby="em-err-sort-e" style="${num}">
+            <p class="m-field-error" id="em-err-sort-e">A sort code is six numbers, for example 60-14-22.</p>
           </div>
           <div class="m-field">
             <label class="m-field-label" for="em-err-acct">Account number</label>
-            <input class="m-input" id="em-err-acct" value="12345678" style="${num}">
+            <input class="m-input" id="em-err-acct" value="48291736" style="${num}">
           </div>
         </div>
         <div class="m-field">
           <label class="m-field-label" for="em-err-amount">Amount</label>
-          <input class="m-input" id="em-err-amount" value="£1,500.00" aria-invalid="true" aria-describedby="em-err-amount-e" style="${num}; font-size: var(--m-font-size-xl)">
-          <p class="m-field-error" id="em-err-amount-e">You have £1,234.56 in your account. Move money from a pot or pay less.</p>
+          <input class="m-input" id="em-err-amount" value="£3,250.00" aria-invalid="true" aria-describedby="em-err-amount-e" style="${num}; font-size: var(--m-font-size-xl)">
+          <p class="m-field-error" id="em-err-amount-e">That's more than the £3,079.42 available. Lower the amount or move money in from savings.</p>
         </div>
         <div class="m-cluster" data-justify="between">
           <button type="button" class="m-button" data-variant="ghost">Cancel</button>
@@ -701,13 +701,13 @@ const errors = `<main class="m-container" data-size="md" style="padding-block: v
       </div>
     </form>
     <section class="m-stack" data-gap="3" aria-label="A toast">
-      <div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title">Your payment to Sam didn't go through</div><div class="m-toast-body">The £12.49 is back in your account.</div></div><button type="button" class="m-button" data-variant="secondary" data-size="sm">Try again</button></div>
+      <div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title">We couldn't send £38.00 to Jo Park</div><div class="m-toast-body">Nothing left your account.</div></div><button type="button" class="m-button" data-variant="secondary" data-size="sm">Try again</button></div>
     </section>
     <section class="m-card" style="background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)" aria-labelledby="em-err-404">
       <div class="m-card-body m-stack" data-gap="4" style="padding: var(--m-space-12) var(--m-space-10)">
         <span style="${heavy}; font-size: var(--m-font-size-4xl); line-height: 1">404</span>
-        <h2 id="em-err-404" style="${heavy}; font-size: var(--m-font-size-xl); max-inline-size: 22rem">Sorry, we can't find the page you're looking for</h2>
-        <div><a class="m-button" data-variant="secondary" href="#">${icon(I.home, 18)} Go to Home</a></div>
+        <h2 id="em-err-404" style="${heavy}; font-size: var(--m-font-size-xl); max-inline-size: 22rem">This page has wandered off</h2>
+        <div><a class="m-button" data-variant="secondary" href="#">${icon(I.home, 18)} Back to the start</a></div>
       </div>
     </section>
 ${errorCard('500', I.alert, 'danger', 'Something went wrong on our side', 'Nothing has changed in your account. Try again in a minute; if it keeps happening, message us from Help.', `<button type="button" class="m-button" data-variant="primary">Try again</button><a class="m-button" data-variant="secondary" href="#">${icon(I.help, 18)} Get help</a>`)}
@@ -720,7 +720,7 @@ export const emberRecipes: ArchetypeRecipe[] = [
     name: 'dashboard',
     title: 'Dashboard',
     description:
-      'A heavy greeting, small spotlight tiles, the account as a navy card with the balance large, an Activity card of rows, spending bars and pots.',
+      'A heavy greeting, small spotlight tiles, the account as a navy card with the balance large, a card of the latest payments, spending bars and savings goals.',
     html: dashboard,
   },
   {

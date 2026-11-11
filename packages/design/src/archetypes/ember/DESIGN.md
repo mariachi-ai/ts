@@ -25,7 +25,7 @@ The tokens are in the `ember` preset of `@mariachi/design` (`data-theme="ember"`
 - **Cards on mint.** The screen is pale mint; content sits on white cards with 16px corners and no
   border. Related rows share one card, separated by hairlines that start after the icon.
 - **Money reads at a glance.** Balances are large with the pound sign and pence small. In lists the
-  pound sign is dropped (`26.00`), money in is green with a plus (`+12.49`), and money out is plain
+  pound sign is dropped (`14.35`), money in is green with a plus (`+38.00`), and money out is plain
   navy with no minus.
 
 ## Foundations
@@ -145,9 +145,9 @@ All 36 of the library's components, as Ember draws them. Every one is in `galler
 **Actions and forms**
 - **Button.** Always a pill, 16px at 600, 48px by default and 38px (`sm`) inside cards and bars.
   - **Primary:** the solid action blue with white text; one per view.
-  - **Secondary** (the default): the pale pill with blue text and no border ("Upgrade", "Add money",
-    "Split bill").
-  - **Ghost:** blue text only ("See all", "Cancel").
+  - **Secondary** (the default): the pale pill with blue text and no border ("See plans", "Top up",
+    "Share the cost").
+  - **Ghost:** blue text only ("View everything", "Cancel").
   - **Danger:** solid red, only to confirm something destructive.
   - **Icon-only:** a round pill with an `aria-label`; the top bar's `+` is primary.
   - On the public site, the main call to action is a navy pill ("Sign up"): set
@@ -165,7 +165,7 @@ All 36 of the library's components, as Ember draws them. Every one is in `galler
 
 **Navigation**
 - **Sidebar.** 240px, white, with a hairline edge.
-  - Top: the wordmark, then the avatar and an "Upgrade" pale pill.
+  - Top: the wordmark, then the avatar and a "See plans" pale pill.
   - Items are 16px with a 20px icon, grey, as pills; the current one is blue on a pale blue pill.
   - A second group (Settings, Help) sits apart. Counts are small pale blue pills.
 - **Navbar** (public pages). White, 84px, with the heavy wordmark, then 16px pill links in muted navy
@@ -178,7 +178,7 @@ All 36 of the library's components, as Ember draws them. Every one is in `galler
 - **Breadcrumb.** Blue links separated by `›`, the current page in navy. In the app, prefer a back
   arrow.
 - **Pagination.** Grey numbers; the current one a navy square with 6px corners and white text. In
-  lists, prefer "See all" and loading more on scroll.
+  lists, prefer a "View everything" link and loading more on scroll.
 
 **Data and content**
 - **Table.**
@@ -199,7 +199,7 @@ All 36 of the library's components, as Ember draws them. Every one is in `galler
   semibold, the answer in muted text, a chevron that turns.
 - **Code, kbd.** DM Mono on the mint fill, with 4px corners for inline code and keys.
 - **Prose.** 16px with a 1.4 line height, at most 40rem wide, links in blue and underlined.
-- **Progress.** A 6px pill bar: blue on the hairline grey. Pots show one under the name.
+- **Progress.** A 6px pill bar: blue on the hairline grey. Savings goals show one under the name.
 - **Meter.** The same bar: green with room left, amber when low, red when over.
 - **Usage.** A label and amount over a meter bar, with the amount in tabular figures.
 
@@ -239,15 +239,15 @@ All 36 of the library's components, as Ember draws them. Every one is in `galler
 ## Error handling
 
 - **In a field:** the border turns red and the message replaces the help text: what's wrong and the
-  fix, with an example ("Sort codes have 6 digits, like 04-00-04"). Check on blur and on submit,
+  fix, with an example ("A sort code is six numbers, for example 60-14-22"). Check on blur and on submit,
   never while someone types.
 - **In a form:** a red notice above the form: "Check the details below", then how many things and
   what didn't happen ("We haven't sent anything"). Focus moves to it.
-- **Somewhere else:** a navy toast that says what happened and what it means for their money ("The
-  £12.49 is back in your account"), with one action ("Try again").
+- **Somewhere else:** a navy toast that says what happened and what it means for their money ("Nothing
+  left your account"), with one action ("Try again").
 - **A whole page:**
-  - **Not found** is a navy slab: a huge white "404", "Sorry, we can't find the page you're looking
-    for" in heavy white, and one pale pill home.
+  - **Not found** is a navy slab: a huge white "404", a short heavy white line ("This page has wandered
+    off"), and one pale pill home.
   - **Failure (500)** and **no access (403)** are white cards: a 36px icon in an 80px pale circle,
     the code in small mono, a 25px heavy title, one sentence and one or two pills.
 - **Words.** Say sorry when it's our fault, say whether money moved, and say what to do next. No
@@ -258,16 +258,16 @@ All 36 of the library's components, as Ember draws them. Every one is in `galler
 - **Dashboard.**
   - A heavy greeting ("Morning, Priya").
   - Four spotlight tiles: a figure, a label, and a detail or a meter.
-  - The account as a navy card (balance large, sort code and account number, pale pills for "Add
-    money" and "Card", a round `…`), the Activity card of rows with "See all", then spending bars
-    with categories and the pots.
+  - The account as a navy card (balance large, sort code and account number, pale pills for "Top
+    up" and "Card settings", a round `…`), a card of the latest payments with a "View everything"
+    link, then spending bars with categories and the savings goals.
 - **List and detail.**
   - The title, a search box, and a segmented filter.
   - Transactions grouped by day ("Today", "Yesterday") with the day's total, each day a white card.
   - The open transaction beside it: a centred header (merchant tile, name, time, amount large), pale
-    pill actions (Split bill, Add receipt, Add note), then grouped rows and a details list.
+    pill actions (Share the cost, Attach receipt, Write a note), then grouped rows and a details list.
 - **Onboarding.** One white card on mint at 440px: a thin progress bar, a heavy centred title, one
-  question per field, a full-width blue pill, and "Already have an account? Log in".
+  question per field, a full-width blue pill, and a line with a bold "Log in" link.
 - **Settings.** The profile card, then grouped cards (Account, Privacy and security, Notifications,
   Theme) of icon-tile rows with chevrons, switches or radios. Closing the account comes last.
 - **Empty state.** A white card: a 44px icon in a 96px pale blue circle, a heavy title, one friendly
@@ -275,15 +275,15 @@ All 36 of the library's components, as Ember draws them. Every one is in `galler
 - **Pricing.**
   - The white public bar, a 49px heavy headline and a 20px intro.
   - Three plan cards (the recommended one lifted with a badge), each with ticks and a blue pill.
-  - "Compare the plans" over the comparison table, then common questions and a navy footer with
+  - A heavy heading over the comparison table, then questions in an accordion and a navy footer with
     rounded top corners.
 - **Errors.** The field, form, toast and full-page errors above, as one page.
 
 ## Words
 
-- Friendly and direct, in sentence case, in the second person: "Add money", "Split bill", "See all",
-  "Something wrong with this payment?"
-- Short dates ("Today", "Yesterday", "Monday, 9 Nov"), money exact.
+- Friendly and direct, in sentence case, in the second person: "Top up", "Share the cost",
+  "View everything", "Report a problem with this payment".
+- Short dates ("Today", "Yesterday", "Thursday"), money exact.
 
 ## Do and don't
 
