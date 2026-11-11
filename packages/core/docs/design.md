@@ -35,6 +35,10 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `enterprise` | Dense (density 0.85), small radius, compact type, strong tables. |
 | `terminal` | Monospace everywhere, square corners, no shadows, phosphor-green dark mode. |
 | `halcyon` | Light type on white, a blue-violet accent, pill actions, ring-shadowed cards. A design language (below). |
+| `fennel` | Near-black on white, forest-green controls, one lime pill, heavy condensed capitals. A design language. |
+| `basalt` | Near-black on warm off-white, square hairline panels, an electric lime primary. A design language. |
+| `ember` | Deep navy on pale mint, white rounded cards, one clear blue, heavy wide headings. A design language. |
+| `cirrus` | Navy on cool off-white, 20px panels, one clear blue, tinted capital pills. A design language. |
 
 ## Design languages
 
@@ -74,6 +78,10 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | Language | Category | Character |
 | --- | --- | --- |
 | `halcyon` | Calm fintech | Airy and exact: light type, one blue-violet accent, pill actions, figures with raised cents |
+| `fennel` | Calm fintech | Plain and confident: forest-green controls, one bright lime pill, soft green-grey fills, heavy capitals |
+| `basalt` | Calm fintech | Flat and exact: square hairline panels on warm off-white, one electric lime action |
+| `ember` | Calm fintech | Friendly and plain: white rounded cards on pale mint, navy type, one clear blue |
+| `cirrus` | Calm fintech | Bright and friendly: rounded hairline panels, one clear blue, tinted category pills |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
