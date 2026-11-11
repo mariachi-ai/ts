@@ -30,6 +30,8 @@ const I = {
   building:
     '<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
   sparkle: '<path d="M12 3v18"/><path d="M4.2 7.5l15.6 9"/><path d="M4.2 16.5l15.6-9"/>',
+  inbox:
+    '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
   clipboard:
     '<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="m9 14 2 2 4-4"/>',
   history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
@@ -78,14 +80,14 @@ const group = (ic: string, label: string, items: string) =>
             <ul style="margin: 0; padding: 0; border: 0">${items}</ul>
           </li>`;
 
-const sidebar = (open: 'home' | 'accounting' | 'company' | 'vendors') => `<nav class="m-sidebar" aria-label="Main">
+const sidebar = (open: 'home' | 'books' | 'settings' | 'payables') => `<nav class="m-sidebar" aria-label="Main">
     <div class="m-sidebar-section" style="padding: var(--m-space-2)">
       <span class="m-cluster" data-gap="2"><span class="m-avatar" data-size="sm" style="border-radius: var(--m-radius-md); background: var(--m-color-fg-default); color: var(--m-color-bg-surface)">T</span> Tidewater Studio</span>
     </div>
     <div class="m-sidebar-section" style="padding: var(--m-space-2); padding-block-end: var(--m-space-4); ${hair.replace('block-start', 'block-end')}">
-      <span class="m-cluster" data-gap="2" style="${muted}">${icon(I.clipboard)} Setup guide</span>
-      <span style="${small}; ${muted}">Next: Connect your accounting</span>
-      <progress class="m-progress" data-size="sm" value="2" max="5" aria-label="Setup: 2 of 5 steps done">2 of 5</progress>
+      <span class="m-cluster" data-gap="2" style="${muted}">${icon(I.clipboard)} Getting started</span>
+      <span style="${small}; ${muted}">3 of 7 done · Invite your approvers</span>
+      <progress class="m-progress" data-size="sm" value="3" max="7" aria-label="Getting started: 3 of 7 done">3 of 7</progress>
     </div>
     <div class="m-sidebar-section">
       <ul>
@@ -93,52 +95,60 @@ const sidebar = (open: 'home' | 'accounting' | 'company' | 'vendors') => `<nav c
           open === 'home'
             ? group(
                 I.home,
-                'Home',
-                subItem('Overview', limeCount('59'), true) +
-                  subItem('Inbox') +
-                  subItem('My expenses') +
-                  subItem('My trips'),
+                'Dashboard',
+                subItem('Summary', '', true) + subItem('Activity') + subItem('Upcoming', limeCount('6')),
               )
-            : navItem(I.home, 'Home', limeCount('59'))
+            : navItem(I.home, 'Dashboard')
         }
-        ${navItem(I.insights, 'Insights')}
+        ${navItem(I.inbox, 'To review', limeCount('23'))}
       </ul>
     </div>
     <div class="m-sidebar-section" style="${hair}; padding-block-start: var(--m-space-4)">
+      <h2 class="m-sidebar-heading">Spend</h2>
       <ul>
-        ${navItem(I.layers, 'Manage spend')}
-        ${navItem(I.dollar, 'Expenses')}
-        ${navItem(I.plane, 'Travel')}
-        ${navItem(I.bill, 'Bill pay', limeCount('30'))}
-        ${navItem(I.bank, 'Banking')}
+        ${navItem(I.card, 'Cards')}
+        ${navItem(I.history, 'Expense claims', limeCount('4'))}
+        ${navItem(I.clipboard, 'Purchase requests')}
+        ${navItem(I.layers, 'Subscriptions')}
       </ul>
     </div>
     <div class="m-sidebar-section" style="${hair}; padding-block-start: var(--m-space-4)">
+      <h2 class="m-sidebar-heading">Payables</h2>
+      <ul>
+        ${navItem(I.bill, 'Invoices', limeCount('12'))}
+        ${navItem(L.send, 'Payment runs', '', open === 'payables')}
+        ${navItem(I.store, 'Payees')}
+      </ul>
+    </div>
+    <div class="m-sidebar-section" style="${hair}; padding-block-start: var(--m-space-4)">
+      <h2 class="m-sidebar-heading">Books</h2>
       <ul>
         ${
-          open === 'accounting'
+          open === 'books'
             ? group(
                 I.book,
-                'Accounting',
-                subItem('Transactions', limeCount('204'), true) +
-                  subItem('Reimbursements', limeCount('33')) +
-                  subItem('Bill pay', limeCount('57')),
+                'Month-end close',
+                subItem('Card spend', limeCount('96'), true) +
+                  subItem('Expense claims', limeCount('11')) +
+                  subItem('Invoices', limeCount('8')),
               )
-            : navItem(I.book, 'Accounting', limeCount('319'))
+            : navItem(I.book, 'Month-end close', limeCount('115'))
         }
-        ${navItem(I.store, 'Vendors', '', open === 'vendors')}
-        ${navItem(L['sliders-horizontal'], 'Policy')}
-        ${navItem(I.building, 'Company', '', open === 'company')}
+        ${navItem(I.bank, 'Reconciliation')}
+        ${navItem(I.insights, 'Reports')}
       </ul>
     </div>
     <div class="m-sidebar-section" style="margin-block-start: auto; ${hair}; padding-block-start: var(--m-space-3)">
-      <ul>${navItem(I.sparkle, 'Assistant')}</ul>
+      <ul>
+        ${navItem(I.users, 'Team')}
+        ${navItem(L.settings, 'Settings', '', open === 'settings')}
+      </ul>
     </div>
   </nav>`;
 
 // The top bar: a wide warm search field with its shortcut, then bell, add, help and the avatar
 const topbar = `<header class="m-cluster" data-justify="between" data-gap="4" style="padding: var(--m-space-2) var(--m-space-6); ${hair.replace('block-start', 'block-end')}; flex-wrap: nowrap">
-      <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="flex: 1; justify-content: flex-start; background: var(--m-color-bg-sunken); border-radius: var(--m-radius-md); max-inline-size: 58rem">${icon(L.search)} <span style="flex: 1; text-align: start">Search for anything</span><kbd class="m-kbd">⌘</kbd><kbd class="m-kbd">K</kbd></button>
+      <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="flex: 1; justify-content: flex-start; background: var(--m-color-bg-sunken); border-radius: var(--m-radius-md); max-inline-size: 58rem">${icon(L.search)} <span style="flex: 1; text-align: start">Find charges, people or payees</span><kbd class="m-kbd">⌘</kbd><kbd class="m-kbd">K</kbd></button>
       <div class="m-cluster" data-gap="1" style="flex-wrap: nowrap">
         <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Updates" style="${pill}">${icon(L.bell)}</button>
         <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Create" style="${pill}">${icon(L.plus)}</button>
@@ -164,14 +174,14 @@ ${main}
 // Charts: a denim spend area, a green-and-denim balance bar, a filled step line for cash
 const spend = [2, 2, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 4, 5, 6, 9, 14, 28, 52, 76, 96, 96];
 const spendLine = spend.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * 300) / (spend.length - 1)},${100 - v}`).join(' ');
-const spendChart = `<svg viewBox="0 0 300 100" width="100%" preserveAspectRatio="none" style="display: block; block-size: 5.5rem" role="img" aria-label="Spend over 90 days, rising sharply in the last three weeks">
+const spendChart = `<svg viewBox="0 0 300 100" width="100%" preserveAspectRatio="none" style="display: block; block-size: 5.5rem" role="img" aria-label="Card spend over 12 weeks, rising steeply in the last four">
                 <defs><linearGradient id="bs-fade" x1="0" y1="0" x2="0" y2="1"><stop offset="0" style="stop-color: var(--m-color-info-border); stop-opacity: 0.35"/><stop offset="1" style="stop-color: var(--m-color-info-border); stop-opacity: 0"/></linearGradient></defs>
                 <path d="${spendLine} L300,100 L0,100 Z" fill="url(#bs-fade)"/>
                 <path d="${spendLine}" fill="none" style="stroke: var(--m-color-info-border)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
               </svg>`;
 const cash = [20, 24, 40, 44, 44, 45, 62, 66, 64, 66, 66, 68, 68];
 const cashLine = cash.map((v, i) => `${i === 0 ? 'M' : 'L'}${(i * 200) / (cash.length - 1)},${80 - v}`).join(' ');
-const cashChart = `<svg viewBox="0 0 200 80" width="100%" preserveAspectRatio="none" style="display: block; block-size: 5rem" role="img" aria-label="Cash balance over 90 days, up from $122K to $488K">
+const cashChart = `<svg viewBox="0 0 200 80" width="100%" preserveAspectRatio="none" style="display: block; block-size: 5rem" role="img" aria-label="Operating cash over 12 weeks, up from $0.62M to $1.31M">
                 <path d="${cashLine} L200,80 L0,80 Z" style="fill: var(--m-color-success-bg)"/>
                 <path d="${cashLine}" fill="none" style="stroke: var(--m-color-success-solid)" stroke-width="1.5" vector-effect="non-scaling-stroke"/>
               </svg>`;
@@ -181,10 +191,10 @@ const insight = (label: string, value: string, extra: string, style = '') =>
               <a href="#" class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-2xl); letter-spacing: var(--m-font-tracking-tight); color: var(--m-color-fg-default); text-decoration: none; ${num}">${value} ${icon(L['arrow-right'], 20)}</a>
               ${extra}
             </div>`;
-const balanceBar = `<div class="m-cluster" data-gap="0" role="img" aria-label="Card balance: $210K settled, $96K pending, $494K available" style="flex-wrap: nowrap; block-size: 0.375rem; margin-block-start: var(--m-space-3)">
-                <span style="flex: 26; block-size: 100%; background: var(--m-color-info-border)"></span>
-                <span style="flex: 12; block-size: 100%; background: var(--m-color-success-solid)"></span>
-                <span style="flex: 62; block-size: 100%; background: var(--m-color-border-muted)"></span>
+const balanceBar = `<div class="m-cluster" data-gap="0" role="img" aria-label="Card spend this month: $58.9K posted, $25.3K pending, $115.8K of the limit left" style="flex-wrap: nowrap; block-size: 0.375rem; margin-block-start: var(--m-space-3)">
+                <span style="flex: 29; block-size: 100%; background: var(--m-color-info-border)"></span>
+                <span style="flex: 13; block-size: 100%; background: var(--m-color-success-solid)"></span>
+                <span style="flex: 58; block-size: 100%; background: var(--m-color-border-muted)"></span>
               </div>`;
 
 // A task row: a round warm icon, a 16px title and a muted line, then an arrow or a Review button
@@ -213,41 +223,41 @@ const dashboard = shell(
   'home',
   `      <div class="m-split" style="--m-layout-split-side: 18rem; --m-layout-split-gap: var(--m-space-10); flex-direction: row-reverse; flex-wrap: wrap-reverse; align-items: flex-end">
         <aside class="m-stack" data-gap="3" aria-label="Quick actions" style="padding-block-start: var(--m-space-16)">
-          <button type="button" class="m-button" data-variant="primary" style="inline-size: 100%">Issue card</button>
-          <button type="button" class="m-button" style="inline-size: 100%">New ${icon(L['chevron-down'])}</button>
+          <button type="button" class="m-button" data-variant="primary" style="inline-size: 100%">New card</button>
+          <button type="button" class="m-button" style="inline-size: 100%">Create ${icon(L['chevron-down'])}</button>
           <section class="m-stack" data-gap="0" aria-labelledby="bs-budgets" style="margin-block-start: var(--m-space-6)">
-            <h2 id="bs-budgets" style="font-size: var(--m-font-size-sm); ${muted}; font-weight: var(--m-font-weight-regular); padding-block-end: var(--m-space-2)">Your funds</h2>
-            ${budget('Software', '$20K', 34)}
-            ${budget('Client travel', '$995.39', 88)}
-            ${budget('Office and supplies', '$682.92', 61)}
-            <a href="#" style="padding-block-start: var(--m-space-3); color: var(--m-color-fg-default)">View all (8)</a>
+            <h2 id="bs-budgets" style="font-size: var(--m-font-size-sm); ${muted}; font-weight: var(--m-font-weight-regular); padding-block-end: var(--m-space-2)">Team budgets</h2>
+            ${budget('Design tools', '$6,400', 46)}
+            ${budget('Team offsites', '$2,180.50', 72)}
+            ${budget('Hardware', '$940.00', 81)}
+            <a href="#" style="padding-block-start: var(--m-space-3); color: var(--m-color-fg-default)">All budgets (11)</a>
           </section>
         </aside>
         <div class="m-stack" data-gap="8">
-          <h1 style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-heading-weight); letter-spacing: var(--m-font-tracking-tight)">Good morning, Maya</h1>
-          <section class="m-grid" aria-label="Overview" style="--m-layout-grid-min: 16rem; --m-layout-grid-gap: 0; ${panelBorder.replace('default', 'muted')}; background: var(--m-color-bg-surface)">
-            ${insight('Current card balance', '$306K', balanceBar, 'border-inline-end: var(--m-border-width-thin) solid var(--m-color-border-muted)')}
-            ${insight('Cash balance', '$488K', cashChart)}
+          <h1 style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-heading-weight); letter-spacing: var(--m-font-tracking-tight)">Hello, Maya</h1>
+          <section class="m-grid" aria-label="Summary" style="--m-layout-grid-min: 16rem; --m-layout-grid-gap: 0; ${panelBorder.replace('default', 'muted')}; background: var(--m-color-bg-surface)">
+            ${insight('Card spend this month', '$84.2K', balanceBar, 'border-inline-end: var(--m-border-width-thin) solid var(--m-color-border-muted)')}
+            ${insight('Operating cash', '$1.31M', cashChart)}
             <div class="m-cluster" data-gap="6" data-align="end" style="grid-column: 1 / -1; ${hair}; flex-wrap: nowrap">
-              ${insight('Total spend, 90 days', '$1.2M', `<span class="m-cluster" data-gap="1" style="font-size: var(--m-font-size-sm); color: var(--m-color-info-fg)">${icon(I.up, 14)} <a href="#" style="color: inherit; text-decoration-style: dotted">212.4%</a></span>`, 'flex: none')}
+              ${insight('Card spend, 12 weeks', '$236K', `<span class="m-cluster" data-gap="1" style="font-size: var(--m-font-size-sm); color: var(--m-color-info-fg)">${icon(I.up, 14)} <a href="#" style="color: inherit; text-decoration-style: dotted">18.6%</a></span>`, 'flex: none')}
               <div style="flex: 1; min-inline-size: 0; padding: var(--m-space-4) var(--m-space-5) var(--m-space-4) 0">${spendChart}</div>
             </div>
           </section>
           <div class="m-tabs">
             <div class="m-tab-list" role="tablist" aria-label="Tasks">
-              <button type="button" class="m-tab" role="tab" aria-selected="true">All</button>
-              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">My expenses ${count('20')}</button>
+              <button type="button" class="m-tab" role="tab" aria-selected="true">Everything</button>
+              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Assigned to me ${count('7')}</button>
             </div>
           </div>
-          <section class="m-stack" data-gap="3" aria-labelledby="bs-approval">
+          <section class="m-stack" data-gap="3" aria-labelledby="bs-waiting">
             <div class="m-cluster" data-justify="between">
-              <h2 id="bs-approval" class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-regular)">${icon(L['chevron-down'])} Requires your approval</h2>
-              <a href="#" class="m-cluster" data-gap="2" style="color: var(--m-color-fg-default)">View all ${count('38')}</a>
+              <h2 id="bs-waiting" class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-regular)">${icon(L['chevron-down'])} Waiting on you</h2>
+              <a href="#" class="m-cluster" data-gap="2" style="color: var(--m-color-fg-default)">See all ${count('23')}</a>
             </div>
-            ${task(I.bill, '8 bills', '$642,530.35 total · Harbor Freightways, Lumen Print and 6 others')}
-            ${task(I.history, '4 reimbursements', '$2,686.55 total · <span style="color: var(--m-color-warning-fg)">Review recommended</span>', `<span class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><span class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="More" style="${pill}">${icon(L['ellipsis-vertical'])}</span><span class="m-button">Review</span></span>`)}
-            ${task(I.dollar, '6 card transactions', '$3,138.60 total · Priya, Jonah and Elena · <span style="color: var(--m-color-warning-fg)">Review recommended</span>')}
-            ${task(I.dollar, '17 card transactions', '$7,726.36 total · Jonah, Elena and Priya · <span style="color: var(--m-color-success-fg)">Approval recommended</span>')}
+            ${task(I.bill, '5 invoices due this week', '$48,920.10 · Coastline Paper, Brightway Freight and 3 more')}
+            ${task(I.history, '3 expense claims', '$1,214.40 · <span style="color: var(--m-color-warning-fg)">One is over the meal limit</span>', `<span class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><span class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="More" style="${pill}">${icon(L['ellipsis-vertical'])}</span><span class="m-button">Review</span></span>`)}
+            ${task(I.card, '9 card charges without receipts', '$2,077.18 · Theo, Ana and Sam · <span style="color: var(--m-color-warning-fg)">Receipts requested twice</span>')}
+            ${task(I.card, '12 card charges', '$4,503.92 · Ana, Sam and Theo · <span style="color: var(--m-color-success-fg)">All within policy</span>')}
           </section>
         </div>
       </div>`,
@@ -260,7 +270,7 @@ const two = (a: string, b: string) =>
 const tag = (tone: string, ic: string, label: string) =>
   `<span class="m-badge" data-tone="${tone}">${icon(ic, 12)} ${label}</span>`;
 const approve = (who: string) =>
-  `<button type="button" class="m-button" data-icon-only aria-label="Mark ${who} ready" style="color: var(--m-color-success-fg); border-color: var(--m-color-success-border)">${icon(I.check)}</button>`;
+  `<button type="button" class="m-button" data-icon-only aria-label="Approve coding for ${who}" style="color: var(--m-color-success-fg); border-color: var(--m-color-success-border)">${icon(I.check)}</button>`;
 const tx = (
   initials: string,
   merchant: string,
@@ -281,68 +291,69 @@ const tx = (
                 <td><button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="More for ${merchant}" style="${pill}">${icon(L['ellipsis-vertical'])}</button></td>
               </tr>`;
 
-const ready = tag('success', I.bill, 'Mark ready');
-const reviewCat = tag('warning', L['triangle-alert'], 'Review category');
-const reviewFields = tag('warning', L['triangle-alert'], 'Review fields');
-const outOfPolicy = tag('danger', L['octagon-alert'], 'Out of policy');
+const ready = tag('success', L['circle-check'], 'Ready to sync');
+const reviewCat = tag('warning', L['triangle-alert'], 'Check GL code');
+const reviewFields = tag('warning', L['triangle-alert'], 'Add a memo');
+const outOfPolicy = tag('danger', L['octagon-alert'], 'Over limit');
 
 // A row of details: an icon and a label on the left, the value on the right; no rules between
 const detailRow = (ic: string, label: string, value: string) =>
   `<div class="m-split" style="--m-layout-split-side: 14rem; --m-layout-split-gap: var(--m-space-4); padding-block: var(--m-space-3)"><dt class="m-cluster" data-gap="3">${icon(ic)} ${label}</dt><dd>${value}</dd></div>`;
 
 const listDetail = shell(
-  'accounting',
+  'books',
   `      <div class="m-stack" data-gap="12">
         <!-- The list: eyebrow, big title, actions, underline tabs with counts, a toolbar strip, the table -->
         <section class="m-stack" data-gap="0" aria-labelledby="bs-tx-title">
-          <span style="${eyebrow}">Accounting</span>
+          <span style="${eyebrow}">Month-end close</span>
           <div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-2) var(--m-space-6)">
-            <h1 id="bs-tx-title" style="${pageTitle}">Card transactions</h1>
+            <h1 id="bs-tx-title" style="${pageTitle}">Card spend</h1>
             <div class="m-cluster" data-gap="2">
               <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="More actions" style="${pill}">${icon(L['ellipsis-vertical'])}</button>
-              <button type="button" class="m-button">Settings</button>
-              <button type="button" class="m-button" data-variant="primary">Export all ${ringCount('53')}</button>
+              <button type="button" class="m-button">Coding rules</button>
+              <button type="button" class="m-button" data-variant="primary">Sync to ledger ${ringCount('41')}</button>
             </div>
           </div>
           <div class="m-tabs">
-            <div class="m-tab-list" role="tablist" aria-label="Review state">
-              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">All ${count('204')}</button>
-              <button type="button" class="m-tab" role="tab" aria-selected="true">Needs review ${ringCount('151')}</button>
-              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Ready to export ${count('53')}</button>
-              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Waiting on cardholder ${count('28')}</button>
+            <div class="m-tab-list" role="tablist" aria-label="Coding state">
+              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Everything ${count('318')}</button>
+              <button type="button" class="m-tab" role="tab" aria-selected="true">To code ${ringCount('96')}</button>
+              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Ready to sync ${count('41')}</button>
+              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Missing receipt ${count('17')}</button>
+              <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Synced ${count('164')}</button>
             </div>
           </div>
           <div class="m-cluster" data-justify="between" role="search" style="padding: var(--m-space-2) 0; background: var(--m-color-bg-canvas)">
             <div class="m-cluster" data-gap="2">
-              <input class="m-input" data-size="sm" type="search" placeholder="Search or filter…" aria-label="Search or filter" style="${pill}; inline-size: 14rem">
+              <input class="m-input" data-size="sm" type="search" placeholder="Find a charge…" aria-label="Find a charge" style="${pill}; inline-size: 14rem">
               ${roundIcon(L.calendar, 'Date range')}
               <span class="m-cluster" data-gap="1" style="padding: var(--m-space-1); ${pill}; background: var(--m-color-bg-sunken); font-size: var(--m-font-size-xs)">
-                <span class="m-cluster" data-gap="1" style="padding-inline: var(--m-space-2); ${muted}">${icon(I.lock, 12)} Status</span>
-                <span style="padding: var(--m-space-1) var(--m-space-3); ${pill}; background: var(--m-color-bg-surface)">Needs review</span>
+                <span class="m-cluster" data-gap="1" style="padding-inline: var(--m-space-2); ${muted}">${icon(I.lock, 12)} Coding</span>
+                <span style="padding: var(--m-space-1) var(--m-space-3); ${pill}; background: var(--m-color-bg-surface)">To code</span>
               </span>
             </div>
             <div class="m-cluster" data-gap="2">
               ${roundIcon(I.rows, 'Row density')}
               ${roundIcon(I.columns, 'Columns')}
-              <button type="button" class="m-button" data-size="sm" style="${pill}">Options ${icon(L['chevron-down'])}</button>
+              <button type="button" class="m-button" data-size="sm" style="${pill}">View ${icon(L['chevron-down'])}</button>
             </div>
           </div>
           <div class="m-table-wrap" style="border-inline: 0">
             <table class="m-table">
-              <thead><tr><th style="inline-size: 2.5rem"><input class="m-checkbox" type="checkbox" aria-label="Select all"></th><th>Merchant</th><th>Suggested action</th><th>Date</th><th data-numeric>Amount</th><th>Cardholder</th><th>Actions</th><th><span class="m-sr-only">More</span></th></tr></thead>
+              <thead><tr><th style="inline-size: 2.5rem"><input class="m-checkbox" type="checkbox" aria-label="Select all"></th><th>Merchant</th><th>Coding</th><th>Posted</th><th data-numeric>Amount</th><th>Spender</th><th>Approve</th><th><span class="m-sr-only">More</span></th></tr></thead>
               <tbody>
-${tx('NB', 'Noble Bakehouse', 'Restaurants', ready, 'Jun 5, 2026', '$276.76 USD', 'Priya Raman', 'Customer success · London')}
-${tx('KC', 'Kiln Coffee', 'Restaurants', reviewCat, 'Jun 5, 2026', '$352.87 USD', 'Jonah Feld', 'Executive · New York')}
-${tx('FG', 'Figtree Design', 'Software', ready, 'Jun 5, 2026', '$8.00 USD', 'Jonah Feld', 'Executive · New York')}
-${tx('CR', 'City Rideshare', 'Taxi and rideshare', reviewFields, 'Jun 5, 2026', '$78.00 USD', 'Elena Ortiz', 'Finance · Seattle')}
-${tx('CM', 'Corner Market', 'Groceries', outOfPolicy, 'Jun 4, 2026', '$24.99 USD', 'Elena Ortiz', 'Finance · Seattle')}
-${tx('BT', 'Bayside Tours', 'Other', reviewCat, 'Jun 4, 2026', '$1,578.89 USD', 'Elena Ortiz', 'Finance · Seattle')}
+${tx('HN', 'Harbor Noodle Co.', 'Meals', ready, 'Oct 28, 2026', '$64.20 USD', 'Ana Duarte', 'Design · Portland')}
+${tx('PS', 'Paperline Supply', 'Office supplies', reviewCat, 'Oct 28, 2026', '$219.45 USD', 'Sam Whitlock', 'Operations · Denver')}
+${tx('CN', 'Cloudnote', 'Software', ready, 'Oct 27, 2026', '$36.00 USD', 'Theo Marsh', 'Engineering · Remote')}
+${tx('MT', 'Metro Transit', 'Local transport', reviewFields, 'Oct 27, 2026', '$12.75 USD', 'Ana Duarte', 'Design · Portland')}
+${tx('NO', 'Night Owl Market', 'Groceries', outOfPolicy, 'Oct 26, 2026', '$148.30 USD', 'Theo Marsh', 'Engineering · Remote')}
+${tx('SR', 'Seaside Rentals', 'Lodging', reviewCat, 'Oct 25, 2026', '$912.60 USD', 'Sam Whitlock', 'Operations · Denver')}
               </tbody>
             </table>
           </div>
           <div class="m-cluster" data-justify="between" style="padding: var(--m-space-3) var(--m-space-3); ${hair}; background: var(--m-color-bg-canvas); ${small}; ${muted}">
-            <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="${small}; ${muted}; text-decoration: underline">Select ${icon(L['chevron-down'], 12)}</button>
-            <span class="m-cluster" data-gap="2" style="${num}">1–50 of 151 transactions · ${icon(L.info, 12)} $141,781.68 USD ${icon(L['arrow-right'])}</span>
+            <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="${small}; ${muted}; text-decoration: underline">Bulk actions ${icon(L['chevron-down'], 12)}</button>
+            <span class="m-cluster" data-gap="2" style="${num}">Rows 1–25 of 96 · ${icon(L.info, 12)} $18,406.77 left to code ${icon(L['arrow-right'])}</span>
           </div>
         </section>
 
@@ -350,36 +361,36 @@ ${tx('BT', 'Bayside Tours', 'Other', reviewCat, 'Jun 4, 2026', '$1,578.89 USD', 
 
         <!-- The detail: a statement title, linked people, a notice, then label-and-value rows and the decision -->
         <section class="m-stack" data-gap="8" aria-labelledby="bs-detail-title" style="max-inline-size: 48rem">
-          <a href="#" class="m-cluster" data-gap="2" style="color: var(--m-color-fg-default)">${icon(L['arrow-left'])} Inbox</a>
+          <a href="#" class="m-cluster" data-gap="2" style="color: var(--m-color-fg-default)">${icon(L['arrow-left'])} Card spend</a>
           <div class="m-stack" data-gap="3">
-            <span class="m-avatar" data-size="lg" style="background: var(--m-color-bg-sunken); color: var(--m-color-fg-default)">${icon(I.plane, 20)}</span>
-            <h1 id="bs-detail-title" style="${pageTitle}; ${num}">$1,048.25 USD at Skyline Air</h1>
+            <span class="m-avatar" data-size="lg" style="background: var(--m-color-bg-sunken); color: var(--m-color-fg-default)">${icon(I.card, 20)}</span>
+            <h1 id="bs-detail-title" style="${pageTitle}; ${num}">$612.40 USD at Coastal Rail</h1>
             <div class="m-cluster" data-justify="between">
-              <span class="m-cluster" data-gap="2" style="${muted}"><a href="#" style="color: inherit">Priya Raman</a> · <a href="#" style="color: inherit">Skyline Air</a> · Mar 23, 2026 at 4:07 PM</span>
-              <a href="#" class="m-cluster" data-gap="1" style="color: var(--m-color-fg-default)">Options ${icon(L['chevron-down'])}</a>
+              <span class="m-cluster" data-gap="2" style="${muted}"><a href="#" style="color: inherit">Sam Whitlock</a> · <a href="#" style="color: inherit">Coastal Rail</a> · Oct 27, 2026, 8:15 AM</span>
+              <a href="#" class="m-cluster" data-gap="1" style="color: var(--m-color-fg-default)">More ${icon(L['chevron-down'])}</a>
             </div>
           </div>
           <div class="m-alert" data-tone="danger" role="note" style="background: var(--m-color-bg-surface)">
             <div class="m-alert-content">
-              <div class="m-alert-title" style="font-weight: var(--m-font-weight-bold); font-size: var(--m-font-size-md)">Rejection recommended</div>
+              <div class="m-alert-title" style="font-weight: var(--m-font-weight-bold); font-size: var(--m-font-size-md)">Over the trip limit</div>
               <ul class="m-alert-body" style="color: var(--m-color-fg-default); padding-inline-start: var(--m-space-5)">
-                <li>Business class upgrades aren’t allowed for this role</li>
-                <li>Never allowed: first-class fares, seat auctions, lounge memberships</li>
+                <li>Rail trips over $500 need sign-off from a team lead</li>
+                <li>Operations’ travel budget has $310.00 left this quarter</li>
               </ul>
             </div>
           </div>
           <section class="m-stack" data-gap="2" aria-labelledby="bs-details">
-            <h2 id="bs-details" class="m-cluster" data-gap="3" style="${sectionTitle}">Details <span class="m-badge" data-tone="success">Complete</span></h2>
+            <h2 id="bs-details" class="m-cluster" data-gap="3" style="${sectionTitle}">Coding <span class="m-badge" data-tone="warning">Memo missing</span></h2>
             <dl class="m-stack" data-gap="0">
-              ${detailRow(I.card, 'Spent from', 'Client travel (3912)')}
+              ${detailRow(I.card, 'Card', 'Operations travel ··7731')}
               ${detailRow(I.building, 'Entity', 'Tidewater Studio, Inc.')}
-              ${detailRow(L['square-pen'], 'Memo', 'Flight back to New York')}
-              ${detailRow(I.bill, 'Receipt', `<span class="m-cluster" data-gap="1" style="color: var(--m-color-success-fg)">${icon(L['circle-check'], 14)} Auto-verified</span>`)}
-              ${detailRow(I.dollar, 'Budget', '<a href="#" style="color: inherit">65100 · Travel, airfare and lodging</a> <span class="m-badge">Tracking</span>')}
+              ${detailRow(L['square-pen'], 'Memo', '<a href="#" style="color: inherit">Add a memo</a>')}
+              ${detailRow(I.bill, 'Receipt', `<span class="m-cluster" data-gap="1" style="color: var(--m-color-success-fg)">${icon(L['circle-check'], 14)} Matched from email</span>`)}
+              ${detailRow(I.dollar, 'GL account', '<a href="#" style="color: inherit">6420 · Ground transport</a> <span class="m-badge">Budgeted</span>')}
             </dl>
           </section>
           <div class="m-grid" style="--m-layout-grid-min: 14rem; --m-layout-grid-gap: var(--m-space-4); ${hair}; padding-block-start: var(--m-space-4)">
-            <button type="button" class="m-button" data-size="lg" style="color: var(--m-color-danger-fg); border-color: var(--m-color-danger-border)">Reject ${icon(L['chevron-down'])}</button>
+            <button type="button" class="m-button" data-size="lg" style="color: var(--m-color-danger-fg); border-color: var(--m-color-danger-border)">Decline ${icon(L['chevron-down'])}</button>
             <button type="button" class="m-button" data-size="lg" style="color: var(--m-color-success-fg); border-color: var(--m-color-success-border)">Approve <kbd class="m-kbd" style="color: inherit; border-color: currentColor">⌘</kbd><kbd class="m-kbd" style="color: inherit; border-color: currentColor">↵</kbd></button>
           </div>
         </section>
@@ -402,7 +413,7 @@ const onboarding = `<div class="m-stack" data-gap="0" style="min-block-size: 100
       </div>
       <div class="m-alert" data-tone="info" role="note">
         <span class="m-alert-icon">${icon(I.sparkle)}</span>
-        <div class="m-alert-content"><div class="m-alert-title">Upload your formation documents to fill this in</div><div class="m-alert-body">We’ll read the legal name, address and EIN from your certificate of incorporation.</div></div>
+        <div class="m-alert-content"><div class="m-alert-title">Have your certificate of incorporation handy?</div><div class="m-alert-body">Drop it here and the next three fields fill themselves in.</div></div>
       </div>
       <section class="m-stack" data-gap="4" aria-labelledby="bs-onb-legal">
         <h2 id="bs-onb-legal" style="${sectionTitle}">Legal details</h2>
@@ -435,10 +446,10 @@ const onboarding = `<div class="m-stack" data-gap="0" style="min-block-size: 100
         <label class="m-field" data-layout="inline"><input class="m-checkbox" type="checkbox" checked> We have more than one entity</label>
       </section>
       <div class="m-cluster" data-justify="between" style="${hair}; padding-block-start: var(--m-space-6)">
-        <button type="button" class="m-button" data-variant="ghost" style="text-decoration: underline">Cancel</button>
+        <button type="button" class="m-button" data-variant="ghost" style="text-decoration: underline">Exit setup</button>
         <div class="m-cluster" data-gap="2">
-          <button type="button" class="m-button">Save draft</button>
-          <button type="submit" class="m-button" data-variant="primary">Continue</button>
+          <button type="button" class="m-button">Finish later</button>
+          <button type="submit" class="m-button" data-variant="primary">Next: owners</button>
         </div>
       </div>
     </form>
@@ -467,10 +478,10 @@ const panel = (rows: string) =>
           </div>`;
 
 const settings = shell(
-  'company',
+  'settings',
   `      <div class="m-stack" data-gap="10" style="max-inline-size: 56rem">
         <div class="m-stack" data-gap="0">
-          <span style="${eyebrow}">Company</span>
+          <span style="${eyebrow}">Workspace</span>
           <h1 style="${pageTitle}; padding-block: var(--m-space-2) var(--m-space-6)">Settings</h1>
           <div class="m-tabs">
             <div class="m-tab-list" role="tablist" aria-label="Settings">
@@ -518,29 +529,29 @@ const settings = shell(
 );
 
 const emptyState = shell(
-  'vendors',
+  'payables',
   `      <div class="m-stack" data-gap="0">
-        <span style="${eyebrow}">Vendors</span>
+        <span style="${eyebrow}">Payables</span>
         <div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-2) var(--m-space-6)">
-          <h1 style="${pageTitle}">Contracts</h1>
-          <button type="button" class="m-button" data-variant="primary">${icon(L.plus)} Add contract</button>
+          <h1 style="${pageTitle}">Payment runs</h1>
+          <button type="button" class="m-button" data-variant="primary">${icon(L.plus)} New payment run</button>
         </div>
         <div class="m-tabs">
-          <div class="m-tab-list" role="tablist" aria-label="Contracts">
-            <button type="button" class="m-tab" role="tab" aria-selected="true">Active ${ringCount('0')}</button>
-            <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Renewing soon ${count('0')}</button>
-            <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Expired ${count('0')}</button>
+          <div class="m-tab-list" role="tablist" aria-label="Payment runs">
+            <button type="button" class="m-tab" role="tab" aria-selected="true">Scheduled ${ringCount('0')}</button>
+            <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Sent ${count('0')}</button>
+            <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Returned ${count('0')}</button>
           </div>
         </div>
         <section class="m-stack" data-gap="4" data-align="center" aria-labelledby="bs-empty" style="text-align: center; padding: var(--m-space-16) var(--m-space-6); margin-block-start: var(--m-space-6); ${panelBorder.replace('default', 'muted')}; background: var(--m-color-bg-canvas)">
-          <span class="m-avatar" data-size="lg" style="background: var(--m-color-bg-sunken); color: var(--m-color-fg-default)">${icon(I.bill, 20)}</span>
-          <h2 id="bs-empty" style="${sectionTitle}">No contracts yet</h2>
-          <p style="${muted}; max-inline-size: 28rem">Upload a vendor contract and we’ll read the terms, track the renewal date and flag price increases before you pay them.</p>
+          <span class="m-avatar" data-size="lg" style="background: var(--m-color-bg-sunken); color: var(--m-color-fg-default)">${icon(L.send, 20)}</span>
+          <h2 id="bs-empty" style="${sectionTitle}">No payment runs yet</h2>
+          <p style="${muted}; max-inline-size: 28rem">Group approved invoices into one run, pick a send date, and each payee is paid by the method they prefer.</p>
           <div class="m-cluster" data-gap="2" data-justify="center">
-            <button type="button" class="m-button" data-variant="primary">${icon(L.upload)} Upload a contract</button>
-            <button type="button" class="m-button">Import from a spreadsheet</button>
+            <button type="button" class="m-button" data-variant="primary">${icon(L.plus)} Start a run</button>
+            <button type="button" class="m-button">Import invoices</button>
           </div>
-          <a href="#" class="m-cluster" data-gap="1" style="font-size: var(--m-font-size-sm); color: var(--m-color-fg-default)">How contract tracking works ${icon(L['arrow-right'], 14)}</a>
+          <a href="#" class="m-cluster" data-gap="1" style="font-size: var(--m-font-size-sm); color: var(--m-color-fg-default)">How payment runs work ${icon(L['arrow-right'], 14)}</a>
         </section>
       </div>`,
   true,
@@ -588,66 +599,66 @@ const pricing = `<div style="background: var(--m-color-bg-surface)">
 <header class="m-navbar">
   <a class="m-navbar-brand" href="#">Ledgerline</a>
   <nav class="m-navbar-nav" aria-label="Main">
-    <a class="m-navbar-link" href="#">Products ${icon(L['chevron-down'], 14)}</a>
-    <a class="m-navbar-link" href="#">Solutions ${icon(L['chevron-down'], 14)}</a>
+    <a class="m-navbar-link" href="#">Product ${icon(L['chevron-down'], 14)}</a>
+    <a class="m-navbar-link" href="#">Teams ${icon(L['chevron-down'], 14)}</a>
     <a class="m-navbar-link" href="#">Customers</a>
     <a class="m-navbar-link" href="#" aria-current="page">Pricing</a>
   </nav>
   <div class="m-navbar-actions">
-    <a class="m-button" data-variant="ghost" href="#">Sign in</a>
-    <a class="m-button" data-variant="primary" href="#">See a demo</a>
-    <a class="m-button" href="#" style="background: var(--m-color-bg-inverse); border-color: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">Get started</a>
+    <a class="m-button" data-variant="ghost" href="#">Log in</a>
+    <a class="m-button" data-variant="primary" href="#">Book a walkthrough</a>
+    <a class="m-button" href="#" style="background: var(--m-color-bg-inverse); border-color: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">Create an account</a>
   </div>
 </header>
 <main class="m-container" style="padding-block: var(--m-space-16)">
   <div class="m-stack" data-gap="16">
     <div class="m-stack" data-gap="4" data-align="center" style="text-align: center">
-      <h1 style="font-family: var(--m-font-family-display); font-size: clamp(var(--m-font-size-3xl), 6vw, 4rem); font-weight: var(--m-font-heading-weight); letter-spacing: var(--m-font-tracking-tight); line-height: 1">Start free.<br>Grow without switching.</h1>
-      <p style="font-size: var(--m-font-size-xl); ${muted}; max-inline-size: 34rem">Whether you have five people or five thousand, the plan scales with your team and never charges for cards.</p>
+      <h1 style="font-family: var(--m-font-family-display); font-size: clamp(var(--m-font-size-3xl), 6vw, 4rem); font-weight: var(--m-font-heading-weight); letter-spacing: var(--m-font-tracking-tight); line-height: 1">One price per seat.<br>Every card included.</h1>
+      <p style="font-size: var(--m-font-size-xl); ${muted}; max-inline-size: 34rem">Pay for the people who approve and code spend. Cardholders, receipts and payees cost nothing.</p>
     </div>
     <div class="m-grid" style="--m-layout-grid-min: 18rem; --m-layout-grid-gap: var(--m-space-6); align-items: start">
 ${tier(
-  'Essentials',
+  'To begin',
   'background: var(--m-color-bg-sunken)',
-  'Free',
-  '$0/mo per user',
-  '',
-  'For small teams that want to stop chasing receipts.',
-  '<button type="button" class="m-button" style="inline-size: 100%; background: var(--m-color-bg-sunken); border-color: var(--m-color-bg-sunken)">Get started for free</button>',
+  'Starter',
+  '$0 a month',
+  'Up to 3 approvers',
+  'For founders who want cards and receipts handled from day one.',
+  '<button type="button" class="m-button" style="inline-size: 100%; background: var(--m-color-bg-sunken); border-color: var(--m-color-bg-sunken)">Create an account</button>',
   [
-    ['Cards', ['Unlimited virtual and physical cards', 'Limits by merchant and category']],
-    ['Expenses', ['Receipts by text or email', 'Automatic receipt matching']],
-    ['Bill pay', ['Pay by ACH, card or check', 'Invoice reading']],
+    ['Cards', ['Virtual and plastic cards for everyone', 'Per-card limits and merchant locks']],
+    ['Receipts', ['Snap, forward or text a receipt', 'Matched to the charge automatically']],
+    ['Payables', ['Pay invoices by bank transfer or check']],
   ],
 )}
 ${tier(
-  'Most teams',
+  'Most chosen',
   'background: var(--m-button-primary-bg); color: var(--m-button-primary-fg)',
-  'Plus',
-  '$12/mo per user',
-  '+ a platform fee by team size<br>Save 20% with yearly billing',
-  'For teams that want approvals and books to run themselves.',
-  '<button type="button" class="m-button" data-variant="primary" style="inline-size: 100%">Get started for free</button>',
+  'Growth',
+  '$10 a seat a month',
+  'Plus $50 a month base<br>Two months free when paid yearly',
+  'For finance teams closing the books every month.',
+  '<button type="button" class="m-button" data-variant="primary" style="inline-size: 100%">Start a 30-day trial</button>',
   [
     [
-      'Everything in Free, plus',
-      ['Multi-step approvals', 'Purchase orders and three-way match', 'Accounting sync with custom fields'],
+      'Starter, and also',
+      ['Approval chains by amount and team', 'Purchase requests with budgets', 'Ledger sync with custom fields'],
     ],
-    ['Controls', ['Custom roles', 'Audit log', 'Entity-level permissions']],
+    ['Control', ['Roles you define', 'A full change history', 'Per-entity access']],
   ],
   true,
 )}
 ${tier(
-  'Large companies',
+  'For groups',
   'background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)',
-  'Enterprise',
-  'Custom',
-  'Billed yearly',
-  'For companies with many entities, currencies and systems.',
-  '<button type="button" class="m-button" style="inline-size: 100%; background: var(--m-color-bg-inverse); border-color: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">Contact sales</button>',
+  'Scale',
+  'Let’s talk',
+  'Yearly agreement',
+  'For groups with several entities, currencies and ledgers.',
+  '<button type="button" class="m-button" style="inline-size: 100%; background: var(--m-color-bg-inverse); border-color: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">Talk to us</button>',
   [
-    ['Everything in Plus, plus', ['Local cards in 30+ countries', 'ERP integrations', 'A dedicated account team']],
-    ['Support', ['Implementation plan', 'Priority support, any time']],
+    ['Growth, and also', ['Cards in local currencies', 'Consolidated reporting', 'A named onboarding lead']],
+    ['Support', ['A rollout plan for each entity', 'Phone support, weekdays']],
   ],
 )}
     </div>
@@ -655,13 +666,13 @@ ${tier(
       <h2 id="bs-compare" style="font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-regular); letter-spacing: var(--m-font-tracking-tight); line-height: 1.1">Compare plans</h2>
       <div class="m-table-wrap" style="border: 0">
         <table class="m-table" style="font-size: var(--m-font-size-md)">
-          <thead><tr><th style="font-size: var(--m-font-size-xl); color: var(--m-color-fg-default)">Cards</th><th style="font-size: var(--m-font-size-xl); color: var(--m-color-fg-default)">Free</th><th style="font-size: var(--m-font-size-xl); color: var(--m-color-fg-default)">Plus</th><th style="font-size: var(--m-font-size-xl); color: var(--m-color-fg-default)">Enterprise</th></tr></thead>
+          <thead><tr><th style="font-size: var(--m-font-size-xl); color: var(--m-color-fg-default)">Spending</th><th style="font-size: var(--m-font-size-xl); color: var(--m-color-fg-default)">Starter</th><th style="font-size: var(--m-font-size-xl); color: var(--m-color-fg-default)">Growth</th><th style="font-size: var(--m-font-size-xl); color: var(--m-color-fg-default)">Scale</th></tr></thead>
           <tbody>
-            ${compareRow('Corporate charge card', true, true, true)}
-            ${compareRow('Unlimited virtual cards', true, true, true)}
-            ${compareRow('Merchant and category limits', true, true, true)}
-            ${compareRow('Purchase orders', false, true, true)}
-            ${compareRow('Local cards abroad', false, false, true)}
+            ${compareRow('Cards for every employee', true, true, true)}
+            ${compareRow('Receipt capture by text', true, true, true)}
+            ${compareRow('Limits by team', true, true, true)}
+            ${compareRow('Purchase requests', false, true, true)}
+            ${compareRow('Cards in local currencies', false, false, true)}
           </tbody>
         </table>
       </div>
@@ -669,8 +680,8 @@ ${tier(
     <section class="m-stack" data-gap="4" aria-labelledby="bs-faq" style="max-inline-size: 48rem">
       <h2 id="bs-faq" style="font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-regular); letter-spacing: var(--m-font-tracking-tight); line-height: 1.1">Questions</h2>
       <div class="m-accordion" data-variant="separated">
-        <details class="m-accordion-item" name="bs-faq" open><summary>Is it really free?</summary><div class="m-accordion-content">Yes. The Free plan has no monthly fee, no minimums and no card fees. We earn from the card network when you spend.</div></details>
-        <details class="m-accordion-item" name="bs-faq"><summary>How is the platform fee set?</summary><div class="m-accordion-content">By the number of people who use the product each month, shown before you upgrade.</div></details>
+        <details class="m-accordion-item" name="bs-faq" open><summary>Who counts as a seat?</summary><div class="m-accordion-content">Anyone who approves, codes or pays spend. People who only hold a card or submit receipts are free.</div></details>
+        <details class="m-accordion-item" name="bs-faq"><summary>What happens after the trial?</summary><div class="m-accordion-content">You choose a plan, or the account moves to Starter. Nothing is deleted.</div></details>
         <details class="m-accordion-item" name="bs-faq"><summary>Can we switch plans later?</summary><div class="m-accordion-content">Any time. Upgrades apply at once; downgrades at the end of the billing period.</div></details>
       </div>
     </section>
@@ -697,8 +708,8 @@ const errors = `<main class="m-container" data-size="md" style="padding-block: v
   <div class="m-stack" data-gap="12">
     <section class="m-stack" data-gap="6" aria-labelledby="bs-err-form">
       <div class="m-stack" data-gap="1">
-        <span style="${eyebrow}">Bill pay</span>
-        <h1 id="bs-err-form" style="${pageTitle}">New bill</h1>
+        <span style="${eyebrow}">Invoices</span>
+        <h1 id="bs-err-form" style="${pageTitle}">New invoice</h1>
       </div>
       <div class="m-alert" data-tone="danger" role="alert" style="background: var(--m-color-bg-surface)">
         <span class="m-alert-icon">${icon(L['octagon-alert'])}</span>
@@ -715,19 +726,19 @@ const errors = `<main class="m-container" data-size="md" style="padding-block: v
         <p class="m-field-error" id="bs-err-due-e">February has 28 days in 2026. Pick a date on or before Feb 28.</p>
       </div>
       <div class="m-cluster" data-justify="between" style="${hair}; padding-block-start: var(--m-space-6)">
-        <button type="button" class="m-button" data-variant="ghost" style="text-decoration: underline">Cancel</button>
-        <div class="m-cluster" data-gap="2"><button type="button" class="m-button">Save draft</button><button type="submit" class="m-button" data-variant="primary">Schedule payment</button></div>
+        <button type="button" class="m-button" data-variant="ghost" style="text-decoration: underline">Discard</button>
+        <div class="m-cluster" data-gap="2"><button type="button" class="m-button">Keep as draft</button><button type="submit" class="m-button" data-variant="primary">Schedule payment</button></div>
       </div>
     </section>
     <section class="m-stack" data-gap="3" aria-label="Notices and toasts">
-      <table class="m-table" style="border: 0"><tbody><tr><td style="background: var(--m-color-danger-bg); color: var(--m-color-danger-fg)"><span class="m-cluster" data-gap="2">${icon(I.corner)} This bill may be a duplicate of <a href="#" style="color: inherit">INV 2041</a>. Make sure you’re not paying twice.</span></td></tr></tbody></table>
+      <table class="m-table" style="border: 0"><tbody><tr><td style="background: var(--m-color-danger-bg); color: var(--m-color-danger-fg)"><span class="m-cluster" data-gap="2">${icon(I.corner)} <a href="#" style="color: inherit">INV 2041</a> from the same payee for the same amount arrived 3 days ago. Check it before scheduling this one.</span></td></tr></tbody></table>
       <div class="m-toast-region" data-static>
-        <div class="m-toast" data-tone="danger" role="alert" style="border-color: var(--m-color-danger-border); background: var(--m-color-danger-bg)"><div class="m-toast-content"><div class="m-toast-title" style="color: var(--m-color-danger-fg)">Payment to Harbor Freightways failed</div><div class="m-toast-body" style="color: var(--m-color-fg-default)">Their bank returned $4,310.00. Nothing else was sent.</div></div><button type="button" class="m-button" data-size="sm">View</button></div>
+        <div class="m-toast" data-tone="danger" role="alert" style="border-color: var(--m-color-danger-border); background: var(--m-color-danger-bg)"><div class="m-toast-content"><div class="m-toast-title" style="color: var(--m-color-danger-fg)">Payment to Brightway Freight bounced</div><div class="m-toast-body" style="color: var(--m-color-fg-default)">Their bank sent back $4,310.00 as an unknown account. The rest of the run went out.</div></div><button type="button" class="m-button" data-size="sm">View</button></div>
       </div>
     </section>
 ${errorPage('404', L.search, 'We can’t find that page', 'The link may be old, or the page has moved.', `<a class="m-button" data-variant="primary" href="#">Go home</a>`)}
 ${errorPage('500', L['triangle-alert'], 'Something went wrong on our side', 'Nothing was changed. Try again in a moment; if it keeps happening, contact support.', `<button type="button" class="m-button" data-variant="primary">Try again</button><button type="button" class="m-button">Contact support</button>`)}
-${errorPage('403', I.lock, 'You don’t have access to this', 'Only admins at Tidewater Studio can see bank accounts. Ask one for access.', `<button type="button" class="m-button" data-variant="primary">Request access</button><a class="m-button" href="#">Go back</a>`)}
+${errorPage('403', I.lock, 'You don’t have access to this', 'Only admins at Tidewater Studio can see bank connections. Ask one to add you.', `<button type="button" class="m-button" data-variant="primary">Request access</button><a class="m-button" href="#">Go back</a>`)}
   </div>
 </main>`;
 
@@ -778,7 +789,7 @@ export const basaltRecipes: ArchetypeRecipe[] = [
     name: 'errors',
     title: 'Errors',
     description:
-      'Field errors under the field, a notice above the form that says nothing was scheduled, an inline duplicate warning, a toast, and full pages for 404, 500 and no access.',
+      'Field errors under the field, a notice above the form that says nothing was scheduled, an inline possible-duplicate warning, a toast, and full pages for 404, 500 and no access.',
     html: errors,
   },
 ];

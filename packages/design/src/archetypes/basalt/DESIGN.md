@@ -18,8 +18,8 @@ The tokens are in the `basalt` preset of `@mariachi/design` (`data-theme="basalt
 
 - **Square and drawn, not floated.** Buttons, inputs, panels, tables and dialogs have square corners
   and a 1px warm hairline. Nothing rests on a shadow; only menus, toasts and dialogs lift.
-- **One lime button.** The electric lime fills the single next action on a screen ("Issue card",
-  "Export all", "Continue"). Everything else is ink, warm grey and white. Pale lime marks counts
+- **One lime button.** The electric lime fills the single next action on a screen ("New card",
+  "Sync to ledger", "Next: owners"). Everything else is ink, warm grey and white. Pale lime marks counts
   that want attention.
 - **Green means done or allowed.** Checked boxes, switches that are on, progress and "Approve" are
   green. Warnings are ochre, problems are orange-red, suggestions are denim blue.
@@ -81,7 +81,9 @@ in the reference at the end.
 
 ## Type
 
-- **Family.** Geist (variable) for everything, Geist Mono for codes and key caps. It's a tight
+- **Family.** Geist for everything, Geist Mono for codes and key caps, self-hosted from
+  `@fontsource-variable/geist` and `@fontsource-variable/geist-mono` (families "Geist Variable" and
+  "Geist Mono Variable"; the 460 and 480 weights need the variable fonts). It's a tight
   neo-grotesque with the same width and flat terminals as the reference face.
 - **Weights.** Body at 400 (the reference's light cut reads as a regular); buttons, tabs and nav at
   480; headings at 460; 700 only for the title of a problem notice.
@@ -93,8 +95,8 @@ in the reference at the end.
   - marketing headings 56px, regular weight, very tight.
 - **Tracking.** −0.02em on everything 20px and up (−0.8px at 40px, −1.12px at 56px). Normal below.
 - **Case.** Sentence case everywhere. No uppercase in the product.
-- **Figures.** Tabular figures, at one size, with the currency code after: `$1,578.89 USD`. Summaries
-  round to `$405K` and `$1.9M` with an arrow that links to the detail.
+- **Figures.** Tabular figures, at one size, with the currency code after: `$912.60 USD`. Summaries
+  round to `$84.2K` and `$1.31M` with an arrow that links to the detail.
 
 ## Icons
 
@@ -102,7 +104,7 @@ in the reference at the end.
   navigation, buttons, rows and toolbars; 12px inside tags and footers; 20px in round icon tiles for
   tasks, empty states and errors. Never filled.
 - Every nav item has an icon; icon tiles are 40px circles on the warm fill.
-- Status tags lead with a 12px icon (`triangle-alert` for review, `octagon-alert` for out of policy).
+- Status tags lead with a 12px icon (`triangle-alert` for review, `octagon-alert` for over a limit).
 - **The same icon for the same action, every time:**
   - add `plus`, edit `square-pen`, delete `trash`;
   - settings `settings`, search `search`, filter `sliders-horizontal`;
@@ -160,13 +162,13 @@ Sections are 32–40px apart.
   full-page flows and the home action column.
   - **Primary:** solid lime, ink text, no border. One per view.
   - **Secondary** (the default): white, ink text, a 1px `#d2cecb` hairline.
-  - **Ghost:** text only; "Cancel" is a ghost button with an underline.
+  - **Ghost:** text only; "Discard" and "Exit setup" are ghost buttons with an underline.
   - **Danger:** solid orange-red with white text, only to confirm something destructive. A
-    reversible decision ("Reject") is a secondary button with an orange-red border and text;
+    reversible decision ("Decline") is a secondary button with an orange-red border and text;
     "Approve" is the same in green.
-  - **Icon-only:** square in rows ("Mark ready" as an outlined green check); a round pill in toolbars
+  - **Icon-only:** square in rows ("Approve coding" as an outlined green check); a round pill in toolbars
     and bars ("More", "Close").
-  - A count inside a button sits in an ink ring: "Export all (53)".
+  - A count inside a button sits in an ink ring: "Sync to ledger (41)".
 - **Input, textarea.** Square, white, a 1px control border, 40px, or 56px in forms. Focus turns the
   border ink and adds the ink ring. Search fields in toolbars are pills; the global search is a
   4px-rounded warm field with ⌘ K key caps.
@@ -180,24 +182,24 @@ Sections are 32–40px apart.
 
 **Navigation**
 - **Sidebar.** 216px on `#f4f2f0` with an `#e9e5e2` edge.
-  - Top: the company mark and name, then a "Setup guide" callout with a thin green progress bar.
+  - Top: the company mark and name, then a "Getting started" callout with a thin green progress bar.
   - Items are 32px, 14px, muted, with a 16px icon; hover fills `#e9e5e2` at 4px radius.
   - The open group is a rounded (8px) `#e9e5e2` block: its title in ink, its items indented, the
     current one on the lighter `#f4f2f0`.
   - Counts are pale-lime pills, right-aligned. Groups are separated by full-width hairlines; the
-    assistant sits alone at the bottom.
+    team and settings sit together at the bottom. Sections can carry a plain 12px muted heading.
 - **Navbar** (public pages). White, 62px, a hairline under it, ink links at 14px, and two square
-  actions at the right: lime "See a demo" style and an ink "Get started".
+  actions at the right: lime "Book a walkthrough" and an ink "Create an account".
 - **Top bar** (in the app). A hairline under it; a wide warm search field with key caps, then round
   ghost icon buttons (notifications, create, help) and the pink avatar.
 - **Tabs.**
   - **Underline:** 48px tall with 16px side padding (the line spans it), 8px apart; muted text, the current tab ink over a 2px
     ink line, on a hairline. Each tab can carry a count pill; the current tab's count is an ink ring.
   - **Pill** (segmented): a square warm track with a white square segment for the current option.
-- **Breadcrumb.** In the app, a muted 16px eyebrow above the title ("Accounting") replaces
+- **Breadcrumb.** In the app, a muted 16px eyebrow above the title ("Month-end close") replaces
   breadcrumbs; full-page flows use "← Back". Elsewhere, muted links with "/" and the current page in
   ink.
-- **Pagination.** "1–50 of 151 transactions" in a footer strip with the total and a next arrow;
+- **Pagination.** "Rows 1–25 of 96" in a footer strip with the total and a next arrow;
   numbered pages, where needed, are square with the current one in ink.
 
 **Data and content**
@@ -215,9 +217,9 @@ Sections are 32–40px apart.
   regular, not headings. Read-only values stack as a muted 12px label over a 16px value, rows divided
   by hairlines.
 - **Badge.** 22px, 12px, regular, 4px radius, no border:
-  - neutral `#e9e5e2` with ink ("Tracking");
-  - green tint ("Mark ready", "Complete"), ochre tint ("Review category"), orange-red tint ("Out of
-    policy"), each with a 12px icon;
+  - neutral `#e9e5e2` with ink ("Budgeted");
+  - green tint ("Ready to sync"), ochre tint ("Check GL code", "Memo missing"), orange-red tint
+    ("Over limit"), each with a 12px icon;
   - counts as pills: pale lime when they want attention, warm grey otherwise.
 - **Avatar.** Round, dusty pink with ink initials for people; 24px in rows, 32px in bars, 40px for
   tiles. Companies and merchants get a round warm tile with initials or a category icon.
@@ -231,7 +233,7 @@ Sections are 32–40px apart.
 - **Progress.** A 4px square bar: green on `#e9e5e2`. The setup guide and spend limits use it; spend
   limits draw it in denim.
 - **Meter.** The same bar; it turns ochre, then orange-red, past its marks.
-- **Usage.** A label and the amount left ("$995.39 left") over a 4px bar.
+- **Usage.** A label and the amount left ("$2,180.50 left") over a 4px bar.
 
 **Feedback and overlays**
 - **Alert** (notice).
@@ -244,7 +246,7 @@ Sections are 32–40px apart.
   - One action ("View", "Undo"). Success toasts close after 5s; problems stay until dismissed.
 - **Dialog.**
   - White, square, no border, the long lower-right shadow over a 40% ink scrim, 32px padding.
-  - The title is 20px; actions on the right: the lime primary last, Cancel as an underlined ghost.
+  - The title is 20px; actions on the right: the lime primary last, Discard as an underlined ghost.
   - A destructive confirm restates the effect in figures and uses the danger button.
 - **Popover and menu.**
   - White, square, the menu shadow with its warm ring, 4px inner padding.
@@ -268,8 +270,8 @@ Sections are 32–40px apart.
   with a 16px icon, the tool name in mono and a 4px status tag.
 - **Citation.** A small warm 4px chip with a number; the source opens in a popover.
 - **Usage**, as above.
-- Suggestions from the assistant are denim notices ("Approval recommended" is green text, "Review
-  recommended" ochre, "Rejection recommended" an orange-red notice).
+- Suggestions from the assistant are denim notices; a reason is coloured by its tone ("All within
+  policy" green, "Receipts requested twice" ochre, "Over the trip limit" an orange-red notice).
 
 ## Error handling
 
@@ -279,8 +281,8 @@ Sections are 32–40px apart.
   done ("2 fields need fixing. Nothing was scheduled."). Focus moves to it; each field shows its own
   message.
 - **In a list:** a full-width row on the problem tint under the row it's about, led by a corner
-  arrow ("This bill may be a duplicate of INV 2041").
-- **Somewhere else:** a toast with what happened and one action ("Payment to Harbor Freightways
+  arrow ("INV 2041 from the same payee for the same amount arrived 3 days ago").
+- **Somewhere else:** a toast with what happened and one action ("Payment to Brightway Freight
   failed · View").
 - **A whole page:** centred.
   - A 40px round warm tile with a 20px icon, "Error 404" in small mono, a 28px title, one sentence
@@ -295,22 +297,22 @@ Sections are 32–40px apart.
 ## Page shapes (recipes)
 
 - **Dashboard.**
-  - "Good morning, Maya" at 28px on the off-white canvas.
-  - One hairline panel of balances that share their borders: card balance with a segment bar, cash
-    with a filled area, 90-day spend with a denim area and a dotted percentage.
-  - Underline tabs ("All", "My expenses 20"), then "Requires your approval" with stacked task rows:
-    a round icon tile, a 16px title, a muted line with the recommendation in its tone, an arrow or
+  - "Hello, Maya" at 28px on the off-white canvas.
+  - One hairline panel of balances that share their borders: card spend with a segment bar, cash
+    with a filled area, 12-week spend with a denim area and a dotted percentage.
+  - Underline tabs ("Everything", "Assigned to me 7"), then "Waiting on you" with stacked task rows:
+    a round icon tile, a 16px title, a muted line with the reason in its tone, an arrow or
     a Review button.
-  - On the right: a full-width lime "Issue card", a "New" menu button, and spend limits with thin
+  - On the right: a full-width lime "New card", a "Create" menu button, and team budgets with thin
     bars.
 - **List and detail.**
-  - The eyebrow and a 40px title, with "more", Settings and the lime Export on the right.
+  - The eyebrow and a 40px title, with "more", Coding rules and the lime Sync to ledger on the right.
   - Underline tabs with counts, the toolbar strip, the two-line table and the footer strip.
-  - A row opens a statement page: "$1,048.25 USD at Skyline Air" at 40px, linked people, a
-    recommendation notice, "Details" with icon-labelled rows, and Reject and Approve side by side.
+  - A row opens a statement page: "$612.40 USD at Coastal Rail" at 40px, linked people, a
+    policy notice, "Coding" with icon-labelled rows, and Decline and Approve side by side.
 - **Onboarding.** A full-page flow: the bar with the step and a round close button, a thin green
-  progress line, "← Back", a 56px title, an info notice, square 56px fields, and Cancel, Save draft
-  and a lime Continue along the bottom.
+  progress line, "← Back", a 56px title, an info notice, square 56px fields, and Exit setup, Finish
+  later and a lime "Next: owners" along the bottom.
 - **Settings.** The eyebrow, a 40px "Settings" and underline tabs; square panels of labelled values
   with Edit buttons (verified values show a lock instead); a panel of switches; closing the account
   last with the danger button.
@@ -327,10 +329,9 @@ Sections are 32–40px apart.
 
 ## Words
 
-- Short and direct, sentence case: "Issue card", "Mark ready", "Export all", "Requires your
-  approval".
-- Recommendations say what to do: "Review recommended", "Approval recommended".
-- Figures exact with the currency code; dates short ("Jun 5, 2026").
+- Short and direct, sentence case: "New card", "Ready to sync", "Sync to ledger", "Waiting on you".
+- A flag says why in plain words: "Over limit", "Memo missing", "Receipts requested twice".
+- Figures exact with the currency code; dates short ("Oct 28, 2026").
 
 ## Do and don't
 
