@@ -188,19 +188,38 @@ const dashboard = shell(
           ${action(I.card, 'Card')}
           ${action(I.more, 'Options')}
         </div>
+        <!-- The web app's account cards, under accent underline tabs -->
+        <div class="m-tabs"><div class="m-tab-list" role="tablist" aria-label="Overview">
+          <button type="button" class="m-tab" role="tab" aria-selected="true">Balances</button>
+          <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Activity</button>
+        </div></div>
+        <div class="m-grid" style="--m-layout-grid-min: 14rem">
+          <section class="m-card" aria-label="US dollar" style="padding: var(--m-space-6)">
+            <div class="m-cluster" data-justify="between" data-align="start" style="flex-wrap: nowrap"><span class="m-stack" data-gap="0"><span style="${t.title}">US dollar</span><span style="${t.second}">USD</span></span>${disc('<span style="font-weight: var(--m-font-weight-bold)">$</span>', '2.5rem', 'accent')}</div>
+            <span style="margin-block-start: var(--m-space-6); font-family: var(--m-font-family-display); font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold); ${t.num}">${money('$9,214', '30')}</span>
+          </section>
+          <section class="m-card" aria-label="Euro" style="padding: var(--m-space-6)">
+            <div class="m-cluster" data-justify="between" data-align="start" style="flex-wrap: nowrap"><span class="m-stack" data-gap="0"><span style="${t.title}">Euro</span><span style="${t.second}">EUR</span></span>${disc('<span style="font-weight: var(--m-font-weight-bold)">€</span>', '2.5rem', 'success')}</div>
+            <span style="margin-block-start: var(--m-space-6); font-family: var(--m-font-family-display); font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold); ${t.num}">${money('€1,806', '12')}</span>
+          </section>
+          <section class="m-card" aria-label="Mexican peso" style="padding: var(--m-space-6)">
+            <div class="m-cluster" data-justify="between" data-align="start" style="flex-wrap: nowrap"><span class="m-stack" data-gap="0"><span style="${t.title}">Mexican peso</span><span style="${t.second}">MXN</span></span>${disc('<span style="font-weight: var(--m-font-weight-bold)">$</span>', '2.5rem', 'neutral')}</div>
+            <span style="margin-block-start: var(--m-space-6); font-family: var(--m-font-family-display); font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold); ${t.num}">${money('MX$2,940', '00')}</span>
+          </section>
+        </div>
         <div class="m-grid" style="--m-layout-grid-min: 20rem">
           <section class="m-card" aria-labelledby="ox-recent" style="padding: var(--m-space-4) 0 var(--m-space-2)">
             <div class="m-card-body m-stack" data-gap="2">
               <h2 id="ox-recent" style="${t.sub}; padding-inline: var(--m-space-4)">Recent</h2>
               ${list([
-                row(disc(icon(I.coffee)), 'Harbor Roasters', 'Today, 08:42', `<span style="${t.num}">−$6.40</span>`),
+                row(disc(icon(I.coffee), '2.5rem', 'danger'), 'Harbor Roasters', 'Today, 08:42', `<span style="${t.num}">−$6.40</span>`),
                 row(
                   `<span class="m-avatar">JL</span>`,
                   'From Jonah Lee',
                   'Yesterday, 19:05 · Dinner',
                   `<span style="${t.num}; ${t.gain}">+$38.00</span>`,
                 ),
-                row(disc(icon(I.train)), 'Metro Transit', 'Yesterday, 07:58', `<span style="${t.num}">−$2.90</span>`),
+                row(disc(icon(I.train), '2.5rem', 'accent'), 'Metro Transit', 'Yesterday, 07:58', `<span style="${t.num}">−$2.90</span>`),
                 row(
                   disc(icon(I.zap), '2.5rem', 'accent'),
                   'Power bill',
@@ -249,6 +268,11 @@ const listDetail = shell(
           <h1 style="${t.page}">Transactions</h1>
           <button type="button" class="m-button" data-size="sm">${icon(I.file, 16)} Statements</button>
         </div>
+        <label style="position: relative; display: block">
+          <span class="m-sr-only">Search transactions</span>
+          <span style="position: absolute; inset-inline-start: var(--m-space-4); inset-block-start: 50%; translate: 0 -50%; color: var(--m-color-fg-subtle); display: inline-flex">${icon(I.search, 20)}</span>
+          <input class="m-input" type="search" placeholder="Search transactions" style="background: var(--m-color-bg-surface); border-radius: var(--m-radius-md); padding-inline-start: var(--m-space-12)">
+        </label>
         <div class="m-cluster" data-gap="2" role="search">
           <select class="m-select" data-size="sm" aria-label="Account" style="border-radius: 9999px"><option>All accounts</option><option>Personal</option><option>Shared</option></select>
           <select class="m-select" data-size="sm" aria-label="Category" style="border-radius: 9999px"><option>Category</option></select>
@@ -260,15 +284,15 @@ const listDetail = shell(
             <div class="m-cluster" data-justify="between" style="padding-inline: var(--m-space-1)"><h2 style="${t.sub}">Today</h2><span style="${t.sub}; ${t.num}">−$70.60</span></div>
             <section class="m-card" aria-label="Today" style="padding: var(--m-space-2) 0">
               ${list([
-                tx(disc(icon(I.cart)), 'Fernwood Market', '12:14 · Groceries', '−$64.20', false, true),
-                tx(disc(icon(I.coffee)), 'Harbor Roasters', '08:42 · Card ··4021', '−$6.40'),
+                tx(disc(icon(I.cart), '2.5rem', 'success'), 'Fernwood Market', '12:14 · Groceries', '−$64.20', false, true),
+                tx(disc(icon(I.coffee), '2.5rem', 'danger'), 'Harbor Roasters', '08:42 · Card ··4021', '−$6.40'),
               ])}
             </section>
             <div class="m-cluster" data-justify="between" style="padding-inline: var(--m-space-1)"><h2 style="${t.sub}">Monday, Nov 9</h2><span style="${t.sub}; ${t.num}">+$1,815.10</span></div>
             <section class="m-card" aria-label="Monday, Nov 9" style="padding: var(--m-space-2) 0">
               ${list([
                 tx('<span class="m-avatar">JL</span>', 'From Jonah Lee', '19:05 · Dinner', '+$38.00', true),
-                tx(disc(icon(I.train)), 'Metro Transit', '07:58 · Card ··4021', '−$2.90'),
+                tx(disc(icon(I.train), '2.5rem', 'accent'), 'Metro Transit', '07:58 · Card ··4021', '−$2.90'),
                 tx(disc(icon(I.file), '2.5rem', 'success'), 'Pinecrest Labs', '06:00 · Salary', '+$1,780.00', true),
               ])}
             </section>
@@ -353,8 +377,15 @@ const onboarding = `<main class="m-container" data-size="sm" style="padding-bloc
 </main>`;
 
 // A settings row: an icon, the label (and a grey line), then the value, a chevron or a switch
-const setting = (ic: string, label: string, second: string, end: string, href = true) => {
-  const inner = `<span class="m-cluster" data-gap="4" style="flex-wrap: nowrap; min-inline-size: 0"><span style="display: inline-flex; flex: none">${icon(ic, 22)}</span><span class="m-stack" data-gap="0"><span style="${t.title}">${label}</span>${second ? `<span style="${t.second}">${second}</span>` : ''}</span></span><span class="m-cluster" data-gap="2" style="flex-wrap: nowrap; color: var(--m-color-fg-subtle)">${end}</span>`;
+const setting = (
+  ic: string,
+  label: string,
+  second: string,
+  end: string,
+  href = true,
+  tone: 'neutral' | 'accent' | 'danger' | 'success' = 'neutral',
+) => {
+  const inner = `<span class="m-cluster" data-gap="4" style="flex-wrap: nowrap; min-inline-size: 0">${disc(icon(ic, 20), '2.5rem', tone)}<span class="m-stack" data-gap="0"><span style="${t.title}">${label}</span>${second ? `<span style="${t.second}">${second}</span>` : ''}</span></span><span class="m-cluster" data-gap="2" style="flex-wrap: nowrap; color: var(--m-color-fg-subtle)">${end}</span>`;
   return href
     ? `<li><a href="#" class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding: var(--m-space-3) var(--m-space-4); color: var(--m-color-fg-default); text-decoration: none">${inner}</a></li>`
     : `<li><label class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding: var(--m-space-3) var(--m-space-4)">${inner}</label></li>`;
@@ -386,19 +417,19 @@ const settings = shell(
           ${action(I.help, 'Get help')}
         </div>
 ${group('Account', [
-  setting(I.user, 'Personal details', 'Name, address, email', chev),
-  setting(I.globe, 'Plan', 'Signature · renews Dec 3', chev),
+  setting(I.user, 'Personal details', 'Name, address, email', chev, true, 'accent'),
+  setting(I.globe, 'Plan', 'Signature · renews Dec 3', chev, true, 'success'),
   setting(I.file, 'Documents and statements', '', chev),
 ])}
 ${group('Security', [
-  setting(I.key, 'Passcode', 'Changed 4 months ago', chev),
-  setting(I.scan, 'Sign in with your face', 'Instead of the passcode', sw('Sign in with your face', true), false),
-  setting(I.pin, 'Location-based security', 'Blocks card payments far from your phone', sw('Location-based security', false), false),
+  setting(I.key, 'Passcode', 'Changed 4 months ago', chev, true, 'accent'),
+  setting(I.scan, 'Sign in with your face', 'Instead of the passcode', sw('Sign in with your face', true), false, 'success'),
+  setting(I.pin, 'Location-based security', 'Blocks card payments far from your phone', sw('Location-based security', false), false, 'danger'),
   setting(I.phone, 'Devices', '', `<span style="${t.num}">2</span> ${chev}`),
 ])}
 ${group('Notifications', [
-  setting(I.bell, 'Payment alerts', 'Every card payment, as it happens', sw('Payment alerts', true), false),
-  setting(I.calendar, 'Weekly summary', 'Sundays at 6 pm', sw('Weekly summary', true), false),
+  setting(I.bell, 'Payment alerts', 'Every card payment, as it happens', sw('Payment alerts', true), false, 'accent'),
+  setting(I.calendar, 'Weekly summary', 'Sundays at 6 pm', sw('Weekly summary', true), false, 'success'),
 ])}
         <section class="m-stack" data-gap="2" aria-label="Close account">
           <div class="m-card"><div class="m-card-body m-cluster" data-justify="between" data-gap="4">

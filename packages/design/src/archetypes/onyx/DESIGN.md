@@ -60,8 +60,8 @@ The tokens are in the `onyx` preset of `@mariachi/design` (`data-theme="onyx"`, 
 - **Layout.**
   - A 248px side menu on the grouped grey, no edge line.
   - A round search field across the top.
-  - Content to 72rem (1152px), 48rem for settings, 25rem (400px) for forms; gutter
-    `clamp(1rem, 3vw, 2rem)`.
+  - Content to 58rem (928px) for the dashboard and lists, 32rem (512px) for settings and other
+    single lists, 25rem (400px) for forms; gutter `clamp(1rem, 3vw, 2rem)`.
   - Detail opens in a 25rem side panel beside the list.
 - **Density.** 1 by default; set `--m-density: 0.85` on dense data screens.
 
@@ -91,8 +91,9 @@ are in the reference at the end.
 - Lucide, outlined, **2px stroke** (the reference's own icons are filled glyphs of about that
   weight). 20px in navigation, buttons and rows; 16–18px inside small pills; 28–32px inside big round
   icons.
-- **Round icons.** A row's icon sits in a 40px circle on the grey fill (on the action background for
-  actions); a status screen's in a 72px circle.
+- **Round icons.** A row's icon sits in a 40px circle tinted by kind (the grey fill, the action
+  background, or a status tint, with the icon in the matching colour); a status screen's in a 72px
+  circle.
 - Every nav item carries an icon; list rows lead with a round icon or an initials avatar.
 - **The same icon for the same action, every time:**
   - add `plus`, edit `pencil`, delete `trash-2`;
@@ -135,7 +136,7 @@ are in the reference at the end.
 All 36 of the library's components, as Onyx draws them. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
-- `m-container`, the content column: 72rem, 48rem for settings, 25rem for forms;
+- `m-container`, the content column: 58rem, 32rem for settings, 25rem for forms;
 - `m-split`, the 248px side menu beside the content;
 - `m-grid`, for widgets: 16px gaps, 20rem columns;
 - `m-stack` and `m-cluster`, for everything inside.
@@ -174,7 +175,8 @@ Groups of widgets are 24px apart.
 - **Tabs.**
   - **Pill** (the usual one, the segmented control): a grey round track, the current segment a
     white round pill in ink, the rest in grey at 500.
-  - **Underline:** grey labels, the current one in ink over a 2px ink line.
+  - **Underline** (the web app's): grey 16px labels at 500, the current one in the action colour
+    over a 2px line of it, on a hairline across the column.
 - **Breadcrumb.** Grey links with "›", the current page in ink. In the app a back arrow is preferred.
 - **Pagination.** Round 40px numbers in ink, the current one an ink circle with white. In lists,
   prefer "View all" and loading more.
@@ -250,17 +252,21 @@ Groups of widgets are 24px apart.
   - A hero panel: the action colour fading to the brand black, the account's name small, the balance
     at 56px with half-size cents, and an "All balances" pill.
   - Four round actions with labels: Top up, Transfer, Card, Options.
+  - Underline tabs, then a row of balance cards: the currency's name and code, a round symbol
+    on the right, and the amount bold with small cents.
   - White widgets: recent rows with "View all", a spending bar chart, a savings goal with a progress
     bar and today's interest in teal.
 - **List and detail.**
-  - The title and a secondary pill; round filter selects in a row.
+  - The title and a secondary pill; a white search field across the column, then round filter
+    selects in a row.
   - Rows grouped by day, each day a white widget under a grey subheader with the day's total.
   - The selected row opens a 25rem side panel: a round icon, the amount large, round actions, then
     label-and-value rows and a red "Report a problem".
 - **Onboarding.** One 400px column: a back arrow beside a thin progress bar, a 32px bold heading,
   grey filled fields, and a 52px full-width primary pill.
-- **Settings.** A centred profile (76px avatar, name, handle, a plan tag), then grouped widgets of
-  rows with round icons, chevrons and switches; closing the account last, as a danger pill.
+- **Settings.** A 32rem column: a centred profile (76px avatar, name, handle, a plan tag), round
+  quick actions, then grouped widgets of rows with tinted round icons, chevrons and switches;
+  closing the account last, as a danger pill.
 - **Empty state.** A white widget: a round action-coloured icon, a short bold heading, one sentence, a
   primary and a secondary pill.
 - **Pricing.**

@@ -162,9 +162,10 @@ export const onyx = extendTheme(minimal, {
     },
   },
   components: {
-    // Popup widths 400 / 768 / 1152px set the columns; the side menu is 248px; widgets 16px apart
+    // The web app's columns: 58rem for accounts, 32rem for help and settings lists; forms take the
+    // 400px popup width. The side menu is 248px; widgets 16px apart
     layout: {
-      containerMax: { sm: '25rem', md: '48rem', lg: '72rem' },
+      containerMax: { sm: '25rem', md: '32rem', lg: '58rem' },
       containerPadding: 'clamp(1rem, 3vw, 2rem)',
       gridGap: 'var(--m-space-4)',
       splitSide: '15.5rem',
@@ -346,15 +347,17 @@ export const onyx = extendTheme(minimal, {
         activeBg: fill,
       },
     },
-    // Tabs: 14px at 500; the current one in ink. The segmented control is a grey round track with a
-    // white round segment; inactive labels take the darker grey to read on the track
+    // Tabs (the web app's): 16px at 500, grey, the current one in the action colour over a 2px line
+    // of it, on a hairline. The segmented control is a grey round track with a white round segment;
+    // inactive labels take the darker grey to read on the track
     tabs: {
-      fontSize: 'var(--m-font-size-sm)',
+      fontSize: 'var(--m-font-size-md)',
       fontWeight: 'var(--m-font-weight-medium)',
       fg: { light: '#636366', dark: '#a1a1a3' },
       hoverFg: 'var(--m-color-fg-default)',
-      activeFg: 'var(--m-color-fg-default)',
-      indicator: 'var(--m-color-fg-default)',
+      // In dark, a lighter step so it also reads on the segmented control's grey segment
+      activeFg: { light: '#4f55f1', dark: '#9da9ff' },
+      indicator: 'var(--m-color-accent-default)',
       indicatorWidth: '2px',
       listBorder: 'var(--m-color-border-default)',
       pill: {
@@ -362,7 +365,7 @@ export const onyx = extendTheme(minimal, {
         listRadius: '9999px',
         listPadding: '2px',
         radius: '9999px',
-        activeBg: { light: '#ffffff', dark: '#525254' },
+        activeBg: { light: '#ffffff', dark: '#3b3b3d' },
         activeShadow: '0 0.125rem 0.1875rem rgb(0 0 0 / 0.08)',
       },
     },
