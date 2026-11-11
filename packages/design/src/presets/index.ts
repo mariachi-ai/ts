@@ -10,6 +10,7 @@ import { fennel } from './fennel';
 import { minimal } from './minimal';
 import { soft } from './soft';
 import { terminal } from './terminal';
+import { zephyr } from './zephyr';
 
 /** Built-in presets, in display order. */
 export const presets = {
@@ -25,7 +26,8 @@ export const presets = {
   basalt,
   ember,
   cirrus,
+  zephyr,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, minimal, soft, terminal };
+export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, minimal, soft, terminal, zephyr };
