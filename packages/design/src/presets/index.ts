@@ -2,6 +2,7 @@ import type { Theme } from '../engine/theme';
 import { basalt } from './basalt';
 import { brutalist } from './brutalist';
 import { ember } from './ember';
+import { cirrus } from './cirrus';
 import { halcyon } from './halcyon';
 import { editorial } from './editorial';
 import { enterprise } from './enterprise';
@@ -23,7 +24,8 @@ export const presets = {
   fennel,
   basalt,
   ember,
+  cirrus,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, brutalist, editorial, ember, enterprise, fennel, halcyon, minimal, soft, terminal };
+export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, minimal, soft, terminal };
