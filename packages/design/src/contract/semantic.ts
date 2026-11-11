@@ -43,6 +43,13 @@ export const semantic = {
       fg: t.color('Text on the accent fill'),
       text: t.color('Accent-coloured text on the canvas (links)'),
     },
+    // A brand's signature colour when it isn't the action colour (a lime, a coral): hero bands, the
+    // logo mark, brand panels. Defaults to the accent, so a preset sets it only when it differs.
+    brand: {
+      default: t.color('Brand colour: hero bands, logo marks, brand panels (not actions or links)', ref('color.accent.default')),
+      fg: t.color('Text on the brand colour', ref('color.accent.fg')),
+      subtle: t.color('A pale tint of the brand (brand panels, highlights)', ref('color.accent.subtle')),
+    },
     success: status('success'),
     warning: status('warning'),
     danger: status('danger'),

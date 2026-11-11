@@ -21,6 +21,9 @@ export const semanticContrastPairs: ContrastPair[] = [
   ...text('color.accent.fg', ['color.accent.default', 'color.accent.hover', 'color.accent.active']),
   ...text('color.accent.text', ['color.bg.canvas', 'color.bg.surface', 'color.accent.subtle']),
   ...text('color.fg.default', ['color.accent.subtle']),
+  // The brand colour is never a control or text on the page, so it has no pair against the canvas.
+  ...text('color.brand.fg', ['color.brand.default']),
+  ...text('color.fg.default', ['color.brand.subtle']),
   ...statuses.flatMap((s) => [
     ...text(`color.${s}.fg`, [`color.${s}.bg`]),
     ...text(`color.${s}.onSolid`, [`color.${s}.solid`]),
