@@ -1,6 +1,6 @@
 # Halcyon
 
-Category: calm trust. Airy and exact: ink-violet text on white, one blue-violet accent, light type
+Category: calm fintech. Airy and exact: ink-violet text on white, one blue-violet accent, light type
 weights, pill-shaped actions, cards that float on a ring shadow, full-bleed hairline tables, and
 figures with small raised cents. For money and finance tools that should feel quiet and modern.
 

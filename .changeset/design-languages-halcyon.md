@@ -4,7 +4,7 @@
 
 Design languages: complete visual systems an app is built from, each faithful to one real product's
 visual system under an abstract name, browsed by category. The first is **Halcyon** (`halcyon`, in
-the *calm trust* category): light type on white, a blue-violet accent, pill actions, ring-shadowed
+the *calm fintech* category): light type on white, a blue-violet accent, pill actions, ring-shadowed
 cards, hairline tables and figures with small raised cents. It's a preset extended from `minimal`,
 passing every contrast pair in both modes. `archetypes` and `categories` (exported, and new sections
 in `catalog.json`) add what an app needs beyond the tokens: search tags and keywords, a discovery card

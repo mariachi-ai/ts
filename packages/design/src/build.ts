@@ -250,7 +250,7 @@ function catalogArchetype(a: Archetype): CatalogArchetype {
     designDoc: `archetypes/${a.id}/DESIGN.md`,
     keywords: [
       ...new Set(
-        [a.id, theme.label, a.category, categories[a.category].label, ...a.tags.feel, a.tags.density, a.tags.mode, ...a.tags.suits, ...a.tags.style].map((w) => w.toLowerCase()),
+        [a.id, theme.label, ...[a.category, ...(a.alsoIn ?? [])].flatMap((c) => [c, categories[c].label]), ...a.tags.feel, a.tags.density, a.tags.mode, ...a.tags.suits, ...a.tags.style].map((w) => w.toLowerCase()),
       ),
     ],
     recipes: a.recipes.map((r) => ({ ...r, file: `archetypes/${a.id}/recipes/${r.name}.html` })),

@@ -4,7 +4,7 @@ import { minimal } from './minimal';
 /**
  * Halcyon: a quiet, airy money interface. Ink-violet text on white, one blue-violet accent, light
  * type weights, pill-shaped actions, ring-shadowed cards, hairline rows and figures with small
- * raised cents. Category: calm trust. The values are measured, not invented (see DESIGN.md).
+ * raised cents. Category: calm fintech. The values are measured, not invented (see DESIGN.md).
  */
 export const halcyon = extendTheme(minimal, {
   name: 'halcyon',

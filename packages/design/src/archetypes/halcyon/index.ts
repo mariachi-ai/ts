@@ -3,7 +3,7 @@ import { halcyonRecipes } from './recipes';
 
 export const halcyonArchetype: Archetype = {
   id: 'halcyon',
-  category: 'calm-trust',
+  category: 'calm-fintech',
   tags: {
     feel: ['calm', 'quiet', 'precise', 'modern', 'trustworthy'],
     density: 'airy',

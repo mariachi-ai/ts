@@ -61,7 +61,7 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 
 | Language | Category | Character |
 | --- | --- | --- |
-| `halcyon` | Calm trust | Airy and exact: light type, one blue-violet accent, pill actions, figures with raised cents |
+| `halcyon` | Calm fintech | Airy and exact: light type, one blue-violet accent, pill actions, figures with raised cents |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all six recipes, recipe markup that uses only known classes and tokens (no colour literals),

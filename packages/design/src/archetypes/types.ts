@@ -4,9 +4,33 @@ export type RecipeName = (typeof recipeNames)[number];
 
 /** Categories for browsing the languages: each holds several, each with its own character. */
 export const categories = {
-  'calm-trust': {
-    label: 'Calm trust',
-    description: 'Money, health, insurance: anything where people need to feel safe',
+  'calm-fintech': { label: 'Calm fintech', description: 'Quiet, exact money tools: banking, spending, budgets' },
+  'bold-fast': {
+    label: 'Bold and fast',
+    description: 'High energy and high contrast: trading, fitness, payments on the go',
+  },
+  'warm-friendly': {
+    label: 'Warm and friendly',
+    description: 'Encouraging and human: learning, wellbeing, hosting, small business',
+  },
+  'calm-minimal': { label: 'Calm and minimal', description: 'Focus first: notes, tasks, journals, meditation' },
+  editorial: {
+    label: 'Editorial and warm-neutral',
+    description: 'Reading and writing first: docs, newsletters, knowledge tools',
+  },
+  'dark-sharp': {
+    label: 'Dark and sharp',
+    description: 'Dark-first, precise and keyboard-driven: developer and pro tools',
+  },
+  'content-first': {
+    label: 'Content-first and immersive',
+    description: 'The content is the hero: music, video, film, inspiration',
+  },
+  marketplace: { label: 'Marketplace and commerce', description: 'Listings, shops, bookings and delivery' },
+  social: { label: 'Social and messaging', description: 'People, conversations and communities' },
+  playful: {
+    label: 'Playful and quirky',
+    description: 'Characterful and surprising: creative tools and brands with a wink',
   },
 } as const;
 export type CategoryId = keyof typeof categories;
@@ -30,6 +54,8 @@ export interface Archetype {
   id: string;
   /** The category it's browsed under. */
   category: CategoryId;
+  /** Other categories it also appears in (one language can serve two). */
+  alsoIn?: CategoryId[];
   /** What New Project's design step searches, beside the name and category (lowercase words). */
   tags: {
     /** How it feels: calm, bold, warm, playful, quiet, precise… */
