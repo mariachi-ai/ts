@@ -191,6 +191,8 @@ describe('tailwind', () => {
     expect(tailwindName('color.bg.surface')).toBe('--color-surface');
     expect(tailwindName('color.fg.default')).toBe('--color-fg');
     expect(tailwindName('color.accent.subtle')).toBe('--color-accent-subtle');
+    expect(tailwindName('color.brand.default')).toBe('--color-brand');
+    expect(tailwindName('color.brand.fg')).toBe('--color-brand-fg');
     expect(tailwindName('color.danger.solid')).toBe('--color-danger');
     expect(tailwindName('color.danger.onSolid')).toBe('--color-on-danger');
     expect(tailwindName('font.size.2xl')).toBe('--text-2xl');
@@ -199,5 +201,18 @@ describe('tailwind', () => {
     const css = emitTailwindCss();
     expect(css).toContain('@theme inline {');
     expect(css).toContain('  --radius-control: var(--m-radius-control);');
+  });
+});
+
+describe('brand colour', () => {
+  it('defaults to the accent, so a preset sets it only when its brand differs', async () => {
+    const { minimal: m, resolveToken: r, extendTheme: x, checkTheme: c } = await import('../src/index');
+    expect(r(m, 'color.brand.default', 'light')).toBe(r(m, 'color.accent.default', 'light'));
+    expect(r(m, 'color.brand.fg', 'dark')).toBe(r(m, 'color.accent.fg', 'dark'));
+    // A lime brand with ink text passes; ink text is checked on the brand, not the brand on the page
+    const lime = x(m, { name: 'lime-brand', tokens: { color: { brand: { default: '#9fe870', fg: '#163300', subtle: { light: '#e2f6d5', dark: '#24371a' } } } } });
+    expect(c(lime).failures.map((f) => `${f.fg} on ${f.bg} (${f.mode})`)).toEqual([]);
+    const unreadable = x(m, { name: 'bad-brand', tokens: { color: { brand: { default: '#9fe870', fg: '#ffffff' } } } });
+    expect(c(unreadable).failures.some((f) => f.fg === 'color.brand.fg')).toBe(true);
   });
 });

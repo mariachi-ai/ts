@@ -406,7 +406,7 @@ ${(['info', 'success', 'warning', 'danger'] as const)
 }
 
 function foundations(a: Archetype, theme: Theme): string {
-  const groups = ['bg', 'fg', 'border', 'accent', 'success', 'warning', 'danger', 'info', 'selection'];
+  const groups = ['bg', 'fg', 'border', 'accent', 'brand', 'success', 'warning', 'danger', 'info', 'selection'];
   const colours = groups
     .map((g) => {
       const toks = tokenList.filter((t) => t.path.startsWith(`color.${g}.`));

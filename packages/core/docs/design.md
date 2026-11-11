@@ -175,6 +175,11 @@ override CSS or the config for you.
 - The CSS name is the token path in kebab case under `--m-` (`color.bg.surface` →
   `--m-color-bg-surface`; `components.button.paddingX.md` → `--m-button-padding-x-md`).
 - Colour values can be one value or `{ light, dark }`.
+- **Brand colour** (`color.brand.default`, `.fg`, `.subtle`; Tailwind `bg-brand`, `text-brand-fg`): a
+  brand's signature colour when it isn't the action colour, such as a lime or a coral, for hero
+  bands, logo marks and brand panels. It defaults to the accent, so a preset sets it only when its
+  brand differs. It's checked as text on the brand (`brand.fg`) and text on its tint, never against
+  the page, because it's not for controls or text.
 - `@mariachi/design/tokens/<preset>.json` is the preset in W3C Design Tokens (DTCG) format, for
   Figma (Tokens Studio) and other tools.
 - `@mariachi/design/tailwind.css` maps Tailwind v4's theme onto the tokens: `@import "tailwindcss";`,

@@ -8,7 +8,7 @@ export function tailwindName(path: string): string | undefined {
   const kebab = (s: string) => s.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
   if (group === 'color') {
     if (a === 'bg') return `--color-${b}`;
-    if (a === 'fg' || a === 'border' || a === 'accent') return b === 'default' ? `--color-${a}` : `--color-${a}-${kebab(b)}`;
+    if (a === 'fg' || a === 'border' || a === 'accent' || a === 'brand') return b === 'default' ? `--color-${a}` : `--color-${a}-${kebab(b)}`;
     if (STATUSES.has(a)) return { solid: `--color-${a}`, bg: `--color-${a}-subtle`, fg: `--color-${a}-fg`, border: `--color-${a}-border`, onSolid: `--color-on-${a}` }[b];
     return undefined;
   }
