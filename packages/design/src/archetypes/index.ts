@@ -1,4 +1,5 @@
 import { fennelArchetype } from './fennel';
+import { basaltArchetype } from './basalt';
 import { halcyonArchetype } from './halcyon';
 import type { Archetype } from './types';
 
@@ -8,7 +9,7 @@ import type { Archetype } from './types';
  * (in `presets`, same name) plus its discovery card, type, icons, charts, six layout recipes and a
  * `DESIGN.md`. Halcyon is the first; the rest follow a category at a time.
  */
-export const archetypes: Archetype[] = [halcyonArchetype, fennelArchetype];
+export const archetypes: Archetype[] = [halcyonArchetype, fennelArchetype, basaltArchetype];
 
 export { categories, iconActions, recipeNames } from './types';
 export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './types';

@@ -1,4 +1,5 @@
 import type { Theme } from '../engine/theme';
+import { basalt } from './basalt';
 import { brutalist } from './brutalist';
 import { halcyon } from './halcyon';
 import { editorial } from './editorial';
@@ -19,7 +20,8 @@ export const presets = {
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
   fennel,
+  basalt,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { brutalist, editorial, enterprise, fennel, halcyon, minimal, soft, terminal };
+export { basalt, brutalist, editorial, enterprise, fennel, halcyon, minimal, soft, terminal };
