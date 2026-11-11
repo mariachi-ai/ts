@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type Archetype, archetypes, categories } from './archetypes';
+import { designReference, galleryCss, galleryPage } from './archetypes/reference';
 import { componentList, contrastPairs, tokenList } from './contract';
 import type { ComponentExample } from './contract/component';
 import { componentExamples } from './components/examples';
@@ -161,6 +162,8 @@ export interface CatalogArchetype extends Omit<Archetype, 'swatches' | 'recipes'
   swatches: { path: string; light: string; dark: string }[];
   /** Package path of the agent-facing text, e.g. `archetypes/halcyon/DESIGN.md`. */
   designDoc: string;
+  /** Package path of the gallery page: foundations, icons, every component in every state. */
+  gallery: string;
   /** Every searchable word in one list: name, category, and all the tags, lowercase. */
   keywords: string[];
   recipes: (Archetype['recipes'][number] & { file: string })[];
@@ -248,6 +251,7 @@ function catalogArchetype(a: Archetype): CatalogArchetype {
     base: theme.extends,
     swatches: a.swatches.map(swatch),
     designDoc: `archetypes/${a.id}/DESIGN.md`,
+    gallery: `archetypes/${a.id}/gallery.html`,
     keywords: [
       ...new Set(
         [a.id, theme.label, ...[a.category, ...(a.alsoIn ?? [])].flatMap((c) => [c, categories[c].label]), ...a.tags.feel, a.tags.density, a.tags.mode, ...a.tags.suits, ...a.tags.style].map((w) => w.toLowerCase()),
@@ -315,8 +319,11 @@ export function packageAssets(root: string = packageRoot()): PackageAssets {
     files[`css/themes/${theme.name}.css`] = emitThemeCss(theme);
     files[`tokens/${theme.name}.json`] = `${JSON.stringify(emitDtcg(theme), null, 2)}\n`;
   }
+  if (archetypes.length > 0) files['archetypes/gallery.css'] = galleryCss(files['css/mariachi.css']);
   for (const a of archetypes) {
-    files[`archetypes/${a.id}/DESIGN.md`] = read(path.join(root, 'src', 'archetypes', a.id, 'DESIGN.md'));
+    const theme = archetypePreset(a);
+    files[`archetypes/${a.id}/DESIGN.md`] = read(path.join(root, 'src', 'archetypes', a.id, 'DESIGN.md')) + designReference(a, theme);
+    files[`archetypes/${a.id}/gallery.html`] = galleryPage(a, theme);
     for (const r of a.recipes) files[`archetypes/${a.id}/recipes/${r.name}.html`] = recipePage(a, r);
   }
   files['css/tailwind.css'] = emitTailwindCss();

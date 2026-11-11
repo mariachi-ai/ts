@@ -43,6 +43,6 @@ export { defineDesign, resolvePreset } from './design';
 export type { ComponentName, DesignConfig, ResolvedDesign } from './design';
 export { brutalist, editorial, enterprise, halcyon, minimal, presets, soft, terminal } from './presets';
 export type { PresetName } from './presets';
-export { archetypes, categories, recipeNames } from './archetypes';
-export type { Archetype, ArchetypeRecipe, CategoryId, RecipeName } from './archetypes';
+export { archetypes, categories, iconActions, recipeNames } from './archetypes';
+export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './archetypes';
 export { DesignError } from './errors';

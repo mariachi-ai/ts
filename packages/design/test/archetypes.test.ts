@@ -2,8 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { buildCatalog, packageAssets, packageRoot } from '../src/build';
-import { tokenList } from '../src/contract';
-import { type Theme, archetypes, checkTheme, presets, recipeNames } from '../src/index';
+import { componentList, tokenList } from '../src/contract';
+import { lucidePaths } from '../src/archetypes/lucide';
+import { type Theme, archetypes, checkTheme, iconActions, presets, recipeNames } from '../src/index';
 
 const assets = packageAssets().files;
 // Every class the package's CSS defines (the CSS files only, never the catalog, which holds the recipes)
@@ -40,20 +41,57 @@ describe.each(archetypes.map((a) => [a.id, a] as const))('archetype %s', (id, ar
     },
   );
 
-  it('has a DESIGN.md with the sections agents rely on', () => {
+  it('has a DESIGN.md with the sections agents rely on, every component specified, and the generated reference', () => {
     const doc = fs.readFileSync(path.join(packageRoot(), 'src', 'archetypes', id, 'DESIGN.md'), 'utf8');
     for (const h of [
       '## Principles',
-      '## Tokens',
+      '## Foundations',
       '## Type',
       '## Icons',
       '## Charts',
+      '## States',
       '## Components',
+      '## Error handling',
       '## Page shapes (recipes)',
       "## Do and don't",
     ])
       expect(doc).toContain(h);
-    expect(assets[`archetypes/${id}/DESIGN.md`]).toBe(doc);
+    const components = doc.slice(doc.indexOf('## Components'), doc.indexOf('## Error handling')).toLowerCase();
+    expect(componentList.map((c) => c.name).filter((n) => !components.includes(n.replace('-', ' ')))).toEqual([]);
+    const shipped = assets[`archetypes/${id}/DESIGN.md`];
+    expect(shipped.startsWith(doc)).toBe(true);
+    for (const h of [
+      '### Type scale',
+      '### Spacing scale',
+      '### Layout and density',
+      '### Radius, borders and shadows',
+      '### Motion',
+      '### Colour',
+      '### Icons for common actions',
+    ])
+      expect(shipped).toContain(h);
+  });
+
+  it('names a drawable icon for every common action', () => {
+    expect(iconActions.filter((k) => !lucidePaths[archetype.icons.actions[k]])).toEqual([]);
+  });
+
+  it('ships a gallery: foundations, icons, every state, the patterns and every component', () => {
+    const page = assets[`archetypes/${id}/gallery.html`];
+    expect(page).toContain(`data-theme="${id}"`);
+    expect(page).toContain('href="../gallery.css"');
+    for (const s of ['foundations', 'icons', 'states', 'patterns', 'components']) expect(page).toContain(`id="${s}"`);
+    for (const st of [
+      'data-g-hover',
+      'data-g-focus',
+      'data-g-active',
+      'disabled',
+      'aria-invalid="true"',
+      'aria-busy="true"',
+    ])
+      expect(page).toContain(st);
+    expect(componentList.map((c) => c.name).filter((n) => !page.includes(`id="c-${n}"`))).toEqual([]);
+    for (const code of ['404', '500', '403']) expect(page).toContain(code);
   });
 
   it('ships each recipe as a page on its own theme', () => {
@@ -95,5 +133,14 @@ describe('catalog archetypes', () => {
         expect(a.keywords).toContain(w);
       for (const w of a.keywords) expect(w).toBe(w.toLowerCase());
     }
+  });
+});
+
+describe('gallery stylesheet', () => {
+  it('is the package CSS with hover, focus and pressed also matching data attributes', () => {
+    const g = assets['archetypes/gallery.css'];
+    expect(g).toContain(':is(:hover, [data-g-hover])');
+    expect(g).toContain(':is(:focus-visible, [data-g-focus])');
+    expect(g).not.toMatch(/[^(]:hover\b(?!, \[data-g-hover\])/);
   });
 });

@@ -33,6 +33,8 @@ const I = {
   up: '<path d="M7 17 17 7"/><path d="M8 7h9v9"/>',
   downArrow: '<path d="M7 7l10 10"/><path d="M17 8v9H8"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
+  alert: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
   arrow: '<path d="M5 12h14"/><path d="m13 6 6 6-6 6"/>',
   chart: '<path d="M3 3v18h18"/><path d="m7 15 4-4 3 3 5-6"/>',
   table: '<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 10h18M9 4v16"/>',
@@ -453,6 +455,54 @@ ${tier('Essentials', 'Pro', '$299/mo.', 'For complex operations that need a rela
   </div>
 </main>`;
 
+// Errors: inline on the field, a summary above the form, a toast for what happened elsewhere, and
+// full pages for not found, failure and no access. Quiet: the icon and the words carry it, not colour.
+const errorPage = (
+  code: string,
+  ic: string,
+  title: string,
+  body: string,
+  actions: string,
+) => `  <section class="m-stack" data-gap="4" data-align="center" style="text-align: center; padding-block: var(--m-space-16); ${hair}" aria-labelledby="hc-err-${code}">
+    <span style="color: var(--m-color-fg-subtle)">${icon(ic, 40)}</span>
+    <span style="${label}; font-family: var(--m-font-family-mono)">${code}</span>
+    <h1 id="hc-err-${code}" style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-regular)">${title}</h1>
+    <p class="m-muted" style="max-inline-size: 28rem">${body}</p>
+    <div class="m-cluster" data-gap="2" data-justify="center">${actions}</div>
+  </section>`;
+
+const errors = `<main class="m-container" data-size="md" style="padding-block: var(--m-space-12)">
+  <div class="m-stack" data-gap="10">
+    <section class="m-stack" data-gap="5" aria-labelledby="hc-err-form">
+      <h1 id="hc-err-form" style="${pageTitle}">Send money</h1>
+      <div class="m-alert" data-tone="danger" role="alert">
+        <span class="m-alert-icon">${icon(I.alert, 16)}</span>
+        <div class="m-alert-content"><div class="m-alert-title">2 things need fixing</div><div class="m-alert-body">Nothing was sent. Check the routing number and the amount.</div></div>
+      </div>
+      <div class="m-field">
+        <label class="m-field-label" for="hc-err-routing">Routing number</label>
+        <input class="m-input" id="hc-err-routing" value="02100002" aria-invalid="true" aria-describedby="hc-err-routing-e" style="font-variant-numeric: tabular-nums">
+        <p class="m-field-error" id="hc-err-routing-e">A routing number has 9 digits.</p>
+      </div>
+      <div class="m-field">
+        <label class="m-field-label" for="hc-err-amount">Amount</label>
+        <input class="m-input" id="hc-err-amount" value="$0.00" aria-invalid="true" aria-describedby="hc-err-amount-e" style="font-variant-numeric: tabular-nums">
+        <p class="m-field-error" id="hc-err-amount-e">Enter an amount above $0.00. Your Operations balance is $2,023,267.12.</p>
+      </div>
+      <div class="m-cluster" data-justify="between">
+        <button type="button" class="m-button" data-variant="ghost">Cancel</button>
+        <button type="submit" class="m-button" data-variant="primary">${icon(I.send, 14)} Review payment</button>
+      </div>
+    </section>
+    <section class="m-stack" data-gap="3" aria-label="A toast">
+      <div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title">Payment to Bluebird Studio failed</div><div class="m-toast-body">The bank returned $419.00. Check their account details.</div></div><button type="button" class="m-button" data-size="sm">View</button></div>
+    </section>
+${errorPage('404', I.search, 'This page doesn’t exist', 'The link may be old, or the page has moved.', `<a class="m-button" data-variant="primary" href="#">${icon(I.home, 14)} Go home</a>`)}
+${errorPage('500', I.alert, 'Something went wrong on our side', 'Nothing was changed. Try again in a moment; if it keeps happening, contact support.', `<button type="button" class="m-button">Try again</button><button type="button" class="m-button" data-variant="ghost">Contact support</button>`)}
+${errorPage('403', I.lock, 'You don’t have access to this', 'Only admins of Fieldstone can see payroll. Ask one to give you access.', `<button type="button" class="m-button" data-variant="primary">Request access</button><a class="m-button" data-variant="ghost" href="#">Go back</a>`)}
+  </div>
+</main>`;
+
 export const halcyonRecipes: ArchetypeRecipe[] = [
   {
     name: 'dashboard',
@@ -494,5 +544,12 @@ export const halcyonRecipes: ArchetypeRecipe[] = [
     description:
       'One panel split into three columns by hairlines, a yearly switch, full-width pills and a footer band.',
     html: pricing,
+  },
+  {
+    name: 'errors',
+    title: 'Errors',
+    description:
+      'Field errors under the field, a summary above the form that says nothing was sent, a toast for failures elsewhere, and full pages for 404, 500 and no access.',
+    html: errors,
   },
 ];

@@ -1,5 +1,13 @@
-/** The six page shapes every language gives, so an agent never invents a layout. */
-export const recipeNames = ['dashboard', 'list-detail', 'onboarding', 'settings', 'empty-state', 'pricing'] as const;
+/** The page shapes every language gives, so an agent never invents a layout. */
+export const recipeNames = [
+  'dashboard',
+  'list-detail',
+  'onboarding',
+  'settings',
+  'empty-state',
+  'pricing',
+  'errors',
+] as const;
 export type RecipeName = (typeof recipeNames)[number];
 
 /** Categories for browsing the languages: each holds several, each with its own character. */
@@ -34,6 +42,36 @@ export const categories = {
   },
 } as const;
 export type CategoryId = keyof typeof categories;
+
+/** The common actions every language names an icon for. */
+export const iconActions = [
+  'add',
+  'edit',
+  'delete',
+  'settings',
+  'search',
+  'filter',
+  'more',
+  'close',
+  'back',
+  'forward',
+  'expand',
+  'download',
+  'upload',
+  'copy',
+  'external',
+  'send',
+  'refresh',
+  'user',
+  'notifications',
+  'calendar',
+  'help',
+  'info',
+  'success',
+  'warning',
+  'error',
+] as const;
+export type IconAction = (typeof iconActions)[number];
 
 export interface ArchetypeRecipe {
   name: RecipeName;
@@ -75,7 +113,14 @@ export interface Archetype {
   swatches: string[];
   /** Open fonts only, by family name (self-hosted with @fontsource). */
   type: { body: string; heading: string; mono: string };
-  icons: { set: 'lucide'; stroke: number; size: { text: number; control: number }; style: 'outline' | 'filled' };
+  icons: {
+    set: 'lucide';
+    stroke: number;
+    size: { text: number; control: number };
+    style: 'outline' | 'filled';
+    /** The icon (a Lucide name) for each common action, so every screen uses the same one. */
+    actions: Record<IconAction, string>;
+  };
   /** Categorical chart colours in order, light and dark. */
   charts: { categorical: { name: string; light: string; dark: string }[] };
   /** The density dial: 1 by default; the value for data-heavy tools. */

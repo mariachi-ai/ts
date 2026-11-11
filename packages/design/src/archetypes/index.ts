@@ -9,5 +9,5 @@ import type { Archetype } from './types';
  */
 export const archetypes: Archetype[] = [halcyonArchetype];
 
-export { categories, recipeNames } from './types';
-export type { Archetype, ArchetypeRecipe, CategoryId, RecipeName } from './types';
+export { categories, iconActions, recipeNames } from './types';
+export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './types';

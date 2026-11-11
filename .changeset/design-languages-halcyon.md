@@ -10,4 +10,4 @@ passing every contrast pair in both modes. `archetypes` and `categories` (export
 in `catalog.json`) add what an app needs beyond the tokens: search tags and keywords, a discovery card
 (who it's for, a pitch, resolved swatches), type, icons, a chart palette, density, six layout recipes
 as framework-free HTML (`@mariachi/design/archetypes/<id>/recipes/<name>.html`) and a `DESIGN.md` for
-agents (`@mariachi/design/archetypes/<id>/DESIGN.md`).
+agents (`@mariachi/design/archetypes/<id>/DESIGN.md`) with a reference generated from the preset (the actual scales, layout, colours and icon map). Each language also gets an icon for every common action, an `errors` recipe, and a generated gallery (`@mariachi/design/archetypes/<id>/gallery.html`) drawing the foundations, icons, every control in every state, error, loading and empty patterns, and all 36 components, in light and dark.

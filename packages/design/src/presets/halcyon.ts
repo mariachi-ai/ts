@@ -139,6 +139,13 @@ export const halcyon = extendTheme(minimal, {
     },
   },
   components: {
+    // The content column is narrow and left of centre-heavy: about 61rem beside a 220px sidebar
+    layout: {
+      containerMax: { sm: '30rem', md: '48rem', lg: '61rem' },
+      containerPadding: 'clamp(1rem, 4vw, 2rem)',
+      gridGap: 'var(--m-space-6)',
+      splitSide: '13.75rem',
+    },
     // Actions are pills: solid accent for the one that matters, a quiet neutral fill for the rest
     button: {
       radius: '9999px',
@@ -154,7 +161,13 @@ export const halcyon = extendTheme(minimal, {
       ghost: { hoverBg: { light: '#f1f1f4', dark: '#2c2c3a' } },
     },
     // Cards float on a ring shadow, with no drawn border
-    card: { border: 'transparent', shadow: 'var(--m-shadow-sm)', hoverShadow: 'var(--m-shadow-lg)' },
+    card: {
+      border: 'transparent',
+      shadow: 'var(--m-shadow-sm)',
+      hoverShadow: 'var(--m-shadow-lg)',
+      hoverBorder: 'transparent',
+      hoverTransform: 'none',
+    },
     table: {
       headerBg: 'var(--m-color-bg-surface)',
       headerFg: 'var(--m-color-fg-muted)',
@@ -188,5 +201,20 @@ export const halcyon = extendTheme(minimal, {
     },
     avatar: { bg: { light: '#eef0fd', dark: '#262a4d' }, fg: { light: '#3c4fbb', dark: '#c3cdfa' } },
     tabs: { fontWeight: 'var(--m-font-weight-regular)' },
+    // Feedback and overlays float on shadow, with no drawn border and no coloured side stripe
+    alert: { border: 'transparent', borderWidth: '0px', accentWidth: '0px' },
+    toast: { border: 'transparent', accentWidth: '0px' },
+    dialog: { border: 'transparent' },
+    popover: { border: 'transparent', radius: '8px', shadow: 'var(--m-shadow-overlay)' },
+    tooltip: { fontSize: 'var(--m-font-size-sm)', fontWeight: 'var(--m-font-weight-regular)', shadow: 'none' },
+    progress: { height: { md: '0.375rem' }, fill: 'var(--m-color-accent-default)' },
+    checkbox: { size: '1rem' },
+    kbd: {
+      radius: '9999px',
+      border: 'var(--m-color-border-default)',
+      shadow: 'none',
+      fontWeight: 'var(--m-font-weight-regular)',
+    },
+    accordion: { radius: '0', bg: 'transparent' },
   },
 });

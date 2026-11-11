@@ -51,21 +51,34 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
   light and dark values in the catalog);
 - **type, icons, charts and density:** open fonts by name, the icon rule, a categorical chart
   palette, and the density for data-heavy tools;
-- **six layout recipes** (`dashboard`, `list-detail`, `onboarding`, `settings`, `empty-state`,
-  `pricing`) as framework-free HTML using only the library's classes and tokens, following the
-  language's real screen patterns. The catalog holds the HTML, and
+- **an icon for every common action** (add, edit, delete, settings, search, filter, more, close,
+  …), by Lucide name, with the stroke and sizes;
+- **seven layout recipes** (`dashboard`, `list-detail`, `onboarding`, `settings`, `empty-state`,
+  `pricing`, `errors`) as framework-free HTML using only the library's classes and tokens, following
+  the language's real screen patterns. The catalog holds the HTML, and
   `@mariachi/design/archetypes/<id>/recipes/<name>.html` is each one as a page;
-- **`DESIGN.md`**, the language in words (principles, tokens, type, icons, charts, components, page
-  shapes, do and don't), at `@mariachi/design/archetypes/<id>/DESIGN.md`. A project copies it to
-  `docs/design.md`.
+- **`DESIGN.md`**, the language in words: principles, foundations, type, icons, charts, the states of
+  every control, all 36 components, error handling, page shapes, and do and don't. A **reference**
+  generated from the preset is appended: the actual type and spacing scales, layout and density,
+  radius, shadows, motion, every colour in light and dark, and the icon map. It ships at
+  `@mariachi/design/archetypes/<id>/DESIGN.md`, and a project copies it to `docs/design.md`;
+- **a gallery**, `@mariachi/design/archetypes/<id>/gallery.html`, generated from the preset:
+  - the foundations and the icons;
+  - every control in every state (default, hover, focus, pressed, disabled, error, loading);
+  - errors, loading and empty patterns;
+  - all 36 components with every example.
+
+  Add `data-mode="dark"` on the root for dark. Hover, focus and pressed are drawn with the
+  components' own rules, through `archetypes/gallery.css`, which only the galleries load.
 
 | Language | Category | Character |
 | --- | --- | --- |
 | `halcyon` | Calm fintech | Airy and exact: light type, one blue-violet accent, pill actions, figures with raised cents |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
-tags, all six recipes, recipe markup that uses only known classes and tokens (no colour literals),
-and the `DESIGN.md` sections.
+tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
+the `DESIGN.md` sections with every component specified, a drawable icon for every action, and a
+gallery with every component and state.
 
 ## Markup contract
 
