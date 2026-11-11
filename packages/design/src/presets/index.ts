@@ -3,6 +3,7 @@ import { brutalist } from './brutalist';
 import { halcyon } from './halcyon';
 import { editorial } from './editorial';
 import { enterprise } from './enterprise';
+import { fennel } from './fennel';
 import { minimal } from './minimal';
 import { soft } from './soft';
 import { terminal } from './terminal';
@@ -17,7 +18,8 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
+  fennel,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { brutalist, editorial, enterprise, halcyon, minimal, soft, terminal };
+export { brutalist, editorial, enterprise, fennel, halcyon, minimal, soft, terminal };
