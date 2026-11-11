@@ -6,6 +6,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { type Archetype, archetypes, categories } from './archetypes';
+import { designReference, galleryCss, galleryPage } from './archetypes/reference';
 import { componentList, contrastPairs, tokenList } from './contract';
 import type { ComponentExample } from './contract/component';
 import { componentExamples } from './components/examples';
@@ -16,7 +18,7 @@ import { emitThemeCss } from './engine/emit-css';
 import { emitDtcg } from './engine/emit-dtcg';
 import { emitOverridesCss } from './engine/overrides';
 import { emitTailwindCss } from './engine/tailwind';
-import type { Theme } from './engine/theme';
+import { resolveToken, type Theme } from './engine/theme';
 import { DesignError } from './errors';
 import { presets } from './presets';
 
@@ -151,9 +153,28 @@ export interface CatalogToken {
   default?: unknown;
 }
 
+/** An archetype as the catalog lists it: the discovery card, everything but the tokens, and where its files are. */
+export interface CatalogArchetype extends Omit<Archetype, 'swatches' | 'recipes'> {
+  label: string;
+  description: string;
+  /** The preset it was extended from. */
+  base?: string;
+  swatches: { path: string; light: string; dark: string }[];
+  /** Package path of the agent-facing text, e.g. `archetypes/halcyon/DESIGN.md`. */
+  designDoc: string;
+  /** Package path of the gallery page: foundations, icons, every component in every state. */
+  gallery: string;
+  /** Every searchable word in one list: name, category, and all the tags, lowercase. */
+  keywords: string[];
+  recipes: (Archetype['recipes'][number] & { file: string })[];
+}
+
 export interface Catalog {
   version: string;
+  /** Categories for browsing the design languages. */
+  categories: typeof categories;
   presets: { name: string; label: string; description: string; extends?: string; tokens: Theme['tokens'] }[];
+  archetypes: CatalogArchetype[];
   semantic: CatalogToken[];
   components: {
     name: string;
@@ -188,6 +209,8 @@ export function buildCatalog(version: string): Catalog {
       extends: p.extends,
       tokens: p.tokens,
     })),
+    categories,
+    archetypes: archetypes.map(catalogArchetype),
     semantic: tokenList.filter((t) => !t.path.startsWith('components.')).map(catalogToken),
     components: componentList.map((c) => ({
       name: c.name,
@@ -206,6 +229,55 @@ export function buildCatalog(version: string): Catalog {
 }
 
 const camel = (s: string) => s.replace(/-([a-z])/g, (_, c: string) => c.toUpperCase());
+
+function archetypePreset(a: Archetype): Theme {
+  const theme = (presets as Record<string, Theme>)[a.id];
+  if (!theme) throw new DesignError('design/unknown-preset', `Archetype "${a.id}" has no preset of the same name`);
+  return theme;
+}
+
+function catalogArchetype(a: Archetype): CatalogArchetype {
+  const theme = archetypePreset(a);
+  const swatch = (p: string) => {
+    const light = resolveToken(theme, p, 'light');
+    const dark = resolveToken(theme, p, 'dark');
+    if (!light || !dark) throw new DesignError('design/unknown-token', `Archetype "${a.id}" swatch ${p} doesn't resolve`);
+    return { path: p, light, dark };
+  };
+  return {
+    ...a,
+    label: theme.label,
+    description: theme.description,
+    base: theme.extends,
+    swatches: a.swatches.map(swatch),
+    designDoc: `archetypes/${a.id}/DESIGN.md`,
+    gallery: `archetypes/${a.id}/gallery.html`,
+    keywords: [
+      ...new Set(
+        [a.id, theme.label, ...[a.category, ...(a.alsoIn ?? [])].flatMap((c) => [c, categories[c].label]), ...a.tags.feel, a.tags.density, a.tags.mode, ...a.tags.suits, ...a.tags.style].map((w) => w.toLowerCase()),
+      ),
+    ],
+    recipes: a.recipes.map((r) => ({ ...r, file: `archetypes/${a.id}/recipes/${r.name}.html` })),
+  };
+}
+
+/** A recipe as a page of its own, for opening in a browser from `dist/archetypes/<id>/recipes/`. */
+export function recipePage(a: Archetype, recipe: Archetype['recipes'][number]): string {
+  return `<!doctype html>
+<html lang="en" data-theme="${a.id}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${recipe.title} · ${archetypePreset(a).label}</title>
+<link rel="stylesheet" href="../../../css/mariachi.css">
+<link rel="stylesheet" href="../../../css/themes/${a.id}.css">
+</head>
+<body>
+${recipe.html}
+</body>
+</html>
+`;
+}
 
 // ---------------------------------------------------------------------------------------------
 // Package assets.
@@ -246,6 +318,13 @@ export function packageAssets(root: string = packageRoot()): PackageAssets {
   for (const theme of Object.values(presets as Record<string, Theme>)) {
     files[`css/themes/${theme.name}.css`] = emitThemeCss(theme);
     files[`tokens/${theme.name}.json`] = `${JSON.stringify(emitDtcg(theme), null, 2)}\n`;
+  }
+  if (archetypes.length > 0) files['archetypes/gallery.css'] = galleryCss(files['css/mariachi.css']);
+  for (const a of archetypes) {
+    const theme = archetypePreset(a);
+    files[`archetypes/${a.id}/DESIGN.md`] = read(path.join(root, 'src', 'archetypes', a.id, 'DESIGN.md')) + designReference(a, theme);
+    files[`archetypes/${a.id}/gallery.html`] = galleryPage(a, theme);
+    for (const r of a.recipes) files[`archetypes/${a.id}/recipes/${r.name}.html`] = recipePage(a, r);
   }
   files['css/tailwind.css'] = emitTailwindCss();
   files['catalog.json'] = `${JSON.stringify(buildCatalog(version), null, 2)}\n`;

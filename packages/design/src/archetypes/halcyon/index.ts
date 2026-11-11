@@ -1,0 +1,71 @@
+import type { Archetype } from '../types';
+import { halcyonRecipes } from './recipes';
+
+export const halcyonArchetype: Archetype = {
+  id: 'halcyon',
+  category: 'calm-fintech',
+  tags: {
+    feel: ['calm', 'quiet', 'precise', 'modern', 'trustworthy'],
+    density: 'airy',
+    mode: 'light-first',
+    suits: ['banking', 'finance', 'payments', 'accounting', 'invoicing', 'dashboards', 'b2b'],
+    style: ['minimal', 'light type', 'pill buttons', 'soft shadows', 'rounded', 'blue', 'violet', 'white'],
+  },
+  for: 'Money and finance tools that should feel quiet, modern and exact',
+  pitch:
+    'Airy and precise: light type on white, one blue-violet accent, soft pill actions and figures that line up to the cent.',
+  swatches: [
+    'color.bg.sunken',
+    'color.bg.surface',
+    'color.fg.default',
+    'color.accent.default',
+    'color.success.fg',
+    'color.danger.fg',
+  ],
+  type: { body: 'Inter', heading: 'Inter Display', mono: 'Roboto Mono' },
+  icons: {
+    set: 'lucide',
+    stroke: 1.25,
+    size: { text: 16, control: 14 },
+    style: 'outline',
+    actions: {
+      add: 'plus',
+      edit: 'pencil',
+      delete: 'trash-2',
+      settings: 'settings',
+      search: 'search',
+      filter: 'list-filter',
+      more: 'ellipsis-vertical',
+      close: 'x',
+      back: 'chevron-left',
+      forward: 'chevron-right',
+      expand: 'chevron-down',
+      download: 'download',
+      upload: 'upload',
+      copy: 'copy',
+      external: 'external-link',
+      send: 'send',
+      refresh: 'refresh-cw',
+      user: 'user',
+      notifications: 'bell',
+      calendar: 'calendar',
+      help: 'circle-help',
+      info: 'info',
+      success: 'circle-check',
+      warning: 'triangle-alert',
+      error: 'circle-alert',
+    },
+  },
+  charts: {
+    // One series is an accent line over a soft fade of the accent; more series step through these
+    categorical: [
+      { name: 'Blue-violet', light: '#5266eb', dark: '#7d8ff2' },
+      { name: 'Periwinkle', light: '#a7b6f8', dark: '#c3cdfa' },
+      { name: 'Teal', light: '#007f95', dark: '#4fbfd0' },
+      { name: 'Green', light: '#036e43', dark: '#2f9e6c' },
+      { name: 'Magenta', light: '#b0175f', dark: '#e0559a' },
+    ],
+  },
+  density: { default: 1, dense: 0.85 },
+  recipes: halcyonRecipes,
+};

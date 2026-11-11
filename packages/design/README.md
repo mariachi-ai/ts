@@ -23,6 +23,7 @@ Browse it: [explorer.md](../core/docs/explorer.md)
 | `@mariachi/design/tokens/<preset>.json` | The preset as W3C Design Tokens (DTCG) |
 | `@mariachi/design/tailwind.css` | Tailwind v4 theme mapped onto the tokens |
 | `@mariachi/design/catalog.json` | Components (anatomy, tokens, examples, a11y), presets and tokens |
+| `@mariachi/design/archetypes/<id>/DESIGN.md`, `gallery.html`, `recipes/<name>.html` | A design language: its rules in words with the generated reference, every component and state drawn, and its page shapes |
 
 ## Public API
 
