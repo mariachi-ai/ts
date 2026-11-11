@@ -1,12 +1,13 @@
-import { calmTrustArchetype } from './calm-trust';
+import { halcyonArchetype } from './halcyon';
 import type { Archetype } from './types';
 
 /**
- * The design archetypes, in display order: complete languages an app is built from. Each is a
- * preset (in `presets`, same name) plus its discovery card, type, icons, charts, six layout
- * recipes and a `DESIGN.md`. Calm trust is first; the other nine follow in their own change.
+ * The design languages, in display order: complete languages an app is built from, each faithful to
+ * one real product's visual system under an abstract name, browsed by category. Each is a preset
+ * (in `presets`, same name) plus its discovery card, type, icons, charts, six layout recipes and a
+ * `DESIGN.md`. Halcyon is the first; the rest follow a category at a time.
  */
-export const archetypes: Archetype[] = [calmTrustArchetype];
+export const archetypes: Archetype[] = [halcyonArchetype];
 
-export { recipeNames } from './types';
-export type { Archetype, ArchetypeRecipe, RecipeName } from './types';
+export { categories, recipeNames } from './types';
+export type { Archetype, ArchetypeRecipe, CategoryId, RecipeName } from './types';

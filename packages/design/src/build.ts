@@ -6,7 +6,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { type Archetype, archetypes } from './archetypes';
+import { type Archetype, archetypes, categories } from './archetypes';
 import { componentList, contrastPairs, tokenList } from './contract';
 import type { ComponentExample } from './contract/component';
 import { componentExamples } from './components/examples';
@@ -159,13 +159,17 @@ export interface CatalogArchetype extends Omit<Archetype, 'swatches' | 'recipes'
   /** The preset it was extended from. */
   base?: string;
   swatches: { path: string; light: string; dark: string }[];
-  /** Package path of the agent-facing text, e.g. `archetypes/calm-trust/DESIGN.md`. */
+  /** Package path of the agent-facing text, e.g. `archetypes/halcyon/DESIGN.md`. */
   designDoc: string;
+  /** Every searchable word in one list: name, category, and all the tags, lowercase. */
+  keywords: string[];
   recipes: (Archetype['recipes'][number] & { file: string })[];
 }
 
 export interface Catalog {
   version: string;
+  /** Categories for browsing the design languages. */
+  categories: typeof categories;
   presets: { name: string; label: string; description: string; extends?: string; tokens: Theme['tokens'] }[];
   archetypes: CatalogArchetype[];
   semantic: CatalogToken[];
@@ -202,6 +206,7 @@ export function buildCatalog(version: string): Catalog {
       extends: p.extends,
       tokens: p.tokens,
     })),
+    categories,
     archetypes: archetypes.map(catalogArchetype),
     semantic: tokenList.filter((t) => !t.path.startsWith('components.')).map(catalogToken),
     components: componentList.map((c) => ({
@@ -243,6 +248,11 @@ function catalogArchetype(a: Archetype): CatalogArchetype {
     base: theme.extends,
     swatches: a.swatches.map(swatch),
     designDoc: `archetypes/${a.id}/DESIGN.md`,
+    keywords: [
+      ...new Set(
+        [a.id, theme.label, a.category, categories[a.category].label, ...a.tags.feel, a.tags.density, a.tags.mode, ...a.tags.suits, ...a.tags.style].map((w) => w.toLowerCase()),
+      ),
+    ],
     recipes: a.recipes.map((r) => ({ ...r, file: `archetypes/${a.id}/recipes/${r.name}.html` })),
   };
 }

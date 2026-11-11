@@ -15,7 +15,7 @@ Every component and preset is browsable in the [explorer](./explorer.md).
 | `soft` | Pastel palette, pill-shaped controls, large rounded containers and diffuse shadows. |
 | `enterprise` | Dense layout, compact type, small radii, crisp borders and strong table styling for data-heavy tools. |
 | `terminal` | Monospace everywhere, outline borders, square corners, no shadows and a phosphor accent. Dark-first. |
-| `calm-trust` | Cool slate, one deep blue, quiet surfaces and exact, tabular figures. For money, health and anything where people need to feel safe. |
+| `halcyon` | Airy and exact: ink-violet on white, a blue-violet accent, light type, pill actions, ring-shadowed cards and hairline rows. |
 
 ## Layout
 

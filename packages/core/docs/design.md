@@ -34,31 +34,38 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `soft` | Pastels, pill controls, large radius, diffuse shadows, rounded type. |
 | `enterprise` | Dense (density 0.85), small radius, compact type, strong tables. |
 | `terminal` | Monospace everywhere, square corners, no shadows, phosphor-green dark mode. |
-| `calm-trust` | Cool slate, one deep blue, quiet surfaces, tabular figures. An archetype (below). |
+| `halcyon` | Light type on white, a blue-violet accent, pill actions, ring-shadowed cards. A design language (below). |
 
-## Archetypes
+## Design languages
 
-An archetype is a complete design language an app is built from: a preset plus everything an agent
-needs to build a cohesive app with it. `archetypes` (exported, and in `catalog.json`) lists them.
-Each has:
+A design language is a complete visual system an app is built from: a preset plus everything an
+agent needs to build a cohesive app with it. Each is taken faithfully from one real product's
+visual system, measured rather than invented, under an abstract name; no logos, illustrations,
+copied assets or proprietary fonts (the closest open font stands in). `archetypes` (exported, and in
+`catalog.json`) lists them; `categories` groups them for browsing. Each has:
 
-- **its preset**, of the same name (`calm-trust`), extended from a base preset;
+- **its preset**, of the same name (`halcyon`), extended from a base preset;
+- **a category and search tags:** the feel, density, light or dark first, the kinds of apps it
+  suits and visible traits. The catalog adds `keywords`, every searchable word in one list;
 - **a discovery card:** who it's for, a one-sentence pitch and swatches (token paths, resolved to
   light and dark values in the catalog);
 - **type, icons, charts and density:** open fonts by name, the icon rule, a categorical chart
   palette, and the density for data-heavy tools;
 - **six layout recipes** (`dashboard`, `list-detail`, `onboarding`, `settings`, `empty-state`,
-  `pricing`) as framework-free HTML using only the library's classes and tokens. The catalog holds
-  the HTML, and `@mariachi/design/archetypes/<id>/recipes/<name>.html` is each one as a page;
-- **`DESIGN.md`**, the language in words (principles, tokens, type, components, page shapes, do and
-  don't), at `@mariachi/design/archetypes/<id>/DESIGN.md`. A project copies it to `docs/design.md`.
+  `pricing`) as framework-free HTML using only the library's classes and tokens, following the
+  language's real screen patterns. The catalog holds the HTML, and
+  `@mariachi/design/archetypes/<id>/recipes/<name>.html` is each one as a page;
+- **`DESIGN.md`**, the language in words (principles, tokens, type, icons, charts, components, page
+  shapes, do and don't), at `@mariachi/design/archetypes/<id>/DESIGN.md`. A project copies it to
+  `docs/design.md`.
 
-| Archetype | For |
-| --- | --- |
-| `calm-trust` | Money, health, insurance: anything where people need to feel safe |
+| Language | Category | Character |
+| --- | --- | --- |
+| `halcyon` | Calm trust | Airy and exact: light type, one blue-violet accent, pill actions, figures with raised cents |
 
-Tests hold each archetype to its preset's contrast pairs in both modes, all six recipes, recipe
-markup that uses only known classes and tokens (no colour literals), and the `DESIGN.md` sections.
+Tests hold each language to its preset's contrast pairs in both modes, a known category and its
+tags, all six recipes, recipe markup that uses only known classes and tokens (no colour literals),
+and the `DESIGN.md` sections.
 
 ## Markup contract
 

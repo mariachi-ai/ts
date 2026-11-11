@@ -46,7 +46,7 @@ describe.each(archetypes.map((a) => [a.id, a] as const))('archetype %s', (id, ar
       '## Principles',
       '## Tokens',
       '## Type',
-      '## Icons and imagery',
+      '## Icons',
       '## Charts',
       '## Components',
       '## Page shapes (recipes)',
@@ -75,11 +75,25 @@ describe('catalog archetypes', () => {
       expect(a.pitch.length).toBeGreaterThan(0);
       expect(a.base).toBe('minimal');
       for (const s of a.swatches) {
-        expect(s.light).toMatch(/^oklch\(/);
-        expect(s.dark).toMatch(/^oklch\(/);
+        // A concrete colour, every reference followed
+        for (const v of [s.light, s.dark]) expect(v).toMatch(/^(#[0-9a-f]{3,8}|oklch\(|rgb\()/i);
       }
       expect(Object.keys(assets)).toContain(a.designDoc);
       for (const r of a.recipes) expect(Object.keys(assets)).toContain(r.file);
+    }
+  });
+
+  it('gives each language a known category and the tags New Project searches', () => {
+    const catalog = buildCatalog('0.0.0');
+    expect(Object.keys(catalog.categories).length).toBeGreaterThan(0);
+    for (const a of catalog.archetypes) {
+      expect(Object.keys(catalog.categories)).toContain(a.category);
+      expect(a.tags.feel.length).toBeGreaterThan(0);
+      expect(a.tags.suits.length).toBeGreaterThan(0);
+      expect(a.tags.style.length).toBeGreaterThan(0);
+      for (const w of [a.id, a.category, a.tags.density, a.tags.mode, ...a.tags.feel, ...a.tags.suits])
+        expect(a.keywords).toContain(w);
+      for (const w of a.keywords) expect(w).toBe(w.toLowerCase());
     }
   });
 });

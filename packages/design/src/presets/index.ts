@@ -1,6 +1,6 @@
 import type { Theme } from '../engine/theme';
 import { brutalist } from './brutalist';
-import { calmTrust } from './calm-trust';
+import { halcyon } from './halcyon';
 import { editorial } from './editorial';
 import { enterprise } from './enterprise';
 import { minimal } from './minimal';
@@ -16,8 +16,8 @@ export const presets = {
   enterprise,
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
-  'calm-trust': calmTrust,
+  halcyon,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { brutalist, calmTrust, editorial, enterprise, minimal, soft, terminal };
+export { brutalist, editorial, enterprise, halcyon, minimal, soft, terminal };
