@@ -1,4 +1,4 @@
-# Carbon
+# Anthracite
 
 Category: dark and sharp. Fast and exact: a near-black window in fine grey steps, white text, a
 red-orange brand that glows behind things but never marks an action, a light-grey primary button,
@@ -12,8 +12,8 @@ This file is the design language in words; follow it for anything visual. Beside
 - **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
-The tokens are in the `carbon` preset of `@mariachi/design` (`data-theme="carbon"`,
-`themes/carbon.css`).
+The tokens are in the `anthracite` preset of `@mariachi/design` (`data-theme="anthracite"`,
+`themes/anthracite.css`).
 
 ## Principles
 
@@ -130,7 +130,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Carbon draws them. Every one is in `gallery.html`.
+All 36 of the library's components, as Anthracite draws them. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`: 50rem for the palette, 46rem for settings and forms, 75.25rem for marketing;

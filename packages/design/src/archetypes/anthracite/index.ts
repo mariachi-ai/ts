@@ -1,8 +1,8 @@
 import type { Archetype } from '../types';
 import { carbonRecipes } from './recipes';
 
-export const carbonArchetype: Archetype = {
-  id: 'carbon',
+export const anthraciteArchetype: Archetype = {
+  id: 'anthracite',
   category: 'dark-sharp',
   tags: {
     feel: ['sharp', 'fast', 'precise', 'focused', 'technical', 'polished'],

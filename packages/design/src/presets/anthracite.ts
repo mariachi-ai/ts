@@ -2,15 +2,15 @@ import { extendTheme } from '../engine/theme';
 import { minimal } from './minimal';
 
 /**
- * Carbon: a dark, keyboard-first command surface. Near-black panels in fine grey steps, white text,
+ * Anthracite: a dark, keyboard-first command surface. Near-black panels in fine grey steps, white text,
  * a red-orange brand used for glow and marks (never for actions), a light-grey primary button,
  * 40px list rows that highlight in white at 10%, outlined key caps beside every action, and a
  * footer bar that always says what Enter and ⌘K will do. Light mode mirrors it in pale greys.
  * Category: dark and sharp. The values are measured, not invented (see DESIGN.md).
  */
-export const carbon = extendTheme(minimal, {
-  name: 'carbon',
-  label: 'Carbon',
+export const anthracite = extendTheme(minimal, {
+  name: 'anthracite',
+  label: 'Anthracite',
   description:
     'Dark and exact: near-black panels, white text, a red-orange brand glow, light-grey actions, 40px list rows and key caps for every shortcut.',
   tokens: {

@@ -3,7 +3,7 @@ import { basalt } from './basalt';
 import { broadsheet } from './broadsheet';
 import { bazaar } from './bazaar';
 import { brutalist } from './brutalist';
-import { carbon } from './carbon';
+import { anthracite } from './anthracite';
 import { cadence } from './cadence';
 import { ember } from './ember';
 import { cirrus } from './cirrus';
@@ -14,7 +14,7 @@ import { meridian } from './meridian';
 import { flint } from './flint';
 import { comet } from './comet';
 import { reel } from './reel';
-import { aria } from './aria';
+import { refrain } from './refrain';
 import { keel } from './keel';
 import { relay } from './relay';
 import { lagoon } from './lagoon';
@@ -28,7 +28,7 @@ import { linen } from './linen';
 import { quill } from './quill';
 import { hearth } from './hearth';
 import { harbor } from './harbor';
-import { prism } from './prism';
+import { nacre } from './nacre';
 import { volt } from './volt';
 import { sprint } from './sprint';
 import { summit } from './summit';
@@ -78,14 +78,14 @@ export const presets = {
   folio,
   broadsheet,
   obsidian,
-  carbon,
+  anthracite,
   cadence,
   mosaic,
   bazaar,
   transit,
   hearth,
   harbor,
-  prism,
+  nacre,
   confetti,
   volt,
   sprint,
@@ -104,7 +104,7 @@ export const presets = {
   comet,
   marquee,
   reel,
-  aria,
+  refrain,
   keel,
   relay,
   lagoon,
@@ -116,4 +116,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { aria, basalt, bazaar, broadsheet, brutalist, cadence, candid, carbon, chalk, cirrus, comet, confetti, doodle, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, kite, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, prism, quill, quire, reel, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, tinker, transit, trellis, vellum, volt, zephyr };
+export { anthracite, basalt, bazaar, broadsheet, brutalist, cadence, candid, chalk, cirrus, comet, confetti, doodle, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, kite, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nacre, nocturne, obsidian, ochre, onyx, quill, quire, reel, refrain, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, tinker, transit, trellis, vellum, volt, zephyr };

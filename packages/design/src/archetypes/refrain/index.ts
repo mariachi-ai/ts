@@ -1,8 +1,8 @@
 import type { Archetype } from '../types';
 import { ariaRecipes } from './recipes';
 
-export const ariaArchetype: Archetype = {
-  id: 'aria',
+export const refrainArchetype: Archetype = {
+  id: 'refrain',
   category: 'content-first',
   tags: {
     feel: ['immersive', 'polished', 'calm', 'glossy', 'confident'],
