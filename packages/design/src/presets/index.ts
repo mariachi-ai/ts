@@ -5,6 +5,7 @@ import { ember } from './ember';
 import { cirrus } from './cirrus';
 import { halcyon } from './halcyon';
 import { onyx } from './onyx';
+import { marigold } from './marigold';
 import { editorial } from './editorial';
 import { enterprise } from './enterprise';
 import { fennel } from './fennel';
@@ -12,6 +13,7 @@ import { minimal } from './minimal';
 import { soft } from './soft';
 import { terminal } from './terminal';
 import { zephyr } from './zephyr';
+import { terracotta } from './terracotta';
 
 /** Built-in presets, in display order. */
 export const presets = {
@@ -29,7 +31,9 @@ export const presets = {
   cirrus,
   zephyr,
   onyx,
+  terracotta,
+  marigold,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, minimal, onyx, soft, terminal, zephyr };
+export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, marigold, minimal, onyx, soft, terminal, terracotta, zephyr };

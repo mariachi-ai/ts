@@ -41,6 +41,8 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `cirrus` | Navy on cool off-white, 20px panels, one clear blue, tinted capital pills. A design language. |
 | `zephyr` | Black screens and charcoal cards, a neon lime for gains and the primary pill, orange-red for losses, solid pills and price chips. A design language. |
 | `onyx` | Near-black on a pale grey screen, white 16px widgets, one blue-violet action, heavy headings, huge balances, pill and round buttons. A design language. |
+| `terracotta` | Ink on white, a coral-magenta action colour, rounded photo cards, a pill search bar, soft lifted panels and underlined links. A design language. |
+| `marigold` | White screens with grey 2px outlines, a bright green action, sky-blue selection, rounded heavy type and chunky buttons on a darker lip. A design language. |
 
 ## Design languages
 
@@ -86,6 +88,8 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `cirrus` | Calm fintech | Bright and friendly: rounded hairline panels, one clear blue, tinted category pills |
 | `zephyr` | Bold and fast | Fast and high-contrast: black screens and charcoal cards, a neon lime for gains and the primary pill, orange-red for losses, solid pills and price chips |
 | `onyx` | Bold and fast | Bold and fast: near-black on a pale grey screen, white 16px widgets, one blue-violet action, heavy headings, huge balances, pill and round buttons |
+| `terracotta` | Warm and friendly | Warm and image-forward: ink on white, a coral-magenta action colour, rounded photo cards, a pill search bar, soft lifted panels and underlined links |
+| `marigold` | Warm and friendly | Bright and encouraging: white screens with grey 2px outlines, a bright green action, sky-blue selection, rounded heavy type and chunky buttons on a darker lip |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
