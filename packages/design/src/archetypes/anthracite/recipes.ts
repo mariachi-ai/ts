@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Carbon's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
+ * Anthracite's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
  * (no colour literals), with sample data from a small engineering team's command tool. The
  * reference is a desktop launcher with no web app, so its screens are translated to web layouts:
  * the launcher window becomes a centred panel (the dashboard is a command palette), its list-with-
@@ -422,8 +422,8 @@ const settings = `<div class="m-split" style="--m-layout-split-side: 13rem; --m-
       ${group(
         'Theme',
         `${setRow('Follow the system', 'Switch between your dark and light themes with the system.', sw('Follow the system'), true)}
-        ${setRow('Dark theme', '', `<select class="m-select" data-size="sm" aria-label="Dark theme" style="${ghostSelect}"><option>Carbon dark</option><option>Graphite</option><option>Midnight</option></select>`)}
-        ${setRow('Light theme', '', `<select class="m-select" data-size="sm" aria-label="Light theme" style="${ghostSelect}"><option>Carbon light</option><option>Paper</option></select>`)}
+        ${setRow('Dark theme', '', `<select class="m-select" data-size="sm" aria-label="Dark theme" style="${ghostSelect}"><option>Anthracite dark</option><option>Graphite</option><option>Midnight</option></select>`)}
+        ${setRow('Light theme', '', `<select class="m-select" data-size="sm" aria-label="Light theme" style="${ghostSelect}"><option>Anthracite light</option><option>Paper</option></select>`)}
         ${setRow('Text size', 'The size of text in the palette and its windows.', `<div class="m-tabs" data-variant="pill"><div class="m-tab-list" role="tablist" aria-label="Text size"><button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1" style="font-size: var(--m-font-size-xs)">Aa</button><button type="button" class="m-tab" role="tab" aria-selected="true">Aa</button><button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1" style="font-size: var(--m-font-size-lg)">Aa</button></div></div>`)}`,
         'cb-set-theme',
       )}

@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Prism's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
+ * Nacre's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
  * (no colour literals), with invented data from a studio's shared web library ("Pinwheel"). They
  * translate a browser's chrome to web layouts: the whole window takes the space colour (the canvas);
  * a borderless sidebar sits on it with a search field, a grid of shortcut tiles, the space's name,

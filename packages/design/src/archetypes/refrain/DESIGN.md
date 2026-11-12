@@ -1,4 +1,4 @@
-# Aria
+# Refrain
 
 Category: content-first and immersive. Artwork first: square tiles on soft layered shadows, bold
 large titles, black pills (white in dark) beside round grey buttons, a pale sidebar library with
@@ -12,7 +12,7 @@ This file is the design language in words; follow it for anything visual. Beside
 - **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
-The tokens are in the `aria` preset of `@mariachi/design` (`data-theme="aria"`, `themes/aria.css`).
+The tokens are in the `refrain` preset of `@mariachi/design` (`data-theme="refrain"`, `themes/refrain.css`).
 
 ## Principles
 
@@ -136,7 +136,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Aria draws them. Every one is in `gallery.html`.
+All 36 of the library's components, as Refrain draws them. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, the 260px sidebar library beside the content;

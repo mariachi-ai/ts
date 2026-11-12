@@ -2,16 +2,16 @@ import { extendTheme } from '../engine/theme';
 import { minimal } from './minimal';
 
 /**
- * Prism: a playful, colourful browsing-tool interface. A periwinkle frame holds a borderless sidebar
+ * Nacre: a playful, colourful browsing-tool interface. A periwinkle frame holds a borderless sidebar
  * and a white content panel with soft 10–12px corners; the current row is a white tile with a soft
  * glow; groups are tinted in their own colour; actions are a vivid blue with 10px corners; headings
  * are a heavy, tightly tracked geometric sans and labels are tracked mono capitals. Brand bands are
  * a deep indigo with cream type. Category: playful. The values are measured, not invented (see
  * DESIGN.md).
  */
-export const prism = extendTheme(minimal, {
-  name: 'prism',
-  label: 'Prism',
+export const nacre = extendTheme(minimal, {
+  name: 'nacre',
+  label: 'Nacre',
   description:
     'Playful and colourful: a periwinkle frame around a white panel, soft rounded rows, a white current tile with a glow, tinted groups, a vivid blue and heavy tight headings.',
   tokens: {

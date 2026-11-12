@@ -2,7 +2,7 @@ import { extendTheme } from '../engine/theme';
 import { minimal } from './minimal';
 
 /**
- * Aria: a content-first listening app in the current glass-era look. White pages (a true dark
+ * Refrain: a content-first listening app in the current glass-era look. White pages (a true dark
  * mode of #1f1f1f), a pale sidebar library with blue glyphs, artwork as the hero (square tiles with
  * 7 and 10px corners on a soft layered shadow), bold large titles, black pills for the main action
  * (white in dark), round grey buttons beside them, hairline track lists, and a floating capsule
@@ -25,9 +25,9 @@ const pillFg = { light: '#ffffff', dark: '#000000' };
 const pillHover = { light: '#262626', dark: '#e6e6e6' };
 const pillPress = { light: '#3a3a3a', dark: '#d1d1d1' };
 
-export const aria = extendTheme(minimal, {
-  name: 'aria',
-  label: 'Aria',
+export const refrain = extendTheme(minimal, {
+  name: 'refrain',
+  label: 'Refrain',
   description:
     'Content-first and glassy: white pages and a true dark mode, a pale sidebar library with blue glyphs, square artwork everywhere, bold large titles, black pills, hairline track lists and a floating capsule player.',
   tokens: {

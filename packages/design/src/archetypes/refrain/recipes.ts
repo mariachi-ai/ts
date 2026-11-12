@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Aria's seven page shapes: framework-free HTML using only @mariachi/design classes and tokens (no
+ * Refrain's seven page shapes: framework-free HTML using only @mariachi/design classes and tokens (no
  * colour literals), with sample data from a made-up listening app, "Sonder". They follow the
  * language's real screen patterns: a pale sidebar library with blue glyphs, bold large titles,
  * square artwork everywhere (token gradients stand in for real art), shelves with a chevron title,

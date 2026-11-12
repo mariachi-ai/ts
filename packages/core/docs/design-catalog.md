@@ -29,14 +29,14 @@ Every component and preset is browsable in the [explorer](./explorer.md).
 | `folio` | Document-first and warm-neutral: near-black ink on a white page, a warm off-white sidebar, hover-only controls, tinted callouts and tag pills, one blue action. |
 | `broadsheet` | Reading first: graphite ink on white, a serif for the words and a grotesque for the chrome, one bright orange for subscribing, 8px corners and hairlines. |
 | `obsidian` | Dark-first and exact: near-black panels a step apart, a muted indigo action, a small dense type scale, hairlines and a command menu. |
-| `carbon` | Dark and exact: near-black panels, white text, a red-orange brand glow, light-grey actions, 40px list rows and key caps for every shortcut. |
+| `anthracite` | Dark and exact: near-black panels, white text, a red-orange brand glow, light-grey actions, 40px list rows and key caps for every shortcut. |
 | `cadence` | Dark-first and content-first: near-black 8px panels in a black frame, a bright green for play and on, white pills, huge bold titles, cover-art tiles and dense track lists. |
 | `mosaic` | Pictures first: ink on white, one bold red for saving, grey and black pills, 16px image tiles in a masonry grid and 32px dialogs. |
 | `bazaar` | Handmade marketplace: warm ink on white, a light serif for headings, an orange brand mark, black pill buttons, outlined secondaries, 12px cards and listing cards with black stars and green sale prices. |
 | `transit` | Stark and direct: black on white, big bold headings, 8px controls on a grey fill, black actions and one blue for focus. |
 | `hearth` | Dark-first community chat: layered near-black greys, a blue-violet accent, rounded bold type, round avatars beside grouped messages, presence dots and role colours. |
 | `harbor` | A messenger on the desktop: near-black on white, warm off-white panels, one fresh green, pill buttons and chips, tailed bubbles on a warm wallpaper and blue read ticks. |
-| `prism` | Playful and colourful: a periwinkle frame around a white panel, soft rounded rows, a white current tile with a glow, tinted groups, a vivid blue and heavy tight headings. |
+| `nacre` | Playful and colourful: a periwinkle frame around a white panel, soft rounded rows, a white current tile with a glow, tinted groups, a vivid blue and heavy tight headings. |
 | `confetti` | Playful and dense: warm yellow-grey canvases, white hairline panels, an orange-red accent (brand yellow in dark), chunky ledge buttons and bold uppercase table headers. |
 | `volt` | Loud and fast: black and white with one electric green, black pill buttons, white 20px cards on light grey, big tight headlines and bold amounts. |
 | `sprint` | Athletic and stark: near-black on white, huge condensed uppercase display type, full-bleed media, black pill actions and one signature orange. |
@@ -55,7 +55,7 @@ Every component and preset is browsable in the [explorer](./explorer.md).
 | `comet` | Fast and focused: warm greys, one muted purple, light grotesque type, big split tabs with counts, generous one-line rows and a command menu. |
 | `marquee` | Dark-first and content-first: a near-black canvas, one signature red, rounded hero billboards with white and grey pills, rows of rounded posters that grow on hover, rating boxes, red progress bars and plain light account pages. |
 | `reel` | Slate and posters: a cool blue-grey dark canvas, tight poster grids, a green for the main action, orange likes, blue lists, star ratings, tracked uppercase headings and serif titles. |
-| `aria` | Content-first and glassy: white pages and a true dark mode, a pale sidebar library with blue glyphs, square artwork everywhere, bold large titles, black pills, hairline track lists and a floating capsule player. |
+| `refrain` | Content-first and glassy: white pages and a true dark mode, a pale sidebar library with blue glyphs, square artwork everywhere, bold large titles, black pills, hairline track lists and a floating capsule player. |
 | `keel` | Commerce back office: a near-black side frame around a white page, 13px ink type, ink pill buttons with an inner glow, flat grey secondaries, 20px containers on a hairline ring, index tables with bulk actions and small status badges. |
 | `relay` | Bold and appetising: near-black type on white, one signature red for actions, grey-filled pills and chips, image-led store cards and a black order stepper. |
 | `lagoon` | A system messenger: near-black on white, a grey sidebar with round avatars, blue bubbles for you and grey for them, capsule buttons and a capsule composer, and a true dark mode. |

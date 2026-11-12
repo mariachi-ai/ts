@@ -1,8 +1,8 @@
 import type { Archetype } from '../types';
 import { prismRecipes } from './recipes';
 
-export const prismArchetype: Archetype = {
-  id: 'prism',
+export const nacreArchetype: Archetype = {
+  id: 'nacre',
   category: 'playful',
   tags: {
     feel: ['playful', 'colourful', 'friendly', 'soft', 'bold', 'quirky', 'calm'],

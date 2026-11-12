@@ -1,4 +1,4 @@
-# Prism
+# Nacre
 
 Category: playful. Colourful, soft and friendly: the whole window takes a colour you choose (a
 periwinkle by default), a borderless sidebar sits on it, and the page is a white panel with soft
@@ -12,8 +12,8 @@ This file is the design language in words; follow it for anything visual. Beside
 - **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
-The tokens are in the `prism` preset of `@mariachi/design` (`data-theme="prism"`,
-`themes/prism.css`).
+The tokens are in the `nacre` preset of `@mariachi/design` (`data-theme="nacre"`,
+`themes/nacre.css`).
 
 ## Principles
 
@@ -137,7 +137,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Prism draws them. Every one is in `gallery.html`.
+All 36 of the library's components, as Nacre draws them. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, for the frame: the 244px sidebar beside the page panel, 8px apart, on the canvas;
