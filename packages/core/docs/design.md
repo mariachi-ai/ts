@@ -53,6 +53,8 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `mosaic` | Ink on white, one bold red for saving, grey and black pills, 16px image tiles in a masonry grid and 32px dialogs. A design language. |
 | `bazaar` | Warm ink on white, a light serif for headings, an orange brand mark, black pill buttons, outlined secondaries, 12px cards and listing cards with black stars and green sale prices. A design language. |
 | `transit` | Black on white, big bold headings, 8px controls on a grey fill, black actions and one blue for focus. A design language. |
+| `hearth` | Layered near-black greys, a blue-violet accent, rounded bold type, round avatars beside grouped messages, presence dots and role colours. A design language. |
+| `harbor` | Near-black on white, warm off-white panels, one fresh green, pill buttons and chips, tailed bubbles on a warm wallpaper and blue read ticks. A design language. |
 
 ## Design languages
 
@@ -110,6 +112,8 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `mosaic` | Content-first and immersive | Pictures first: ink on white, one bold red for saving, grey and black pills, 16px image tiles in a masonry grid and 32px dialogs |
 | `bazaar` | Marketplace and commerce | Handmade marketplace: warm ink on white, a light serif for headings, an orange brand mark, black pill buttons, outlined secondaries, 12px cards and listing cards with black stars and green sale prices |
 | `transit` | Marketplace and commerce | Stark and direct: black on white, big bold headings, 8px controls on a grey fill, black actions and one blue for focus |
+| `hearth` | Social and messaging | Dark-first community chat: layered near-black greys, a blue-violet accent, rounded bold type, round avatars beside grouped messages, presence dots and role colours |
+| `harbor` | Social and messaging | A messenger on the desktop: near-black on white, warm off-white panels, one fresh green, pill buttons and chips, tailed bubbles on a warm wallpaper and blue read ticks |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
