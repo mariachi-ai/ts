@@ -25,15 +25,8 @@ const skyLine = { light: '#84d8ff', dark: '#3f87ab' };
 const skyText = { light: '#0b6fb0', dark: '#49c0f8' };
 // The pale green tint behind "correct" and the learner's own row
 const greenTint = { light: '#d7ffb8', dark: '#1f3a1a' };
-// The 3D lip and ring, drawn inside the button so one value works on every fill
-const lip = {
-  light: 'inset 0 0 0 2px rgb(0 0 0 / 0.1), inset 0 -4px 0 rgb(0 0 0 / 0.12)',
-  dark: 'inset 0 0 0 2px rgb(255 255 255 / 0.14), inset 0 -4px 0 rgb(0 0 0 / 0.3)',
-};
-const lipPressed = {
-  light: 'inset 0 0 0 2px rgb(0 0 0 / 0.1)',
-  dark: 'inset 0 0 0 2px rgb(255 255 255 / 0.14)',
-};
+// The 3D lip: a solid band below each button in its own darker step (the reference's 0 4px 0)
+const lipShadow = (light: string, dark: string, h = 4) => ({ light: `0 ${h}px 0 ${light}`, dark: `0 ${h}px 0 ${dark}` });
 
 export const marigold = extendTheme(minimal, {
   name: 'marigold',
@@ -189,30 +182,42 @@ export const marigold = extendTheme(minimal, {
       textTransform: 'uppercase',
       tracking: '0.05em',
       radius: '16px',
-      borderWidth: '0px',
-      shadow: lip,
-      hoverShadow: lip,
-      activeShadow: lipPressed,
-      activeTransform: 'translateY(2px)',
+      borderWidth: '2px',
+      activeTransform: 'translateY(4px)',
+      // The face; the lip below brings the main button to the reference's 50px
+      height: {
+        sm: 'calc(2.25rem * var(--m-density))',
+        md: 'calc(2.875rem * var(--m-density))',
+        lg: 'calc(3.25rem * var(--m-density))',
+      },
       primary: {
         bg: { light: green, dark: greenDark },
         fg: onBright,
         border: 'transparent',
         hoverBg: { light: '#61e002', dark: '#a2e43a' },
         activeBg: { light: green, dark: greenDark },
+        shadow: lipShadow('#58a700', '#79b933'),
+        hoverShadow: lipShadow('#58a700', '#79b933'),
+        activeShadow: 'none',
       },
-      // The white "stroke" button: grey ring and lip, blue label
+      // The white "stroke" button: a 2px grey border and a 2px lip in the same grey, blue label
       secondary: {
         bg: { light: '#ffffff', dark: '#131f24' },
         fg: skyText,
-        border: 'transparent',
+        border: line,
         hoverBg: { light: '#f7f7f7', dark: '#202f36' },
         activeBg: { light: '#ffffff', dark: '#131f24' },
+        shadow: lipShadow('#e5e5e5', '#37464f', 2),
+        hoverShadow: lipShadow('#e5e5e5', '#37464f', 2),
+        activeShadow: 'none',
       },
       ghost: {
         fg: skyText,
         hoverBg: { light: '#f7f7f7', dark: '#202f36' },
         activeBg: { light: '#f0f0f0', dark: '#37464f' },
+        shadow: 'none',
+        hoverShadow: 'none',
+        activeShadow: 'none',
       },
       danger: {
         bg: { light: '#ff4b4b', dark: '#ee5555' },
@@ -220,6 +225,9 @@ export const marigold = extendTheme(minimal, {
         border: 'transparent',
         hoverBg: { light: '#ff6363', dark: '#ff6b6b' },
         activeBg: { light: '#ff4b4b', dark: '#ee5555' },
+        shadow: lipShadow('#ea2b2b', '#c94444'),
+        hoverShadow: lipShadow('#ea2b2b', '#c94444'),
+        activeShadow: 'none',
       },
     },
     // Inputs sit in the pale well with a 2px outline and 12px corners

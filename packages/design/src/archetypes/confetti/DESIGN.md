@@ -49,7 +49,8 @@ The tokens are in the `confetti` preset of `@mariachi/design` (`data-theme="conf
 
 - **Radius.** 4px for checkboxes, keys and small parts; 6px for buttons, inputs, panels, tags,
   banners and dialogs; 10px for menus and popovers. Pills only for progress bars.
-- **Ledge.** Buttons: an inset 3px band at 13% black (40% in dark) along the bottom of the face.
+- **Ledge.** Buttons: a solid frame 3px below the face in the variant's own colour (amber under the
+  primary, warm grey under secondary, a translucent orange-red under danger); tertiary is flat.
   Menus, popovers and lifted cards: a solid `0 3px 0` ledge in a warm grey (`#dadbd2`; `#35373e` in
   dark). Dialogs add a short dark drop under the bottom edge. Nothing else has a shadow.
 - **Motion.** 100ms for switches and checks, 200ms for buttons, menus and dialogs, `ease`. Buttons
@@ -160,7 +161,7 @@ All 36 of the library's components, as Confetti draws them. Every one is in `gal
 **Actions and forms**
 - **Button.** 37px by default (33px `sm`, 49px `lg`), 6px corners, 14px medium, 12px side padding,
   an icon before the label.
-  - **Primary:** the amber face (yellow in dark), a dark-amber border, dark text, on its ledge. One
+  - **Primary:** a white face (yellow in dark), a dark-amber border, dark text, on an amber ledge. One
     per view, usually top right ("Add a chart", "New poll").
   - **Secondary:** white with a light grey border, on its grey ledge. The default for everything
     else in toolbars and filters ("Last 30 days", "Share", "Export").

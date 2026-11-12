@@ -175,22 +175,23 @@ export const confetti = extendTheme(minimal, {
       splitGap: '0',
     },
     // The chunky button: a face with a 1px border, standing on a 3px ledge that darkens the face
-    // colour (an inset shadow, so every variant gets its own ledge). Hover lifts it; pressing sinks
+    // colour (each variant's own frame colour, 3px below the face). Hover lifts it; pressing sinks
     // it. Primary is the brand amber (yellow in dark), secondary is white, tertiary (ghost) is flat.
     button: {
       fontWeight: 'var(--m-font-weight-medium)',
-      shadow: { light: 'inset 0 -3px 0 rgb(0 0 0 / 0.13)', dark: 'inset 0 -3px 0 rgb(0 0 0 / 0.4)' },
-      hoverShadow: { light: 'inset 0 -3px 0 rgb(0 0 0 / 0.13)', dark: 'inset 0 -3px 0 rgb(0 0 0 / 0.4)' },
-      activeShadow: { light: 'inset 0 -1px 0 rgb(0 0 0 / 0.13)', dark: 'inset 0 -1px 0 rgb(0 0 0 / 0.4)' },
       hoverTransform: 'translateY(-1px)',
       activeTransform: 'translateY(1px)',
       disabledOpacity: '0.65',
+      // Each variant stands on its own frame colour, 3px below the face (the reference's chrome depth)
       primary: {
-        bg: { light: '#eb9d2a', dark: '#f8be2a' },
+        bg: { light: '#ffffff', dark: '#f8be2a' },
         fg: '#111111',
         border: { light: '#b17816', dark: '#b17816' },
-        hoverBg: { light: '#eb9d2a', dark: '#f8be2a' },
-        activeBg: { light: '#e7962a', dark: '#f5b81f' },
+        hoverBg: { light: '#ffffff', dark: '#f8be2a' },
+        activeBg: { light: '#ffffff', dark: '#f5b81f' },
+        shadow: { light: '0 3px 0 -1px #eb9d2a', dark: '0 3px 0 -1px #926826' },
+        hoverShadow: { light: '0 4px 0 -1px #eb9d2a', dark: '0 4px 0 -1px #926826' },
+        activeShadow: { light: '0 2px 0 -1px #eb9d2a', dark: '0 2px 0 -1px #926826' },
       },
       secondary: {
         bg: 'var(--m-color-bg-surface)',
@@ -198,8 +199,12 @@ export const confetti = extendTheme(minimal, {
         border: { light: '#cccccc', dark: '#4a4c52' },
         hoverBg: 'var(--m-color-bg-surface)',
         activeBg: 'var(--m-color-bg-surface)',
+        shadow: { light: '0 3px 0 -1px #e1dddd', dark: '0 3px 0 -1px #323232' },
+        hoverShadow: { light: '0 4px 0 -1px #e1dddd', dark: '0 4px 0 -1px #323232' },
+        activeShadow: { light: '0 2px 0 -1px #e1dddd', dark: '0 2px 0 -1px #323232' },
       },
-      ghost: { fg: 'var(--m-color-fg-default)', hoverBg: hoverFill, activeBg: activeFill },
+      // Tertiary buttons are flat: no frame at rest, hovered or pressed
+      ghost: { fg: 'var(--m-color-fg-default)', hoverBg: hoverFill, activeBg: activeFill, shadow: 'none', hoverShadow: 'none', activeShadow: 'none' },
       // Danger is an outlined orange-red button on white, standing on the same ledge
       danger: {
         bg: 'var(--m-color-bg-surface)',
@@ -207,6 +212,9 @@ export const confetti = extendTheme(minimal, {
         border: { light: '#e96b30', dark: '#c44003' },
         hoverBg: { light: '#fcebe6', dark: '#3a2721' },
         activeBg: { light: '#fae2da', dark: '#43291f' },
+        shadow: '0 3px 0 -1px rgb(245 78 0 / 0.5)',
+        hoverShadow: '0 4px 0 -1px rgb(245 78 0 / 0.5)',
+        activeShadow: '0 2px 0 -1px rgb(245 78 0 / 0.5)',
       },
     },
     // Inputs: 37px, white, 6px corners, a hairline that darkens on hover and focus
