@@ -152,7 +152,7 @@ All 36 of the library's components, as Saffron draws them. Every one is in `gall
 
 **Navigation**
 - **Sidebar.** 216px, white, a hairline edge.
-  - Top: a secondary "Write" button the full width, with a pencil.
+  - Top: a secondary "New issue" button the full width, with a pencil.
   - Items are 16px in muted text with a 20px icon; the current one is graphite at 500 on `#e2e9ed`
     with 6px corners. Nested items sit under their parent, indented, without icons.
   - Counts are muted on the right; "New" is a violet badge.
@@ -221,7 +221,7 @@ All 36 of the library's components, as Saffron draws them. Every one is in `gall
 - **Somewhere else:** the snackbar, with what happened and one action ("Verify").
 - **A whole page:** centred, a 40px outline icon, "Error 404" in small mono, a 40px serif title, one
   sentence and one or two buttons.
-  - **404:** "We can't find that page", with Go to overview.
+  - **404:** "We can't find that page", with Go to Today.
   - **500:** "Something went wrong on our end" and "Nothing was changed", with Try again.
   - **403:** "This part is for account owners", with Ask for access.
 - **Words.** Say what happened, whether anything changed, and what to do next, kindly. No blame, no
@@ -250,7 +250,7 @@ All 36 of the library's components, as Saffron draws them. Every one is in `gall
 
 ## Words
 
-- Friendly and plain: "Write", "New email", "See how journeys work", "Your first email can go out
+- Friendly and plain: "New issue", "Export summary", "See how planning works", "Your first email can go out
   today."
 - Explain without jargon; dates short ("Nov 10, 2026").
 

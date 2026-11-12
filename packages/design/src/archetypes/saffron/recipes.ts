@@ -13,25 +13,23 @@ import type { ArchetypeRecipe } from '../types';
 const icon = (paths: string, size = 16) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 const I = {
+  today:
+    '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  issues:
+    '<path d="M15 18h-5"/><path d="M18 14h-8"/><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-4 0v-9a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="10" y="6" rx="1"/>',
+  segments:
+    '<path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/>',
+  gear: '<path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"/><circle cx="12" cy="12" r="3"/>',
+  download: '<path d="M12 15V3"/><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/>',
   write:
     '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/>',
-  overview:
-    '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
   contacts:
     '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><path d="M16 3.128a4 4 0 0 1 0 7.744"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><circle cx="9" cy="7" r="4"/>',
   sends: '<path d="m22 7-8.991 5.727a2 2 0 0 1-2.009 0L2 7"/><rect x="2" y="4" width="20" height="16" rx="2"/>',
-  journeys:
-    '<rect width="8" height="8" x="3" y="3" rx="2"/><path d="M7 11v4a2 2 0 0 0 2 2h4"/><rect width="8" height="8" x="13" y="13" rx="2"/>',
-  pages:
-    '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"/><path d="M14 2v5a1 1 0 0 0 1 1h5"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
   results: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
-  library:
-    '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
-  apps: '<path d="M10 22V7a1 1 0 0 0-1-1H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-5a1 1 0 0 0-1-1H2"/><rect x="14" y="2" width="8" height="8" rx="1"/>',
   search: '<path d="m21 21-4.34-4.34"/><circle cx="11" cy="11" r="8"/>',
   bell: '<path d="M10.268 21a2 2 0 0 0 3.464 0"/><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
-  down: '<path d="m6 9 6 6 6-6"/>',
   right: '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
   left: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
   up: '<path d="m5 12 7-7 7 7"/><path d="M12 19V5"/>',
@@ -115,18 +113,18 @@ const shell = (
   <div class="m-split" style="--m-layout-split-side: 13.5rem; --m-layout-split-gap: 0">
     <nav class="m-sidebar" aria-label="Main">
       <div class="m-sidebar-section">
-        <button type="button" class="m-button" style="inline-size: 100%; justify-content: flex-start">${icon(I.write, 18)} Write</button>
+        <button type="button" class="m-button" style="inline-size: 100%; justify-content: flex-start">${icon(I.write, 18)} New issue</button>
       </div>
       <div class="m-sidebar-section">
         <ul>
-${navItem('overview', 'Overview', current)}
-${navItem('contacts', 'Contacts', current, ' <span class="m-sidebar-count">4,812</span>', subNav(['All contacts', 'Groups', 'Imports'], sub))}
-${navItem('sends', 'Sends', current)}
-${navItem('journeys', 'Journeys', current)}
-${navItem('pages', 'Pages', current, ' <span class="m-badge" data-tone="info">New</span>')}
-${navItem('results', 'Results', current)}
-${navItem('library', 'Library', current)}
-${navItem('apps', 'Apps', current)}
+${navItem('today', 'Today', current)}
+${navItem('issues', 'Issues', current, ' <span class="m-sidebar-count">3</span>')}
+${navItem('calendar', 'Calendar', current)}
+${navItem('contacts', 'Subscribers', current, ' <span class="m-sidebar-count">4.8k</span>', subNav(['Everyone', 'Unconfirmed', 'Imported'], sub))}
+${navItem('segments', 'Segments', current)}
+${navItem('layout', 'Templates', current, ' <span class="m-badge" data-tone="info">New</span>')}
+${navItem('results', 'Reports', current)}
+${navItem('gear', 'Settings', current)}
         </ul>
       </div>
     </nav>
@@ -182,13 +180,13 @@ const sendRow = (
             </tr>`;
 
 const dashboard = shell(
-  'Overview',
+  'Today',
   `      <div class="m-stack" data-gap="8">
         <div class="m-cluster" data-justify="between">
-          <h1 style="${pageTitle}">Overview</h1>
+          <h1 style="${pageTitle}">Today</h1>
           <div class="m-cluster" data-gap="3">
-            <button type="button" class="m-button">Shortcuts ${icon(I.down, 16)}</button>
-            <button type="button" class="m-button" data-variant="primary">New email</button>
+            <button type="button" class="m-button">${icon(I.download, 16)} Export summary</button>
+            <button type="button" class="m-button" data-variant="primary">New issue</button>
           </div>
         </div>
         <div class="m-field" style="max-inline-size: 16rem">
@@ -212,13 +210,13 @@ ${metric('contacts', 'Unsubscribes', '37', fall('12'))}
         <div class="m-grid" style="--m-layout-grid-min: 22rem; --m-layout-grid-gap: var(--m-space-6)">
           <section class="m-stack" data-gap="3" aria-labelledby="sf-growth">
             <div class="m-cluster" data-justify="between">
-              <h2 id="sf-growth" class="m-cluster" data-gap="2" style="${sectionTitle}">Contact growth <span class="m-subtle" style="display: inline-flex">${icon(I.info, 18)}</span></h2>
-              ${more('Contacts')}
+              <h2 id="sf-growth" class="m-cluster" data-gap="2" style="${sectionTitle}">Subscriber growth <span class="m-subtle" style="display: inline-flex">${icon(I.info, 18)}</span></h2>
+              ${more('Subscribers')}
             </div>
             <div class="m-card">
               <div class="m-card-body m-stack" data-gap="4">
                 <div class="m-cluster" data-justify="between" data-align="end">
-                  <div class="m-stack" data-gap="1"><span style="${label}">${term('New contacts')}</span><span style="${figure}">1,027</span></div>
+                  <div class="m-stack" data-gap="1"><span style="${label}">${term('New subscribers')}</span><span style="${figure}">1,027</span></div>
                   <div class="m-tabs" data-variant="pill"><div class="m-tab-list" role="tablist" aria-label="Period">
                     <button type="button" class="m-tab" role="tab" aria-selected="true">Weekly</button>
                     <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Monthly</button>
@@ -255,18 +253,18 @@ ${metric('contacts', 'Unsubscribes', '37', fall('12'))}
         </div>
         <section class="m-stack" data-gap="3" aria-labelledby="sf-recent">
           <div class="m-cluster" data-justify="between">
-            <h2 id="sf-recent" style="${sectionTitle}">Recent sends</h2>
-            ${more('All sends')}
+            <h2 id="sf-recent" style="${sectionTitle}">Recent issues</h2>
+            ${more('All issues')}
           </div>
           <div class="m-table-wrap">
             <table class="m-table">
               <thead><tr><th>Name</th><th>Status</th><th data-numeric>Recipients</th><th data-numeric>Opens</th><th data-numeric>Clicks</th><th aria-label="Actions"></th></tr></thead>
               <tbody>
-${sendRow('The autumn loaf club is back', 'Regular email · Bread lovers', 'Sent', 'success', '3,904', '51.2%', '7.9%')}
-${sendRow('Two seats left in Sunday’s sourdough class', 'Regular email · Class waitlist', 'Sent', 'success', '612', '63.0%', '14.4%')}
-${sendRow('Market stall hours for November', 'Regular email · Everyone', 'Scheduled', 'info', '4,812', '—', '—')}
-${sendRow('Thank you for your first order', 'Journey · New customers', 'Ongoing', 'warning', '1,148', '58.7%', '9.1%')}
-${sendRow('Holiday pre-orders', 'Regular email · Everyone', 'Draft', '', '—', '—', '—')}
+${sendRow('The autumn loaf club is back', 'Newsletter · Bread lovers', 'Sent', 'success', '3,904', '51.2%', '7.9%')}
+${sendRow('Two seats left in Sunday’s sourdough class', 'Newsletter · Class waitlist', 'Sent', 'success', '612', '63.0%', '14.4%')}
+${sendRow('Market stall hours for November', 'Newsletter · Everyone', 'Scheduled', 'info', '4,812', '—', '—')}
+${sendRow('Thank you for your first order', 'Automatic · New customers', 'Ongoing', 'warning', '1,148', '58.7%', '9.1%')}
+${sendRow('Holiday pre-orders', 'Newsletter · Everyone', 'Draft', '', '—', '—', '—')}
               </tbody>
             </table>
           </div>
@@ -304,13 +302,13 @@ const listDetail = shell(
         <!-- The list: tabs by status, a search and filters, then a frameless table -->
         <section class="m-stack" data-gap="5" aria-labelledby="sf-contacts">
           <div class="m-cluster" data-justify="between">
-            <h1 id="sf-contacts" style="${pageTitle}">Contacts</h1>
+            <h1 id="sf-contacts" style="${pageTitle}">Subscribers</h1>
             <div class="m-cluster" data-gap="3">
               <button type="button" class="m-button">${icon(I.upload, 16)} Import</button>
-              <button type="button" class="m-button" data-variant="primary">${icon(I.userPlus, 16)} Add a contact</button>
+              <button type="button" class="m-button" data-variant="primary">${icon(I.userPlus, 16)} Add a subscriber</button>
             </div>
           </div>
-          <p class="m-muted" style="max-inline-size: 44rem">Your contacts are everyone who has bought from you or asked to hear from you. <a href="#" style="color: var(--m-color-accent-text)">How contacts work</a></p>
+          <p class="m-muted" style="max-inline-size: 44rem">Your subscribers are everyone who has bought from you or asked to hear from you. <a href="#" style="color: var(--m-color-accent-text)">How subscribing works</a></p>
           <div class="m-tabs"><div class="m-tab-list" role="tablist" aria-label="Status">
             <button type="button" class="m-tab" role="tab" aria-selected="true">Everyone (4,812)</button>
             <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Opted in (4,206)</button>
@@ -321,7 +319,7 @@ const listDetail = shell(
             <div class="m-cluster" data-gap="3" role="search">
               <span style="position: relative; display: flex; inline-size: 18rem">
                 <span style="position: absolute; inset-inline-start: var(--m-space-3); inset-block: 0; display: flex; align-items: center; color: var(--m-color-fg-muted)">${icon(I.search, 16)}</span>
-                <input class="m-input" type="search" data-size="sm" placeholder="Search by name or email" aria-label="Search contacts" style="padding-inline-start: var(--m-space-8)">
+                <input class="m-input" type="search" data-size="sm" placeholder="Search by name or email" aria-label="Search subscribers" style="padding-inline-start: var(--m-space-8)">
               </span>
               <select class="m-select" data-size="sm" aria-label="Group"><option>Any group</option><option>Bread lovers</option><option>Class waitlist</option></select>
               <button type="button" class="m-button" data-size="sm">${icon(I.filter, 16)} More filters</button>
@@ -356,7 +354,7 @@ ${contactRow('dev.marsh@example.com', 'Dev Marsh', 'Opted in', 'success', 'Added
         </section>
         <!-- The detail: a contact's own page, opened from a row -->
         <section class="m-stack" data-gap="6" aria-labelledby="sf-contact" style="${hair}; padding-block-start: var(--m-space-10)">
-          <nav class="m-breadcrumb" aria-label="Breadcrumb"><ol><li><a href="#">Contacts</a></li><li><span aria-current="page">Maya Okafor</span></li></ol></nav>
+          <nav class="m-breadcrumb" aria-label="Breadcrumb"><ol><li><a href="#">Subscribers</a></li><li><span aria-current="page">Maya Okafor</span></li></ol></nav>
           <div class="m-cluster" data-justify="between">
             <div class="m-cluster" data-gap="4">
               ${serifAvatar('M', 'lg')}
@@ -398,7 +396,7 @@ ${contactRow('dev.marsh@example.com', 'Dev Marsh', 'Opted in', 'success', 'Added
           </div>
         </section>
       </div>`,
-  'All contacts',
+  'Everyone',
 );
 
 // Onboarding: a narrow form column beside a brand panel built from token shapes, never an illustration
@@ -467,7 +465,7 @@ const toggle = (title: string, desc: string, on: boolean) =>
   `            <label class="m-cluster" data-justify="between" data-align="start" style="gap: var(--m-space-6); flex-wrap: nowrap"><span class="m-stack" data-gap="0"><span>${title}</span><span style="${label}">${desc}</span></span><input class="m-switch" type="checkbox" role="switch"${on ? ' checked' : ''}></label>`;
 
 const settings = shell(
-  '',
+  'Settings',
   `      <div class="m-stack" data-gap="6" style="max-inline-size: 60rem">
         <h1 style="${pageTitle}">Settings</h1>
         <div class="m-tabs"><div class="m-tab-list" role="tablist" aria-label="Settings">
@@ -537,23 +535,23 @@ const way = (
           </div>`;
 
 const emptyState = shell(
-  'Journeys',
+  'Calendar',
   `      <div class="m-stack" data-gap="10">
-        <h1 style="${pageTitle}">Journeys</h1>
+        <h1 style="${pageTitle}">Calendar</h1>
         <section class="m-stack" data-gap="4" data-align="center" style="text-align: center; background: var(--m-color-bg-sunken); border-radius: var(--m-radius-lg); padding: var(--m-space-12) var(--m-space-6)" aria-labelledby="sf-empty">
-          <h2 id="sf-empty" style="${serif('3xl')}">Send the right note at the right time</h2>
-          <p class="m-muted" style="max-inline-size: 34rem; font-size: var(--m-font-size-lg)">A journey sends emails on its own when something happens, like a first order or a birthday. You don’t have any yet.</p>
+          <h2 id="sf-empty" style="${serif('3xl')}">Nothing on the calendar yet</h2>
+          <p class="m-muted" style="max-inline-size: 34rem; font-size: var(--m-font-size-lg)">Plan your issues ahead: drop a draft on a day and it goes out at the time you pick.</p>
           <div class="m-cluster" data-gap="3" data-justify="center">
-            <button type="button" class="m-button" data-variant="primary" data-size="lg">${icon(I.plus, 16)} Build a journey</button>
-            <button type="button" class="m-button" data-variant="ghost" data-size="lg">See how journeys work</button>
+            <button type="button" class="m-button" data-variant="primary" data-size="lg">${icon(I.plus, 16)} Plan an issue</button>
+            <button type="button" class="m-button" data-variant="ghost" data-size="lg">See how planning works</button>
           </div>
         </section>
         <section class="m-stack" data-gap="4" aria-labelledby="sf-start">
-          <h2 id="sf-start" style="${sectionTitle}">Start from a common one</h2>
+          <h2 id="sf-start" style="${sectionTitle}">Or start with a rhythm</h2>
           <div class="m-grid" style="--m-layout-grid-min: 15rem; --m-layout-grid-gap: var(--m-space-6)">
-${way('var(--m-color-success-bg)', 'userPlus', 'Welcome new contacts', 'Three short emails over a week for everyone who joins.', 'Use this')}
-${way('var(--m-color-selection-bg)', 'sends', 'Follow up a first order', 'Say thanks, then ask how it went a week later.', 'Use this')}
-${way('var(--m-color-brand-subtle)', 'calendar', 'Celebrate a birthday', 'A note and an offer on the day, every year.', 'Use this')}
+${way('var(--m-color-success-bg)', 'issues', 'A weekly letter', 'The same day and time every week, with a reminder to write.', 'Set it up')}
+${way('var(--m-color-selection-bg)', 'today', 'Seasonal menus', 'Four issues a year, lined up with what’s in the oven.', 'Set it up')}
+${way('var(--m-color-brand-subtle)', 'calendar', 'Before each class', 'A note three days ahead of every class you teach.', 'Set it up')}
           </div>
         </section>
       </div>`,
@@ -615,7 +613,7 @@ const pricing = `<div style="background: var(--m-color-bg-canvas)">
     </div>
     <section aria-label="Plans" class="m-grid" style="--m-layout-grid-min: 15rem; --m-layout-grid-gap: 0; background: var(--m-color-bg-surface); border: var(--m-border-width-thin) solid var(--m-color-border-default); border-inline-start: 0">
 ${plan('Starter', 'For a first list. Send a few emails a month and see what works.', '$0', '/month', 'Up to 400 contacts', 'Sign up', inkPill)}
-${plan('Grow', 'Journeys, testing and scheduling for a list that’s taking off.', '$16', '/month', 'For 500 contacts, then $3 per 100 more', 'Start a free trial', yellowPill, true)}
+${plan('Grow', 'Automatic emails, testing and scheduling for a list that’s taking off.', '$16', '/month', 'For 500 contacts, then $3 per 100 more', 'Start a free trial', yellowPill, true)}
 ${plan('Team', 'Every tool, more people and help on the phone, for busy shops.', '$290', '/month', 'For 10,000 contacts, billed monthly', 'Start a free trial', yellowPill)}
     </section>
     <section class="m-stack" data-gap="4" aria-labelledby="sf-compare">
@@ -626,7 +624,7 @@ ${plan('Team', 'Every tool, more people and help on the phone, for busy shops.',
           <tbody>
             ${compareRow('Emails a month', ['2,000', '6,000', '150,000'])}
             ${compareRow('People on the account', ['1', '3', 'Unlimited'])}
-            ${compareRow('Journeys', ['1 step', 'Up to 100', 'Unlimited'])}
+            ${compareRow('Automatic emails', ['1', 'Up to 100', 'Unlimited'])}
             ${compareRow('Send-time testing', ['no', 'yes', 'yes'])}
             ${compareRow('Your own email footer', ['no', 'yes', 'yes'])}
             ${compareRow('Phone support', ['no', 'no', 'yes'])}
@@ -688,7 +686,7 @@ const errors = `<div style="min-block-size: 100vh; border-block-start: 4px solid
     <section class="m-stack" data-gap="3" aria-label="A snackbar">
       <div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title">“Market stall hours” didn’t send</div><div class="m-toast-body">Your sending address needs to be verified again.</div></div><button type="button" class="m-button" data-size="sm" data-variant="ghost" style="color: var(--m-color-fg-inverse); text-decoration: underline">Verify</button></div>
     </section>
-${errorPage('404', I.search, 'We can’t find that page', 'The link might be old, or the page has moved. Try searching, or head back to your overview.', `<a class="m-button" data-variant="primary" href="#">Go to overview</a>`)}
+${errorPage('404', I.search, 'We can’t find that page', 'The link might be old, or the page has moved. Try searching, or head back to Today.', `<a class="m-button" data-variant="primary" href="#">Go to Today</a>`)}
 ${errorPage('500', I.alert, 'Something went wrong on our end', 'Nothing was changed, and nothing was sent. Give it a minute and try again.', `<button type="button" class="m-button" data-variant="primary">${icon(I.zap, 16)} Try again</button><button type="button" class="m-button">Check our status</button>`)}
 ${errorPage('403', I.lock, 'This part is for account owners', 'Plan and billing can only be changed by an owner of Wildflower Bakehouse. Ask one to give you access.', `<button type="button" class="m-button" data-variant="primary">Ask for access</button><a class="m-button" data-variant="ghost" href="#">${icon(I.left, 16)} Go back</a>`)}
   </div>
