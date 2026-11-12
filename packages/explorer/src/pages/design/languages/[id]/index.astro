@@ -1,0 +1,347 @@
+---
+import { iconActions, lucideSvg } from '@mariachi/design';
+import TableWrap from '../../../../components/TableWrap.astro';
+import type { Heading } from '../../../../data/schema';
+import Base from '../../../../layouts/Base.astro';
+import { designSidebar } from '../../../../lib/sidebars';
+import { href } from '../../../../lib/url';
+import { findLanguage, languageAssetRoute, languageFilterQuery, languageFontStylesheets, languageSettings, loadDesign, loadLanguages } from '../../../../loaders/design';
+
+export function getStaticPaths() {
+  return loadLanguages().map((a) => ({ params: { id: a.id } }));
+}
+
+const catalog = loadDesign();
+const language = findLanguage(String(Astro.params.id))!;
+const [settings, fonts] = await Promise.all([languageSettings(language), languageFontStylesheets(language, 'page')]);
+const categories = catalog.categories as Record<string, { label: string; description: string }>;
+const category = categories[language.category];
+const hasPreset = catalog.presets.some((p) => p.name === language.id);
+const index = href('design/languages');
+const modes = ['light', 'dark'] as const;
+const modeLabel = { light: 'Light', dark: 'Dark' };
+// Gallery and recipes open in the language's first mode; the toggle switches both.
+const firstMode = language.tags.mode === 'dark-first' ? 'dark' : 'light';
+const tagGroups = [
+  { key: 'feel', label: 'Feel', values: language.tags.feel },
+  { key: 'density', label: 'Density', values: [language.tags.density] },
+  { key: 'mode', label: 'Mode', values: [language.tags.mode] },
+  { key: 'suits', label: 'Suits', values: language.tags.suits },
+  { key: 'style', label: 'Style', values: language.tags.style },
+] as const;
+const differs = (t: { light: string; dark: string }) => t.light !== t.dark;
+const toc: Heading[] = [
+  { depth: 2, id: 'settings', text: 'Settings' },
+  { depth: 3, id: 'colours', text: 'Colours' },
+  { depth: 3, id: 'type', text: 'Type' },
+  { depth: 3, id: 'shape', text: 'Radius and shadows' },
+  { depth: 3, id: 'motion', text: 'Motion' },
+  { depth: 3, id: 'density', text: 'Density' },
+  { depth: 2, id: 'gallery', text: 'Gallery' },
+  { depth: 2, id: 'recipes', text: 'Recipes' },
+  { depth: 2, id: 'icons', text: 'Icons' },
+  { depth: 2, id: 'guide', text: 'DESIGN.md' },
+];
+---
+
+<Base title={`${language.label} design language`} description={language.pitch} sidebar={designSidebar(catalog)} toc={toc} fonts={fonts}>
+  <nav class="m-breadcrumb" aria-label="Breadcrumb">
+    <ol>
+      <li><a href={href('design')}>Design</a></li>
+      <li><a href={index}>Languages</a></li>
+      <li aria-current="page">{language.label}</li>
+    </ol>
+  </nav>
+  <header class="x-page-header">
+    <a class="x-eyebrow x-eyebrow-link" href={`${index}${languageFilterQuery('category', language.category)}`}>{category?.label ?? language.category}</a>
+    <h1>{language.label}</h1>
+    <p class="x-lede">{language.pitch}</p>
+    <p>{language.for}.</p>
+    <div class="x-meta">
+      <a href={href(languageAssetRoute(language.gallery))}>Gallery (full page)</a>
+      <a href={href(`design/languages/${language.id}/guide`)}>DESIGN.md</a>
+      {hasPreset && <a href={href(`design/presets/${language.id}`)}>Preset tokens and contrast</a>}
+      {hasPreset && <a href={`${href('design/compare')}?presets=${language.id},minimal`}>Compare</a>}
+      <span class="x-mono">data-theme="{language.id}"</span>
+    </div>
+    <dl class="x-definition x-language-tags">
+      {
+        tagGroups.map((g) => (
+          <>
+            <dt>{g.label}</dt>
+            <dd class="m-cluster" data-gap="1">
+              {g.values.map((v) => (
+                <a class="m-badge x-badge-link" href={`${index}${languageFilterQuery(g.key, v)}`}>
+                  {v}
+                </a>
+              ))}
+            </dd>
+          </>
+        ))
+      }
+      {
+        language.alsoIn && language.alsoIn.length > 0 && (
+          <>
+            <dt>Also in</dt>
+            <dd class="m-cluster" data-gap="1">
+              {language.alsoIn.map((c) => (
+                <a class="m-badge x-badge-link" href={`${index}${languageFilterQuery('category', c)}`}>
+                  {categories[c]?.label ?? c}
+                </a>
+              ))}
+            </dd>
+          </>
+        )
+      }
+    </dl>
+  </header>
+
+  <section class="x-section" id="settings">
+    <h2>Settings</h2>
+    <p class="m-muted">Every value resolved from the <code class="m-code-inline">{language.id}</code> preset, light and dark: the same values its gallery and DESIGN.md show.</p>
+
+    <h3 id="colours">Colours</h3>
+    <div class="x-mode-pair" data-pagefind-ignore>
+      {
+        modes.map((mode) => (
+          <div class="x-preset-frame" data-theme={language.id} data-mode={mode}>
+            <strong>{modeLabel[mode]}</strong>
+            <div class="x-brand-band">
+              <span>Brand</span>
+              <span class="x-mono">{settings.brand[mode]}</span>
+            </div>
+            {settings.colours.map((g) => (
+              <div class="m-stack" data-gap="2">
+                <span class="m-muted x-mono">{g.group}</span>
+                <div class="x-swatches">
+                  {g.tokens.map((t) => (
+                    <div class="x-swatch" title={t.description}>
+                      <div class="x-swatch-chip" style={`background: var(${t.cssVar})`} />
+                      <span class="x-mono">{t.name}</span>
+                      <span class="m-subtle x-mono x-swatch-value">{t[mode]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+            {language.charts.categorical.length > 0 && (
+              <div class="m-stack" data-gap="2">
+                <span class="m-muted x-mono">charts.categorical</span>
+                <div class="x-swatches">
+                  {language.charts.categorical.map((c) => (
+                    <div class="x-swatch">
+                      <div class="x-swatch-chip" style={`background: ${c[mode]}`} />
+                      <span>{c.name}</span>
+                      <span class="m-subtle x-mono x-swatch-value">{c[mode]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        ))
+      }
+    </div>
+
+    <h3 id="type">Type</h3>
+    <TableWrap label="Type families">
+      <table class="m-table" data-density="compact">
+        <thead><tr><th>Role</th><th>Family</th><th>Token</th><th>Stack</th></tr></thead>
+        <tbody>
+          {
+            settings.type.families.map((f) => (
+              <tr>
+                <td>{f.role}</td>
+                <td>{f.family}</td>
+                <td class="x-mono">{f.cssVar}</td>
+                <td class="x-mono">{f.stack}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </TableWrap>
+    <div class="x-preset-frame" data-theme={language.id} data-pagefind-ignore>
+      <p class="x-type-heading">Heading in {language.type.heading}</p>
+      {
+        settings.type.sizes.map((t) => (
+          <div class="x-type-row">
+            <span class="m-subtle x-mono">{t.name}</span>
+            <span class="m-subtle x-mono">{t.px}</span>
+            <span class="x-type-sample" style={`font-size: var(${t.cssVar})`}>Payments arrive tomorrow, 0123456789</span>
+          </div>
+        ))
+      }
+      <code class="m-code-inline">{language.type.mono}: const total = 1280.50;</code>
+    </div>
+    <dl class="x-definition">
+      <dt>Weights</dt>
+      <dd>{settings.type.weights.map((w) => `${w.name} ${w.light}`).join(' · ')}</dd>
+      <dt>Body / heading</dt>
+      <dd>
+        body {settings.type.body.weight} · heading {settings.type.heading.weight}{settings.type.heading.transform !== 'none' && ` · ${settings.type.heading.transform}`} · heading tracking {settings.type.heading.tracking}
+      </dd>
+      <dt>Line height</dt>
+      <dd>{settings.type.leading.map((t) => `${t.name} ${t.light}`).join(' · ')}</dd>
+      <dt>Tracking</dt>
+      <dd>{settings.type.tracking.map((t) => `${t.name} ${t.light}`).join(' · ')}</dd>
+    </dl>
+
+    <h3 id="shape">Radius and shadows</h3>
+    <div class="x-mode-pair" data-pagefind-ignore>
+      {
+        modes.map((mode) => (
+          <div class="x-preset-frame" data-theme={language.id} data-mode={mode}>
+            <strong>{modeLabel[mode]}</strong>
+            <div class="m-cluster" data-gap="4">
+              {settings.radius.map((t) => (
+                <div class="x-swatch">
+                  <div class="x-radius-box" style={`border-radius: var(${t.cssVar})`} />
+                  <span class="x-mono">{t.name}</span>
+                  <span class="m-subtle x-mono x-swatch-value">{t.px}</span>
+                </div>
+              ))}
+            </div>
+            <div class="m-cluster" data-gap="6">
+              {settings.shadows.map((t) => (
+                <div class="x-swatch">
+                  <div class="x-shadow-box" style={`box-shadow: var(${t.cssVar})`} />
+                  <span class="x-mono">{t.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))
+      }
+    </div>
+    <TableWrap label="Shadow values">
+      <table class="m-table" data-density="compact">
+        <thead><tr><th>Token</th><th>Light</th><th>Dark</th></tr></thead>
+        <tbody>
+          {
+            settings.shadows.map((t) => (
+              <tr>
+                <td class="x-mono">{t.cssVar}</td>
+                <td class="x-mono">{t.light}</td>
+                <td class="x-mono">{differs(t) ? t.dark : 'same'}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </TableWrap>
+
+    <h3 id="motion">Motion</h3>
+    <TableWrap label="Motion tokens">
+      <table class="m-table" data-density="compact">
+        <thead><tr><th>Token</th><th>Value</th></tr></thead>
+        <tbody>
+          {
+            settings.motion.map((t) => (
+              <tr>
+                <td class="x-mono">{t.cssVar}</td>
+                <td class="x-mono">{differs(t) ? `${t.light} / ${t.dark}` : t.light}</td>
+              </tr>
+            ))
+          }
+        </tbody>
+      </table>
+    </TableWrap>
+    <p class="m-muted">Every duration collapses to 0ms under prefers-reduced-motion.</p>
+
+    <h3 id="density">Density</h3>
+    <dl class="x-definition">
+      <dt>Density dial</dt>
+      <dd>
+        {settings.density.default} by default; <code class="m-code-inline">--m-density: {settings.density.dense}</code> for data-heavy screens
+      </dd>
+      <dt>Space unit</dt>
+      <dd>{settings.density.unit}</dd>
+      <dt>Control heights</dt>
+      <dd>{settings.density.controls.map((c) => `${c.name} ${c.px}`).join(' · ')}</dd>
+    </dl>
+  </section>
+
+  <section class="x-section" id="gallery" data-x-frames={firstMode}>
+    <div class="m-cluster" data-justify="between">
+      <h2>Gallery</h2>
+      <div class="m-cluster" data-gap="2" role="group" aria-label="Gallery and recipe mode">
+        {
+          modes.map((mode) => (
+            <button type="button" class="m-button" data-size="sm" data-x-frame-mode={mode} aria-pressed={mode === firstMode ? 'true' : 'false'}>
+              {modeLabel[mode]}
+            </button>
+          ))
+        }
+      </div>
+    </div>
+    <p class="m-muted">
+      Foundations, icons, every control in every state, the error, loading and empty patterns, and every component in the library, drawn in {language.label}.{' '}
+      <a href={href(languageAssetRoute(language.gallery))} target="_blank" rel="noopener">Open the gallery on its own</a>.
+    </p>
+    <iframe class="x-language-gallery" src={href(languageAssetRoute(language.gallery))} title={`${language.label} gallery`} data-x-mode-frame loading="lazy"></iframe>
+  </section>
+
+  <section class="x-section" id="recipes">
+    <h2>Recipes</h2>
+    <p class="m-muted">
+      The {language.recipes.length} page shapes every language gives, as HTML using only the library's classes. They follow the Gallery's light or dark switch above.
+    </p>
+    <div class="m-grid" style="--m-layout-grid-min: 18rem">
+      {
+        language.recipes.map((r) => (
+          <article class="m-card x-has-stretched x-recipe-card">
+            <div class="x-recipe-thumb" aria-hidden="true">
+              <iframe src={href(languageAssetRoute(r.file))} title={`${r.title} preview`} tabindex="-1" loading="lazy" data-x-mode-frame />
+            </div>
+            <div class="m-card-body m-stack" data-gap="1">
+              <a class="x-stretched m-card-title" href={href(languageAssetRoute(r.file))} target="_blank" rel="noopener">
+                {r.title}
+              </a>
+              <span class="m-muted">{r.description}</span>
+            </div>
+          </article>
+        ))
+      }
+    </div>
+  </section>
+
+  <section class="x-section" id="icons">
+    <h2>Icons</h2>
+    <p class="m-muted">
+      {language.icons.set === 'lucide' ? 'Lucide' : language.icons.set}, {language.icons.style}, {language.icons.stroke}px stroke: {language.icons.size.text}px beside text,{' '}
+      {language.icons.size.control}px in controls. One icon per common action, used every time.
+    </p>
+    <div class="x-preset-frame" data-theme={language.id} data-pagefind-ignore>
+      <div class="m-grid x-icon-grid" style="--m-layout-grid-min: 9.5rem">
+        {
+          iconActions.map((action) => (
+            <div class="m-cluster x-icon-cell" data-gap="3">
+              <Fragment set:html={lucideSvg(language.icons.actions[action], 20, language.icons.stroke)} />
+              <span class="m-stack" data-gap="0">
+                <span>{action}</span>
+                <span class="m-subtle x-mono">{language.icons.actions[action]}</span>
+              </span>
+            </div>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <section class="x-section" id="guide">
+    <h2>DESIGN.md</h2>
+    <p class="m-muted">
+      The language in words, for agents and people: its principles, foundations, components and patterns, then a reference generated from the preset.
+    </p>
+    <div class="m-cluster" data-gap="2">
+      <a class="m-button" href={href(`design/languages/${language.id}/guide`)}>Read DESIGN.md</a>
+      <a class="m-button" data-variant="ghost" href={href(`design/languages/${language.id}/DESIGN.md`)}>Raw markdown</a>
+    </div>
+  </section>
+
+  <script>
+    import { bindFrameModes } from '../../../../islands/frames';
+    bindFrameModes();
+  </script>
+</Base>

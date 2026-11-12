@@ -32,6 +32,8 @@ The tokens are in the `fennel` preset of `@mariachi/design` (`data-theme="fennel
 
 ## Foundations
 
+**Brand colour** (`--m-color-brand-default`): the bright lime `#9fe870` with forest-green text, for hero bands, brand panels and the logo tile. It's not the action colour (forest green) and never text on the page.
+
 | What | Light | Dark |
 | --- | --- | --- |
 | Canvas and surfaces | white `#ffffff`; raised `#ffffff` | screen `#121511`, raised `#1e211d` |

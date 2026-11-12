@@ -1,12 +1,28 @@
 import { defineComponent } from '../../contract/component';
 import { ref, t } from '../../contract/tokens';
 
-const variant = (name: string, v: { bg: string; fg: string; border: string; hoverBg: string; activeBg: string }) => ({
+type Variant = {
+  bg: string;
+  fg: string;
+  border: string;
+  hoverBg: string;
+  activeBg: string;
+  shadow?: string;
+  hoverShadow?: string;
+  activeShadow?: string;
+};
+
+// Each variant's shadows default to the button-wide ones, so a preset can give one variant its own
+// (a raised primary, a flat secondary) without touching the others.
+const variant = (name: string, v: Variant) => ({
   bg: t.color(`${name} background`, v.bg),
   fg: t.color(`${name} text`, v.fg),
   border: t.color(`${name} border`, v.border),
   hoverBg: t.color(`${name} background on hover`, v.hoverBg),
   activeBg: t.color(`${name} background when pressed`, v.activeBg),
+  shadow: t.shadow(`${name} resting shadow`, v.shadow ?? ref('components.button.shadow')),
+  hoverShadow: t.shadow(`${name} shadow on hover`, v.hoverShadow ?? ref('components.button.hoverShadow')),
+  activeShadow: t.shadow(`${name} shadow when pressed`, v.activeShadow ?? ref('components.button.activeShadow')),
 });
 
 export const button = defineComponent({
@@ -68,6 +84,7 @@ export const button = defineComponent({
       border: 'transparent',
       hoverBg: ref('color.bg.sunken'),
       activeBg: ref('color.border.muted'),
+      shadow: 'none',
     }),
     danger: variant('Danger', {
       bg: ref('color.danger.solid'),

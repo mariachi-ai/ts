@@ -30,6 +30,8 @@ The tokens are in the `ember` preset of `@mariachi/design` (`data-theme="ember"`
 
 ## Foundations
 
+**Brand colour** (`--m-color-brand-default`): the hot coral `#ff4f40` with navy text, for the account card, plan names on the pricing page and brand panels. It's not the action colour (blue), and white text never goes on it.
+
 | What | Light | Dark |
 | --- | --- | --- |
 | Screen (canvas) | pale mint `#f2f8f3` | navy `#091723` |

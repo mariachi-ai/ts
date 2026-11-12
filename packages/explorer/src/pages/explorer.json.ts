@@ -36,6 +36,9 @@ export const GET: APIRoute = async () => {
     graph: { nodes: graph.nodes, edges: graph.edges },
     design: {
       presets: design.presets.map(({ tokens, ...p }) => p),
+      categories: design.categories,
+      // Design languages: the catalog entry (recipe HTML left out; it's served at each recipe's page).
+      languages: (design.archetypes ?? []).map(({ recipes, ...a }) => ({ ...a, recipes: recipes.map(({ html, ...r }) => r) })),
       semanticTokens: design.semantic,
       components: design.components.map(({ examples, ...c }) => ({ ...c, examples: examples.map((e) => ({ name: e.name, html: e.html })) })),
     },

@@ -30,6 +30,8 @@ The tokens are in the `basalt` preset of `@mariachi/design` (`data-theme="basalt
 
 ## Foundations
 
+**Brand colour** (`--m-color-brand-default`): the electric lime `#e4f222` with ink text, for hero bands and brand panels. The same lime fills the primary button; it's never text or a border on the page.
+
 | What | Light | Dark |
 | --- | --- | --- |
 | Canvas and surfaces | dashboards on warm off-white `#fcfbfa`; lists, forms and panels white `#ffffff` | `#121110`, panels `#1a1919`, raised `#232221` |

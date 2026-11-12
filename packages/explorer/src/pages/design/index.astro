@@ -3,9 +3,10 @@ import Code from '../../components/Code.astro';
 import Base from '../../layouts/Base.astro';
 import { componentCategoryTitle, designSidebar } from '../../lib/sidebars';
 import { href } from '../../lib/url';
-import { loadDesign } from '../../loaders/design';
+import { loadDesign, loadLanguages } from '../../loaders/design';
 
 const catalog = loadDesign();
+const languages = loadLanguages();
 const categories = [...new Set(catalog.components.map((c) => c.category))];
 const mini = `<div class="m-stack" data-gap="3">
   <div class="m-cluster" data-gap="2"><button class="m-button" data-variant="primary" data-size="sm">Save</button><button class="m-button" data-size="sm">Cancel</button><span class="m-badge" data-tone="success">Live</span></div>
@@ -45,7 +46,8 @@ const levels = [
       and overriding one tiny piece is one line.
     </p>
     <div class="m-cluster">
-      <a class="m-button" data-variant="primary" href={href('design/compare')}>Compare presets</a>
+      {languages.length > 0 && <a class="m-button" data-variant="primary" href={href('design/languages')}>Browse {languages.length} design languages</a>}
+      <a class="m-button" data-variant={languages.length > 0 ? undefined : 'primary'} href={href('design/compare')}>Compare presets</a>
       <a class="m-button" href={href('design/playground')}>Open the playground</a>
       <a class="m-button" data-variant="ghost" href={href('packages/design')}>Package</a>
     </div>

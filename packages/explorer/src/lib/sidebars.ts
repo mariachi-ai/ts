@@ -75,20 +75,25 @@ export const componentCategoryTitle = (key: string) => CATEGORY_TITLES[key] ?? k
 
 export function designSidebar(catalog: Catalog): SidebarGroup[] {
   const categories = [...new Set(catalog.components.map((c) => c.category))];
+  const languages = catalog.archetypes ?? [];
+  const isLanguage = new Set(languages.map((a) => a.id));
   return [
     {
       heading: 'Design',
       links: [
         { label: 'Overview', route: 'design' },
+        { label: 'Design languages', route: 'design/languages', badge: languages.length > 0 ? String(languages.length) : undefined },
         { label: 'Compare presets', route: 'design/compare' },
         { label: 'Playground', route: 'design/playground' },
         { label: 'Sample pages', route: 'design/samples' },
       ],
     },
-    { heading: 'Presets', links: catalog.presets.map((p) => ({ label: p.label, route: `design/presets/${p.name}` })) },
+    // A language's preset page links from its language page, so each is listed once.
+    { heading: 'Languages', links: languages.map((a) => ({ label: a.label, route: `design/languages/${a.id}` })) },
+    { heading: 'Presets', links: catalog.presets.filter((p) => !isLanguage.has(p.name)).map((p) => ({ label: p.label, route: `design/presets/${p.name}` })) },
     ...categories.map((cat) => ({
       heading: componentCategoryTitle(cat),
       links: catalog.components.filter((c) => c.category === cat).map((c) => ({ label: c.title, route: `design/components/${c.name}` })),
     })),
-  ];
+  ].filter((g) => g.links.length > 0);
 }
