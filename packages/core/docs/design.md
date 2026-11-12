@@ -75,6 +75,8 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `marquee` | A near-black canvas, one signature red, rounded hero billboards with white and grey pills, rows of rounded posters that grow on hover, rating boxes, red progress bars and plain light account pages. A design language. |
 | `reel` | A cool blue-grey dark canvas, tight poster grids, a green for the main action, orange likes, blue lists, star ratings, tracked uppercase headings and serif titles. A design language. |
 | `aria` | White pages and a true dark mode, a pale sidebar library with blue glyphs, square artwork everywhere, bold large titles, black pills, hairline track lists and a floating capsule player. A design language. |
+| `keel` | A near-black side frame around a white page, 13px ink type, ink pill buttons with an inner glow, flat grey secondaries, 20px containers on a hairline ring, index tables with bulk actions and small status badges. A design language. |
+| `relay` | Near-black type on white, one signature red for actions, grey-filled pills and chips, image-led store cards and a black order stepper. A design language. |
 
 ## Design languages
 
@@ -154,6 +156,8 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `marquee` | Content-first | Dark-first and content-first: a near-black canvas, one signature red, rounded hero billboards with white and grey pills, rows of rounded posters that grow on hover, rating boxes, red progress bars and plain light account pages |
 | `reel` | Content-first | Slate and posters: a cool blue-grey dark canvas, tight poster grids, a green for the main action, orange likes, blue lists, star ratings, tracked uppercase headings and serif titles |
 | `aria` | Content-first | Content-first and glassy: white pages and a true dark mode, a pale sidebar library with blue glyphs, square artwork everywhere, bold large titles, black pills, hairline track lists and a floating capsule player |
+| `keel` | Marketplace | Commerce back office: a near-black side frame around a white page, 13px ink type, ink pill buttons with an inner glow, flat grey secondaries, 20px containers on a hairline ring, index tables with bulk actions and small status badges |
+| `relay` | Marketplace | Bold and appetising: near-black type on white, one signature red for actions, grey-filled pills and chips, image-led store cards and a black order stepper |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
