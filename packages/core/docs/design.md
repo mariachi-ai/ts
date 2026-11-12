@@ -77,6 +77,9 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `aria` | White pages and a true dark mode, a pale sidebar library with blue glyphs, square artwork everywhere, bold large titles, black pills, hairline track lists and a floating capsule player. A design language. |
 | `keel` | A near-black side frame around a white page, 13px ink type, ink pill buttons with an inner glow, flat grey secondaries, 20px containers on a hairline ring, index tables with bulk actions and small status badges. A design language. |
 | `relay` | Near-black type on white, one signature red for actions, grey-filled pills and chips, image-led store cards and a black order stepper. A design language. |
+| `lagoon` | Near-black on white, a grey sidebar with round avatars, blue bubbles for you and grey for them, capsule buttons and a capsule composer, and a true dark mode. A design language. |
+| `candid` | White type set bold and tight, dual-camera posts, a grey late line, stacked round reactions, dark grey pills and one white button. A design language. |
+| `trellis` | An aubergine frame round a white conversation panel, bold unread rows with red mention counts, blue for the current row and links, green for send, rounded-square people and a composer with a formatting bar. A design language. |
 
 ## Design languages
 
@@ -158,6 +161,9 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `aria` | Content-first | Content-first and glassy: white pages and a true dark mode, a pale sidebar library with blue glyphs, square artwork everywhere, bold large titles, black pills, hairline track lists and a floating capsule player |
 | `keel` | Marketplace | Commerce back office: a near-black side frame around a white page, 13px ink type, ink pill buttons with an inner glow, flat grey secondaries, 20px containers on a hairline ring, index tables with bulk actions and small status badges |
 | `relay` | Marketplace | Bold and appetising: near-black type on white, one signature red for actions, grey-filled pills and chips, image-led store cards and a black order stepper |
+| `lagoon` | Social | A system messenger: near-black on white, a grey sidebar with round avatars, blue bubbles for you and grey for them, capsule buttons and a capsule composer, and a true dark mode |
+| `candid` | Social | Black-first and stark: white type set bold and tight, dual-camera posts, a grey late line, stacked round reactions, dark grey pills and one white button |
+| `trellis` | Social | Work messaging: an aubergine frame round a white conversation panel, bold unread rows with red mention counts, blue for the current row and links, green for send, rounded-square people and a composer with a formatting bar |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
