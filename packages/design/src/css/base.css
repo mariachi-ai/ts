@@ -10,6 +10,19 @@
     accent-color: var(--m-color-accent-default);
   }
 
+  /*
+   * On the root element the theme's body size would also redefine 1rem, so every rem token (type,
+   * spacing, control heights) would scale a second time: a 15px body made 36px buttons 33.75px. The
+   * root keeps the browser's size and the body takes the theme's instead.
+   */
+  html[data-theme] {
+    font-size: 100%;
+  }
+
+  html[data-theme] > body {
+    font-size: var(--m-font-size-md);
+  }
+
   ::selection {
     background-color: var(--m-color-selection-bg);
     color: var(--m-color-selection-fg);
