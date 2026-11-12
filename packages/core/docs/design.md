@@ -57,6 +57,9 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `harbor` | Near-black on white, warm off-white panels, one fresh green, pill buttons and chips, tailed bubbles on a warm wallpaper and blue read ticks. A design language. |
 | `prism` | A periwinkle frame around a white panel, soft rounded rows, a white current tile with a glow, tinted groups, a vivid blue and heavy tight headings. A design language. |
 | `confetti` | Warm yellow-grey canvases, white hairline panels, an orange-red accent (brand yellow in dark), chunky ledge buttons and bold uppercase table headers. A design language. |
+| `volt` | Black and white with one electric green, black pill buttons, white 20px cards on light grey, big tight headlines and bold amounts. A design language. |
+| `sprint` | Near-black on white, huge condensed uppercase display type, full-bleed media, black pill actions and one signature orange. A design language. |
+| `summit` | Warm near-black on off-white, a signature orange, bold compact type, white 4px cards, stats rows with big figures and small units. A design language. |
 
 ## Design languages
 
@@ -118,6 +121,9 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `harbor` | Social and messaging | A messenger on the desktop: near-black on white, warm off-white panels, one fresh green, pill buttons and chips, tailed bubbles on a warm wallpaper and blue read ticks |
 | `prism` | Playful and quirky | Playful and colourful: a periwinkle frame around a white panel, soft rounded rows, a white current tile with a glow, tinted groups, a vivid blue and heavy tight headings |
 | `confetti` | Playful and quirky | Playful and dense: warm yellow-grey canvases, white hairline panels, an orange-red accent (brand yellow in dark), chunky ledge buttons and bold uppercase table headers |
+| `volt` | Bold and fast | Loud and fast: black and white with one electric green, black pill buttons, white 20px cards on light grey, big tight headlines and bold amounts |
+| `sprint` | Bold and fast | Athletic and stark: near-black on white, huge condensed uppercase display type, full-bleed media, black pill actions and one signature orange |
+| `summit` | Bold and fast | Sporty and loud: warm near-black on off-white, a signature orange, bold compact type, white 4px cards, stats rows with big figures and small units |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),

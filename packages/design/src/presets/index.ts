@@ -16,6 +16,9 @@ import { quill } from './quill';
 import { hearth } from './hearth';
 import { harbor } from './harbor';
 import { prism } from './prism';
+import { volt } from './volt';
+import { sprint } from './sprint';
+import { summit } from './summit';
 import { editorial } from './editorial';
 import { enterprise } from './enterprise';
 import { fennel } from './fennel';
@@ -61,7 +64,10 @@ export const presets = {
   harbor,
   prism,
   confetti,
+  volt,
+  sprint,
+  summit,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, confetti, editorial, ember, enterprise, fennel, folio, halcyon, harbor, hearth, linen, marigold, minimal, mosaic, obsidian, onyx, prism, quill, soft, terminal, terracotta, transit, zephyr };
+export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, confetti, editorial, ember, enterprise, fennel, folio, halcyon, harbor, hearth, linen, marigold, minimal, mosaic, obsidian, onyx, prism, quill, soft, sprint, summit, terminal, terracotta, transit, volt, zephyr };

@@ -21,6 +21,9 @@ import { hearthArchetype } from './hearth';
 import { harborArchetype } from './harbor';
 import { prismArchetype } from './prism';
 import { confettiArchetype } from './confetti';
+import { voltArchetype } from './volt';
+import { sprintArchetype } from './sprint';
+import { summitArchetype } from './summit';
 import type { Archetype } from './types';
 
 /**
@@ -29,7 +32,7 @@ import type { Archetype } from './types';
  * (in `presets`, same name) plus its discovery card, type, icons, charts, six layout recipes and a
  * `DESIGN.md`. Halcyon is the first; the rest follow a category at a time.
  */
-export const archetypes: Archetype[] = [halcyonArchetype, fennelArchetype, basaltArchetype, emberArchetype, cirrusArchetype, zephyrArchetype, onyxArchetype, terracottaArchetype, marigoldArchetype, linenArchetype, quillArchetype, folioArchetype, broadsheetArchetype, obsidianArchetype, carbonArchetype, cadenceArchetype, mosaicArchetype, bazaarArchetype, transitArchetype, hearthArchetype, harborArchetype, prismArchetype, confettiArchetype];
+export const archetypes: Archetype[] = [halcyonArchetype, fennelArchetype, basaltArchetype, emberArchetype, cirrusArchetype, zephyrArchetype, onyxArchetype, terracottaArchetype, marigoldArchetype, linenArchetype, quillArchetype, folioArchetype, broadsheetArchetype, obsidianArchetype, carbonArchetype, cadenceArchetype, mosaicArchetype, bazaarArchetype, transitArchetype, hearthArchetype, harborArchetype, prismArchetype, confettiArchetype, voltArchetype, sprintArchetype, summitArchetype];
 
 export { categories, iconActions, recipeNames } from './types';
 export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './types';
