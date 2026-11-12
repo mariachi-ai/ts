@@ -49,6 +49,8 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `broadsheet` | Graphite ink on white, a serif for the words and a grotesque for the chrome, one bright orange for subscribing, 8px corners and hairlines. A design language. |
 | `obsidian` | Near-black panels a step apart, a muted indigo action, a small dense type scale, hairlines and a command menu. A design language. |
 | `carbon` | Near-black panels, white text, a red-orange brand glow, light-grey actions, 40px list rows and key caps for every shortcut. A design language. |
+| `cadence` | Near-black 8px panels in a black frame, a bright green for play and on, white pills, huge bold titles, cover-art tiles and dense track lists. A design language. |
+| `mosaic` | Ink on white, one bold red for saving, grey and black pills, 16px image tiles in a masonry grid and 32px dialogs. A design language. |
 
 ## Design languages
 
@@ -102,6 +104,8 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `broadsheet` | Editorial and warm-neutral | Reading first: graphite ink on white, a serif for the words and a grotesque for the chrome, one bright orange for subscribing, 8px corners and hairlines |
 | `obsidian` | Dark and sharp | Dark-first and exact: near-black panels a step apart, a muted indigo action, a small dense type scale, hairlines and a command menu |
 | `carbon` | Dark and sharp | Dark and exact: near-black panels, white text, a red-orange brand glow, light-grey actions, 40px list rows and key caps for every shortcut |
+| `cadence` | Content-first and immersive | Dark-first and content-first: near-black 8px panels in a black frame, a bright green for play and on, white pills, huge bold titles, cover-art tiles and dense track lists |
+| `mosaic` | Content-first and immersive | Pictures first: ink on white, one bold red for saving, grey and black pills, 16px image tiles in a masonry grid and 32px dialogs |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
