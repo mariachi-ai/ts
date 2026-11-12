@@ -31,11 +31,6 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
-  quill,
-  folio,
-  broadsheet,
-  obsidian,
-  carbon,
   fennel,
   basalt,
   ember,
@@ -45,6 +40,11 @@ export const presets = {
   terracotta,
   marigold,
   linen,
+  quill,
+  folio,
+  broadsheet,
+  obsidian,
+  carbon,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
