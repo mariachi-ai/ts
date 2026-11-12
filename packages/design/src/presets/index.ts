@@ -12,6 +12,8 @@ import { onyx } from './onyx';
 import { marigold } from './marigold';
 import { linen } from './linen';
 import { quill } from './quill';
+import { hearth } from './hearth';
+import { harbor } from './harbor';
 import { editorial } from './editorial';
 import { enterprise } from './enterprise';
 import { fennel } from './fennel';
@@ -53,7 +55,9 @@ export const presets = {
   mosaic,
   bazaar,
   transit,
+  hearth,
+  harbor,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, mosaic, obsidian, onyx, quill, soft, terminal, terracotta, transit, zephyr };
+export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, harbor, hearth, linen, marigold, minimal, mosaic, obsidian, onyx, quill, soft, terminal, terracotta, transit, zephyr };
