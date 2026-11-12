@@ -27,6 +27,7 @@ import { minimal } from './minimal';
 import { obsidian } from './obsidian';
 import { mosaic } from './mosaic';
 import { soft } from './soft';
+import { solace } from './solace';
 import { terminal } from './terminal';
 import { zephyr } from './zephyr';
 import { terracotta } from './terracotta';
@@ -42,6 +43,7 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
+  solace,
   fennel,
   basalt,
   ember,
@@ -70,4 +72,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, confetti, editorial, ember, enterprise, fennel, folio, halcyon, harbor, hearth, linen, marigold, minimal, mosaic, obsidian, onyx, prism, quill, soft, sprint, summit, terminal, terracotta, transit, volt, zephyr };
+export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, confetti, editorial, ember, enterprise, fennel, folio, halcyon, harbor, hearth, linen, marigold, minimal, mosaic, obsidian, onyx, prism, quill, soft, solace, sprint, summit, terminal, terracotta, transit, volt, zephyr };
