@@ -1,7 +1,10 @@
 import fs from 'node:fs';
-import type { Catalog } from '@mariachi/design/build';
+import path from 'node:path';
+import type { Catalog, CatalogArchetype } from '@mariachi/design/build';
 import { ExplorerError } from '../lib/errors';
+import { renderMarkdown } from '../lib/markdown';
 import { fromRoot, once } from '../lib/repo';
+import { routeForFile } from './routes';
 
 const dist = (...parts: string[]) => fromRoot('packages', 'design', 'dist', ...parts);
 
@@ -23,3 +26,301 @@ export const loadPresetChecks = once(async () => {
   const { presets, checkTheme } = await import('@mariachi/design');
   return Object.fromEntries(Object.values(presets).map((p) => [p.name, checkTheme(p)]));
 });
+
+/** A file the design package publishes, by its package path (`css/mariachi.css`, `archetypes/<id>/gallery.html`). */
+export function designFile(packagePath: string): string {
+  const file = dist(...packagePath.split('/'));
+  if (!file.startsWith(dist()) || !fs.existsSync(file)) {
+    throw new ExplorerError('explorer/missing-source', `${file} is missing; build @mariachi/design first`);
+  }
+  return fs.readFileSync(file, 'utf8');
+}
+
+// ---------------------------------------------------------------------------------------------
+// Design languages: everything is read from the catalog, so new languages appear without changes.
+
+export type Language = CatalogArchetype;
+
+/** Every design language in the catalog, in its display order. */
+export const loadLanguages = (): Language[] => loadDesign().archetypes ?? [];
+
+export const findLanguage = (id: string): Language | undefined => loadLanguages().find((a) => a.id === id);
+
+/** The groups languages are filtered by: category (including the ones a language is also in) and each tag group. */
+export const LANGUAGE_FACETS = [
+  { key: 'category', label: 'Category' },
+  { key: 'feel', label: 'Feel' },
+  { key: 'density', label: 'Density' },
+  { key: 'mode', label: 'Mode' },
+  { key: 'suits', label: 'Suits' },
+  { key: 'style', label: 'Style' },
+] as const;
+export type LanguageFacetKey = (typeof LANGUAGE_FACETS)[number]['key'];
+
+type FacetSource = Pick<Language, 'category' | 'alsoIn' | 'tags'>;
+
+/** A language's values for every facet. */
+export function languageFacetValues(a: FacetSource): Record<LanguageFacetKey, string[]> {
+  return {
+    category: [a.category, ...(a.alsoIn ?? [])],
+    feel: a.tags.feel,
+    density: [a.tags.density],
+    mode: [a.tags.mode],
+    suits: a.tags.suits,
+    style: a.tags.style,
+  };
+}
+
+export interface LanguageFacet {
+  key: LanguageFacetKey;
+  label: string;
+  options: { value: string; label: string; count: number }[];
+}
+
+/**
+ * The filter's options: every value any language has, with how many have it. Categories keep the
+ * catalog's order and labels (only those with a language); tag values are alphabetical.
+ */
+export function languageFacets(languages: FacetSource[], categories: Record<string, { label: string }>): LanguageFacet[] {
+  return LANGUAGE_FACETS.map(({ key, label }) => {
+    const counts = new Map<string, number>();
+    for (const a of languages) for (const v of new Set(languageFacetValues(a)[key])) counts.set(v, (counts.get(v) ?? 0) + 1);
+    const values = key === 'category' ? Object.keys(categories).filter((c) => counts.has(c)) : [...counts.keys()].sort((x, y) => x.localeCompare(y));
+    return {
+      key,
+      label,
+      options: values.map((value) => ({ value, label: key === 'category' ? (categories[value]?.label ?? value) : value, count: counts.get(value) ?? 0 })),
+    };
+  }).filter((f) => f.options.length > 0);
+}
+
+/** What the text search matches: the catalog's keywords plus the card's words, lowercase. */
+export const languageSearchText = (a: Pick<Language, 'keywords' | 'label' | 'pitch' | 'for'>) => [...a.keywords, a.label, a.pitch, a.for].join(' ').toLowerCase();
+
+/** Query string for the index filtered to one facet value, e.g. `?category=calm-fintech`. */
+export const languageFilterQuery = (key: LanguageFacetKey, value: string) => `?${new URLSearchParams({ [key]: value })}`;
+
+// ---------------------------------------------------------------------------------------------
+// A language's settings, resolved from its preset the same way its gallery and DESIGN.md are.
+
+export interface ResolvedToken {
+  path: string;
+  cssVar: string;
+  /** The path below its group: `default` for `color.brand.default`, `md` for `radius.md`. */
+  name: string;
+  description: string;
+  light: string;
+  dark: string;
+}
+
+export interface LanguageSettings {
+  /** `color.<group>` groups, the brand colour first. */
+  colours: { group: string; tokens: ResolvedToken[] }[];
+  brand: ResolvedToken;
+  type: {
+    families: { role: string; family: string; stack: string; cssVar: string }[];
+    sizes: (ResolvedToken & { px: string })[];
+    weights: ResolvedToken[];
+    leading: ResolvedToken[];
+    tracking: ResolvedToken[];
+    body: { weight: string };
+    heading: { weight: string; tracking: string; transform: string };
+  };
+  radius: (ResolvedToken & { px: string })[];
+  shadows: ResolvedToken[];
+  motion: ResolvedToken[];
+  density: { default: number; dense: number; unit: string; controls: { name: string; px: string }[] };
+}
+
+const BRAND_GROUP = 'color.brand';
+
+/** Resolves a language's tokens (every `var()` followed, light and dark) for its settings section. */
+export async function languageSettings(language: Language): Promise<LanguageSettings> {
+  const { presets, resolveDeep, toPx } = await import('@mariachi/design');
+  const theme = (presets as Record<string, Parameters<typeof resolveDeep>[0]>)[language.id];
+  if (!theme) throw new ExplorerError('explorer/missing-source', `Design language "${language.id}" has no preset of the same name`);
+  const semantic = loadDesign().semantic;
+  const resolve = (t: Catalog['semantic'][number], depth: number): ResolvedToken => ({
+    path: t.path,
+    cssVar: t.cssVar,
+    name: t.path.split('.').slice(depth).join('.'),
+    description: t.description,
+    light: resolveDeep(theme, t.path, 'light'),
+    dark: resolveDeep(theme, t.path, 'dark'),
+  });
+  const under = (prefix: string) =>
+    semantic.filter((t) => t.path.startsWith(`${prefix}.`)).map((t) => resolve(t, prefix.split('.').length));
+  const one = (p: string) => {
+    const t = semantic.find((s) => s.path === p);
+    if (!t) throw new ExplorerError('explorer/missing-source', `The design contract has no token ${p}`);
+    return resolve(t, p.split('.').length - 1);
+  };
+  const withPx = <T extends ResolvedToken>(t: T) => ({ ...t, px: toPx(t.light) });
+
+  const groups = [...new Set(semantic.filter((t) => t.kind === 'color' && t.path.startsWith('color.')).map((t) => t.path.split('.').slice(0, 2).join('.')))];
+  const ordered = groups.includes(BRAND_GROUP) ? [BRAND_GROUP, ...groups.filter((g) => g !== BRAND_GROUP)] : groups;
+  const families = [
+    { role: 'Body', family: language.type.body, token: 'font.body.family' },
+    { role: 'Heading', family: language.type.heading, token: 'font.heading.family' },
+    { role: 'Mono', family: language.type.mono, token: 'font.family.mono' },
+  ].map(({ role, family, token }) => {
+    const t = one(token);
+    return { role, family, stack: t.light, cssVar: t.cssVar };
+  });
+  return {
+    colours: ordered.map((group) => ({ group, tokens: under(group) })),
+    brand: one('color.brand.default'),
+    type: {
+      families,
+      sizes: under('font.size').map(withPx),
+      weights: under('font.weight'),
+      leading: under('font.leading'),
+      tracking: under('font.tracking'),
+      body: { weight: one('font.body.weight').light },
+      heading: {
+        weight: one('font.heading.weight').light,
+        tracking: one('font.heading.tracking').light,
+        transform: one('font.heading.transform').light,
+      },
+    },
+    radius: under('radius').map(withPx),
+    shadows: under('shadow'),
+    motion: under('motion'),
+    density: {
+      default: language.density.default,
+      dense: language.density.dense,
+      unit: toPx(one('space.unit').light),
+      controls: under('control.height').map((t) => ({ name: t.name, px: toPx(t.light) })),
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------------------------
+// A language's published files, served by the explorer in the package's own layout (`archetypes/`
+// under `design/languages/`, `css/` under `design/css/`), so their relative links keep working.
+
+/** Explorer route for a file in the design package's `archetypes/` folder, e.g. `design/languages/<id>/gallery.html`. */
+export const languageAssetRoute = (packagePath: string) => `design/languages/${packagePath.replace(/^archetypes\//, '')}`;
+
+/**
+ * Link resolver for a language's DESIGN.md: the files beside it (gallery, recipes, the recipes
+ * folder, DESIGN.md itself) become their explorer routes; anything else goes to `fallback`.
+ */
+export function languageLinkResolver(language: Language, fallback: (absolutePath: string) => string | undefined) {
+  const folder = path.posix.dirname(language.designDoc);
+  const root = dist(...folder.split('/'));
+  const served = new Set([language.gallery, ...language.recipes.map((r) => r.file)]);
+  return (absolute: string): string | undefined => {
+    const rel = path.relative(root, absolute).split(path.sep).join('/');
+    if (rel.startsWith('..') || path.isAbsolute(rel)) return fallback(absolute);
+    if (rel === 'DESIGN.md') return `design/languages/${language.id}/guide`;
+    if (rel.replace(/\/$/, '') === 'recipes') return `design/languages/${language.id}#recipes`;
+    if (served.has(`${folder}/${rel}`)) return languageAssetRoute(`${folder}/${rel}`);
+    return fallback(absolute);
+  };
+}
+
+/** A language's DESIGN.md, rendered (links to its gallery and recipes point at their served copies). */
+export function loadLanguageGuide(language: Language) {
+  return renderMarkdown(designFile(language.designDoc), dist(...language.designDoc.split('/')), languageLinkResolver(language, routeForFile));
+}
+
+// ---------------------------------------------------------------------------------------------
+// A language's fonts. Every language names open families (`type`); the explorer loads them from
+// Google Fonts with the weights the language uses. A family Google doesn't have is skipped (its
+// preset's stack falls back on its own); offline, the stylesheet just fails and the stack is used.
+
+const GOOGLE_CSS2 = 'https://fonts.googleapis.com/css2';
+
+export interface FontRequest {
+  family: string;
+  weights: number[];
+}
+
+/** A Google Fonts css2 URL for some families, each with its weights, `display=swap`. */
+export function googleFontsUrl(requests: FontRequest[]): string {
+  const families = requests.map(({ family, weights }) => {
+    const ws = [...new Set(weights.map((w) => Math.round(w)).filter((w) => w >= 1 && w <= 1000))].sort((a, b) => a - b);
+    return `family=${encodeURIComponent(family).replace(/%20/g, '+')}${ws.length > 0 ? `:wght@${ws.join(';')}` : ''}`;
+  });
+  return `${GOOGLE_CSS2}?${families.join('&')}&display=swap`;
+}
+
+/**
+ * The families a language's page (`page`: body, heading, mono) or index card (`card`: heading, body)
+ * uses. Each gets every weight in play, so when one is skipped (Google lacks it) the family its
+ * stack falls back to still has the right weights.
+ */
+export function languageFontRequests(
+  language: Pick<Language, 'type'>,
+  weights: { all: number[]; body: number; heading: number },
+  use: 'page' | 'card',
+): FontRequest[] {
+  const families = use === 'page' ? [language.type.body, language.type.heading, language.type.mono] : [language.type.heading, language.type.body];
+  const ws = [...new Set(use === 'page' ? [...weights.all, weights.body, weights.heading] : [400, weights.body, weights.heading])].sort((a, b) => a - b);
+  return [...new Set(families)].map((family) => ({ family, weights: ws }));
+}
+
+/** true / false when Google Fonts has / hasn't the family; undefined when it couldn't be checked (offline). */
+export type FontAvailability = (family: string) => Promise<boolean | undefined>;
+
+const probes = new Map<string, Promise<boolean | undefined>>();
+
+/** Asks Google Fonts once per family per build (css2 answers 400 for a family it doesn't have). */
+export const googleFontAvailability: FontAvailability = (family) => {
+  let probe = probes.get(family);
+  if (!probe) {
+    probe = fetch(googleFontsUrl([{ family, weights: [] }]), { signal: AbortSignal.timeout(5000) })
+      .then((res) => (res.ok ? true : res.status === 400 ? false : undefined))
+      .catch(() => undefined);
+    probes.set(family, probe);
+  }
+  return probe;
+};
+
+/**
+ * Stylesheet URLs for some fonts: one URL for the families Google Fonts is known to have, and one
+ * each for any that couldn't be checked (so one missing family can't fail the others).
+ */
+export async function fontStylesheets(requests: FontRequest[], available: FontAvailability = googleFontAvailability): Promise<string[]> {
+  const checked = await Promise.all(requests.map(async (r) => ({ r, ok: await available(r.family) })));
+  const known = checked.filter((c) => c.ok === true).map((c) => c.r);
+  const unknown = checked.filter((c) => c.ok === undefined).map((c) => c.r);
+  return [...(known.length > 0 ? [googleFontsUrl(known)] : []), ...unknown.map((r) => googleFontsUrl([r]))];
+}
+
+/** The font weights a language's preset uses (the weight scale plus body and heading), resolved. */
+export async function languageWeights(language: Language): Promise<{ all: number[]; body: number; heading: number }> {
+  const { presets, resolveDeep } = await import('@mariachi/design');
+  const theme = (presets as Record<string, Parameters<typeof resolveDeep>[0]>)[language.id];
+  if (!theme) throw new ExplorerError('explorer/missing-source', `Design language "${language.id}" has no preset of the same name`);
+  const weight = (p: string) => Number.parseFloat(resolveDeep(theme, p, 'light'));
+  const scale = loadDesign()
+    .semantic.filter((t) => t.path.startsWith('font.weight.'))
+    .map((t) => weight(t.path))
+    .filter((w) => Number.isFinite(w));
+  const body = weight('font.body.weight');
+  const heading = weight('font.heading.weight');
+  return { all: scale, body: Number.isFinite(body) ? body : 400, heading: Number.isFinite(heading) ? heading : 400 };
+}
+
+/** Stylesheet URLs for a language's fonts on its page (and gallery and recipes) or on its index card. */
+export async function languageFontStylesheets(language: Language, use: 'page' | 'card', available?: FontAvailability): Promise<string[]> {
+  return fontStylesheets(languageFontRequests(language, await languageWeights(language), use), available);
+}
+
+/**
+ * Adds a language's fonts to one of its standalone HTML documents (gallery, recipe), before
+ * `</head>`. Non-blocking: the stylesheet applies on load, so offline the page renders at once
+ * in the stack's fallbacks.
+ */
+export function withFontLinks(html: string, stylesheets: string[]): string {
+  if (stylesheets.length === 0) return html;
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const links = [
+    '<link rel="preconnect" href="https://fonts.googleapis.com">',
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+    ...stylesheets.map((u) => `<link rel="stylesheet" href="${esc(u)}" media="print" onload="this.media='all'">`),
+  ].join('\n');
+  return html.includes('</head>') ? html.replace('</head>', () => `${links}\n</head>`) : `${links}\n${html}`;
+}

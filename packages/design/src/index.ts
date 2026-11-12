@@ -46,3 +46,7 @@ export type { PresetName } from './presets';
 export { archetypes, categories, iconActions, recipeNames } from './archetypes';
 export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './archetypes';
 export { DesignError } from './errors';
+// For pages that show a language's settings and icons (the explorer): the same resolution and icons
+// the galleries and DESIGN.md references use.
+export { lucidePaths, lucideSvg } from './archetypes/lucide';
+export { resolveDeep, toPx } from './archetypes/reference';

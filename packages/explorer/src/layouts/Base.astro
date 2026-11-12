@@ -2,7 +2,7 @@
 import '../styles/explorer.css';
 import type { Heading } from '../data/schema';
 import { loadDesign } from '../loaders/design';
-import { currentRoute, SECTIONS, type SidebarGroup } from '../lib/nav';
+import { activeSection, currentRoute, SECTIONS, type SidebarGroup } from '../lib/nav';
 import { BASE, href } from '../lib/url';
 
 interface Props {
@@ -12,15 +12,18 @@ interface Props {
   toc?: Heading[];
   /** Full-bleed main column (design samples, compare). */
   wide?: boolean;
+  /** Font stylesheets (a design language's), loaded without blocking the page. */
+  fonts?: string[];
   /** Excluded from search (index pages that only list other pages). */
   noindex?: boolean;
 }
 
-const { title, description = 'Explore every Mariachi package, doc, API, error code and design component.', sidebar, toc, wide, noindex } = Astro.props;
+const { title, description = 'Explore every Mariachi package, doc, API, error code and design component.', sidebar, toc, wide, noindex, fonts = [] } = Astro.props;
 const route = currentRoute(Astro.url.pathname, BASE);
 const presets = loadDesign().presets;
 const version = loadDesign().version;
-const active = (match: string) => route === match || route.startsWith(`${match}/`);
+const section = activeSection(route);
+const active = (match: string) => match === section;
 const pageTitle = route === '' ? 'Mariachi Explorer' : `${title} · Mariachi`;
 const tocItems = (toc ?? []).filter((h) => h.id);
 ---
@@ -34,6 +37,17 @@ const tocItems = (toc ?? []).filter((h) => h.id);
     <meta name="description" content={description} />
     <link rel="icon" href={href('favicon.svg')} type="image/svg+xml" />
     <link rel="stylesheet" href={href('design.css')} />
+    {
+      fonts.length > 0 && (
+        <>
+          <link rel="preconnect" href="https://fonts.googleapis.com" />
+          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+          {fonts.map((url) => (
+            <link rel="stylesheet" href={url} media="print" onload="this.media='all'" />
+          ))}
+        </>
+      )
+    }
     <script is:inline>
       // Restore the visitor's preset and mode before first paint.
       (() => {

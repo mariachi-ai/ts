@@ -833,3 +833,147 @@
     min-block-size: var(--m-control-min-target);
   }
 }
+
+@layer mariachi.overrides {
+  /* Design languages: the index cards and filter, and each language's page. */
+  .x-language-filter .m-select {
+    inline-size: auto;
+    max-inline-size: 100%;
+  }
+
+  .x-filter-count {
+    font-size: var(--m-font-size-sm);
+  }
+
+  .x-language-card {
+    align-content: start;
+    gap: var(--m-space-3);
+    background: var(--m-color-bg-canvas);
+    color: var(--m-color-fg-default);
+  }
+
+  .x-language-swatches {
+    display: flex;
+    block-size: 2.5rem;
+    overflow: hidden;
+    border: var(--m-border-width-thin) solid var(--m-color-border-default);
+    border-radius: var(--m-radius-md);
+  }
+
+  .x-language-swatches > span {
+    flex: 1;
+  }
+
+  .x-language-category {
+    font-size: var(--m-font-size-sm);
+  }
+
+  .x-language-pitch {
+    margin: 0;
+    color: var(--m-color-fg-muted);
+  }
+
+  .x-eyebrow-link {
+    inline-size: fit-content;
+    text-decoration: none;
+  }
+
+  .x-eyebrow-link:hover {
+    text-decoration: underline;
+  }
+
+  .x-language-tags {
+    font-size: var(--m-font-size-sm);
+  }
+
+  .x-badge-link {
+    text-decoration: none;
+  }
+
+  .x-badge-link:hover {
+    border-color: var(--m-color-border-strong);
+    color: var(--m-color-fg-default);
+  }
+
+  .x-brand-band {
+    display: flex;
+    justify-content: space-between;
+    gap: var(--m-space-3);
+    padding: var(--m-space-4);
+    border-radius: var(--m-radius-container);
+    background: var(--m-color-brand-default);
+    color: var(--m-color-brand-fg);
+  }
+
+  .x-swatch-value {
+    font-size: var(--m-font-size-xs);
+    overflow-wrap: anywhere;
+  }
+
+  .x-type-heading {
+    margin: 0;
+    font-family: var(--m-font-heading-family);
+    font-size: var(--m-font-size-2xl);
+    font-weight: var(--m-font-heading-weight);
+    letter-spacing: var(--m-font-heading-tracking);
+    text-transform: var(--m-font-heading-transform);
+  }
+
+  .x-type-row {
+    display: grid;
+    grid-template-columns: 2.5rem 3.5rem minmax(0, 1fr);
+    gap: var(--m-space-3);
+    align-items: baseline;
+  }
+
+  .x-type-sample {
+    overflow: hidden;
+    line-height: var(--m-font-leading-tight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .x-language-gallery {
+    display: block;
+    inline-size: 100%;
+    block-size: min(80vh, 56rem);
+    border: var(--m-border-width-container) solid var(--m-color-border-default);
+    border-radius: var(--m-radius-container);
+    background: var(--m-color-bg-canvas);
+  }
+
+  .x-recipe-card {
+    overflow: hidden;
+  }
+
+  /* A recipe drawn at four times the card's width, scaled to a quarter: a desktop-width thumbnail. */
+  .x-recipe-thumb {
+    position: relative;
+    aspect-ratio: 16 / 10;
+    overflow: hidden;
+    border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default);
+  }
+
+  .x-recipe-thumb iframe {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: 0;
+    inline-size: 400%;
+    block-size: 400%;
+    border: 0;
+    transform: scale(0.25);
+    transform-origin: 0 0;
+    pointer-events: none;
+  }
+
+  .x-icon-cell {
+    flex-wrap: nowrap;
+    padding: var(--m-space-2) var(--m-space-3);
+    border-radius: var(--m-radius-md);
+    background: var(--m-color-bg-sunken);
+  }
+
+  .x-icon-cell svg {
+    flex-shrink: 0;
+  }
+}

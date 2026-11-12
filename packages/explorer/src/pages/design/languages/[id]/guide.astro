@@ -1,0 +1,37 @@
+---
+import Base from '../../../../layouts/Base.astro';
+import { designSidebar } from '../../../../lib/sidebars';
+import { href } from '../../../../lib/url';
+import { findLanguage, loadDesign, loadLanguageGuide, loadLanguages } from '../../../../loaders/design';
+
+export function getStaticPaths() {
+  return loadLanguages().map((a) => ({ params: { id: a.id } }));
+}
+
+const catalog = loadDesign();
+const language = findLanguage(String(Astro.params.id))!;
+const guide = await loadLanguageGuide(language);
+---
+
+<Base title={`${language.label}: DESIGN.md`} description={guide.summary || language.pitch} sidebar={designSidebar(catalog)} toc={guide.headings.filter((h) => h.depth === 2)}>
+  <nav class="m-breadcrumb" aria-label="Breadcrumb">
+    <ol>
+      <li><a href={href('design')}>Design</a></li>
+      <li><a href={href('design/languages')}>Languages</a></li>
+      <li><a href={href(`design/languages/${language.id}`)}>{language.label}</a></li>
+      <li aria-current="page">DESIGN.md</li>
+    </ol>
+  </nav>
+  <header class="x-page-header">
+    <span class="x-eyebrow">DESIGN.md</span>
+    <h1>{guide.title ?? language.label}</h1>
+    <div class="x-meta">
+      <a href={href(`design/languages/${language.id}`)}>Settings, gallery and recipes</a>
+      <a href={href(`design/languages/${language.id}/DESIGN.md`)}>Raw markdown</a>
+      <span>Published as <code class="m-code-inline">@mariachi/design/{language.designDoc}</code></span>
+    </div>
+  </header>
+  <article class="m-prose">
+    <Fragment set:html={guide.html} />
+  </article>
+</Base>
