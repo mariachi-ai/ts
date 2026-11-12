@@ -23,6 +23,7 @@ import { soft } from './soft';
 import { terminal } from './terminal';
 import { zephyr } from './zephyr';
 import { terracotta } from './terracotta';
+import { transit } from './transit';
 
 /** Built-in presets, in display order. */
 export const presets = {
@@ -35,6 +36,7 @@ export const presets = {
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
   bazaar,
+  transit,
   fennel,
   basalt,
   ember,
@@ -54,4 +56,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, mosaic, obsidian, onyx, quill, soft, terminal, terracotta, zephyr };
+export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, mosaic, obsidian, onyx, quill, soft, terminal, terracotta, transit, zephyr };
