@@ -14,6 +14,7 @@ import { enterprise } from './enterprise';
 import { fennel } from './fennel';
 import { folio } from './folio';
 import { minimal } from './minimal';
+import { obsidian } from './obsidian';
 import { soft } from './soft';
 import { terminal } from './terminal';
 import { zephyr } from './zephyr';
@@ -32,6 +33,7 @@ export const presets = {
   quill,
   folio,
   broadsheet,
+  obsidian,
   fennel,
   basalt,
   ember,
@@ -44,4 +46,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, broadsheet, brutalist, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, onyx, quill, soft, terminal, terracotta, zephyr };
+export { basalt, broadsheet, brutalist, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, obsidian, onyx, quill, soft, terminal, terracotta, zephyr };
