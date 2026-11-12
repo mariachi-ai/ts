@@ -41,7 +41,7 @@ export { emitOverridesCss } from './engine/overrides';
 export { emitTailwindCss, tailwindName } from './engine/tailwind';
 export { defineDesign, resolvePreset } from './design';
 export type { ComponentName, DesignConfig, ResolvedDesign } from './design';
-export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, minimal, presets, soft, terminal } from './presets';
+export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, minimal, onyx, presets, soft, terminal, zephyr } from './presets';
 export type { PresetName } from './presets';
 export { archetypes, categories, iconActions, recipeNames } from './archetypes';
 export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './archetypes';

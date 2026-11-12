@@ -39,6 +39,8 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `basalt` | Near-black on warm off-white, square hairline panels, an electric lime primary. A design language. |
 | `ember` | Deep navy on pale mint, white rounded cards, one clear blue, heavy wide headings. A design language. |
 | `cirrus` | Navy on cool off-white, 20px panels, one clear blue, tinted capital pills. A design language. |
+| `zephyr` | Black screens and charcoal cards, a neon lime for gains and the primary pill, orange-red for losses, solid pills and price chips. A design language. |
+| `onyx` | Near-black on a pale grey screen, white 16px widgets, one blue-violet action, heavy headings, huge balances, pill and round buttons. A design language. |
 
 ## Design languages
 
@@ -82,6 +84,8 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `basalt` | Calm fintech | Flat and exact: square hairline panels on warm off-white, one electric lime action |
 | `ember` | Calm fintech | Friendly and plain: white rounded cards on pale mint, navy type, one clear blue |
 | `cirrus` | Calm fintech | Bright and friendly: rounded hairline panels, one clear blue, tinted category pills |
+| `zephyr` | Bold and fast | Fast and high-contrast: black screens and charcoal cards, a neon lime for gains and the primary pill, orange-red for losses, solid pills and price chips |
+| `onyx` | Bold and fast | Bold and fast: near-black on a pale grey screen, white 16px widgets, one blue-violet action, heavy headings, huge balances, pill and round buttons |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
