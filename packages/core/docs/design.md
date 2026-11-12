@@ -69,6 +69,9 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `ochre` | Ink on ivory, warm greys, serif headings and reading text, ink actions, a clay brand colour and a warm near-black dark mode. A design language. |
 | `margin` | Slate ink on white, a pale grey rail, a calm serif for documents, yellow highlights, soft grey pill buttons, one restrained blue and a deep slate dark mode. A design language. |
 | `quire` | Ink on white pages over a pale grey window, capsule buttons, tinted blocks, page cards with soft covers, one clear blue and a true-black dark mode. A design language. |
+| `meridian` | Black and white on a ten-step grey scale, hairline rings, 6px corners, dense 14px lists, status dots, mono for hashes and logs, and blue only for focus and links. A design language. |
+| `flint` | Neutral near-black panels, compact 12–13px type, hairlines, small radii, an inverted primary, green and red diffs and an agent composer. A design language. |
+| `comet` | Warm greys, one muted purple, light grotesque type, big split tabs with counts, generous one-line rows and a command menu. A design language. |
 
 ## Design languages
 
@@ -142,6 +145,9 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `ochre` | Editorial | Warm and editorial: ink on ivory, warm greys, serif headings and reading text, ink actions, a clay brand colour and a warm near-black dark mode |
 | `margin` | Editorial | Reading first: slate ink on white, a pale grey rail, a calm serif for documents, yellow highlights, soft grey pill buttons, one restrained blue and a deep slate dark mode |
 | `quire` | Editorial | A calm document editor: ink on white pages over a pale grey window, capsule buttons, tinted blocks, page cards with soft covers, one clear blue and a true-black dark mode |
+| `meridian` | Dark and sharp | Stark and exact: black and white on a ten-step grey scale, hairline rings, 6px corners, dense 14px lists, status dots, mono for hashes and logs, and blue only for focus and links |
+| `flint` | Dark and sharp | Dark-first and sharp: neutral near-black panels, compact 12–13px type, hairlines, small radii, an inverted primary, green and red diffs and an agent composer |
+| `comet` | Dark and sharp | Fast and focused: warm greys, one muted purple, light grotesque type, big split tabs with counts, generous one-line rows and a command menu |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
