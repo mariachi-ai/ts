@@ -47,6 +47,8 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `quill` | Ink-grey type on white, a graphite tag sidebar, one signature red, grey tag capsules, a red-edged selected note and round quiet chrome; a graphite dark mode with a calm blue. A design language. |
 | `folio` | Near-black ink on a white page, a warm off-white sidebar, hover-only controls, tinted callouts and tag pills, one blue action. A design language. |
 | `broadsheet` | Graphite ink on white, a serif for the words and a grotesque for the chrome, one bright orange for subscribing, 8px corners and hairlines. A design language. |
+| `obsidian` | Near-black panels a step apart, a muted indigo action, a small dense type scale, hairlines and a command menu. A design language. |
+| `carbon` | Near-black panels, white text, a red-orange brand glow, light-grey actions, 40px list rows and key caps for every shortcut. A design language. |
 
 ## Design languages
 
@@ -98,6 +100,8 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `quill` | Calm and minimal | Calm and bookish: ink-grey type on white, a graphite tag sidebar, one signature red, grey tag capsules, a red-edged selected note and round quiet chrome; a graphite dark mode with a calm blue |
 | `folio` | Editorial and warm-neutral | Document-first and warm-neutral: near-black ink on a white page, a warm off-white sidebar, hover-only controls, tinted callouts and tag pills, one blue action |
 | `broadsheet` | Editorial and warm-neutral | Reading first: graphite ink on white, a serif for the words and a grotesque for the chrome, one bright orange for subscribing, 8px corners and hairlines |
+| `obsidian` | Dark and sharp | Dark-first and exact: near-black panels a step apart, a muted indigo action, a small dense type scale, hairlines and a command menu |
+| `carbon` | Dark and sharp | Dark and exact: near-black panels, white text, a red-orange brand glow, light-grey actions, 40px list rows and key caps for every shortcut |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
