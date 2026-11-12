@@ -51,9 +51,6 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
-  ochre,
-  margin,
-  quire,
   fennel,
   basalt,
   ember,
@@ -85,6 +82,9 @@ export const presets = {
   nocturne,
   vellum,
   chalk,
+  ochre,
+  margin,
+  quire,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
