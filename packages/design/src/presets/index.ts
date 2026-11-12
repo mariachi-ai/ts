@@ -8,6 +8,7 @@ import { cadence } from './cadence';
 import { ember } from './ember';
 import { cirrus } from './cirrus';
 import { confetti } from './confetti';
+import { doodle } from './doodle';
 import { halcyon } from './halcyon';
 import { meridian } from './meridian';
 import { flint } from './flint';
@@ -19,6 +20,7 @@ import { relay } from './relay';
 import { lagoon } from './lagoon';
 import { candid } from './candid';
 import { trellis } from './trellis';
+import { kite } from './kite';
 import { onyx } from './onyx';
 import { marigold } from './marigold';
 import { marquee } from './marquee';
@@ -50,6 +52,7 @@ import { solace } from './solace';
 import { terminal } from './terminal';
 import { zephyr } from './zephyr';
 import { terracotta } from './terracotta';
+import { tinker } from './tinker';
 import { transit } from './transit';
 
 /** Built-in presets, in display order. */
@@ -107,7 +110,10 @@ export const presets = {
   lagoon,
   candid,
   trellis,
+  kite,
+  doodle,
+  tinker,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { aria, basalt, bazaar, broadsheet, brutalist, cadence, candid, carbon, chalk, cirrus, comet, confetti, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, prism, quill, quire, reel, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, transit, trellis, vellum, volt, zephyr };
+export { aria, basalt, bazaar, broadsheet, brutalist, cadence, candid, carbon, chalk, cirrus, comet, confetti, doodle, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, kite, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, prism, quill, quire, reel, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, tinker, transit, trellis, vellum, volt, zephyr };
