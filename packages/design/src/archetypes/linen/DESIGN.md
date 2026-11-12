@@ -24,8 +24,8 @@ The tokens are in the `linen` preset of `@mariachi/design` (`data-theme="linen"`
   headings and links. The pink-red marks only what's due or overdue. Everything else is ink and
   grey. The brand pink (`color.brand.default`) appears only on the public site, on its one
   sign-up button.
-- **Colour lives in small glyphs.** Each list has its own coloured glyph (a yellow star, a blue
-  tray, a pink calendar); the rest of the interface stays grey.
+- **Colour lives in small glyphs.** Each list has its own coloured glyph (a pink calendar, a blue
+  hourglass, green layers); the rest of the interface stays grey.
 - **Generous space.** Rows are short, but the page around them is wide and calm: a narrow centred
   column, 48–64px of air above the title, sections well apart.
 - **Gentle motion.** Short, with a light spring when something opens; nothing bounces twice.
@@ -77,10 +77,10 @@ scales are in the reference at the end.
   - the project under a to-do, tags' neighbours and secondary text 13px;
   - tags and counts 11px;
   - list titles 26px **bold**, tracked −1.5%, with the list's glyph before them;
-  - section headings 15px semibold, in blue for headings inside a project and in ink for a day's
-    sections ("Evening");
+  - section headings 15px semibold, in blue for headings inside a project and in ink for a day in a
+    week list ("Thursday", with the date in grey);
   - marketing headings 36px bold.
-- **Weights.** 400 for text, 500 for buttons and tabs, 600 for headings and areas in the sidebar,
+- **Weights.** 400 for text, 500 for buttons and tabs, 600 for headings and the sidebar's group headings,
   700 for list titles.
 - **Case.** Sentence case everywhere. No capitals for labels.
 - **Times and dates** use tabular figures: `8:15 AM`, `Mar 12`.
@@ -89,10 +89,11 @@ scales are in the reference at the end.
 
 - Lucide, outlined, **1.5px stroke**: 16px in the sidebar and beside text, 18px in the bottom
   toolbar, 26px beside a list title, 56–72px for empty lists and full-page errors.
-- **List glyphs are coloured** and softly filled (the outline with a 16% fill in its own colour; the
-  star solid): the tray in blue, the star in yellow, the calendar in pink-red, the layers in green,
-  the archive box in amber, the finished list in deep green. Areas are a grey box; projects are a
-  grey progress circle whose wedge fills as to-dos are done.
+- **List glyphs are coloured** and softly filled (the outline with a 16% fill in its own colour):
+  for example a calendar in pink-red, an hourglass in blue, layers in green, a checklist in amber, a
+  note in the action blue. Give each list one glyph and one tone and keep it everywhere. Projects
+  are a grey progress circle whose wedge fills as to-dos are done. A star, solid yellow, marks a
+  starred to-do.
 - Small grey marks after a to-do's title show it has notes (`file`) or a checklist (`list-checks`).
 - A deadline is a solid pink-red `flag` with the word ("today", "2 days left").
 - **The same icon for the same action, every time:**
@@ -124,7 +125,7 @@ scales are in the reference at the end.
   to-do or menu row is the pale selection blue (deep blue in dark). The chosen tag filter is a grey
   pill. Checked boxes fill with the blue and a white tick.
 - **Done.** A finished to-do's box fills blue and its title turns muted; it stays in place until
-  the list is cleared, then moves to the finished list.
+  the list is cleared.
 - **Error.**
   - The field's border turns pink-red.
   - The message replaces the help text under the field, in pink-red 13px, and says how to fix it.
@@ -165,8 +166,9 @@ Sections are 32px apart; a list title has 48–64px above it.
 
 **Navigation**
 - **Sidebar.** 224px on the pale blue-grey, no border.
-  - Groups of lists separated by space, not lines: the capture list; the day lists; the finished
-    list; then each area (bold, with a grey box) followed by its projects (progress circles).
+  - Groups of lists separated by space, not lines: the main lists first, then smaller ones, then
+    groups of projects under plain semibold headings in ink ("Projects", "Shared"), each with its
+    progress circle.
   - Rows are 15px ink with a 16px coloured glyph; the current one is a soft grey row with a 6px
     radius.
   - Counts sit right-aligned in grey; an overdue count is a small solid pink-red pill before it.
@@ -244,7 +246,7 @@ Sections are 32px apart; a list title has 48–64px above it.
 - **A whole page:** centred in the page column.
   - A 56px outline icon in a faint grey, "Error 404" in muted 13px, a 20px bold title, one sentence
     and one or two buttons.
-  - **404:** the list isn't here, with a way back to the day list.
+  - **404:** the list isn't here, with a way back to the week.
   - **500:** "Something went wrong on our side" and "Nothing in your lists was changed", with Try
     again.
   - **403:** the list is private, with a way to ask for it.
@@ -253,12 +255,12 @@ Sections are 32px apart; a list title has 48–64px above it.
 
 ## Page shapes (recipes)
 
-- **Dashboard** (a day list).
-  - The sidebar of lists; the title "Focus" at 26px bold with a yellow star.
-  - The day's calendar in a grey box: an all-day line with a thin blue bar, then times in blue and
+- **Dashboard** (a week list).
+  - The sidebar of lists; the title "Week" at 26px bold with its pink calendar glyph.
+  - Today's calendar in a grey box: an all-day line with a thin blue bar, then times in blue and
     green with the event in muted grey.
-  - To-dos with the project beneath; a deadline flag on the right; an "Evening" section with a moon
-    over a hairline. The toolbar along the bottom.
+  - A section per day, its name bold over a hairline with the date in grey; to-dos with the
+    project beneath and a deadline flag on the right. The toolbar along the bottom.
 - **List and detail** (a project).
   - The project's progress circle and title, its notes, and tag filters as pills.
   - Blue headings over hairlines with a blue `•••`, to-dos under each, tags and date chips inline.
@@ -270,8 +272,8 @@ Sections are 32px apart; a list title has 48–64px above it.
 - **Settings.** A settings window: icon tabs over right-aligned labels with menus, a hairline, then
   checkboxes in the control column. A sync pane with a large soft glyph and a switch on the left,
   the account and plain buttons on the right, and a blue help link.
-- **Empty state.** The list's title, then its glyph large and faint in the middle, one sentence and
-  a quiet "New to-do".
+- **Empty state.** The list's title ("Waiting"), then its glyph large and faint in the middle, one
+  sentence and a quiet "New to-do".
 - **Pricing.** The public site: a plain header, a bold line, one grey 18px-radius card per device
   with an outline device icon, a one-time price and a dark store button, the free trial in the
   brand pink above it, then questions.

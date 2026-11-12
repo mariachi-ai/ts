@@ -54,6 +54,9 @@ const I = {
   left: '<path d="m15 18-6-6 6-6"/>',
   right: '<path d="m9 18 6-6-6-6"/>',
   updown: '<path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/>',
+  hourglass:
+    '<path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
 };
 
@@ -82,29 +85,29 @@ const due = (n: number, total: number) =>
 
 const sidebar = (current: string) => `  <nav class="m-sidebar" aria-label="Lists" style="padding-block-start: var(--m-space-10)">
     <ul>
-${link([icon(I.inbox, 16, 'soft'), 'accent-default', 'Capture', count(3)], current)}
-    </ul>
-    <ul>
 ${[
-  link([icon(I.star, 16, 'solid'), 'warning-solid', 'Focus', due(1, 6)], current),
-  link([icon(I.days, 16, 'soft'), 'danger-fg', 'Ahead'], current),
-  link([icon(I.layers, 16, 'soft'), 'success-fg', 'Open'], current),
-  link([icon(I.archive, 16, 'soft'), 'warning-fg', 'Later'], current),
+  link([icon(I.days, 16, 'soft'), 'danger-fg', 'Week', due(1, 9)], current),
+  link([icon(I.hourglass, 16, 'soft'), 'info-fg', 'Waiting', count(2)], current),
+  link([icon(I.layers, 16, 'soft'), 'success-fg', 'Backlog', count(14)], current),
 ].join('\n')}
     </ul>
     <ul>
-${link([icon(I.done, 16, 'soft'), 'success-solid', 'Finished'], current)}
+${[
+  link([icon(I.checklist, 16), 'warning-fg', 'Review'], current),
+  link([icon(I.note, 16, 'soft'), 'accent-default', 'Notes'], current),
+].join('\n')}
     </ul>
 ${[
-  ['Home', [['Repaint the hallway', 0.6], ['Winter garden prep', 0.25], ['Book the boiler service', 0]]],
-  ['Studio', [['Spring glaze tests', 0.45], ['Kiln shelf order', 0.8], ['Open studio weekend', 0.1]]],
-  ['Learning', [['Portuguese basics', 0.35], ['Half-marathon base', 0.55]]],
+  ['Projects', [['Spring glaze tests', 0.45], ['Repaint the hallway', 0.6], ['Kiln shelf order', 0.8], ['Open studio weekend', 0.1], ['Half-marathon base', 0.55]]],
+  ['Shared', [['Allotment rota', 0.3], ['Wedding gifts', 0.7]]],
 ]
   .map(
-    ([area, projects]) => `    <ul>
-${link([icon(I.box, 16), 'fg-subtle', area as string], current, true)}
+    ([group, projects]) => `    <div class="m-sidebar-section">
+      <h2 class="m-sidebar-heading">${group}</h2>
+      <ul>
 ${(projects as [string, number][]).map(([p, d]) => link([pie(d), 'fg-subtle', p], current)).join('\n')}
-    </ul>`,
+      </ul>
+    </div>`,
   )
   .join('\n')}
     <div class="m-cluster" data-justify="between" style="margin-block-start: auto; ${hair}; padding-block-start: var(--m-space-2)">
@@ -157,10 +160,16 @@ const heading = (title: string, id: string) =>
 const event = (time: string, what: string, tone: 'info' | 'success') =>
   `<div><span style="color: var(--m-color-${tone}-fg); font-variant-numeric: tabular-nums">${time}</span> ${what}</div>`;
 
+// A day in the week: its name in bold over a hairline, the date in grey
+const day = (name: string, date: string, id: string, items: string[]) => `        <section class="m-stack" data-gap="2" aria-labelledby="${id}">
+          <h2 id="${id}" class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-bold); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default); padding-block-end: var(--m-space-2)">${name} <span style="font-weight: var(--m-font-weight-regular); color: var(--m-color-fg-muted)">${date}</span></h2>
+${list(items)}
+        </section>`;
+
 const dashboard = shell(
-  'Focus',
+  'Week',
   `      <div class="m-stack" data-gap="8">
-        <h1 class="m-cluster" data-gap="2" style="${listTitle}"><span style="${glyph('warning-solid')}">${icon(I.star, 26, 'solid')}</span> Focus</h1>
+        <h1 class="m-cluster" data-gap="2" style="${listTitle}"><span style="${glyph('danger-fg')}">${icon(I.days, 26, 'soft')}</span> Week</h1>
         <section aria-label="Calendar" class="m-stack" data-gap="0" style="padding: var(--m-space-3) var(--m-space-4); background: var(--m-color-bg-sunken); border-radius: var(--m-radius-lg); color: var(--m-color-fg-muted); line-height: 1.35">
           <div class="m-cluster" data-gap="2"><span style="inline-size: 3px; block-size: 0.875rem; border-radius: 2px; background: var(--m-color-info-fg)"></span>Ines flies home</div>
           ${event('8:15 AM', 'Swim, lane 4', 'info')}
@@ -168,22 +177,21 @@ const dashboard = shell(
           ${event('1:30 PM', 'Studio clean-up', 'success')}
           ${event('6:00 PM', 'Supper at Tomas’s', 'success')}
         </section>
-${list([
+${day('Thursday', 'Nov 12, today', 'ln-d-thu', [
   todo('Order 20 kiln shelf posts', 'Kiln shelf order', { right: dueFlag('today') }),
   todo('Sand the hallway skirting', 'Repaint the hallway', { extras: noteMark }),
   todo('Mix three celadon test batches', 'Spring glaze tests'),
-  todo('Ask Priya about the gallery wall', 'Open studio weekend'),
-  todo('Renew library books', 'Home'),
-  todo('Twenty minutes of verb drills', 'Portuguese basics', { extras: checklistMark }),
+  todo('Renew library books'),
 ])}
-        <section class="m-stack" data-gap="2" aria-labelledby="ln-evening">
-          <h2 id="ln-evening" class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-bold); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default); padding-block-end: var(--m-space-2)"><span style="${glyph('info-fg')}">${icon(I.moon, 16, 'soft')}</span> Evening</h2>
-${list([
-  todo('Lay out tomorrow’s running kit', 'Half-marathon base'),
+${day('Friday', 'Nov 13', 'ln-d-fri', [
+  todo('Ask Priya about the gallery wall', 'Open studio weekend'),
+  todo('Twenty minutes of verb drills', 'Portuguese basics', { extras: checklistMark }),
+  todo('Lay out the running kit', 'Half-marathon base'),
+])}
+${day('Saturday', 'Nov 14', 'ln-d-sat', [
   todo('Read the chapter on reduction firing', 'Spring glaze tests', { extras: noteMark }),
   todo('Write the open-studio flyer', 'Open studio weekend', { extras: `${noteMark}${checklistMark}` }),
 ])}
-        </section>
       </div>`,
   [
     [I.plus, 'New to-do'],
@@ -193,21 +201,21 @@ ${list([
   ],
 );
 
-// The date picker: a dark menu with Today and Tonight, a month and Later
-const day = (d: string, today = false) =>
-  `<span style="text-align: center; padding-block: 2px${today ? '; color: var(--m-color-fg-muted)' : ''}">${today ? icon(I.star, 12, 'solid') : d}</span>`;
-const picker = `<div class="m-popover" data-static data-theme="linen" data-mode="dark" style="inline-size: 15rem; font-size: var(--m-font-size-md)" aria-label="When">
-          <div class="m-menu" role="menu" aria-label="When">
-            <div class="m-menu-label">When</div>
-            <button type="button" class="m-menu-item" role="menuitem" style="background: var(--m-color-accent-default); color: var(--m-color-accent-fg)"><span style="${glyph('warning-solid')}">${icon(I.star, 14, 'solid')}</span> Today</button>
-            <button type="button" class="m-menu-item" role="menuitem"><span style="${glyph('info-fg')}">${icon(I.moon, 14, 'soft')}</span> Tonight</button>
+// The date picker: a dark menu with two quick dates, the month, then a reminder and No date
+const cell = (d: string, today = false) =>
+  `<span style="text-align: center; padding-block: 2px${today ? '; color: var(--m-color-accent-text); font-weight: var(--m-font-weight-bold)' : ''}">${d}</span>`;
+const picker = `<div class="m-popover" data-static data-theme="linen" data-mode="dark" style="inline-size: 15rem; font-size: var(--m-font-size-md)" aria-label="Due date">
+          <div class="m-menu" role="menu" aria-label="Due date">
+            <div class="m-menu-label">Due</div>
+            <button type="button" class="m-menu-item" role="menuitem" style="background: var(--m-color-accent-default); color: var(--m-color-accent-fg)"><span style="${glyph('warning-solid')}">${icon(I.sun, 14, 'soft')}</span> Tomorrow</button>
+            <button type="button" class="m-menu-item" role="menuitem"><span style="${glyph('danger-fg')}">${icon(I.days, 14, 'soft')}</span> Next Monday</button>
             <div style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: var(--m-space-2); font-size: var(--m-font-size-sm); font-variant-numeric: tabular-nums">
               ${['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((d) => `<span style="text-align: center; color: var(--m-color-fg-muted); font-size: var(--m-font-size-xs)">${d}</span>`).join('')}
-              ${['', '', ''].map(() => '<span></span>').join('')}${day('', true)}${['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'].map((d) => day(d)).join('')}
+              ${['', '', ''].map(() => '<span></span>').join('')}${cell('12', true)}${['13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23', '24', '25', '26', '27', '28', '29', '30'].map((d) => cell(d)).join('')}
             </div>
-            <button type="button" class="m-menu-item" role="menuitem"><span style="${glyph('warning-fg')}">${icon(I.archive, 14, 'soft')}</span> Later</button>
             <div class="m-menu-separator" role="separator"></div>
-            <button type="button" class="m-menu-item" role="menuitem" style="color: var(--m-color-fg-muted)">${icon(I.plus, 14)} Add a reminder</button>
+            <button type="button" class="m-menu-item" role="menuitem" style="color: var(--m-color-fg-muted)">${icon(I.bell, 14)} Remind me</button>
+            <button type="button" class="m-menu-item" role="menuitem" style="color: var(--m-color-fg-muted)">${icon(I.x, 14)} No date</button>
           </div>
         </div>`;
 
@@ -243,7 +251,7 @@ ${list([
                 <li class="m-cluster" data-gap="2" style="padding-block: var(--m-space-1); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-muted)"><span style="${glyph('accent-text')}">${icon(I.circle, 14)}</span> Batch three, extra silica</li>
               </ul>
               <div class="m-cluster" data-justify="between" style="padding-inline-start: calc(0.9375rem + var(--m-space-3))">
-                <span class="m-cluster" data-gap="2"><span class="m-badge" data-tone="success">Kiln</span><span class="m-cluster" data-gap="1" style="font-size: var(--m-font-size-sm)"><span style="${glyph('warning-solid')}">${icon(I.star, 14, 'solid')}</span> Today</span></span>
+                <span class="m-cluster" data-gap="2"><span class="m-badge" data-tone="success">Kiln</span><span class="m-cluster" data-gap="1" style="font-size: var(--m-font-size-sm)"><span style="${glyph('danger-fg')}">${icon(I.days, 14, 'soft')}</span> Thursday</span></span>
                 <span class="m-cluster" data-gap="1" style="color: var(--m-color-fg-subtle)">
                   <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Tags" style="color: inherit">${icon(I.tag, 16)}</button>
                   <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Checklist" style="color: inherit">${icon(I.checklist, 16)}</button>
@@ -263,7 +271,7 @@ ${list([
         </section>
         <section class="m-cluster" data-gap="6" data-align="start" aria-label="Choosing a date">
           ${picker}
-          <p style="${sub}; max-inline-size: 16rem">Pickers open beside what they change: a dark menu with Today and Tonight first, then the month.</p>
+          <p style="${sub}; max-inline-size: 16rem">Pickers open beside what they change: a dark menu with two quick dates first, then the month.</p>
         </section>
       </div>`,
   [
@@ -293,14 +301,14 @@ const onboarding = `<main class="m-container" data-size="sm" style="padding-bloc
       </div>
       <fieldset class="m-stack" data-gap="1">
         <legend class="m-sr-only">New to-dos</legend>
-${choice('ln-dest', 'Capture', 'Collect everything in one list and sort it later.', true)}
-${choice('ln-dest', 'Focus', 'Put new to-dos straight onto today’s list.')}
+${choice('ln-dest', 'Backlog', 'Collect everything in one place and plan it later.', true)}
+${choice('ln-dest', 'This week', 'Give each new to-do a day this week.')}
 ${choice('ln-dest', 'The list I’m looking at', 'Add to whichever list is open.')}
       </fieldset>
       <div class="m-field">
-        <label class="m-field-label" for="ln-onb-name">Name your first area</label>
-        <input class="m-input" id="ln-onb-name" value="Studio" aria-describedby="ln-onb-name-hint">
-        <p class="m-field-hint" id="ln-onb-name-hint">Areas hold the projects for one part of your life, like Home or Work.</p>
+        <label class="m-field-label" for="ln-onb-name">Name your first project</label>
+        <input class="m-input" id="ln-onb-name" value="Spring glaze tests" aria-describedby="ln-onb-name-hint">
+        <p class="m-field-hint" id="ln-onb-name-hint">A project is anything with a few steps and an end, like a trip or a move.</p>
       </div>
       <div class="m-cluster" data-justify="between">
         <button type="button" class="m-button" data-variant="ghost">${icon(I.left, 14)} Back</button>
@@ -328,7 +336,7 @@ const settings = `<main class="m-container" data-size="md" style="padding-block:
       <div class="m-cluster" data-gap="1" data-justify="center" role="tablist" aria-label="Settings">
         ${tabTile(I.sliders, 'Basics', true)}
         ${tabTile(I.cloud, 'Sync')}
-        ${tabTile(I.squarePlus, 'Capture')}
+        ${tabTile(I.squarePlus, 'New to-dos')}
         ${tabTile(I.bell, 'Alerts')}
         ${tabTile(I.days, 'Schedule')}
       </div>
@@ -336,7 +344,7 @@ const settings = `<main class="m-container" data-size="md" style="padding-block:
     <div class="m-stack" data-gap="5" style="padding: var(--m-space-6) var(--m-space-8) var(--m-space-8)">
       <div style="display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: var(--m-space-3) var(--m-space-3); align-items: center">
 ${formRow('ln-set-clear', 'Clear finished items:', '<select class="m-select" id="ln-set-clear" data-size="sm"><option>At the end of each day</option><option>Straight away</option><option>Never</option></select>')}
-${formRow('ln-set-badge', 'Number on the app icon:', '<select class="m-select" id="ln-set-badge" data-size="sm"><option>Due and overdue</option><option>Everything in Focus</option><option>None</option></select>')}
+${formRow('ln-set-badge', 'Number on the app icon:', '<select class="m-select" id="ln-set-badge" data-size="sm"><option>Due and overdue</option><option>Everything this week</option><option>None</option></select>')}
 ${formRow('ln-set-look', 'Look:', '<select class="m-select" id="ln-set-look" data-size="sm"><option>Match the system</option><option>Light</option><option>Dark</option></select>')}
 ${formRow('ln-set-week', 'Weeks begin on:', '<select class="m-select" id="ln-set-week" data-size="sm"><option>Monday</option><option>Sunday</option></select>')}
       </div>
@@ -345,7 +353,7 @@ ${formRow('ln-set-week', 'Weeks begin on:', '<select class="m-select" id="ln-set
         <legend class="m-sr-only">Options</legend>
 ${box('Show a count beside each list')}
 ${box('Fold finished checklist items away')}
-${box('Open new windows on Focus', false)}
+${box('Open new windows on Week', false)}
 ${box('Ask before deleting a project')}
       </fieldset>
     </div>
@@ -366,7 +374,7 @@ ${box('Ask before deleting a project')}
         </div>
         <div class="m-stack" data-gap="2">
           <h3 style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-semibold)">Email in</h3>
-          <p class="m-muted" style="font-size: var(--m-font-size-sm)">Forward a message to your private address and it arrives in Capture.</p>
+          <p class="m-muted" style="font-size: var(--m-font-size-sm)">Forward a message to your private address and it arrives in Backlog.</p>
           <div><button type="button" class="m-button" data-size="sm">Set up…</button></div>
         </div>
         <a href="#" class="m-cluster" data-gap="1" style="align-self: end; color: var(--m-color-accent-text); text-decoration: none; font-size: var(--m-font-size-sm)">Sync help ${icon(I.right, 12)}</a>
@@ -378,12 +386,12 @@ ${box('Ask before deleting a project')}
 
 // An empty list: the list's own glyph, large and faint, in the middle of the page
 const emptyState = shell(
-  'Capture',
+  'Waiting',
   `      <div class="m-stack" data-gap="8" style="min-block-size: 70vh">
-        <h1 class="m-cluster" data-gap="2" style="${listTitle}"><span style="${glyph('accent-default')}">${icon(I.inbox, 26, 'soft')}</span> Capture</h1>
+        <h1 class="m-cluster" data-gap="2" style="${listTitle}"><span style="${glyph('info-fg')}">${icon(I.hourglass, 26, 'soft')}</span> Waiting</h1>
         <div class="m-stack" data-gap="3" data-align="center" style="text-align: center; margin-block: auto; color: var(--m-color-fg-subtle)">
-          <span style="display: inline-flex; opacity: 0.45">${icon(I.inbox, 72, 'soft')}</span>
-          <p style="max-inline-size: 22rem">Nothing to sort. New to-dos land here until you give them a list or a day.</p>
+          <span style="display: inline-flex; opacity: 0.45">${icon(I.hourglass, 72, 'soft')}</span>
+          <p style="max-inline-size: 22rem">Nothing on hold. Move a to-do here when it’s waiting on someone else.</p>
           <button type="button" class="m-button" data-variant="ghost" style="color: var(--m-color-accent-text)">${icon(I.plus, 14)} New to-do</button>
         </div>
       </div>`,
@@ -483,7 +491,7 @@ const errors = `<main class="m-container" data-size="md" style="padding-block: v
     <section class="m-stack" data-gap="3" data-align="center" aria-label="A toast">
       <div class="m-toast" data-tone="danger" role="alert"><span style="${glyph('danger-fg')}">${icon(I.cloudOff, 18)}</span><div class="m-toast-content"><div class="m-toast-title">Couldn’t sync</div><div class="m-toast-body">You’re offline. Changes are kept here and sync when you’re back.</div></div><button type="button" class="m-button" data-size="sm">Retry</button></div>
     </section>
-${errorPage('404', I.searchX, 'This list isn’t here', 'It may have been deleted on another device, or the link is out of date.', `<a class="m-button" data-variant="primary" href="#">${icon(I.star, 14)} Go to Focus</a>`)}
+${errorPage('404', I.searchX, 'This list isn’t here', 'It may have been deleted on another device, or the link is out of date.', `<a class="m-button" data-variant="primary" href="#">${icon(I.days, 14)} Go to Week</a>`)}
 ${errorPage('500', I.alert, 'Something went wrong on our side', 'Nothing in your lists was changed. Try again in a moment.', `<button type="button" class="m-button" data-variant="primary">Try again</button><a class="m-button" data-variant="ghost" href="#">Status page</a>`)}
 ${errorPage('403', I.lock, 'This list is private', 'Only Marisol can open it. Ask her to share it with you.', `<button type="button" class="m-button" data-variant="primary">Ask to see it</button><a class="m-button" data-variant="ghost" href="#">Go back</a>`)}
   </div>
@@ -494,7 +502,7 @@ export const linenRecipes: ArchetypeRecipe[] = [
     name: 'dashboard',
     title: 'Dashboard',
     description:
-      'A day list: the pale sidebar of lists, a bold title with its glyph, the day’s calendar in a grey box, to-dos with the project beneath, an Evening section and a quiet bottom toolbar.',
+      'A week list: the pale sidebar of lists, a bold title with its glyph, today’s calendar in a grey box, a section per day with to-dos and the project beneath, and a quiet bottom toolbar.',
     html: dashboard,
   },
   {
