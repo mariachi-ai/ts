@@ -6,6 +6,8 @@ import { cirrus } from './cirrus';
 import { halcyon } from './halcyon';
 import { onyx } from './onyx';
 import { marigold } from './marigold';
+import { linen } from './linen';
+import { quill } from './quill';
 import { editorial } from './editorial';
 import { enterprise } from './enterprise';
 import { fennel } from './fennel';
@@ -25,6 +27,7 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
+  quill,
   fennel,
   basalt,
   ember,
@@ -33,7 +36,8 @@ export const presets = {
   onyx,
   terracotta,
   marigold,
+  linen,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, marigold, minimal, onyx, soft, terminal, terracotta, zephyr };
+export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, linen, marigold, minimal, onyx, quill, soft, terminal, terracotta, zephyr };
