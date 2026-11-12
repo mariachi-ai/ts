@@ -63,6 +63,9 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `solace` | Charcoal on white and warm off-white, a sunny orange brand, one bright blue action, bold rounded type, pill buttons and a midnight-blue night mode. A design language. |
 | `heather` | Charcoal ink on white, one clear blue, 12px buttons, 16px hairline cards and video frames, pale-blue time chips and a charcoal dark mode. A design language. |
 | `saffron` | A sunny yellow brand stripe, deep teal actions, graphite on white, a sturdy serif for figures and a plain grotesque for the rest. A design language. |
+| `nocturne` | Night-blue scenes, white type, rounded tiles with durations, white pill actions and a soft violet brand; light pages in deep-plum ink. A design language. |
+| `vellum` | White pages, grey grouped panels, a sky-blue signature, pill actions, an entry timeline with big date numerals, and a true black dark mode. A design language. |
+| `chalk` | Black ink on white panes, a system-grey sidebar, white inset groups on grey, one clear blue, a warm signature yellow, round coloured list icons and a true-black dark mode. A design language. |
 
 ## Design languages
 
@@ -130,6 +133,9 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `solace` | Warm and friendly | Warm and soothing: charcoal on white and warm off-white, a sunny orange brand, one bright blue action, bold rounded type, pill buttons and a midnight-blue night mode |
 | `heather` | Warm and friendly | Friendly and clean: charcoal ink on white, one clear blue, 12px buttons, 16px hairline cards and video frames, pale-blue time chips and a charcoal dark mode |
 | `saffron` | Warm and friendly | Warm and plain-spoken: a sunny yellow brand stripe, deep teal actions, graphite on white, a sturdy serif for figures and a plain grotesque for the rest |
+| `nocturne` | Calm and minimal | Dark-first and gentle: night-blue scenes, white type, rounded tiles with durations, white pill actions and a soft violet brand; light pages in deep-plum ink |
+| `vellum` | Calm and minimal | A quiet journal: white pages, grey grouped panels, a sky-blue signature, pill actions, an entry timeline with big date numerals, and a true black dark mode |
+| `chalk` | Calm and minimal | Native and calm: black ink on white panes, a system-grey sidebar, white inset groups on grey, one clear blue, a warm signature yellow, round coloured list icons and a true-black dark mode |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
