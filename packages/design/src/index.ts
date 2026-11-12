@@ -41,7 +41,7 @@ export { emitOverridesCss } from './engine/overrides';
 export { emitTailwindCss, tailwindName } from './engine/tailwind';
 export { defineDesign, resolvePreset } from './design';
 export type { ComponentName, DesignConfig, ResolvedDesign } from './design';
-export { aria, basalt, bazaar, broadsheet, brutalist, cadence, candid, carbon, chalk, cirrus, comet, confetti, doodle, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, kite, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, presets, prism, quill, quire, reel, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, transit, trellis, vellum, volt, zephyr } from './presets';
+export { aria, basalt, bazaar, broadsheet, brutalist, cadence, candid, carbon, chalk, cirrus, comet, confetti, doodle, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, kite, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, presets, prism, quill, quire, reel, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, tinker, transit, trellis, vellum, volt, zephyr } from './presets';
 export type { PresetName } from './presets';
 export { archetypes, categories, iconActions, recipeNames } from './archetypes';
 export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './archetypes';

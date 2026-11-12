@@ -52,6 +52,7 @@ import { solace } from './solace';
 import { terminal } from './terminal';
 import { zephyr } from './zephyr';
 import { terracotta } from './terracotta';
+import { tinker } from './tinker';
 import { transit } from './transit';
 
 /** Built-in presets, in display order. */
@@ -66,6 +67,7 @@ export const presets = {
   halcyon,
   kite,
   doodle,
+  tinker,
   fennel,
   basalt,
   ember,
@@ -114,4 +116,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { aria, basalt, bazaar, broadsheet, brutalist, cadence, candid, carbon, chalk, cirrus, comet, confetti, doodle, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, kite, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, prism, quill, quire, reel, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, transit, trellis, vellum, volt, zephyr };
+export { aria, basalt, bazaar, broadsheet, brutalist, cadence, candid, carbon, chalk, cirrus, comet, confetti, doodle, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, kite, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, prism, quill, quire, reel, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, tinker, transit, trellis, vellum, volt, zephyr };
