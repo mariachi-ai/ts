@@ -5,6 +5,7 @@ export const SECTIONS = [
   { label: 'API', route: 'api', match: 'api' },
   { label: 'Reference', route: 'reference/errors', match: 'reference' },
   { label: 'Design', route: 'design', match: 'design' },
+  { label: 'Languages', route: 'design/languages', match: 'design/languages' },
   { label: 'Status', route: 'status', match: 'status' },
 ] as const;
 
@@ -22,4 +23,11 @@ export interface SidebarGroup {
 /** Route of the current page without the base, e.g. `packages/ai`. */
 export function currentRoute(pathname: string, base: string): string {
   return pathname.slice(base.length).replace(/^\/+|\/+$/g, '');
+}
+
+/** The header section a route belongs to: the longest matching prefix (`design/languages/x` is Languages, not Design). */
+export function activeSection(route: string): string | undefined {
+  return SECTIONS.map((s) => s.match)
+    .filter((m) => route === m || route.startsWith(`${m}/`))
+    .sort((a, b) => b.length - a.length)[0];
 }

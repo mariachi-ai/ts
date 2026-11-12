@@ -5,7 +5,7 @@ import type { Heading } from '../../../data/schema';
 import Base from '../../../layouts/Base.astro';
 import { designSidebar } from '../../../lib/sidebars';
 import { href } from '../../../lib/url';
-import { loadDesign, loadPresetChecks } from '../../../loaders/design';
+import { findLanguage, loadDesign, loadPresetChecks } from '../../../loaders/design';
 
 export function getStaticPaths() {
   return loadDesign().presets.map((p) => ({ params: { name: p.name } }));
@@ -14,6 +14,7 @@ export function getStaticPaths() {
 const catalog = loadDesign();
 const preset = catalog.presets.find((p) => p.name === Astro.params.name)!;
 const check = (await loadPresetChecks())[preset.name];
+const language = findLanguage(preset.name);
 const colorGroups = [...new Set(catalog.semantic.filter((t) => t.kind === 'color').map((t) => t.path.split('.').slice(0, 2).join('.')))];
 const colorTokens = (group: string) => catalog.semantic.filter((t) => t.kind === 'color' && t.path.startsWith(`${group}.`));
 const sizes = catalog.semantic.filter((t) => t.path.startsWith('font.size.'));
@@ -49,6 +50,7 @@ const extend = `import { extendTheme, ${preset.name} } from '@mariachi/design';\
     <div class="x-meta">
       <span>{passed}/{check.results.length} contrast checks pass</span>
       {preset.extends && <span>Extends {preset.extends}</span>}
+      {language && <a href={href(`design/languages/${language.id}`)}>Design language: gallery, recipes and settings</a>}
       <a href={href(`design/tokens/${preset.name}.json`)}>DTCG tokens (JSON)</a>
       <a href={`${href('design/compare')}?presets=${preset.name},minimal`}>Compare</a>
     </div>

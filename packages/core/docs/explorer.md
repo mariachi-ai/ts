@@ -27,6 +27,7 @@ workflow publishes `main`'s explorer to GitHub Pages when it is run by hand (`wo
 | API | Every exported symbol per import path, with signatures and JSDoc | each package's built `.d.ts` |
 | Reference | Error codes with HTTP status and throw sites; CLI commands; framework tables; dependency graph | source AST, `@mariachi/cli/program`, `@mariachi/schema` |
 | Design | Presets with token pages and contrast results, components with examples and tokens, compare view, sample pages, playground | `@mariachi/design` catalog |
+| Languages | Design languages filtered by category and tags; each with its settings (colours, type, radius, shadows, motion, density), gallery (light and dark), recipes, icons and `DESIGN.md` | `@mariachi/design` catalog and its `archetypes/` files |
 | Status | Roadmap and per-package status | `ROADMAP.md` |
 
 `/explorer.json` holds all of it as one JSON document (packages, docs outlines, API, error codes, CLI,

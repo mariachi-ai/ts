@@ -2,7 +2,7 @@
 import '../styles/explorer.css';
 import type { Heading } from '../data/schema';
 import { loadDesign } from '../loaders/design';
-import { currentRoute, SECTIONS, type SidebarGroup } from '../lib/nav';
+import { activeSection, currentRoute, SECTIONS, type SidebarGroup } from '../lib/nav';
 import { BASE, href } from '../lib/url';
 
 interface Props {
@@ -20,7 +20,8 @@ const { title, description = 'Explore every Mariachi package, doc, API, error co
 const route = currentRoute(Astro.url.pathname, BASE);
 const presets = loadDesign().presets;
 const version = loadDesign().version;
-const active = (match: string) => route === match || route.startsWith(`${match}/`);
+const section = activeSection(route);
+const active = (match: string) => match === section;
 const pageTitle = route === '' ? 'Mariachi Explorer' : `${title} · Mariachi`;
 const tocItems = (toc ?? []).filter((h) => h.id);
 ---
