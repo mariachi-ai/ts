@@ -118,7 +118,7 @@ const chevron = `<span style="color: var(--m-color-fg-subtle); display: inline-f
 const mark = (size = 32) =>
   `<span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: ${size}px; block-size: ${size}px; border-radius: ${Math.round(size * 0.28)}px; background: var(--m-color-brand-default); color: var(--m-color-brand-fg)">${icon(I.zap, Math.round(size * 0.6))}</span>`;
 const wordmark = (size = 32) =>
-  `<a href="#" class="m-cluster" data-gap="2" style="color: var(--m-color-fg-default); text-decoration: none; font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium); letter-spacing: -0.02em">${mark(size)}brisk</a>`;
+  `<a href="#" class="m-cluster" data-gap="2" style="flex-wrap: nowrap; flex-shrink: 0; color: var(--m-color-fg-default); text-decoration: none; font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium); letter-spacing: -0.02em">${mark(size)}brisk</a>`;
 
 const nav = (items: [keyof typeof I, string, string?][], current: string) =>
   items
@@ -644,7 +644,7 @@ const pricing = `<div style="background: var(--m-color-bg-surface)">
     <a class="m-navbar-link" href="#">Support</a>
   </nav>
   <div class="m-navbar-actions">
-    <a class="m-button" data-variant="primary" data-size="sm" href="#" style="--m-button-primary-bg: var(--m-color-brand-default); --m-button-primary-border: var(--m-color-brand-default); --m-button-primary-fg: var(--m-color-brand-fg); --m-button-primary-hover-bg: var(--m-color-brand-default)">Join brisk ${icon(I.arrowRight, 16)}</a>
+    <a class="m-button" data-variant="primary" data-size="sm" href="#" style="--m-button-primary-bg: var(--m-color-brand-default); --m-button-primary-border: var(--m-color-brand-default); --m-button-primary-fg: var(--m-color-brand-fg); --m-button-primary-hover-bg: var(--m-color-brand-default)">Join ${icon(I.arrowRight, 16)}</a>
     <a class="m-button" data-variant="primary" data-size="sm" href="#" style="--m-button-primary-bg: var(--m-color-bg-inverse); --m-button-primary-border: var(--m-color-bg-inverse); --m-button-primary-fg: var(--m-color-fg-inverse); --m-button-primary-hover-bg: var(--m-color-bg-inverse)">Log in</a>
   </div>
 </header>
