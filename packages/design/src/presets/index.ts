@@ -1,6 +1,7 @@
 import type { Theme } from '../engine/theme';
 import { basalt } from './basalt';
 import { broadsheet } from './broadsheet';
+import { bazaar } from './bazaar';
 import { brutalist } from './brutalist';
 import { carbon } from './carbon';
 import { cadence } from './cadence';
@@ -22,6 +23,7 @@ import { soft } from './soft';
 import { terminal } from './terminal';
 import { zephyr } from './zephyr';
 import { terracotta } from './terracotta';
+import { transit } from './transit';
 
 /** Built-in presets, in display order. */
 export const presets = {
@@ -49,7 +51,9 @@ export const presets = {
   carbon,
   cadence,
   mosaic,
+  bazaar,
+  transit,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, mosaic, obsidian, onyx, quill, soft, terminal, terracotta, zephyr };
+export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, mosaic, obsidian, onyx, quill, soft, terminal, terracotta, transit, zephyr };
