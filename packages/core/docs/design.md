@@ -60,6 +60,9 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `volt` | Black and white with one electric green, black pill buttons, white 20px cards on light grey, big tight headlines and bold amounts. A design language. |
 | `sprint` | Near-black on white, huge condensed uppercase display type, full-bleed media, black pill actions and one signature orange. A design language. |
 | `summit` | Warm near-black on off-white, a signature orange, bold compact type, white 4px cards, stats rows with big figures and small units. A design language. |
+| `solace` | Charcoal on white and warm off-white, a sunny orange brand, one bright blue action, bold rounded type, pill buttons and a midnight-blue night mode. A design language. |
+| `heather` | Charcoal ink on white, one clear blue, 12px buttons, 16px hairline cards and video frames, pale-blue time chips and a charcoal dark mode. A design language. |
+| `saffron` | A sunny yellow brand stripe, deep teal actions, graphite on white, a sturdy serif for figures and a plain grotesque for the rest. A design language. |
 
 ## Design languages
 
@@ -124,6 +127,9 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `volt` | Bold and fast | Loud and fast: black and white with one electric green, black pill buttons, white 20px cards on light grey, big tight headlines and bold amounts |
 | `sprint` | Bold and fast | Athletic and stark: near-black on white, huge condensed uppercase display type, full-bleed media, black pill actions and one signature orange |
 | `summit` | Bold and fast | Sporty and loud: warm near-black on off-white, a signature orange, bold compact type, white 4px cards, stats rows with big figures and small units |
+| `solace` | Warm and friendly | Warm and soothing: charcoal on white and warm off-white, a sunny orange brand, one bright blue action, bold rounded type, pill buttons and a midnight-blue night mode |
+| `heather` | Warm and friendly | Friendly and clean: charcoal ink on white, one clear blue, 12px buttons, 16px hairline cards and video frames, pale-blue time chips and a charcoal dark mode |
+| `saffron` | Warm and friendly | Warm and plain-spoken: a sunny yellow brand stripe, deep teal actions, graphite on white, a sturdy serif for figures and a plain grotesque for the rest |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
