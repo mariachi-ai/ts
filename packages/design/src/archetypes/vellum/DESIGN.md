@@ -25,7 +25,7 @@ that look like the platform's own.
   face (Lato) a size larger than the interface. Chrome is thin, grey and quiet around them.
 - **Time is the structure.** Lists of entries are a timeline: a bold month heading, then rows with
   the weekday in small capitals over a big day numeral, the title, two lines of text and a meta line.
-  A calendar and "years ago" are first-class views, not extras.
+  The calendar is a first-class view, not an extra.
 - **Colour belongs to journals.** The sky blue (`--m-color-brand-default`) is the default journal's
   colour and the brand; each other journal has its own. Colour marks which journal something is in:
   a small square swatch, a band behind a journal's title, the open row, a written day in the
@@ -170,10 +170,13 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
 
 **Navigation**
 - **Sidebar** (the journal column). 240px on cool grey, with no edge line.
-  - A wordmark at the top, then the app's views (Home, Years ago, Starred) with 15px icons.
-  - A hairline, then "Journals": each row a square colour swatch, the name and a right-aligned
-    count, the current one in a darker grey with 8px corners.
-  - "Add a journal" with a plus, then a hairline and the rest (Recently deleted, Preferences).
+  - The wordmark at the top, with a round settings button at the right.
+  - The app's views (Write, Photos, Places, Calendar, Starred) with 15px icons and right-aligned
+    counts.
+  - A hairline, then "Journals": one row per journal, each a square colour swatch, the name and a
+    right-aligned count; the current one in a darker grey with 8px corners. "Start a journal" with a
+    plus ends the group. There is no "all journals" row.
+  - A hairline, then Tags and Archive.
 - **Navbar** (public pages). White, a faint bottom hairline, a wordmark left, 17px ink links, and one
   outlined blue button at the right.
 - **Toolbar** (in the app). No fill: grey 18px glyph buttons for the views (timeline, photos,
@@ -245,7 +248,7 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
   writing is safe. Undo for anything reversible.
 - **A whole page:** centred. A 40px outline icon in the subtle colour, a small "Error 404" line, a
   20px bold title, one sentence and stacked pills.
-  - **404:** "This entry isn't here", with Go to Home.
+  - **404:** "This entry isn't here", with Go to your journals.
   - **500:** "Something went wrong on our side" and "Nothing you wrote was lost", with Try again.
   - **403:** "This journal is locked", with Ask for access.
 - **Words.** Reassure first: say whether anything written was lost. No codes in sentences, no blame,
@@ -253,12 +256,12 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
 
 ## Page shapes (recipes)
 
-- **Dashboard** (Home).
-  - "Home" as a 34px bold title with the date in subtle text, and round grey previous and next
+- **Dashboard** (Write).
+  - "Write" as a 34px bold title with the date in subtle text, and round grey previous and next
     buttons.
   - Two grey count pills, today's question with a full-width primary pill, and a grouped panel of
     moments (photos, places, voice memos) with counts and chevrons.
-  - Beside it: the month calendar with written days in the brand colour, entries from years ago,
+  - Beside it: the month calendar with written days in the brand colour, recently written entries,
     and streak and count tiles.
 - **List and detail.** The journal column, the timeline (toolbar of view glyphs, bold month headings,
   date tiles, photos, the open row filled with the journal colour), and the open entry at a reading
@@ -266,7 +269,7 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
 - **Onboarding.** A journal-colour band with a large title, a white sheet with 28px top corners
   rising over it, a progress bar, one field, colour swatches, a grouped panel of switches and a
   full-width primary pill.
-- **Settings.** A grey section list whose current row fills with the action blue; a title bar with
+- **Settings.** Opened from the settings button by the wordmark: a grey section list whose current row fills with the action blue; a title bar with
   Close; grouped outlined panels of label-and-control rows; a red destructive row last.
 - **Empty state.** A new journal's colour band and title, text tabs, then a 40px feather, a bold
   heading, one sentence and two stacked pills.
@@ -276,7 +279,7 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
 
 ## Words
 
-- Warm and plain, in sentence case: "Write about it", "Start from a moment", "Add a journal".
+- Warm and plain, in sentence case: "Write about it", "Start from a moment", "Start a journal".
 - Dates written out ("Saturday, 28 September"); times in the person's own clock.
 
 ## Do and don't

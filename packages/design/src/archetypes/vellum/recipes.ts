@@ -14,8 +14,6 @@ import type { ArchetypeRecipe } from '../types';
 const icon = (paths: string, size = 16) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths}</svg>`;
 const I = {
-  home: '<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>',
-  history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
   star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
   pen: '<path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/>',
@@ -36,6 +34,7 @@ const I = {
   pin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
   sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
   flame: '<path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>',
+  archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
   trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
   gear: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   mic: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>',
@@ -81,19 +80,22 @@ const largeTitle =
 const sectionTitle = 'font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold)';
 const entryFace = 'font-family: var(--m-font-family-display)';
 
-// The journal column: no logo, the app's views, the journals with swatches and counts, then the rest
+// The journal column: the wordmark with a settings button, the app's own views, the journals with
+// swatches and counts, then tags and the archive
 const navRow = (lead: string, label: string, count: string | null, current: string) =>
   `        <li><a class="m-sidebar-link" href="#"${label === current ? ' aria-current="page"' : ''}>${lead} ${label}${count ? ` <span class="m-sidebar-count">${count}</span>` : ''}</a></li>`;
 const rule = `    <hr class="m-divider" style="margin: var(--m-space-1) var(--m-space-3)">`;
 const sidebar = (current: string) => `  <nav class="m-sidebar" aria-label="Journals">
-    <div class="m-cluster" data-gap="2" style="padding: var(--m-space-2) var(--m-space-3)">
-      <span class="m-avatar" data-size="sm" style="border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">${icon(I.feather, 14)}</span>
-      <span style="font-weight: var(--m-font-weight-semibold)">Keepsake</span>
+    <div class="m-cluster" data-justify="between" style="padding: var(--m-space-1) var(--m-space-1) var(--m-space-1) var(--m-space-3)">
+      <span class="m-cluster" data-gap="2"><span class="m-avatar" data-size="sm" style="border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">${icon(I.feather, 14)}</span><span style="font-weight: var(--m-font-weight-semibold)">Keepsake</span></span>
+      <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Settings"${current === 'Settings' ? ' aria-pressed="true" style="color: var(--m-color-fg-default); background: var(--m-color-bg-sunken)"' : ' style="color: var(--m-color-fg-subtle)"'}>${icon(I.gear, 16)}</button>
     </div>
     <div class="m-sidebar-section">
       <ul>
-${navRow(icon(I.home, 15), 'Home', null, current)}
-${navRow(icon(I.history, 15), 'Years ago', '4', current)}
+${navRow(icon(I.pen, 15), 'Write', null, current)}
+${navRow(icon(I.image, 15), 'Photos', '418', current)}
+${navRow(icon(I.pin, 15), 'Places', '57', current)}
+${navRow(icon(I.cal, 15), 'Calendar', null, current)}
 ${navRow(icon(I.star, 15), 'Starred', '12', current)}
       </ul>
     </div>
@@ -101,20 +103,19 @@ ${rule}
     <div class="m-sidebar-section">
       <h2 class="m-sidebar-heading">Journals</h2>
       <ul>
-${navRow(swatch(J.all), 'Everything', '486', current)}
 ${navRow(swatch(J.notebook), 'Notebook', '231', current)}
 ${navRow(swatch(J.garden), 'Garden log', '64', current)}
 ${navRow(swatch(J.kitchen), 'Kitchen', '38', current)}
 ${navRow(swatch(J.letters), 'Letters to Ada', '17', current)}
 ${navRow(swatch(J.work), 'Work diary', '136', current)}
-${navRow(icon(I.plus, 15), 'Add a journal', null, current)}
+${navRow(icon(I.plus, 15), 'Start a journal', null, current)}
       </ul>
     </div>
 ${rule}
     <div class="m-sidebar-section">
       <ul>
-${navRow(icon(I.trash, 15), 'Recently deleted', '3', current)}
-${navRow(icon(I.gear, 15), 'Preferences', null, current)}
+${navRow(icon(I.tag, 15), 'Tags', '24', current)}
+${navRow(icon(I.archive, 15), 'Archive', '9', current)}
       </ul>
     </div>
   </nav>`;
@@ -166,7 +167,7 @@ const groupRow = (ic: string, label: string, value: string) =>
   `<a href="#" class="m-cluster" data-gap="3" style="flex-wrap: nowrap; padding: var(--m-space-3) var(--m-space-4); color: inherit; text-decoration: none"><span style="display: inline-flex">${icon(ic, 18)}</span><span style="flex: 1">${label}</span><span style="${subtle}">${value}</span><span style="display: inline-flex; ${subtle}">${icon(I.right, 14)}</span></a>`;
 const inset = '<hr class="m-divider" style="margin: 0 0 0 calc(var(--m-space-4) * 2 + 18px)">';
 
-// ---------- Dashboard: Home, the day at a glance ----------
+// ---------- Dashboard: Write, the day at a glance ----------
 
 const calDays = () => {
   const written = new Set([2, 3, 5, 6, 9, 10, 11, 14, 16, 17, 18, 21, 23, 24, 25, 28]);
@@ -188,20 +189,20 @@ const calDays = () => {
 const stat = (label: string, value: string) =>
   `<div class="m-card" style="padding: var(--m-space-3) var(--m-space-4)"><div class="m-stack" data-gap="1"><span style="font-size: var(--m-font-size-xs); font-weight: var(--m-font-weight-semibold); text-transform: uppercase; letter-spacing: var(--m-font-tracking-wide); ${muted}">${label}</span><span style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-semibold); font-variant-numeric: tabular-nums">${value}</span></div></div>`;
 
-const pastEntry = (when: string, title: string, text: string, pic: keyof typeof tones) =>
+const recentEntry = (when: string, title: string, text: string, pic: keyof typeof tones) =>
   `<a href="#" class="m-cluster" data-gap="3" data-align="start" style="flex-wrap: nowrap; padding: var(--m-space-3) 0; color: inherit; text-decoration: none; ${hair}">
                 <span class="m-stack" data-gap="1" style="flex: 1; min-inline-size: 0"><span style="font-size: var(--m-font-size-xs); font-weight: var(--m-font-weight-semibold); text-transform: uppercase; letter-spacing: var(--m-font-tracking-wide); color: var(--m-color-accent-text)">${when}</span><span style="font-weight: var(--m-font-weight-semibold)">${title}</span><span class="m-muted" style="${small}; ${clamp2}">${text}</span></span>
                 ${photo(pic, 'inline-size: 3.5rem; block-size: 3.5rem')}
               </a>`;
 
 const dashboard = shell(
-  'Home',
+  'Write',
   `    <main class="m-container" style="padding-block: var(--m-space-8) var(--m-space-12)">
       <div class="m-grid" style="--m-layout-grid-min: 22rem; --m-layout-grid-gap: var(--m-space-10); align-items: start">
         <div class="m-stack" data-gap="8">
           <header class="m-cluster" data-justify="between" data-align="start">
             <div class="m-stack" data-gap="1">
-              <h1 style="${largeTitle}">Home</h1>
+              <h1 style="${largeTitle}">Write</h1>
               <span class="m-subtle">Saturday, 28 September</span>
             </div>
             <div class="m-cluster" data-gap="2">
@@ -211,7 +212,7 @@ const dashboard = shell(
           </header>
           <div class="m-grid" style="--m-layout-grid-min: 11rem; --m-layout-grid-gap: var(--m-space-3)">
             <a href="#" class="m-button" data-size="lg" style="justify-content: space-between; font-weight: var(--m-font-weight-medium)">2 entries today <span style="display: inline-flex; flex: none; color: var(--m-color-accent-text)">${icon(I.plus, 16)}</span></a>
-            <a href="#" class="m-button" data-size="lg" style="justify-content: space-between; font-weight: var(--m-font-weight-medium)">4 from years ago <span style="display: inline-flex; flex: none; ${subtle}">${icon(I.right, 16)}</span></a>
+            <a href="#" class="m-button" data-size="lg" style="justify-content: space-between; font-weight: var(--m-font-weight-medium)">5 drafts <span style="display: inline-flex; flex: none; ${subtle}">${icon(I.right, 16)}</span></a>
           </div>
           <section class="m-stack" data-gap="3" aria-labelledby="vl-question">
             <h2 id="vl-question" style="${sectionTitle}">A question for today</h2>
@@ -242,11 +243,11 @@ const dashboard = shell(
               ${calDays()}
             </div>
           </section>
-          <section class="m-stack" data-gap="1" aria-labelledby="vl-past">
-            <h2 id="vl-past" style="${sectionTitle}; padding-block-end: var(--m-space-2)">From years ago</h2>
+          <section class="m-stack" data-gap="1" aria-labelledby="vl-recent">
+            <h2 id="vl-recent" style="${sectionTitle}; padding-block-end: var(--m-space-2)">Recently written</h2>
             <div class="m-stack" data-gap="0">
-              ${pastEntry('1 year ago', 'First tomatoes off the vine', 'Three of them, split from the rain but still the best thing I ate all week.', 'leaf')}
-              ${pastEntry('3 years ago', 'The ferry to Inishmore', 'Grey water, a dog asleep on the deck, and the island arriving slowly out of the fog.', 'sky')}
+              ${recentEntry('Garden log · Thursday', 'First tomatoes off the vine', 'Three of them, split from the rain but still the best thing I ate all week.', 'leaf')}
+              ${recentEntry('Notebook · Monday', 'The ferry to Inishmore', 'Grey water, a dog asleep on the deck, and the island arriving slowly out of the fog.', 'sky')}
             </div>
           </section>
           <section class="m-stack" data-gap="3" aria-labelledby="vl-stats">
@@ -377,9 +378,9 @@ const sw = (label: string, on: boolean) =>
 const settingsSections = ['Profile', 'Writing', 'Look and feel', 'Reminders', 'Privacy and lock', 'Backups', 'Connected apps', 'Help'];
 
 const settings = shell(
-  'Preferences',
+  'Settings',
   `    <div class="m-split" style="--m-layout-split-side: 14rem; --m-layout-split-gap: 0; min-block-size: 100vh">
-      <nav aria-label="Preferences" style="background: var(--m-color-bg-sunken); padding: var(--m-space-6) var(--m-space-3)">
+      <nav aria-label="Settings sections" style="background: var(--m-color-bg-sunken); padding: var(--m-space-6) var(--m-space-3)">
         <ul class="m-stack" data-gap="1" style="padding: 0; list-style: none">
 ${settingsSections
   .map(
@@ -392,7 +393,7 @@ ${settingsSections
       <main>
         <div class="m-cluster" data-justify="between" style="padding: var(--m-space-4) var(--m-space-6); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
           <h1 style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-bold)">Look and feel</h1>
-          ${toolbarBtn(I.x, 'Close preferences')}
+          ${toolbarBtn(I.x, 'Close settings')}
         </div>
         <div class="m-container" data-size="md" style="padding-block: var(--m-space-6) var(--m-space-12)">
           <div class="m-stack" data-gap="8">
@@ -510,9 +511,9 @@ const pricing = `<div style="min-block-size: 100vh; background: var(--m-color-bg
           <p class="m-muted" style="${small}">Try any paid plan free for 14 days. Your entries stay yours if you stop.</p>
         </div>
         <div class="m-grid" style="--m-layout-grid-min: 17rem; --m-layout-grid-gap: var(--m-space-5); align-items: stretch">
-${tier({ ic: I.feather, icColor: 'var(--m-color-brand-default)', name: 'Starter', line: 'Everything you need to write every day', price: '$0', features: ['One journal, no entry limit', 'One photo in each entry', 'Daily questions', 'Search by word and date', 'Years-ago reminders'], cta: 'Start writing' })}
+${tier({ ic: I.feather, icColor: 'var(--m-color-brand-default)', name: 'Starter', line: 'Everything you need to write every day', price: '$0', features: ['One journal, no entry limit', 'One photo in each entry', 'Daily questions', 'Search by word and date', 'Tags and starred entries'], cta: 'Start writing' })}
 ${tier({ ic: I.book, icColor: 'var(--m-color-fg-subtle)', name: 'Keeper', line: 'For a life in many journals, on every device', price: '$39.99', features: ['Unlimited journals and colours', 'Twenty photos in each entry', 'Sync between all your devices', 'Voice notes, written out for you', 'Printed books at 20% off'], cta: 'Try it free', primary: true })}
-${tier({ ic: I.star, icColor: 'var(--m-color-warning-solid)', name: 'Archivist', line: 'Everything in Keeper, plus a deeper look back', price: '$69.99', features: ['Video and scanned pages', 'Shared journals with family', 'Yearly printed recap', 'Priority help from a person', 'Printed books at 35% off'], cta: 'Try it free', primary: true, featured: true })}
+${tier({ ic: I.star, icColor: 'var(--m-color-warning-solid)', name: 'Archivist', line: 'Everything in Keeper, plus video and family sharing', price: '$69.99', features: ['Video and scanned pages', 'Shared journals with family', 'Yearly printed recap', 'Priority help from a person', 'Printed books at 35% off'], cta: 'Try it free', primary: true, featured: true })}
         </div>
         <section class="m-stack" data-gap="4" aria-labelledby="vl-compare" style="max-inline-size: 56rem; margin-inline: auto; inline-size: 100%">
           <h2 id="vl-compare" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-bold); text-align: center">Compare the plans</h2>
@@ -576,7 +577,7 @@ const errors = `<main class="m-container" data-size="md" style="padding-block: v
       <div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title m-cluster" data-gap="2"><span style="display: inline-flex; color: var(--m-color-danger-fg)">${icon(I.cloud, 18)}</span>3 entries haven’t synced</div><div class="m-toast-body">They’re safe on this device and will sync when you’re back online.</div></div><button type="button" class="m-button" data-size="sm">Retry</button></div>
       <div class="m-toast" data-tone="success" role="status"><div class="m-toast-content"><div class="m-toast-title m-cluster" data-gap="2"><span style="display: inline-flex; color: var(--m-color-success-fg)">${icon(I.check, 18)}</span>Entry moved to Garden log</div></div><button type="button" class="m-button" data-variant="ghost" data-size="sm">Undo</button></div>
     </section>
-${errorPage('404', I.search, 'This entry isn’t here', 'It may have been deleted, or moved to a journal you no longer share.', `<a class="m-button" data-variant="primary" href="#">${icon(I.home, 16)} Go to Home</a>`)}
+${errorPage('404', I.search, 'This entry isn’t here', 'It may have been deleted, or moved to a journal you no longer share.', `<a class="m-button" data-variant="primary" href="#">${icon(I.book, 16)} Go to your journals</a>`)}
 ${errorPage('500', I.wifiOff, 'Something went wrong on our side', 'Nothing you wrote was lost. Try again in a moment.', `<button type="button" class="m-button" data-variant="primary">Try again</button><button type="button" class="m-button" data-variant="ghost">Get help</button>`)}
 ${errorPage('403', I.lock, 'This journal is locked', 'Only its owner can open it. Ask them to share it with you.', `<button type="button" class="m-button" data-variant="primary">Ask for access</button><a class="m-button" data-variant="ghost" href="#">Go back</a>`)}
   </div>
@@ -587,7 +588,7 @@ export const vellumRecipes: ArchetypeRecipe[] = [
     name: 'dashboard',
     title: 'Dashboard',
     description:
-      'Home: a large bold title with the date, grey count pills, today’s question with a full-width primary pill, a grouped panel of moments, the month calendar with written days in the brand colour, entries from years ago and streak tiles.',
+      'Write: a large bold title with the date, grey count pills, today’s question with a full-width primary pill, a grouped panel of moments, the month calendar with written days in the brand colour, recent entries and streak tiles.',
     html: dashboard,
   },
   {
