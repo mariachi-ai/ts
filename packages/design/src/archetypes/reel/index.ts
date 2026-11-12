@@ -1,0 +1,82 @@
+import type { Archetype } from '../types';
+import { reelRecipes } from './recipes';
+
+export const reelArchetype: Archetype = {
+  id: 'reel',
+  category: 'content-first',
+  tags: {
+    feel: ['cinematic', 'dark', 'editorial', 'cool', 'social', 'dense'],
+    density: 'dense',
+    mode: 'dark-first',
+    suits: ['film', 'video', 'tv', 'books', 'reviews', 'diaries', 'collections', 'catalogues', 'social', 'media'],
+    style: [
+      'dark',
+      'slate',
+      'blue-grey',
+      'poster grids',
+      'star ratings',
+      'uppercase headings',
+      'serif titles',
+      'green',
+      'small radius',
+    ],
+  },
+  for: 'Diaries, catalogues and social apps about things people watch, read or collect',
+  pitch:
+    'A cool slate dark where the posters carry the colour: tight poster grids, green for done, orange for loved, star ratings, serif titles and small tracked headings over a hairline.',
+  swatches: [
+    'color.bg.canvas',
+    'color.bg.raised',
+    'color.fg.muted',
+    'color.brand.default',
+    'color.warning.solid',
+    'color.info.solid',
+  ],
+  type: { body: 'Hanken Grotesk', heading: 'Newsreader', mono: 'JetBrains Mono' },
+  icons: {
+    set: 'lucide',
+    stroke: 2,
+    size: { text: 14, control: 16 },
+    style: 'outline',
+    actions: {
+      add: 'plus',
+      edit: 'pencil',
+      delete: 'trash-2',
+      settings: 'settings',
+      search: 'search',
+      filter: 'sliders-horizontal',
+      more: 'ellipsis',
+      close: 'x',
+      back: 'chevron-left',
+      forward: 'chevron-right',
+      expand: 'chevron-down',
+      download: 'download',
+      upload: 'upload',
+      copy: 'copy',
+      external: 'external-link',
+      send: 'send',
+      refresh: 'refresh-cw',
+      user: 'user',
+      notifications: 'bell',
+      calendar: 'calendar',
+      help: 'circle-help',
+      info: 'info',
+      success: 'circle-check',
+      warning: 'triangle-alert',
+      error: 'circle-alert',
+    },
+  },
+  charts: {
+    // The bright green of stars first, then the like orange, the list blue, the ice and the slate the
+    // rating bars are drawn in. Light uses darker steps so marks read on white
+    categorical: [
+      { name: 'Green', light: '#00a23a', dark: '#00e054' },
+      { name: 'Orange', light: '#d96a00', dark: '#ff8000' },
+      { name: 'Blue', light: '#1d8ed0', dark: '#40bcf4' },
+      { name: 'Ice', light: '#8899aa', dark: '#ccddee' },
+      { name: 'Slate', light: '#445566', dark: '#667788' },
+    ],
+  },
+  density: { default: 1, dense: 0.85 },
+  recipes: reelRecipes,
+};
