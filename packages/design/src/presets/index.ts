@@ -7,6 +7,7 @@ import { carbon } from './carbon';
 import { cadence } from './cadence';
 import { ember } from './ember';
 import { cirrus } from './cirrus';
+import { confetti } from './confetti';
 import { halcyon } from './halcyon';
 import { onyx } from './onyx';
 import { marigold } from './marigold';
@@ -39,6 +40,7 @@ export const presets = {
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
   prism,
+  confetti,
   fennel,
   basalt,
   ember,
@@ -62,4 +64,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, harbor, hearth, linen, marigold, minimal, mosaic, obsidian, onyx, prism, quill, soft, terminal, terracotta, transit, zephyr };
+export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, confetti, editorial, ember, enterprise, fennel, folio, halcyon, harbor, hearth, linen, marigold, minimal, mosaic, obsidian, onyx, prism, quill, soft, terminal, terracotta, transit, zephyr };
