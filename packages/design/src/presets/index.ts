@@ -1,6 +1,7 @@
 import type { Theme } from '../engine/theme';
 import { basalt } from './basalt';
 import { broadsheet } from './broadsheet';
+import { bazaar } from './bazaar';
 import { brutalist } from './brutalist';
 import { carbon } from './carbon';
 import { cadence } from './cadence';
@@ -33,6 +34,7 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
+  bazaar,
   fennel,
   basalt,
   ember,
@@ -52,4 +54,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, mosaic, obsidian, onyx, quill, soft, terminal, terracotta, zephyr };
+export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, mosaic, obsidian, onyx, quill, soft, terminal, terracotta, zephyr };
