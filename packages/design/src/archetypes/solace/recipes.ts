@@ -2,7 +2,7 @@ import type { ArchetypeRecipe } from '../types';
 
 /*
  * Solace's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
- * (no colour literals), with sample data from a made-up wellbeing app, "lull". They follow the
+ * (no colour literals), with sample data from a made-up wellbeing app, "Lull". They follow the
  * language's real screen patterns, translated from the phone to a desktop width: a white header
  * with charcoal links and one blue pill, a day laid out as a timeline of big bordered session cards,
  * the warm off-white player with a round orange play button, streak dots, flat colour tiles, a
@@ -83,8 +83,8 @@ const rule = 'border-block-start: 2px solid var(--m-color-border-default)';
 const caps =
   'font-size: var(--m-font-size-sm); font-weight: 700; text-transform: uppercase; letter-spacing: var(--m-font-tracking-wide); color: var(--m-color-accent-text); text-decoration: none';
 
-// The brand mark: an orange disc and the app's name in lower case
-const brand = `<a class="m-navbar-brand" href="#"><svg width="28" height="28" viewBox="0 0 28 28" aria-hidden="true"><circle cx="14" cy="14" r="14" style="fill: var(--m-color-brand-default)"/></svg>lull</a>`;
+// The sample app's mark: a Lucide sprout in an orange rounded-square tile, and the name in title case
+const brand = `<a class="m-navbar-brand" href="#"><span style="display: inline-grid; place-items: center; inline-size: 2rem; block-size: 2rem; border-radius: var(--m-radius-sm); background: var(--m-color-brand-default); color: var(--m-color-brand-fg)">${icon('<path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/>', 18)}</span>Lull</a>`;
 
 const navItems = ['Home', 'Library', 'Rest', 'Journal', 'Coaching'];
 const header = (current: string) => `<header class="m-navbar">

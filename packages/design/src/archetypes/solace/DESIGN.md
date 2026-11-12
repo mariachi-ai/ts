@@ -166,7 +166,7 @@ Sections are 40–64px apart.
   effect at once.
 
 **Navigation**
-- **Navbar.** 80px, white, no rule. The brand mark (an orange disc and the name in bold lower case)
+- **Navbar.** 80px, white, no rule. The product's mark (a glyph in a small orange rounded-square tile, beside the name in bold)
   on the left; 16px charcoal links; the current one on a warm off-white pill. On the right: ghost
   icon buttons (saved, history, notifications) and the avatar, or on public pages "Log in" and one
   blue pill.
