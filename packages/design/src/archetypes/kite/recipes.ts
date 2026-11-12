@@ -1,3 +1,4 @@
+import { DesignError } from '../../errors';
 import { lucidePaths } from '../lucide';
 import type { ArchetypeRecipe } from '../types';
 
@@ -76,7 +77,7 @@ const I: Record<string, string> = {
 };
 const ic = (name: string, size = 16, label?: string) => {
   const paths = I[name];
-  if (!paths) throw new Error(`No icon named ${name}`);
+  if (!paths) throw new DesignError('design/missing-asset', `No icon named ${name}`);
   return icon(paths, size, label);
 };
 
