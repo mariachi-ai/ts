@@ -66,6 +66,9 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `nocturne` | Night-blue scenes, white type, rounded tiles with durations, white pill actions and a soft violet brand; light pages in deep-plum ink. A design language. |
 | `vellum` | White pages, grey grouped panels, a sky-blue signature, pill actions, an entry timeline with big date numerals, and a true black dark mode. A design language. |
 | `chalk` | Black ink on white panes, a system-grey sidebar, white inset groups on grey, one clear blue, a warm signature yellow, round coloured list icons and a true-black dark mode. A design language. |
+| `ochre` | Ink on ivory, warm greys, serif headings and reading text, ink actions, a clay brand colour and a warm near-black dark mode. A design language. |
+| `margin` | Slate ink on white, a pale grey rail, a calm serif for documents, yellow highlights, soft grey pill buttons, one restrained blue and a deep slate dark mode. A design language. |
+| `quire` | Ink on white pages over a pale grey window, capsule buttons, tinted blocks, page cards with soft covers, one clear blue and a true-black dark mode. A design language. |
 
 ## Design languages
 
@@ -136,6 +139,9 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `nocturne` | Calm and minimal | Dark-first and gentle: night-blue scenes, white type, rounded tiles with durations, white pill actions and a soft violet brand; light pages in deep-plum ink |
 | `vellum` | Calm and minimal | A quiet journal: white pages, grey grouped panels, a sky-blue signature, pill actions, an entry timeline with big date numerals, and a true black dark mode |
 | `chalk` | Calm and minimal | Native and calm: black ink on white panes, a system-grey sidebar, white inset groups on grey, one clear blue, a warm signature yellow, round coloured list icons and a true-black dark mode |
+| `ochre` | Editorial | Warm and editorial: ink on ivory, warm greys, serif headings and reading text, ink actions, a clay brand colour and a warm near-black dark mode |
+| `margin` | Editorial | Reading first: slate ink on white, a pale grey rail, a calm serif for documents, yellow highlights, soft grey pill buttons, one restrained blue and a deep slate dark mode |
+| `quire` | Editorial | A calm document editor: ink on white pages over a pale grey window, capsule buttons, tinted blocks, page cards with soft covers, one clear blue and a true-black dark mode |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
