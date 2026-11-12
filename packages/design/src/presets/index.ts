@@ -57,9 +57,6 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
-  marquee,
-  reel,
-  aria,
   fennel,
   basalt,
   ember,
@@ -97,6 +94,9 @@ export const presets = {
   meridian,
   flint,
   comet,
+  marquee,
+  reel,
+  aria,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
