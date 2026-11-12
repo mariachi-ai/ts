@@ -80,6 +80,9 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `lagoon` | Near-black on white, a grey sidebar with round avatars, blue bubbles for you and grey for them, capsule buttons and a capsule composer, and a true dark mode. A design language. |
 | `candid` | White type set bold and tight, dual-camera posts, a grey late line, stacked round reactions, dark grey pills and one white button. A design language. |
 | `trellis` | An aubergine frame round a white conversation panel, bold unread rows with red mention counts, blue for the current row and links, green for send, rounded-square people and a composer with a formatting bar. A design language. |
+| `kite` | Near-black panels, filled 30px controls, 12px UI type, one bright blue for selection and publish, and huge tight display type on black. A design language. |
+| `doodle` | White chrome, 11–13px type, filled grey inputs, a bright blue selection, near-black menus, a violet brand and bright sticky-note colours. A design language. |
+| `tinker` | A light lowercase grotesque on white and off-white, square black actions, black hairline rules, tiny technical caps, and a signal orange beside knob blue, yellow, green and red. A design language. |
 
 ## Design languages
 
@@ -164,6 +167,9 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `lagoon` | Social | A system messenger: near-black on white, a grey sidebar with round avatars, blue bubbles for you and grey for them, capsule buttons and a capsule composer, and a true dark mode |
 | `candid` | Social | Black-first and stark: white type set bold and tight, dual-camera posts, a grey late line, stacked round reactions, dark grey pills and one white button |
 | `trellis` | Social | Work messaging: an aubergine frame round a white conversation panel, bold unread rows with red mention counts, blue for the current row and links, green for send, rounded-square people and a composer with a formatting bar |
+| `kite` | Playful | Dark-first and compact: near-black panels, filled 30px controls, 12px UI type, one bright blue for selection and publish, and huge tight display type on black |
+| `doodle` | Playful | Playful and compact: white chrome, 11–13px type, filled grey inputs, a bright blue selection, near-black menus, a violet brand and bright sticky-note colours |
+| `tinker` | Playful | Engineered and playful: a light lowercase grotesque on white and off-white, square black actions, black hairline rules, tiny technical caps, and a signal orange beside knob blue, yellow, green and red |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
