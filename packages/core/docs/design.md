@@ -43,6 +43,8 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `onyx` | Near-black on a pale grey screen, white 16px widgets, one blue-violet action, heavy headings, huge balances, pill and round buttons. A design language. |
 | `terracotta` | Ink on white, a coral-magenta action colour, rounded photo cards, a pill search bar, soft lifted panels and underlined links. A design language. |
 | `marigold` | White screens with grey 2px outlines, a bright green action, sky-blue selection, rounded heavy type and chunky buttons on a darker lip. A design language. |
+| `linen` | A pale blue-grey list sidebar beside a white page, bold titles, small rounded checkboxes, blue headings over a hairline, outlined tags and a soft charcoal dark mode. A design language. |
+| `quill` | Ink-grey type on white, a graphite tag sidebar, one signature red, grey tag capsules, a red-edged selected note and round quiet chrome; a graphite dark mode with a calm blue. A design language. |
 
 ## Design languages
 
@@ -90,6 +92,8 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `onyx` | Bold and fast | Bold and fast: near-black on a pale grey screen, white 16px widgets, one blue-violet action, heavy headings, huge balances, pill and round buttons |
 | `terracotta` | Warm and friendly | Warm and image-forward: ink on white, a coral-magenta action colour, rounded photo cards, a pill search bar, soft lifted panels and underlined links |
 | `marigold` | Warm and friendly | Bright and encouraging: white screens with grey 2px outlines, a bright green action, sky-blue selection, rounded heavy type and chunky buttons on a darker lip |
+| `linen` | Calm and minimal | Calm and quiet: a pale blue-grey list sidebar beside a white page, bold titles, small rounded checkboxes, blue headings over a hairline, outlined tags and a soft charcoal dark mode |
+| `quill` | Calm and minimal | Calm and bookish: ink-grey type on white, a graphite tag sidebar, one signature red, grey tag capsules, a red-edged selected note and round quiet chrome; a graphite dark mode with a calm blue |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
