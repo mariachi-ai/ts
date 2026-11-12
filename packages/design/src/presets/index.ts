@@ -45,9 +45,6 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
-  solace,
-  heather,
-  saffron,
   fennel,
   basalt,
   ember,
@@ -73,6 +70,9 @@ export const presets = {
   volt,
   sprint,
   summit,
+  solace,
+  heather,
+  saffron,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
