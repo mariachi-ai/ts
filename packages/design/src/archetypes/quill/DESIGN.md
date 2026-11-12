@@ -158,7 +158,7 @@ All 36 of the library's components, as Quill draws them. Every one is in `galler
 
 **Navigation**
 - **Sidebar.** The graphite tag sidebar: 180px, 8px padding, 15px rows 28px tall.
-  - A filter icon at the top right, then the fixed places (All notes, Drafts, Tasks…), then
+  - A filter icon at the top right, then the fixed places (Inbox, Agenda, Starred…), then
     "Tags" and the tag tree.
   - Each row has a 16px outline icon; parent tags have a small chevron in the left gutter, and
     child tags are indented with a `#` icon.
@@ -238,7 +238,7 @@ All 36 of the library's components, as Quill draws them. Every one is in `galler
 - **A whole page:** centred, in an outline card or the editor column.
   - A 44px thin outline icon in the subtle colour, the code in small mono, a 22px bold title, one
     sentence and one or two buttons.
-  - **404:** "This note isn't here" with All notes.
+  - **404:** "This note isn't here" with Back to notes.
   - **500:** "Something broke on our side" and "Nothing in your notes changed", with Try again.
   - **403:** "This note is private" with Ask for access.
 - **Words.** Say what happened, whether anything changed, and what to do. Gentle, plain and short;
@@ -257,15 +257,15 @@ web.
     title, tag capsules in the text, a callout, to-dos, a framed table, red bullets, and the floating
     format bar at the foot.
 - **List and detail.** A pill search field with a red ring at the top of the list, matches marked in
-  the text, the open note, and its info panel: a segmented control of icons, statistics tiles on the
-  fill, dates, and the notes that link here.
+  the text, the open note, and its info panel: a segmented control of icons, figure tiles on the
+  fill, dates, and the notes that mention this one.
 - **Onboarding.** A centred 40rem column, a thin progress bar, a 51px bold line, three look cards
   with live previews (the chosen one ringed in red), a quiet settings panel on the fill, Back as a
   ghost and Continue as the red primary.
 - **Settings.** A desktop preferences window, the quiet fill on white paper: a toolbar of panes
-  with 22px icons over their names, the current one on a grey block in red; right-aligned labels
-  beside selects, checkboxes, radios and shortcuts; a tip callout; changes apply at once, so there
-  is no Save, only a centred Restore editor defaults.
+  with 22px icons over their names (Writing, Look, Keyboard, Privacy), the current one on a grey
+  block in red; right-aligned labels beside selects, checkboxes, radios and shortcuts; a tip
+  callout; changes apply at once, so there is no Save, only a centred Reset writing settings.
 - **Empty state.** An empty tag: the list explains how notes arrive, with the tag capsule; the
   editor shows a 56px thin icon, a bold heading, one sentence with the shortcut, a red New note and
   a secondary Import notes.
@@ -276,7 +276,7 @@ web.
 
 ## Words
 
-- Short, warm and plain, sentence case everywhere: "New note", "All notes", "Keep notes on all my
+- Short, warm and plain, sentence case everywhere: "New note", "Put away", "Keep notes on all my
   devices".
 - Dates are relative when recent ("Just now", "Yesterday"), then short ("Nov 9").
 

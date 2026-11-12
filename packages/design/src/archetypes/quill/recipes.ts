@@ -15,8 +15,15 @@ import type { ArchetypeRecipe } from '../types';
 const icon = (paths: string, size = 16, stroke = 1.75) =>
   `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${stroke}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex: none; display: inline-block; vertical-align: middle">${paths}</svg>`;
 const I = {
-  notes:
-    '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>',
+  inbox:
+    '<polyline points="22 12 16 12 14 15 10 15 8 12 2 12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  everything:
+    '<path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"/><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"/><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"/>',
+  star: '<path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/>',
+  agenda: '<path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/><path d="m9 16 2 2 4-4"/>',
+  history: '<path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>',
+  shield:
+    '<path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>',
   drafts:
     '<path d="M12 20h9"/><path d="M16.376 3.622a1 1 0 0 1 3.002 3.002L7.368 18.635a2 2 0 0 1-.855.506l-2.872.838a.5.5 0 0 1-.62-.62l.838-2.872a2 2 0 0 1 .506-.854z"/><path d="m15 5 3 3"/>',
   tasks:
@@ -24,7 +31,6 @@ const I = {
   pin: '<path d="M12 17v5"/><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"/>',
   lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   archive: '<rect width="20" height="5" x="2" y="3" rx="1"/><path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8"/><path d="M10 12h4"/>',
-  bin: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/>',
   hash: '<line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="10" x2="8" y1="3" y2="21"/><line x1="16" x2="14" y1="3" y2="21"/>',
   leaf: '<path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>',
   book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
@@ -46,11 +52,8 @@ const I = {
   dots: '<circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>',
   info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
   down: '<path d="m6 9 6 6 6-6"/>',
-  right: '<path d="m9 18 6-6-6-6"/>',
   left: '<path d="m15 18-6-6 6-6"/>',
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
-  check: '<path d="M20 6 9 17l-5-5"/>',
-  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
   heading: '<path d="M6 12h12"/><path d="M6 20V4"/><path d="M18 20V4"/>',
   list: '<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
   bold: '<path d="M6 12h9a4 4 0 0 1 0 8H7a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h7a4 4 0 0 1 0 8"/>',
@@ -61,14 +64,9 @@ const I = {
   image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
   alert: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
   bulb: '<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/>',
-  stats: '<line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="14"/>',
-  outline: '<path d="M15 18H3"/><path d="M17 6H3"/><path d="M21 12H3"/>',
-  backlink: '<polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/>',
   type: '<polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/>',
-  gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1"/>',
   keyboard:
     '<path d="M10 8h.01"/><path d="M12 12h.01"/><path d="M14 8h.01"/><path d="M16 12h.01"/><path d="M18 8h.01"/><path d="M6 8h.01"/><path d="M7 16h10"/><path d="M8 12h.01"/><rect width="20" height="16" x="2" y="4" rx="2"/>',
-  backup: '<ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/>',
   file: '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/>',
   sqCheck: '<rect width="18" height="18" x="3" y="3" rx="3"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
   sqMinus: '<rect width="18" height="18" x="3" y="3" rx="3"/><path d="M8 12h8"/>',
@@ -154,13 +152,11 @@ const sidebar = (current: string) => `  <nav class="m-sidebar" aria-label="Notes
     </div>
     <div class="m-sidebar-section">
       <ul>
-        ${sideLink(I.notes, 'All notes', current)}
-        ${sideLink(I.drafts, 'Drafts', current, '<span class="m-sidebar-count">4</span>')}
-        ${sideLink(I.tasks, 'Tasks', current)}
-        ${sideLink(I.pin, 'Pinned', current)}
-        ${sideLink(I.lock, 'Private', current)}
-        ${sideLink(I.archive, 'Archived', current)}
-        ${sideLink(I.bin, 'Bin', current)}
+        ${sideLink(I.inbox, 'Inbox', current, '<span class="m-sidebar-count">4</span>')}
+        ${sideLink(I.agenda, 'Agenda', current, '<span class="m-sidebar-count">2</span>')}
+        ${sideLink(I.star, 'Starred', current)}
+        ${sideLink(I.everything, 'Everything', current)}
+        ${sideLink(I.archive, 'Put away', current)}
       </ul>
     </div>
     <div class="m-sidebar-section">
@@ -249,16 +245,16 @@ const homeNotes: Note[] = [
     pinned: true,
   },
   {
+    title: 'Reading list for winter',
+    snippet: 'Two essay collections, the lighthouse novel Inés lent me, and a field guide to coastal birds.',
+    date: 'Nov 9',
+  },
+  {
     title: 'Balcony herb plan',
     snippet: 'Three troughs along the south rail, filled in the order below. Mint stays in its own pot.',
     date: 'Just now',
     selected: true,
     file: 'trough-layout.pdf',
-  },
-  {
-    title: 'Reading list for winter',
-    snippet: 'Two essay collections, the lighthouse novel Inés lent me, and a field guide to coastal birds.',
-    date: 'Nov 9',
   },
   {
     title: 'Letter to Aunt Marisol',
@@ -284,8 +280,9 @@ ${editorBar()}
         ${callout('warning', I.alert, 'Before planting', 'Mint spreads underground, so it gets <em>its own pot</em>, never the shared trough.')}
         <h2>This weekend</h2>
         <div class="m-stack" data-gap="2">
-          ${todo('Buy compost and two bags of grit', true)}
           ${todo('Drill drainage holes in trough two')}
+          ${todo('Buy compost and two bags of grit', true)}
+          ${todo('Soak the parsley seed overnight', true)}
           ${todo('Ask Tomás about the spare trellis')}
         </div>
         <h2>Where everything goes</h2>
@@ -375,23 +372,23 @@ ${editorBar()}
       <aside aria-label="Note info" style="flex: 1 0 16rem; max-inline-size: 22rem; border-inline-start: ${hair}; padding: var(--m-space-4) var(--m-space-4) var(--m-space-8); background: var(--m-color-bg-surface)">
         <div class="m-tabs" data-variant="pill">
           <div class="m-tab-list" role="tablist" aria-label="Note info" style="display: flex; inline-size: 100%">
-            <button type="button" class="m-tab" role="tab" id="qi-tab-0" aria-controls="qi-panel-0" aria-selected="true" tabindex="0" style="flex: 1; justify-content: center" aria-label="Statistics">${icon(I.stats, 16)}</button>
-            <button type="button" class="m-tab" role="tab" id="qi-tab-1" aria-selected="false" tabindex="-1" style="flex: 1; justify-content: center" aria-label="Outline">${icon(I.outline, 16)}</button>
-            <button type="button" class="m-tab" role="tab" id="qi-tab-2" aria-selected="false" tabindex="-1" style="flex: 1; justify-content: center" aria-label="Linked from">${icon(I.backlink, 16)}</button>
+            <button type="button" class="m-tab" role="tab" id="qi-tab-0" aria-controls="qi-panel-0" aria-selected="true" tabindex="0" style="flex: 1; justify-content: center" aria-label="Details">${icon(I.info, 16)}</button>
+            <button type="button" class="m-tab" role="tab" id="qi-tab-1" aria-selected="false" tabindex="-1" style="flex: 1; justify-content: center" aria-label="Links">${icon(I.link, 16)}</button>
+            <button type="button" class="m-tab" role="tab" id="qi-tab-2" aria-selected="false" tabindex="-1" style="flex: 1; justify-content: center" aria-label="History">${icon(I.history, 16)}</button>
           </div>
           <div class="m-tab-panel" role="tabpanel" id="qi-panel-0" aria-labelledby="qi-tab-0" tabindex="0">
-            <p style="text-align: center; font-weight: var(--m-font-weight-semibold); ${muted}; margin: var(--m-space-3) 0">Statistics</p>
+            <p style="text-align: center; font-weight: var(--m-font-weight-semibold); ${muted}; margin: var(--m-space-3) 0">Details</p>
             <div class="m-grid" data-gap="2" style="--m-layout-grid-min: 6.5rem">
-              ${stat('1,846', 'Words', I.type)}
-              ${stat('31', 'Paragraphs', I.outline)}
               ${stat('8', 'Minutes to read', I.book)}
-              ${stat('3', 'Links out', I.link)}
+              ${stat('1,846', 'Words', I.type)}
+              ${stat('2', 'Open to-dos', I.tasks)}
+              ${stat('1', 'Attachment', I.file)}
             </div>
             <dl class="m-stack" data-gap="0" style="margin: var(--m-space-4) 0 0; font-size: var(--m-font-size-md)">
               <div style="padding-block: var(--m-space-2); border-block-start: ${hair}"><dt style="font-size: var(--m-font-size-xs); ${subtle}">Edited</dt><dd style="margin: 0">Nov 12, 2026 at 09:41</dd></div>
               <div style="padding-block: var(--m-space-2); border-block-start: ${hair}"><dt style="font-size: var(--m-font-size-xs); ${subtle}">Created</dt><dd style="margin: 0">Nov 3, 2026 at 21:07</dd></div>
             </dl>
-            <p style="font-weight: var(--m-font-weight-semibold); margin: var(--m-space-5) 0 var(--m-space-1)">Linked from</p>
+            <p style="font-weight: var(--m-font-weight-semibold); margin: var(--m-space-5) 0 var(--m-space-1)">Mentioned in</p>
             <ul style="list-style: none; margin: 0; padding: 0">
               ${backlink('Book club, November', 'We meet on the 20th to talk about ', 'The Lantern Keeper', '.')}
               ${backlink('Essay ideas', 'Start from the log entries in ', 'The Lantern Keeper', ' and work outward.')}
@@ -466,32 +463,30 @@ const check = (label: string, checked = false) =>
 const settings = `<div style="min-block-size: 100vh; background: var(--m-color-bg-canvas); padding: var(--m-space-10) var(--m-space-4)">
   <section class="m-container" data-size="md" aria-labelledby="quill-settings-title" style="background: var(--m-color-bg-sunken); border-radius: 12px; box-shadow: var(--m-shadow-overlay); padding: 0; overflow: hidden">
     <header style="border-block-end: ${hair}; padding: var(--m-space-3) var(--m-space-4) var(--m-space-2)">
-      <h1 id="quill-settings-title" style="text-align: center; font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-semibold); margin: 0 0 var(--m-space-2)">Editor</h1>
+      <h1 id="quill-settings-title" style="text-align: center; font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-semibold); margin: 0 0 var(--m-space-2)">Writing</h1>
       <nav aria-label="Settings" class="m-cluster" data-justify="center" data-gap="1">
-        ${pane(I.gear, 'General')}
-        ${pane(I.drafts, 'Editor', true)}
-        ${pane(I.palette, 'Appearance')}
-        ${pane(I.backup, 'Backups')}
-        ${pane(I.keyboard, 'Shortcuts')}
+        ${pane(I.drafts, 'Writing', true)}
+        ${pane(I.palette, 'Look')}
+        ${pane(I.keyboard, 'Keyboard')}
+        ${pane(I.shield, 'Privacy')}
       </nav>
     </header>
     <div class="m-stack" data-gap="6" style="padding: var(--m-space-8) var(--m-space-8) var(--m-space-6)">
       <div class="m-stack" data-gap="4">
-        ${row('Typeface', '<select class="m-select" aria-label="Typeface" style="inline-size: 16rem"><option selected>Folio Sans</option><option>System serif</option><option>Mono</option></select>')}
-        ${row('Text size', '<select class="m-select" aria-label="Text size" style="inline-size: 8rem"><option>15 px</option><option selected>16 px</option><option>18 px</option></select>')}
-        ${row('Line spacing', '<select class="m-select" aria-label="Line spacing" style="inline-size: 8rem"><option>1.4</option><option selected>1.6</option><option>1.8</option></select>', 'Space between lines inside a paragraph.')}
-        ${row('Line width', '<select class="m-select" aria-label="Line width" style="inline-size: 8rem"><option>Narrow</option><option selected>Medium</option><option>Full</option></select>')}
+        ${row('Text size', '<select class="m-select" aria-label="Text size" style="inline-size: 8rem"><option>Small</option><option selected>Medium</option><option>Large</option></select>')}
+        ${row('Spacing', '<select class="m-select" aria-label="Spacing" style="inline-size: 12rem"><option>Compact</option><option selected>Comfortable</option><option>Airy</option></select>', 'Sets lines and paragraphs together.')}
+        ${row('Typeface', '<select class="m-select" aria-label="Typeface" style="inline-size: 16rem"><option selected>Folio Sans</option><option>Book serif</option><option>Typewriter</option></select>')}
       </div>
       <hr class="m-divider" style="margin: 0">
       <div class="m-stack" data-gap="4">
         ${row('While writing', `<div class="m-stack" data-gap="2">${check('Show Markdown symbols', true)}${check('Turn straight quotes into curly ones', true)}${check('Keep the cursor line in the middle')}${check('Check spelling as I type', true)}</div>`)}
         ${row('New notes', `<div class="m-stack" data-gap="2"><label class="m-field" data-layout="inline"><input class="m-radio" type="radio" name="quill-new" checked> Start with a title</label><label class="m-field" data-layout="inline"><input class="m-radio" type="radio" name="quill-new"> Start with today’s date</label></div>`)}
-        ${row('Keyboard', '<span class="m-cluster" data-gap="2" style="padding-block-start: var(--m-space-1)">New note <kbd class="m-kbd">⌘</kbd><kbd class="m-kbd">N</kbd> · Find <kbd class="m-kbd">⌘</kbd><kbd class="m-kbd">F</kbd></span>')}
+        ${row('Shortcuts', '<span class="m-cluster" data-gap="2" style="padding-block-start: var(--m-space-1)">New note <kbd class="m-kbd">⌘</kbd><kbd class="m-kbd">N</kbd> · Find <kbd class="m-kbd">⌘</kbd><kbd class="m-kbd">F</kbd></span>')}
       </div>
       <hr class="m-divider" style="margin: 0">
       ${callout('info', I.bulb, 'Tip', 'Hold <kbd class="m-kbd">⌥</kbd> while choosing a size to apply it to this note only.')}
       <div class="m-cluster" data-justify="center">
-        <button type="button" class="m-button" style="background: var(--m-color-bg-surface)">Restore editor defaults</button>
+        <button type="button" class="m-button" style="background: var(--m-color-bg-surface)">Reset writing settings</button>
       </div>
     </div>
   </section>
@@ -531,11 +526,10 @@ ${editorBar()}
 const navbar = `<header class="m-navbar">
   <a class="m-navbar-brand" href="#" style="gap: var(--m-space-3)">${brandMark()} Folio</a>
   <nav class="m-navbar-nav" aria-label="Site" style="margin-inline-start: auto; justify-content: flex-end">
-    <a class="m-navbar-link" href="#">Tour</a>
+    <a class="m-navbar-link" href="#">What’s new</a>
     <a class="m-navbar-link" href="#" aria-current="page">Plans</a>
-    <a class="m-navbar-link" href="#">Journal</a>
-    <a class="m-navbar-link" href="#">Guides</a>
-    <a class="m-navbar-link" href="#">Forum</a>
+    <a class="m-navbar-link" href="#">Help</a>
+    <a class="m-navbar-link" href="#">Download</a>
   </nav>
 </header>`;
 const feat = (state: 'yes' | 'part' | 'no', text: string) =>
@@ -560,32 +554,29 @@ ${navbar}
     <section aria-labelledby="quill-free" style="padding: var(--m-space-10) var(--m-space-2) 0">
       <h2 id="quill-free" style="${display('3xl')}; margin-block-end: var(--m-space-6)">Free</h2>
       <ul style="list-style: none; margin: 0; padding: 0">
-          ${feat('yes', 'Unlimited notes on this device')}
+          ${feat('yes', 'Write in Markdown or plain text')}
           ${feat('yes', 'Tags, nested tags and links between notes')}
-          ${feat('part', 'Export to plain text and Markdown')}
-          ${feat('part', '2 looks')}
-          ${feat('no', 'Search inside scanned pages')}
-          ${feat('no', 'Keep notes on all your devices')}
+          ${feat('part', 'Version history for 7 days')}
+          ${feat('part', 'Export to Markdown only')}
+          ${feat('no', 'Encrypted sync between devices')}
       </ul>
       <p style="font-size: var(--m-font-size-md); ${muted}; margin: var(--m-space-8) 0 0; max-inline-size: 22rem">Free stays free. Plus pays for the time we spend on new features and on keeping your notes safe.</p>
     </section>
     <section aria-labelledby="quill-plus" style="padding: var(--m-space-10); border-radius: 2.5rem; background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-lg)">
       <h2 id="quill-plus" class="m-cluster" data-gap="3" style="${display('3xl')}; margin-block-end: var(--m-space-6)">Folio <span class="m-badge" style="background: var(--m-color-brand-default); color: var(--m-color-brand-fg); border-radius: var(--m-radius-sm); font-weight: var(--m-font-weight-bold); font-size: var(--m-font-size-xl); block-size: auto; padding: 0 var(--m-space-2); letter-spacing: 0.02em">PLUS</span></h2>
       <ul style="list-style: none; margin: 0; padding: 0">
-          ${feat('yes', 'Unlimited notes on this device')}
-          ${feat('yes', 'Tags, nested tags and links between notes')}
-          ${feat('yes', 'Export to PDF, HTML, Word, ePub and images')}
-          ${feat('yes', '24 looks and 9 app icons')}
-          ${feat('yes', 'Search inside scanned pages')}
-          ${feat('yes', 'Keep notes on all your devices')}
+          ${feat('yes', 'Everything in Free')}
+          ${feat('yes', 'Encrypted sync between devices')}
+          ${feat('yes', 'Version history, kept for good')}
+          ${feat('yes', 'Export to PDF, Word and web pages')}
+          ${feat('yes', 'Publish a note as a private link')}
+          ${feat('yes', 'Every look, light and dark')}
       </ul>
       <div style="border-block-start: ${hair}; margin-block-start: var(--m-space-8); padding-block-start: var(--m-space-6)" class="m-stack" data-gap="4">
-        <p style="margin: 0">Try it for <strong>14 days</strong>, then</p>
-        <div class="m-cluster" data-gap="6" data-align="end">
-          ${price('$3.49', 'month')}
-          <span class="m-cluster" data-gap="2" data-align="start">${price('$32.99', 'year')}<span class="m-badge" data-tone="success" style="font-weight: var(--m-font-weight-semibold)">−21%</span></span>
-        </div>
+        <div class="m-cluster" data-gap="3" data-align="center">${price('$32.99', 'year')}<span class="m-badge" data-tone="success" style="font-weight: var(--m-font-weight-semibold)">2 months free</span></div>
+        <p style="margin: 0; ${muted}">or $3.49 a month, billed monthly</p>
         <button type="button" class="m-button" data-variant="primary" data-size="lg" style="align-self: start">Start the free trial</button>
+        <p style="margin: 0; font-size: var(--m-font-size-sm); ${subtle}">Free for <strong>14 days</strong>. Cancel any time before then and pay nothing.</p>
       </div>
     </section>
   </div>
@@ -625,7 +616,7 @@ const errors = `<div style="min-block-size: 100vh; background: var(--m-color-bg-
 
       <section aria-labelledby="quill-unlock" class="m-stack" data-gap="4" data-align="center" style="padding: var(--m-space-10) var(--m-space-6); border-radius: var(--m-radius-lg); background: var(--m-color-bg-sunken); text-align: center">
         <span style="${subtle}">${icon(I.lock, 40, 1.25)}</span>
-        <h2 id="quill-unlock" style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-bold); margin: 0">Unlock note</h2>
+        <h2 id="quill-unlock" style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-bold); margin: 0">This note is locked</h2>
         <div class="m-field" style="inline-size: min(20rem, 100%); text-align: start">
           <label class="m-sr-only" for="quill-pass">Password</label>
           <div class="m-cluster" data-gap="1" style="flex-wrap: nowrap">
@@ -680,7 +671,7 @@ const errors = `<div style="min-block-size: 100vh; background: var(--m-color-bg-
       <section aria-labelledby="quill-pages" class="m-stack" data-gap="4">
         <h2 id="quill-pages" style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold)">Whole pages</h2>
         <div class="m-grid" data-gap="4" style="--m-layout-grid-min: 11rem">
-          ${fullPage('404', I.searchX, 'This note isn’t here', 'It may have moved to the bin, or the link is old.', '<button type="button" class="m-button" data-variant="primary">All notes</button>')}
+          ${fullPage('404', I.searchX, 'This note isn’t here', 'It may have moved to the bin, or the link is old.', '<button type="button" class="m-button" data-variant="primary">Back to notes</button>')}
           ${fullPage('500', I.warn, 'Something broke on our side', 'Nothing in your notes changed. Try again in a moment.', '<button type="button" class="m-button" data-variant="primary">Try again</button><button type="button" class="m-button" data-variant="ghost">Status</button>')}
           ${fullPage('403', I.lock, 'This note is private', 'Ask its owner to share it with you.', '<button type="button" class="m-button" data-variant="primary">Ask for access</button>')}
         </div>
@@ -701,7 +692,7 @@ export const quillRecipes: ArchetypeRecipe[] = [
     name: 'list-detail',
     title: 'List and detail',
     description:
-      'A search across notes with the matches marked, the open note, and its info panel: a segmented control, statistics tiles, dates and the notes that link here.',
+      'A search across notes with the matches marked, the open note, and its info panel: a segmented control, figure tiles, dates and the notes that mention it.',
     html: listDetail,
   },
   {
