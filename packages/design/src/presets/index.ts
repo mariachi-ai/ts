@@ -3,6 +3,7 @@ import { basalt } from './basalt';
 import { broadsheet } from './broadsheet';
 import { brutalist } from './brutalist';
 import { carbon } from './carbon';
+import { cadence } from './cadence';
 import { ember } from './ember';
 import { cirrus } from './cirrus';
 import { halcyon } from './halcyon';
@@ -31,6 +32,7 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
+  cadence,
   fennel,
   basalt,
   ember,
@@ -48,4 +50,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, broadsheet, brutalist, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, obsidian, onyx, quill, soft, terminal, terracotta, zephyr };
+export { basalt, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, obsidian, onyx, quill, soft, terminal, terracotta, zephyr };
