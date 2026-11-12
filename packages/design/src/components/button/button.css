@@ -5,6 +5,9 @@
     --_border: var(--m-button-secondary-border);
     --_hover-bg: var(--m-button-secondary-hover-bg);
     --_active-bg: var(--m-button-secondary-active-bg);
+    --_shadow: var(--m-button-secondary-shadow);
+    --_hover-shadow: var(--m-button-secondary-hover-shadow);
+    --_active-shadow: var(--m-button-secondary-active-shadow);
     --_height: var(--m-button-height-md);
     --_padding-x: var(--m-button-padding-x-md);
 
@@ -18,7 +21,7 @@
     border-radius: var(--m-button-radius);
     background: var(--_bg);
     color: var(--_fg);
-    box-shadow: var(--m-button-shadow);
+    box-shadow: var(--_shadow);
     font-family: var(--m-button-font-family);
     font-size: var(--m-button-font-size);
     font-weight: var(--m-button-font-weight);
@@ -38,13 +41,13 @@
 
   .m-button:hover:not(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
     background: var(--_hover-bg);
-    box-shadow: var(--m-button-hover-shadow);
+    box-shadow: var(--_hover-shadow);
     transform: var(--m-button-hover-transform);
   }
 
   .m-button:active:not(:disabled, [aria-disabled="true"], [aria-busy="true"]) {
     background: var(--_active-bg);
-    box-shadow: var(--m-button-active-shadow);
+    box-shadow: var(--_active-shadow);
     transform: var(--m-button-active-transform);
   }
 
@@ -54,6 +57,9 @@
     --_border: var(--m-button-primary-border);
     --_hover-bg: var(--m-button-primary-hover-bg);
     --_active-bg: var(--m-button-primary-active-bg);
+    --_shadow: var(--m-button-primary-shadow);
+    --_hover-shadow: var(--m-button-primary-hover-shadow);
+    --_active-shadow: var(--m-button-primary-active-shadow);
   }
 
   .m-button[data-variant="ghost"] {
@@ -62,8 +68,9 @@
     --_border: var(--m-button-ghost-border);
     --_hover-bg: var(--m-button-ghost-hover-bg);
     --_active-bg: var(--m-button-ghost-active-bg);
-
-    box-shadow: none;
+    --_shadow: var(--m-button-ghost-shadow);
+    --_hover-shadow: var(--m-button-ghost-hover-shadow);
+    --_active-shadow: var(--m-button-ghost-active-shadow);
   }
 
   .m-button[data-variant="danger"] {
@@ -72,6 +79,9 @@
     --_border: var(--m-button-danger-border);
     --_hover-bg: var(--m-button-danger-hover-bg);
     --_active-bg: var(--m-button-danger-active-bg);
+    --_shadow: var(--m-button-danger-shadow);
+    --_hover-shadow: var(--m-button-danger-hover-shadow);
+    --_active-shadow: var(--m-button-danger-active-shadow);
   }
 
   .m-button[data-size="sm"] {
