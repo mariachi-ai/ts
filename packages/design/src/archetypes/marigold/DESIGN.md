@@ -51,8 +51,9 @@ The tokens are in the `marigold` preset of `@mariachi/design` (`data-theme="mari
   segments; 16px for buttons, cards, alerts, toasts, dialogs and accordions. Lesson buttons and
   avatars are round.
 - **Borders.** Every line is 2px, including table rows and dividers.
-- **The lip.** A button's bottom 4px are darker than its face (black at 12% over the fill), with a
-  2px ring at 10%; pressed, the lip goes and the button moves down 2px. Cards and tooltips take a
+- **The lip.** A solid band below each button in its own darker step: 4px under the green and red
+  (`#58a700`, `#ea2b2b`), 2px of grey under the white button; ghost buttons have none. Pressed, the
+  lip goes and the button moves down 4px. Cards and tooltips take a
   solid `0 2px 0` or `0 4px 0` lip in the line grey.
 - **Motion.** 100ms for hover and press, 200ms for opening, 400ms for large moves; plain `ease`,
   with a small overshoot (`cubic-bezier(0.34, 1.56, 0.64, 1)`) for celebrations.
