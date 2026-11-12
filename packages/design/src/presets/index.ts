@@ -12,6 +12,7 @@ import { minimal } from './minimal';
 import { soft } from './soft';
 import { terminal } from './terminal';
 import { zephyr } from './zephyr';
+import { terracotta } from './terracotta';
 
 /** Built-in presets, in display order. */
 export const presets = {
@@ -29,7 +30,8 @@ export const presets = {
   cirrus,
   zephyr,
   onyx,
+  terracotta,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, minimal, onyx, soft, terminal, zephyr };
+export { basalt, brutalist, cirrus, editorial, ember, enterprise, fennel, halcyon, minimal, onyx, soft, terminal, terracotta, zephyr };
