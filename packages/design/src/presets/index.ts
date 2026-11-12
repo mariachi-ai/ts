@@ -13,6 +13,7 @@ import { meridian } from './meridian';
 import { flint } from './flint';
 import { comet } from './comet';
 import { reel } from './reel';
+import { aria } from './aria';
 import { onyx } from './onyx';
 import { marigold } from './marigold';
 import { marquee } from './marquee';
@@ -58,6 +59,7 @@ export const presets = {
   halcyon,
   marquee,
   reel,
+  aria,
   fennel,
   basalt,
   ember,
@@ -98,4 +100,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, bazaar, broadsheet, brutalist, cadence, carbon, chalk, cirrus, comet, confetti, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, prism, quill, quire, reel, saffron, soft, solace, sprint, summit, terminal, terracotta, transit, vellum, volt, zephyr };
+export { aria, basalt, bazaar, broadsheet, brutalist, cadence, carbon, chalk, cirrus, comet, confetti, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, prism, quill, quire, reel, saffron, soft, solace, sprint, summit, terminal, terracotta, transit, vellum, volt, zephyr };
