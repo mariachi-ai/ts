@@ -33,8 +33,6 @@ export const presets = {
   terminal,
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
-  cadence,
-  mosaic,
   fennel,
   basalt,
   ember,
@@ -49,6 +47,8 @@ export const presets = {
   broadsheet,
   obsidian,
   carbon,
+  cadence,
+  mosaic,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
