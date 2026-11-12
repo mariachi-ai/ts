@@ -45,6 +45,8 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `marigold` | White screens with grey 2px outlines, a bright green action, sky-blue selection, rounded heavy type and chunky buttons on a darker lip. A design language. |
 | `linen` | A pale blue-grey list sidebar beside a white page, bold titles, small rounded checkboxes, blue headings over a hairline, outlined tags and a soft charcoal dark mode. A design language. |
 | `quill` | Ink-grey type on white, a graphite tag sidebar, one signature red, grey tag capsules, a red-edged selected note and round quiet chrome; a graphite dark mode with a calm blue. A design language. |
+| `folio` | Near-black ink on a white page, a warm off-white sidebar, hover-only controls, tinted callouts and tag pills, one blue action. A design language. |
+| `broadsheet` | Graphite ink on white, a serif for the words and a grotesque for the chrome, one bright orange for subscribing, 8px corners and hairlines. A design language. |
 
 ## Design languages
 
@@ -94,6 +96,8 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `marigold` | Warm and friendly | Bright and encouraging: white screens with grey 2px outlines, a bright green action, sky-blue selection, rounded heavy type and chunky buttons on a darker lip |
 | `linen` | Calm and minimal | Calm and quiet: a pale blue-grey list sidebar beside a white page, bold titles, small rounded checkboxes, blue headings over a hairline, outlined tags and a soft charcoal dark mode |
 | `quill` | Calm and minimal | Calm and bookish: ink-grey type on white, a graphite tag sidebar, one signature red, grey tag capsules, a red-edged selected note and round quiet chrome; a graphite dark mode with a calm blue |
+| `folio` | Editorial and warm-neutral | Document-first and warm-neutral: near-black ink on a white page, a warm off-white sidebar, hover-only controls, tinted callouts and tag pills, one blue action |
+| `broadsheet` | Editorial and warm-neutral | Reading first: graphite ink on white, a serif for the words and a grotesque for the chrome, one bright orange for subscribing, 8px corners and hairlines |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
