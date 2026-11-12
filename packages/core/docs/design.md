@@ -72,6 +72,9 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 | `meridian` | Black and white on a ten-step grey scale, hairline rings, 6px corners, dense 14px lists, status dots, mono for hashes and logs, and blue only for focus and links. A design language. |
 | `flint` | Neutral near-black panels, compact 12–13px type, hairlines, small radii, an inverted primary, green and red diffs and an agent composer. A design language. |
 | `comet` | Warm greys, one muted purple, light grotesque type, big split tabs with counts, generous one-line rows and a command menu. A design language. |
+| `marquee` | A near-black canvas, one signature red, rounded hero billboards with white and grey pills, rows of rounded posters that grow on hover, rating boxes, red progress bars and plain light account pages. A design language. |
+| `reel` | A cool blue-grey dark canvas, tight poster grids, a green for the main action, orange likes, blue lists, star ratings, tracked uppercase headings and serif titles. A design language. |
+| `aria` | White pages and a true dark mode, a pale sidebar library with blue glyphs, square artwork everywhere, bold large titles, black pills, hairline track lists and a floating capsule player. A design language. |
 
 ## Design languages
 
@@ -148,6 +151,9 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
 | `meridian` | Dark and sharp | Stark and exact: black and white on a ten-step grey scale, hairline rings, 6px corners, dense 14px lists, status dots, mono for hashes and logs, and blue only for focus and links |
 | `flint` | Dark and sharp | Dark-first and sharp: neutral near-black panels, compact 12–13px type, hairlines, small radii, an inverted primary, green and red diffs and an agent composer |
 | `comet` | Dark and sharp | Fast and focused: warm greys, one muted purple, light grotesque type, big split tabs with counts, generous one-line rows and a command menu |
+| `marquee` | Content-first | Dark-first and content-first: a near-black canvas, one signature red, rounded hero billboards with white and grey pills, rows of rounded posters that grow on hover, rating boxes, red progress bars and plain light account pages |
+| `reel` | Content-first | Slate and posters: a cool blue-grey dark canvas, tight poster grids, a green for the main action, orange likes, blue lists, star ratings, tracked uppercase headings and serif titles |
+| `aria` | Content-first | Content-first and glassy: white pages and a true dark mode, a pale sidebar library with blue glyphs, square artwork everywhere, bold large titles, black pills, hairline track lists and a floating capsule player |
 
 Tests hold each language to its preset's contrast pairs in both modes, a known category and its
 tags, all seven recipes, recipe markup that uses only known classes and tokens (no colour literals),
