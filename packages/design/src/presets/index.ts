@@ -15,6 +15,7 @@ import { comet } from './comet';
 import { reel } from './reel';
 import { aria } from './aria';
 import { keel } from './keel';
+import { relay } from './relay';
 import { onyx } from './onyx';
 import { marigold } from './marigold';
 import { marquee } from './marquee';
@@ -59,6 +60,7 @@ export const presets = {
   // The design archetypes (src/archetypes): complete languages an app is built from
   halcyon,
   keel,
+  relay,
   fennel,
   basalt,
   ember,
@@ -102,4 +104,4 @@ export const presets = {
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { aria, basalt, bazaar, broadsheet, brutalist, cadence, carbon, chalk, cirrus, comet, confetti, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, prism, quill, quire, reel, saffron, soft, solace, sprint, summit, terminal, terracotta, transit, vellum, volt, zephyr };
+export { aria, basalt, bazaar, broadsheet, brutalist, cadence, carbon, chalk, cirrus, comet, confetti, editorial, ember, enterprise, fennel, flint, folio, halcyon, harbor, hearth, heather, keel, linen, margin, marigold, marquee, meridian, minimal, mosaic, nocturne, obsidian, ochre, onyx, prism, quill, quire, reel, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, transit, vellum, volt, zephyr };

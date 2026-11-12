@@ -10,6 +10,7 @@ import { flintArchetype } from './flint';
 import { cometArchetype } from './comet';
 import { reelArchetype } from './reel';
 import { ariaArchetype } from './aria';
+import { relayArchetype } from './relay';
 import { zephyrArchetype } from './zephyr';
 import { onyxArchetype } from './onyx';
 import { terracottaArchetype } from './terracotta';
@@ -48,7 +49,7 @@ import type { Archetype } from './types';
  * (in `presets`, same name) plus its discovery card, type, icons, charts, six layout recipes and a
  * `DESIGN.md`. Halcyon is the first; the rest follow a category at a time.
  */
-export const archetypes: Archetype[] = [halcyonArchetype, fennelArchetype, basaltArchetype, emberArchetype, cirrusArchetype, zephyrArchetype, onyxArchetype, terracottaArchetype, marigoldArchetype, linenArchetype, quillArchetype, folioArchetype, broadsheetArchetype, obsidianArchetype, carbonArchetype, cadenceArchetype, mosaicArchetype, bazaarArchetype, transitArchetype, hearthArchetype, harborArchetype, prismArchetype, confettiArchetype, voltArchetype, sprintArchetype, summitArchetype, solaceArchetype, heatherArchetype, saffronArchetype, nocturneArchetype, vellumArchetype, chalkArchetype, ochreArchetype, marginArchetype, quireArchetype, meridianArchetype, flintArchetype, cometArchetype, marqueeArchetype, reelArchetype, ariaArchetype, keelArchetype];
+export const archetypes: Archetype[] = [halcyonArchetype, fennelArchetype, basaltArchetype, emberArchetype, cirrusArchetype, zephyrArchetype, onyxArchetype, terracottaArchetype, marigoldArchetype, linenArchetype, quillArchetype, folioArchetype, broadsheetArchetype, obsidianArchetype, carbonArchetype, cadenceArchetype, mosaicArchetype, bazaarArchetype, transitArchetype, hearthArchetype, harborArchetype, prismArchetype, confettiArchetype, voltArchetype, sprintArchetype, summitArchetype, solaceArchetype, heatherArchetype, saffronArchetype, nocturneArchetype, vellumArchetype, chalkArchetype, ochreArchetype, marginArchetype, quireArchetype, meridianArchetype, flintArchetype, cometArchetype, marqueeArchetype, reelArchetype, ariaArchetype, keelArchetype, relayArchetype];
 
 export { categories, iconActions, recipeNames } from './types';
 export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './types';
