@@ -3,6 +3,7 @@ import { basalt } from './basalt';
 import { broadsheet } from './broadsheet';
 import { brutalist } from './brutalist';
 import { carbon } from './carbon';
+import { cadence } from './cadence';
 import { ember } from './ember';
 import { cirrus } from './cirrus';
 import { halcyon } from './halcyon';
@@ -16,6 +17,7 @@ import { fennel } from './fennel';
 import { folio } from './folio';
 import { minimal } from './minimal';
 import { obsidian } from './obsidian';
+import { mosaic } from './mosaic';
 import { soft } from './soft';
 import { terminal } from './terminal';
 import { zephyr } from './zephyr';
@@ -45,7 +47,9 @@ export const presets = {
   broadsheet,
   obsidian,
   carbon,
+  cadence,
+  mosaic,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { basalt, broadsheet, brutalist, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, obsidian, onyx, quill, soft, terminal, terracotta, zephyr };
+export { basalt, broadsheet, brutalist, cadence, carbon, cirrus, editorial, ember, enterprise, fennel, folio, halcyon, linen, marigold, minimal, mosaic, obsidian, onyx, quill, soft, terminal, terracotta, zephyr };
