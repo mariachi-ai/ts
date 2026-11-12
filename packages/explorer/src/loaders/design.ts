@@ -224,3 +224,103 @@ export function languageLinkResolver(language: Language, fallback: (absolutePath
 export function loadLanguageGuide(language: Language) {
   return renderMarkdown(designFile(language.designDoc), dist(...language.designDoc.split('/')), languageLinkResolver(language, routeForFile));
 }
+
+// ---------------------------------------------------------------------------------------------
+// A language's fonts. Every language names open families (`type`); the explorer loads them from
+// Google Fonts with the weights the language uses. A family Google doesn't have is skipped (its
+// preset's stack falls back on its own); offline, the stylesheet just fails and the stack is used.
+
+const GOOGLE_CSS2 = 'https://fonts.googleapis.com/css2';
+
+export interface FontRequest {
+  family: string;
+  weights: number[];
+}
+
+/** A Google Fonts css2 URL for some families, each with its weights, `display=swap`. */
+export function googleFontsUrl(requests: FontRequest[]): string {
+  const families = requests.map(({ family, weights }) => {
+    const ws = [...new Set(weights.map((w) => Math.round(w)).filter((w) => w >= 1 && w <= 1000))].sort((a, b) => a - b);
+    return `family=${encodeURIComponent(family).replace(/%20/g, '+')}${ws.length > 0 ? `:wght@${ws.join(';')}` : ''}`;
+  });
+  return `${GOOGLE_CSS2}?${families.join('&')}&display=swap`;
+}
+
+/**
+ * The families a language's page (`page`: body, heading, mono) or index card (`card`: heading, body)
+ * uses. Each gets every weight in play, so when one is skipped (Google lacks it) the family its
+ * stack falls back to still has the right weights.
+ */
+export function languageFontRequests(
+  language: Pick<Language, 'type'>,
+  weights: { all: number[]; body: number; heading: number },
+  use: 'page' | 'card',
+): FontRequest[] {
+  const families = use === 'page' ? [language.type.body, language.type.heading, language.type.mono] : [language.type.heading, language.type.body];
+  const ws = [...new Set(use === 'page' ? [...weights.all, weights.body, weights.heading] : [400, weights.body, weights.heading])].sort((a, b) => a - b);
+  return [...new Set(families)].map((family) => ({ family, weights: ws }));
+}
+
+/** true / false when Google Fonts has / hasn't the family; undefined when it couldn't be checked (offline). */
+export type FontAvailability = (family: string) => Promise<boolean | undefined>;
+
+const probes = new Map<string, Promise<boolean | undefined>>();
+
+/** Asks Google Fonts once per family per build (css2 answers 400 for a family it doesn't have). */
+export const googleFontAvailability: FontAvailability = (family) => {
+  let probe = probes.get(family);
+  if (!probe) {
+    probe = fetch(googleFontsUrl([{ family, weights: [] }]), { signal: AbortSignal.timeout(5000) })
+      .then((res) => (res.ok ? true : res.status === 400 ? false : undefined))
+      .catch(() => undefined);
+    probes.set(family, probe);
+  }
+  return probe;
+};
+
+/**
+ * Stylesheet URLs for some fonts: one URL for the families Google Fonts is known to have, and one
+ * each for any that couldn't be checked (so one missing family can't fail the others).
+ */
+export async function fontStylesheets(requests: FontRequest[], available: FontAvailability = googleFontAvailability): Promise<string[]> {
+  const checked = await Promise.all(requests.map(async (r) => ({ r, ok: await available(r.family) })));
+  const known = checked.filter((c) => c.ok === true).map((c) => c.r);
+  const unknown = checked.filter((c) => c.ok === undefined).map((c) => c.r);
+  return [...(known.length > 0 ? [googleFontsUrl(known)] : []), ...unknown.map((r) => googleFontsUrl([r]))];
+}
+
+/** The font weights a language's preset uses (the weight scale plus body and heading), resolved. */
+export async function languageWeights(language: Language): Promise<{ all: number[]; body: number; heading: number }> {
+  const { presets, resolveDeep } = await import('@mariachi/design');
+  const theme = (presets as Record<string, Parameters<typeof resolveDeep>[0]>)[language.id];
+  if (!theme) throw new ExplorerError('explorer/missing-source', `Design language "${language.id}" has no preset of the same name`);
+  const weight = (p: string) => Number.parseFloat(resolveDeep(theme, p, 'light'));
+  const scale = loadDesign()
+    .semantic.filter((t) => t.path.startsWith('font.weight.'))
+    .map((t) => weight(t.path))
+    .filter((w) => Number.isFinite(w));
+  const body = weight('font.body.weight');
+  const heading = weight('font.heading.weight');
+  return { all: scale, body: Number.isFinite(body) ? body : 400, heading: Number.isFinite(heading) ? heading : 400 };
+}
+
+/** Stylesheet URLs for a language's fonts on its page (and gallery and recipes) or on its index card. */
+export async function languageFontStylesheets(language: Language, use: 'page' | 'card', available?: FontAvailability): Promise<string[]> {
+  return fontStylesheets(languageFontRequests(language, await languageWeights(language), use), available);
+}
+
+/**
+ * Adds a language's fonts to one of its standalone HTML documents (gallery, recipe), before
+ * `</head>`. Non-blocking: the stylesheet applies on load, so offline the page renders at once
+ * in the stack's fallbacks.
+ */
+export function withFontLinks(html: string, stylesheets: string[]): string {
+  if (stylesheets.length === 0) return html;
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;');
+  const links = [
+    '<link rel="preconnect" href="https://fonts.googleapis.com">',
+    '<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>',
+    ...stylesheets.map((u) => `<link rel="stylesheet" href="${esc(u)}" media="print" onload="this.media='all'">`),
+  ].join('\n');
+  return html.includes('</head>') ? html.replace('</head>', () => `${links}\n</head>`) : `${links}\n${html}`;
+}

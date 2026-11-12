@@ -2,7 +2,7 @@
 import Base from '../../../layouts/Base.astro';
 import { designSidebar } from '../../../lib/sidebars';
 import { href } from '../../../lib/url';
-import { languageFacets, languageFacetValues, languageSearchText, loadDesign, loadLanguages } from '../../../loaders/design';
+import { languageFacets, languageFacetValues, languageFontStylesheets, languageSearchText, loadDesign, loadLanguages } from '../../../loaders/design';
 
 const catalog = loadDesign();
 const languages = loadLanguages();
@@ -11,6 +11,8 @@ const facets = languageFacets(languages, categories);
 const groups = Object.entries(categories)
   .map(([key, c]) => ({ key, ...c, languages: languages.filter((a) => a.category === key) }))
   .filter((g) => g.languages.length > 0);
+// Card fonts load lazily, as each card nears the viewport.
+const cardFonts = Object.fromEntries(await Promise.all(languages.map(async (a) => [a.id, await languageFontStylesheets(a, 'card')] as const)));
 const cssVar = (path: string) => catalog.semantic.find((t) => t.path === path)?.cssVar;
 ---
 
@@ -71,6 +73,7 @@ const cssVar = (path: string) => catalog.semantic.find((t) => t.path === path)?.
               data-x-item
               data-x-text={languageSearchText(a)}
               data-x-facets={JSON.stringify(languageFacetValues(a))}
+              data-x-fonts={JSON.stringify(cardFonts[a.id] ?? [])}
             >
               <div class="x-language-swatches" aria-hidden="true">
                 {a.swatches.map((s) => (
@@ -99,6 +102,8 @@ const cssVar = (path: string) => catalog.semantic.find((t) => t.path === path)?.
 
   <script>
     import { bindFilter } from '../../../islands/filter';
+    import { loadFontsWhenVisible } from '../../../islands/fonts';
     bindFilter('languages');
+    loadFontsWhenVisible();
   </script>
 </Base>

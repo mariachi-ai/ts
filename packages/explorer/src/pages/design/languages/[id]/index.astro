@@ -5,7 +5,7 @@ import type { Heading } from '../../../../data/schema';
 import Base from '../../../../layouts/Base.astro';
 import { designSidebar } from '../../../../lib/sidebars';
 import { href } from '../../../../lib/url';
-import { findLanguage, languageAssetRoute, languageFilterQuery, languageSettings, loadDesign, loadLanguages } from '../../../../loaders/design';
+import { findLanguage, languageAssetRoute, languageFilterQuery, languageFontStylesheets, languageSettings, loadDesign, loadLanguages } from '../../../../loaders/design';
 
 export function getStaticPaths() {
   return loadLanguages().map((a) => ({ params: { id: a.id } }));
@@ -13,7 +13,7 @@ export function getStaticPaths() {
 
 const catalog = loadDesign();
 const language = findLanguage(String(Astro.params.id))!;
-const settings = await languageSettings(language);
+const [settings, fonts] = await Promise.all([languageSettings(language), languageFontStylesheets(language, 'page')]);
 const categories = catalog.categories as Record<string, { label: string; description: string }>;
 const category = categories[language.category];
 const hasPreset = catalog.presets.some((p) => p.name === language.id);
@@ -44,7 +44,7 @@ const toc: Heading[] = [
 ];
 ---
 
-<Base title={`${language.label} design language`} description={language.pitch} sidebar={designSidebar(catalog)} toc={toc}>
+<Base title={`${language.label} design language`} description={language.pitch} sidebar={designSidebar(catalog)} toc={toc} fonts={fonts}>
   <nav class="m-breadcrumb" aria-label="Breadcrumb">
     <ol>
       <li><a href={href('design')}>Design</a></li>

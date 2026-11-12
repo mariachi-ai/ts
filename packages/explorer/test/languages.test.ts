@@ -8,7 +8,11 @@ import { designSidebar } from '../src/lib/sidebars';
 import { fromRoot } from '../src/lib/repo';
 import {
   designFile,
+  fontStylesheets,
+  googleFontsUrl,
   languageAssetRoute,
+  languageFontRequests,
+  languageWeights,
   languageFacets,
   languageFacetValues,
   languageFilterQuery,
@@ -17,6 +21,7 @@ import {
   languageSettings,
   loadDesign,
   loadLanguages,
+  withFontLinks,
 } from '../src/loaders/design';
 
 const languages = loadLanguages();
@@ -156,5 +161,51 @@ describe('design languages: DESIGN.md links and navigation', () => {
     for (const a of languages) expect(routes).toContain(`design/languages/${a.id}`);
     for (const a of languages) expect(routes).not.toContain(`design/presets/${a.id}`);
     expect(new Set(routes).size).toBe(routes.length);
+  });
+});
+
+describe('design languages: fonts', () => {
+  it('builds a css2 URL with sorted, whole weights and display=swap', () => {
+    expect(googleFontsUrl([{ family: 'Open Face', weights: [600, 400, 400.4, 0] }, { family: 'Mono Face', weights: [] }])).toBe(
+      'https://fonts.googleapis.com/css2?family=Open+Face:wght@400;600&family=Mono+Face&display=swap',
+    );
+  });
+
+  it('asks for each family once, with the weights the page or card uses', () => {
+    const type = { type: { body: 'A', heading: 'A', mono: 'M' } } as Parameters<typeof languageFontRequests>[0];
+    const weights = { all: [400, 500, 700], body: 360, heading: 380 };
+    expect(languageFontRequests(type, weights, 'page')).toEqual([
+      { family: 'A', weights: [360, 380, 400, 500, 700] },
+      { family: 'M', weights: [360, 380, 400, 500, 700] },
+    ]);
+    expect(languageFontRequests(type, weights, 'card')).toEqual([{ family: 'A', weights: [360, 380, 400] }]);
+  });
+
+  it('skips families Google lacks; keeps unchecked ones apart so one miss cannot fail the rest', async () => {
+    const known: Record<string, boolean | undefined> = { Yes: true, Also: true, No: false, Unknown: undefined };
+    const urls = await fontStylesheets(
+      ['Yes', 'No', 'Also', 'Unknown'].map((family) => ({ family, weights: [400] })),
+      async (f) => known[f],
+    );
+    expect(urls).toEqual([
+      'https://fonts.googleapis.com/css2?family=Yes:wght@400&family=Also:wght@400&display=swap',
+      'https://fonts.googleapis.com/css2?family=Unknown:wght@400&display=swap',
+    ]);
+    expect(await fontStylesheets([{ family: 'No', weights: [400] }], async () => false)).toEqual([]);
+  });
+
+  it('resolves every language\'s weights from its preset', async () => {
+    for (const a of languages) {
+      const w = await languageWeights(a);
+      expect(w.all.length).toBeGreaterThan(0);
+      for (const n of [...w.all, w.body, w.heading]) expect(n).toBeGreaterThan(0);
+    }
+  });
+
+  it('adds non-blocking font links before </head>', () => {
+    const html = withFontLinks('<html><head><title>x</title></head><body></body></html>', ['https://fonts.googleapis.com/css2?family=A&b=1']);
+    expect(html).toContain('href="https://fonts.googleapis.com/css2?family=A&amp;b=1" media="print" onload="this.media=\'all\'"></head>'.replace('></head>', '>\n</head>'));
+    expect(html.indexOf('fonts.gstatic.com')).toBeLessThan(html.indexOf('</head>'));
+    expect(withFontLinks('<p>x</p>', [])).toBe('<p>x</p>');
   });
 });
