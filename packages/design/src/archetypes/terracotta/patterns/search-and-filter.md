@@ -7,16 +7,16 @@
 1. **The pill search bar:** a white pill with a hairline and the `md` shadow, three segments split by short hairlines, each a 12px/600 label over a grey 14px value ("Where / Search places"), and a round brand-coral disc with a white `search` icon at the end.
 2. On results and detail screens it shrinks to a **compact pill** in the header: three ink labels at 14/500 split by hairlines and a small coral disc.
 3. **Filter chips** under the header: 34px pills with a `#dddddd` edge and 12px text; `Filters` first with `sliders-horizontal`; a chosen chip takes an ink edge on the sunken fill.
-4. A help or article area uses a single-field pill (one grey prompt and the disc), centred under a large question.
+4. A help or article area uses a single-field pill: a `#f7f7f7` fill with a hairline, one prompt at 16/500 and the coral disc. It sits in the reading header, or centred under a large question on the help home.
 
 ## Where it appears
 
-- `list-detail` (compact pill and chips), `dashboard`, `settings`, `empty-state`, `errors` share the guest header. Source: observed on the browse screens (full pill), the place pages (compact pill) and the help home (single-field pill) (private notes).
+- `list-detail` (compact pill and chips), `reading` (the single-field pill); `settings`, `empty-state`, `errors` and `sign-in` share the guest header without the search. Source: observed on the browse screens (full pill), the place pages (compact pill) and the help home (single-field pill) (private notes).
 
 ## Variations and triggers
 
 - **Full pill** on a home or browse screen with nothing chosen yet; **compact** once a search exists.
-- **Phones:** the pill becomes one full-width rounded field with "Start your search"; chips scroll sideways.
+- **Phones:** the pill becomes one full-width rounded field with a short prompt, the only thing in the header; chips scroll sideways (`observed`). In a recipe the header keeps the mark's row above it (see [move-between-areas](./move-between-areas.md)).
 
 ## What it does not do
 

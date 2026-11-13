@@ -8,7 +8,7 @@
 - **In a form:** a danger alert above the fields (the pale wash, no border, 12px corners, a 20px icon), its title counting the problems and its body saying what didn't happen ("Your card wasn't charged"). Focus moves to it.
 - **Somewhere else:** an ink toast at the bottom left, one line, an optional light-grey detail, one action.
 - **A change that isn't a failure** (dates just taken): a warning alert that offers what's still open.
-- **A whole page:** a huge bold word (up to 8rem, 700, −4% tracking), a 32px grey line, a small "Error code: 404", and a short list of underlined ink links, beside a placeholder image.
+- **A whole page** (a public page): a huge bold word (up to 8rem, 700, −4% tracking), a 32px grey line, a small "Error code: 404" at 400, and a short list of underlined ink links, beside a placeholder image. Its weights are the public family's: 400, 500 and 700, no 600.
 
 ## Where it appears
 

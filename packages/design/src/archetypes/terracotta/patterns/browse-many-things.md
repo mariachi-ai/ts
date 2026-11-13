@@ -7,7 +7,7 @@
 1. The header, with the compact pill search in the centre (see [search-and-filter](./search-and-filter.md)).
 2. A row of rounded filter chips under it, `Filters` first, a short vertical hairline, then the quick filters.
 3. A plain heading that counts the results at 22px ("280 places on the Lisbon coast"); no hero, no intro paragraph.
-4. A grid of **photo cards**: the photo first with 20px corners and no frame, a heart in its top-right corner and at most one white pill badge on it; under it the title at 500 with the rating on the right, one or two grey lines, and the price underlined. Gaps are 24px across and 40px down; columns are about 15rem.
+4. A grid of **photo cards**: the photo first with 20px corners and no frame, a heart in its top-right corner and at most one white pill badge on it; under it the title at 500 with the rating on the right, one or two grey lines, and the price underlined at 600. Gaps are 24px across and 40px down; columns are about 15rem.
 5. Beside the grid, a map about two fifths wide, as a picture layer with white price pills laid over it (the chosen one ink).
 6. Round page numbers centred under the grid, the current one an ink disc.
 

@@ -6,7 +6,7 @@
 
 1. A large question or title (32px/500), a sentence in ink under it.
 2. **Choice tiles or cards** in a grid: white, 12px corners, a 1px hairline edge drawn as an inset shadow; the chosen one takes a **2px ink edge** and the sunken fill.
-3. Tiles: a 32px outline icon at 1.5px over a 16/500 label. Cards: name at 18/600, an optional pale badge, the figure at 32px, a grey line, and points with green ticks.
+3. Tiles: a 32px outline icon at 1.5px over a 16/500 label. Cards: name at 18/600, an optional pale badge, the figure at 32px/600, a grey line, and points with ink ticks (icons are ink; see DESIGN.md, Icons).
 4. A **pill switch** (segmented control: grey track, white knob on a soft shadow) for a two- or three-way setting above the cards.
 5. The commit action comes after, never inside a tile.
 

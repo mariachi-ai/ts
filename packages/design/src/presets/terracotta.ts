@@ -58,7 +58,7 @@ export const terracotta = extendTheme(minimal, {
         // Links and accent text are ink, underlined, as in the reference; the brand's text red (#da1249) is not a link colour
         text: { light: '#222222', dark: '#f7f7f7' },
       },
-      // The signature coral: the logo mark, the search button, map pins and brand panels
+      // The signature coral: the logo mark, the search disc, saved hearts and the viewer's own place on a public map
       brand: {
         default: { light: '#ff385c', dark: '#ff385c' },
         fg: { light: '#111111', dark: '#111111' },
@@ -165,7 +165,7 @@ export const terracotta = extendTheme(minimal, {
     },
   },
   components: {
-    // A 1120px listing column; wide grids run to 80rem with 24–80px gutters
+    // A 1120px (70rem) column for place, reading and account pages; browse grids and the footer run to 90rem, with 24–80px gutters
     layout: {
       containerMax: { sm: '35rem', md: '50rem', lg: '70rem' },
       containerPadding: 'clamp(1.5rem, 5vw, 5rem)',

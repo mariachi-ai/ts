@@ -5,7 +5,7 @@
 ## What Terracotta does
 
 1. The page title stays (32px/500), as if the list were full.
-2. A block bounded by hairlines above and below: a 40px outline icon, a 22px heading that says what's missing ("Nothing planned yet"), one sentence in ink about what will appear here, and **one ink-outlined button**.
+2. A block bounded by hairlines above and below: a 40px ink outline icon (never coral), a 22px heading that says what's missing ("Nothing planned yet"), one sentence in ink about what will appear here, and **one ink-outlined button**.
 3. A placeholder photo beside it on wide screens (16:9, 20px corners); it stacks under on phones.
 4. Where the empty thing has a shape (saved places), resting skeleton cards in the grid with one grey line on how to fill it.
 5. A grey line with an underlined help link under the block.

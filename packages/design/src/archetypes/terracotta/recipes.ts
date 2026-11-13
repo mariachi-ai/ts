@@ -1,8 +1,8 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Terracotta's seven layout recipes: framework-free HTML using only @mariachi/design classes and
- * tokens (no colour literals), with sample data from a made-up stays marketplace, "Hearthway". They
+ * Terracotta's nine layout recipes (the seven shapes, then `reading` and `sign-in`): framework-free
+ * HTML using only @mariachi/design classes and tokens (no colour literals), with sample data from a made-up stays marketplace, "Hearthway". They
  * follow the language's real screen patterns: a white header with a centred pill search bar and a
  * coral search disc, frameless photo cards with 20px corners and a heart, white pill badges on the
  * photos, ink text with grey secondary lines, prices underlined, panels lifted on a soft shadow, hairline
@@ -117,12 +117,14 @@ const listing = (n: number, glyph: string, title: string, sub: string, dates: st
               <div class="m-cluster" data-justify="between" data-gap="2" style="flex-wrap: nowrap"><span style="font-weight: var(--m-font-weight-medium)">${title}</span>${rating(score)}</div>
               <span class="m-muted">${sub}</span>
               <span class="m-muted">${dates}</span>
-              <span style="margin-block-start: var(--m-space-1)">${was ? `<s class="m-muted">${was}</s> ` : ''}<span style="text-decoration: underline; font-weight: var(--m-font-weight-medium)">${price}</span></span>
+              <span style="margin-block-start: var(--m-space-1)">${was ? `<s class="m-muted">${was}</s> ` : ''}<span style="text-decoration: underline; font-weight: var(--m-font-weight-semibold)">${price}</span></span>
             </div>
           </a>`;
 
 const h1 = 'font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
 const h2 = 'font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
+// Public reading pages set their section headings at 500, as the source's articles do
+const h2Public = h2.replace('semibold', 'medium');
 const h3 = 'font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-semibold)';
 const small = 'font-size: var(--m-font-size-sm)';
 const hair = 'border-block-start: var(--m-border-width-thin) solid var(--m-color-border-default)';
@@ -138,8 +140,7 @@ const inkCta =
 const brand = `<a class="m-navbar-brand" href="#" style="color: var(--m-color-brand-default); gap: var(--m-space-1); font-weight: var(--m-font-weight-semibold)">${icon('flame', 30, 2.25)} hearthway</a>`;
 const userMenu = `<div class="m-navbar-actions">
       <a class="m-navbar-link" href="#">Host a place</a>
-      <button type="button" class="m-button" data-size="sm" data-icon-only aria-label="Language and currency" style="--m-button-radius: var(--m-radius-full)">${icon('globe', 16)}</button>
-      <button type="button" class="m-button" data-size="sm" data-icon-only aria-label="Menu" style="--m-button-radius: var(--m-radius-full)">${icon('menu', 16)}</button>
+      <button type="button" class="m-button" data-size="sm" data-icon-only aria-label="Menu, with language and currency" style="--m-button-radius: var(--m-radius-full)">${icon('menu', 16)}</button>
     </div>`;
 
 // The pill search bar: three segments split by hairlines and a coral search disc; its edge is the elevation's 1px ring, not a border
@@ -149,7 +150,7 @@ const searchBar = (where: string, when: string, who: string) => `<div role="sear
       ${seg('Where', where)}${seg('When', when)}${seg('Who', who, true)}
       <button type="button" class="m-button" data-variant="primary" data-icon-only aria-label="Search" style="--m-button-primary-bg: var(--m-color-brand-default); --m-button-primary-border: var(--m-color-brand-default); --m-button-primary-hover-bg: var(--m-color-accent-default); --m-button-radius: var(--m-radius-full); flex: none">${icon('search', 16, 3)}</button>
     </div>`;
-const compactSearch = `<div role="search" class="m-cluster" data-gap="0" style="flex-wrap: nowrap; padding: var(--m-space-1) var(--m-space-1) var(--m-space-1) var(--m-space-2); border-radius: var(--m-radius-full); box-shadow: var(--m-shadow-sm); font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-medium)">
+const compactSearch = `<div role="search" class="m-cluster" data-gap="0" style="flex-wrap: nowrap; max-inline-size: 100%; padding: var(--m-space-1) var(--m-space-1) var(--m-space-1) var(--m-space-2); border-radius: var(--m-radius-full); box-shadow: var(--m-shadow-sm); font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-medium); --m-button-padding-x-sm: var(--m-space-3)">
       <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="--m-button-radius: var(--m-radius-full); font-size: var(--m-font-size-sm)">Lisbon coast</button>
       <span aria-hidden="true" style="block-size: 1.5rem; border-inline-start: var(--m-border-width-thin) solid var(--m-color-border-default)"></span>
       <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="--m-button-radius: var(--m-radius-full); font-size: var(--m-font-size-sm)">Mar 6 – 11</button>
@@ -158,10 +159,18 @@ const compactSearch = `<div role="search" class="m-cluster" data-gap="0" style="
       <button type="button" class="m-button" data-variant="primary" data-size="sm" data-icon-only aria-label="Search" style="--m-button-primary-bg: var(--m-color-brand-default); --m-button-primary-border: var(--m-color-brand-default); --m-button-radius: var(--m-radius-full); --m-button-height-sm: 2rem; flex: none">${icon('search', 14, 3)}</button>
     </div>`;
 
-const guestHeader = (search: string) => `<header class="m-navbar" style="block-size: auto; flex-wrap: wrap; row-gap: var(--m-space-4); padding-block: var(--m-space-4)">
-    ${brand}
-    <div style="flex: 1 1 auto; display: flex; justify-content: center; min-inline-size: 0">${search}</div>
-    ${userMenu}
+// The guest header. Recipes have no media queries, so it is laid out as flow: the mark floats to the
+// start and the icon buttons to the end, and the search (its own formatting context, at least 20rem
+// wide) sits centred between them while there is room. On a phone it can't fit beside them, so it drops
+// under them as one full-width row; the mark and the buttons keep the first row. Below 20rem of free
+// space nothing squeezes: the search moves, it never shrinks.
+const startSlot = 'float: inline-start; display: flex; align-items: center; block-size: 3rem; margin-inline-end: var(--m-space-6); margin-block-end: var(--m-space-3)';
+const endSlot = 'float: inline-end; display: flex; align-items: center; block-size: 3rem; margin-inline-start: var(--m-space-6); margin-block-end: var(--m-space-3)';
+const searchSlot = 'display: flex; justify-content: center; align-items: center; min-block-size: 3rem; min-inline-size: 20rem';
+const guestHeader = (search: string, actions = userMenu, mark = brand) => `<header class="m-navbar" style="display: flow-root; block-size: auto; padding-block: var(--m-space-4) var(--m-space-1)">
+    <div style="${startSlot}">${mark}</div>
+    <div style="${endSlot}">${actions}</div>
+    ${search ? `<div style="${searchSlot}">${search}</div>` : ''}
   </header>`;
 
 // ---------------------------------------------------------------------------------------------
@@ -251,7 +260,7 @@ const dashboard = `<div class="m-stack" data-gap="0" style="min-block-size: 100v
           </section>
           <section class="m-card" data-variant="sunken" aria-labelledby="tc-tip">
             <div class="m-card-body m-stack" data-gap="3">
-              <span style="color: var(--m-color-brand-default)">${icon('sparkles', 24)}</span>
+              ${icon('sparkles', 24)}
               <h2 id="tc-tip" style="${h3}">Weekends in March are filling fast</h2>
               <p style="${small}">Homes like yours nearby are 82% booked. A nightly price of $168 would keep you in the top results.</p>
               <div><a href="#" style="${link}">See price tips</a></div>
@@ -329,10 +338,10 @@ const booking = `<aside class="m-card" style="position: sticky; inset-block-star
               <div class="m-cluster" data-gap="1" data-align="baseline"><span id="tc-book" style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-semibold); text-decoration: underline">$184</span><span>night</span></div>
               <div class="m-stack" data-gap="0" style="border: var(--m-border-width-thin) solid var(--m-color-border-strong); border-radius: var(--m-radius-md); overflow: hidden">
                 <div class="m-cluster" data-gap="0" style="flex-wrap: nowrap">
-                  <button type="button" class="m-stack" data-gap="0" style="flex: 1 1 0; text-align: start; padding: var(--m-space-3); border: 0; background: transparent; color: inherit; font: inherit; box-shadow: inset calc(-1 * var(--m-border-width-thin)) 0 0 var(--m-color-border-strong)"><span style="font-size: 0.625rem; font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-font-tracking-wide); text-transform: uppercase">Arrive</span><span style="${small}">3/6/2027</span></button>
-                  <button type="button" class="m-stack" data-gap="0" style="flex: 1 1 0; text-align: start; padding: var(--m-space-3); border: 0; background: transparent; color: inherit; font: inherit"><span style="font-size: 0.625rem; font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-font-tracking-wide); text-transform: uppercase">Leave</span><span style="${small}">3/11/2027</span></button>
+                  <button type="button" class="m-stack" data-gap="0" style="flex: 1 1 0; text-align: start; padding: var(--m-space-3); border: 0; background: transparent; color: inherit; font: inherit; box-shadow: inset calc(-1 * var(--m-border-width-thin)) 0 0 var(--m-color-border-strong)"><span style="font-size: 0.625rem; font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-wide); text-transform: uppercase">Arrive</span><span style="${small}">3/6/2027</span></button>
+                  <button type="button" class="m-stack" data-gap="0" style="flex: 1 1 0; text-align: start; padding: var(--m-space-3); border: 0; background: transparent; color: inherit; font: inherit"><span style="font-size: 0.625rem; font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-wide); text-transform: uppercase">Leave</span><span style="${small}">3/11/2027</span></button>
                 </div>
-                <button type="button" class="m-cluster" data-justify="between" style="padding: var(--m-space-3); border: 0; background: transparent; color: inherit; font: inherit; text-align: start; ${hair.replace('default', 'strong')}"><span class="m-stack" data-gap="0"><span style="font-size: 0.625rem; font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-font-tracking-wide); text-transform: uppercase">Guests</span><span style="${small}">3 guests</span></span>${icon('chevron-down', 20)}</button>
+                <button type="button" class="m-cluster" data-justify="between" style="padding: var(--m-space-3); border: 0; background: transparent; color: inherit; font: inherit; text-align: start; ${hair.replace('default', 'strong')}"><span class="m-stack" data-gap="0"><span style="font-size: 0.625rem; font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-wide); text-transform: uppercase">Guests</span><span style="${small}">3 guests</span></span>${icon('chevron-down', 20)}</button>
               </div>
               <button type="button" class="m-button" data-variant="primary" style="${gradientCta}">Book these dates</button>
               <p class="m-muted" style="${small}; text-align: center">Nothing is charged yet</p>
@@ -345,6 +354,66 @@ const booking = `<aside class="m-card" style="position: sticky; inset-block-star
             </div>
           </aside>`;
 
+// The photo mosaic. It responds without a media query: a flex row of a fixed height that wraps and clips.
+// From about 45rem the large photo and the 2 × 2 block share one row; on a phone the block wraps to a
+// second row, which the fixed height cuts off, so the page opens on one photo with the count on it.
+const mosaicTile = (n: number, glyph: string, label: string) =>
+  photo(n, glyph, label, '', 'auto', '0').replace('aspect-ratio: auto', 'block-size: 100%');
+const mosaic = `<div style="position: relative; display: flex; flex-wrap: wrap; align-content: flex-start; gap: var(--m-space-2); block-size: clamp(16rem, 30vw, 25rem); border-radius: var(--m-radius-md); overflow: hidden">
+        <div style="flex: 2 1 22rem; block-size: 100%">${mosaicTile(0, 'house', 'Living room facing the bay')}</div>
+        <div style="flex: 1 1 22rem; block-size: 100%; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: var(--m-space-2)">
+          ${mosaicTile(1, 'bed-double', 'Main bedroom')}
+          ${mosaicTile(2, 'utensils', 'Kitchen')}
+          ${mosaicTile(3, 'sun', 'Terrace')}
+          ${mosaicTile(5, 'waves', 'The beach')}
+        </div>
+        <button type="button" class="m-button" data-size="sm" style="position: absolute; inset-block-end: var(--m-space-4); inset-inline-end: var(--m-space-4); --m-button-secondary-bg: var(--m-color-bg-surface); --m-button-secondary-border: transparent; --m-button-radius: var(--m-radius-sm); --m-button-font-size: var(--m-font-size-xs); box-shadow: var(--m-shadow-sm)">${icon('layout-grid', 14)} All 32 photos</button>
+      </div>`;
+
+// A sleeping card: a photo with 12px corners, the room at 500, the beds in grey
+const bedroom = (n: number, room: string, beds: string) => `<div class="m-stack" data-gap="3">
+              ${photo(n, 'bed-double', room, '', '3 / 2', 'var(--m-radius-md)')}
+              <div class="m-stack" data-gap="0"><span style="font-weight: var(--m-font-weight-medium)">${room}</span><span class="m-muted" style="${small}">${beds}</span></div>
+            </div>`;
+
+// Reviews: the score large and centred, the categories split by short hairlines, then two columns of
+// reviews (avatar, name, a grey line, small ink stars with the date, three lines of text, Read more)
+const stars = (n: number) =>
+  `<span role="img" aria-label="Rated ${n} out of 5" style="display: inline-flex; gap: 1px">${solid('star', 10).repeat(n)}</span>`;
+const category = (label: string, score: string, glyph: string, first = false) => `<div class="m-stack" data-gap="4" style="padding-inline: var(--m-space-4)${first ? '' : '; border-inline-start: var(--m-border-width-thin) solid var(--m-color-border-default)'}">
+              <span class="m-stack" data-gap="0" style="font-size: var(--m-font-size-xs)"><span style="font-weight: var(--m-font-weight-medium)">${label}</span><span>${score}</span></span>
+              ${icon(glyph, 24, 1.5)}
+            </div>`;
+const review = (initials: string, name: string, line: string, n: number, when: string, text: string) => `<article class="m-stack" data-gap="3">
+              <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap"><span class="m-avatar" data-size="md">${initials}</span><span class="m-stack" data-gap="0"><span style="font-weight: var(--m-font-weight-medium)">${name}</span><span class="m-muted" style="${small}">${line}</span></span></div>
+              <p class="m-cluster" data-gap="2" style="${small}">${stars(n)}<span class="m-muted">· ${when}</span></p>
+              <p style="display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden">${text}</p>
+              <div><a href="#" style="${link}">Read more</a></div>
+            </article>`;
+
+// One place on a map: the 48px ink disc with a white house and a short point, on the small shadow
+const placePin = `<span style="position: absolute; inset-inline-start: 50%; inset-block-start: 45%; translate: -50% -50%; display: grid; place-items: center">
+              <span aria-hidden="true" style="position: absolute; inset-block-end: -0.3rem; inline-size: 0.75rem; block-size: 0.75rem; rotate: 45deg; background: var(--m-color-bg-inverse)"></span>
+              <span role="img" aria-label="The flat's location" style="position: relative; display: grid; place-items: center; inline-size: 3rem; block-size: 3rem; border-radius: var(--m-radius-full); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse); box-shadow: var(--m-shadow-sm)">${icon('house', 20)}</span>
+            </span>`;
+const placeMap = `<div style="position: relative; block-size: clamp(18rem, 34vw, 30rem); border-radius: var(--m-radius-lg); overflow: hidden">
+            <div role="img" aria-label="Map of Cascais and the coast" style="position: absolute; inset: 0; background:
+              radial-gradient(ellipse at 15% 110%, var(--m-color-info-bg) 0 38%, transparent 38.5%),
+              linear-gradient(105deg, transparent 52%, var(--m-color-border-default) 52% 52.5%, transparent 52.5%),
+              linear-gradient(15deg, transparent 40%, var(--m-color-border-default) 40% 40.4%, transparent 40.4%),
+              linear-gradient(170deg, var(--m-color-bg-sunken), var(--m-color-success-bg) 70%)"></div>
+            ${placePin}
+            <div class="m-stack" data-gap="0" style="position: absolute; inset-block-start: var(--m-space-4); inset-inline-end: var(--m-space-4); border-radius: var(--m-radius-md); background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-sm)">
+              <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Zoom in">${icon('plus', 16)}</button>
+              <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Zoom out" style="${hair}"><span aria-hidden="true" style="inline-size: 0.75rem; border-block-start: var(--m-border-width-thick) solid currentColor"></span></button>
+            </div>
+          </div>`;
+
+const knowing = (glyph: string, title: string, line: string, more = true) => `<div class="m-stack" data-gap="3" style="${small}">
+              ${icon(glyph, 24, 1.5)}
+              <div class="m-stack" data-gap="1"><span style="font-weight: var(--m-font-weight-medium)">${title}</span><span class="m-muted">${line}</span>${more ? `<span><a href="#" style="${link}">Read more</a></span>` : ''}</div>
+            </div>`;
+
 const detail = `<article class="m-stack" data-gap="8" aria-labelledby="tc-title">
       <div class="m-cluster" data-justify="between">
         <h2 id="tc-title" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); line-height: var(--m-font-leading-tight)">Whitewashed flat in Cascais</h2>
@@ -353,14 +422,7 @@ const detail = `<article class="m-stack" data-gap="8" aria-labelledby="tc-title"
           <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="--m-button-radius: var(--m-radius-sm); text-decoration: underline; font-size: var(--m-font-size-sm)">${icon('heart', 16)} Save</button>
         </div>
       </div>
-      <div style="position: relative; display: grid; grid-template-columns: 2fr 1fr 1fr; grid-template-rows: repeat(2, minmax(8rem, 12rem)); gap: var(--m-space-2); border-radius: var(--m-radius-md); overflow: hidden">
-        <div style="grid-row: span 2">${photo(0, 'house', 'Living room facing the bay', '', 'auto', '0').replace('aspect-ratio: auto', 'block-size: 100%')}</div>
-        ${photo(1, 'bed-double', 'Main bedroom', '', 'auto', '0').replace('aspect-ratio: auto', 'block-size: 100%')}
-        ${photo(2, 'utensils', 'Kitchen', '', 'auto', '0').replace('aspect-ratio: auto', 'block-size: 100%')}
-        ${photo(3, 'sun', 'Terrace', '', 'auto', '0').replace('aspect-ratio: auto', 'block-size: 100%')}
-        ${photo(5, 'waves', 'The beach', '', 'auto', '0').replace('aspect-ratio: auto', 'block-size: 100%')}
-        <button type="button" class="m-button" data-size="sm" style="position: absolute; inset-block-end: var(--m-space-4); inset-inline-end: var(--m-space-4); --m-button-secondary-bg: var(--m-color-bg-surface); --m-button-secondary-border: transparent; --m-button-radius: var(--m-radius-sm); --m-button-font-size: var(--m-font-size-xs); box-shadow: var(--m-shadow-sm)">${icon('layout-grid', 14)} All 32 photos</button>
-      </div>
+      ${mosaic}
       <div class="m-cluster" data-gap="16" data-align="start">
         <div class="m-stack" data-gap="8" style="flex: 1 1 28rem">
           <div class="m-stack" data-gap="1">
@@ -374,6 +436,13 @@ const detail = `<article class="m-stack" data-gap="8" aria-labelledby="tc-title"
           </div>
           <p>Bright, quiet and two minutes from the sand. Mornings are best on the terrace, where the bay turns silver before the fishing boats head out. The station is a short walk, so Lisbon is forty minutes away.</p>
           <div><button type="button" class="m-button" data-variant="ghost" data-size="sm" style="--m-button-padding-x-sm: 0; text-decoration: underline">Read more ${icon('chevron-right', 16)}</button></div>
+          <section class="m-stack" data-gap="6" style="padding-block-start: var(--m-space-10); ${hair}" aria-labelledby="tc-beds">
+            <h3 id="tc-beds" style="${h2}">The bedrooms</h3>
+            <div class="m-grid" style="--m-layout-grid-min: 12rem; --m-layout-grid-gap: var(--m-space-4)">
+              ${bedroom(3, 'Main bedroom', '1 double bed')}
+              ${bedroom(1, 'Second bedroom', '2 single beds')}
+            </div>
+          </section>
           <section class="m-stack" data-gap="6" style="padding-block-start: var(--m-space-10); ${hair}" aria-labelledby="tc-offers">
             <h3 id="tc-offers" style="${h2}">In the flat</h3>
             <ul class="m-grid" style="--m-layout-grid-min: 14rem; --m-layout-grid-gap: var(--m-space-4); padding: 0; list-style: none">
@@ -382,21 +451,93 @@ const detail = `<article class="m-stack" data-gap="8" aria-labelledby="tc-title"
             <div><button type="button" class="m-button">See all 41 things</button></div>
           </section>
         </div>
-        <div style="flex: 0 1 23rem; min-inline-size: min(100%, 20rem)">${booking}</div>
+        <div style="flex: 0 1 23rem; min-inline-size: min(100%, 20rem); align-self: stretch">${booking}</div>
       </div>
+      <section class="m-stack" data-gap="10" style="padding-block-start: var(--m-space-12); ${hair}" aria-labelledby="tc-reviews">
+        <div class="m-stack" data-gap="2" style="align-items: center; text-align: center">
+          <p id="tc-reviews" style="font-size: clamp(4.5rem, 7vw, 6.25rem); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight); line-height: 1"><span class="m-sr-only">Rated </span>4.91<span class="m-sr-only"> out of 5 from 126 reviews</span></p>
+          <h3 style="${h2}">Guests keep coming back</h3>
+          <p class="m-muted" style="max-inline-size: 26rem">Among the best-rated places on the coast for tidiness, honesty and an easy arrival.</p>
+          <a href="#" class="m-muted" style="font-size: var(--m-font-size-xs); text-decoration: underline">About ratings</a>
+        </div>
+        <div class="m-grid" style="--m-layout-grid-min: 8rem; --m-layout-grid-gap: var(--m-space-6) 0">
+          ${category('Clean and tidy', '4.9', 'sparkles', true)}${category('As described', '4.9', 'circle-check')}${category('Arrival', '5.0', 'key-round')}${category('Talking to Joana', '5.0', 'message-square')}${category('Location', '4.8', 'map-pin')}${category('Value', '4.7', 'wallet')}
+        </div>
+        <div class="m-grid" style="--m-layout-grid-min: 24rem; --m-layout-grid-gap: var(--m-space-10) var(--m-space-16)">
+          ${review('AN', 'Aiko', 'From Osaka, Japan', 5, 'March 2026 · 4 nights', 'We woke to the sea every day. Joana left a map of the best bakeries and a note about which beach is calm in the morning, and both were right.')}
+          ${review('TB', 'Theo', '3 years travelling with us', 5, 'February 2026 · A week', 'Exactly as the photos show. The desk by the window is a real desk, the wifi held up on calls, and the station really is five minutes away.')}
+          ${review('MR', 'Mireille', 'From Lyon, France', 4, 'January 2026 · 3 nights', 'Lovely flat and very quiet. The stairs are steep with suitcases, so travel light, but the terrace makes up for every step.')}
+          ${review('DK', 'Dev', 'From Leeds, UK', 5, 'December 2025 · 5 nights', 'Warm in winter, which we did not expect. Joana answered every message within the hour.')}
+        </div>
+        <div><button type="button" class="m-button">See all 126 reviews</button></div>
+      </section>
+      <section class="m-stack" data-gap="6" style="padding-block-start: var(--m-space-12); ${hair}" aria-labelledby="tc-where">
+        <div class="m-stack" data-gap="2">
+          <h3 id="tc-where" style="${h2}">Where it is</h3>
+          <p style="font-weight: var(--m-font-weight-medium)">Cascais, Lisbon coast, Portugal</p>
+        </div>
+        ${placeMap}
+        <p>A quiet lane behind the old harbour. The beach is two minutes down the hill, the market four, and the train to Lisbon leaves every twenty minutes.</p>
+        <div><a href="#" style="${link}">More about the area</a></div>
+      </section>
+      <section class="m-stack" data-gap="8" style="padding-block-start: var(--m-space-12); ${hair}" aria-labelledby="tc-know">
+        <h3 id="tc-know" style="${h2}">Before you book</h3>
+        <div class="m-grid" style="--m-layout-grid-min: 15rem; --m-layout-grid-gap: var(--m-space-8) var(--m-space-6)">
+          ${knowing('clock-3', 'Arrival and leaving', 'Arrive after 3pm, leave by 11am. Self check-in with a key box.', false)}
+          ${knowing('file-text', 'House rules', 'Up to 4 guests. No parties. Quiet after 10pm.')}
+          ${knowing('shield-check', 'Safety', 'Smoke alarm and a first-aid kit. Steep stairs to the terrace.')}
+          ${knowing('calendar-days', 'Cancelling', 'Free until Mar 1. After that, half of the stay is refunded.')}
+        </div>
+      </section>
     </article>`;
 
-const listDetail = `<div class="m-stack" data-gap="0">
+// The footer: a grey band across the window, its columns to 90rem whatever the page's own width. Link
+// lists are plain ink (a product's CSS underlines them on hover); the legal row sits above a light hairline.
+const footLinks = (title: string, links: string[]) => `<section class="m-stack" data-gap="4" aria-label="${title}">
+          <h2 style="font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-medium)">${title}</h2>
+          <ul class="m-stack" data-gap="4" style="padding: 0; list-style: none; ${small}">
+${links.map((l) => `            <li><a href="#" style="color: var(--m-color-fg-default); text-decoration: none">${l}</a></li>`).join('\n')}
+          </ul>
+        </section>`;
+const nearby = (place: string, kind: string) =>
+  `<a href="#" class="m-stack" data-gap="0" style="color: var(--m-color-fg-default); text-decoration: none; ${small}"><span style="font-weight: var(--m-font-weight-medium)">${place}</span><span class="m-muted">${kind}</span></a>`;
+const siteFooter = (lead = '') => `<footer style="margin-block-start: auto; background: var(--m-color-bg-sunken)">
+    <div class="m-container" style="--m-layout-container-max-lg: 90rem; padding-block: var(--m-space-12) var(--m-space-6)">
+      <div class="m-stack" data-gap="12">
+        ${lead}
+        <div class="m-grid" style="--m-layout-grid-min: 15rem; --m-layout-grid-gap: var(--m-space-8) var(--m-space-6)">
+        ${footLinks('Help', ['Help articles', 'Safety while you travel', 'Cancelling a stay', 'Access needs', 'Report a problem'])}
+        ${footLinks('Hosting', ['Share your place', 'Hosting guides', 'Protection for hosts', 'Learn to host', 'Get help hosting'])}
+        ${footLinks('Hearthway', ['About us', 'News', 'Jobs', 'Gift vouchers', 'Stays for relief work'])}
+        </div>
+        <div class="m-cluster" data-justify="between" data-gap="4" style="padding-block-start: var(--m-space-6); border-block-start: var(--m-border-width-thin) solid var(--m-color-border-muted); ${small}">
+          <p class="m-cluster" data-gap="2">© 2026 Hearthway <span aria-hidden="true">·</span> <a href="#" style="color: var(--m-color-fg-default); text-decoration: none">Privacy</a> <span aria-hidden="true">·</span> <a href="#" style="color: var(--m-color-fg-default); text-decoration: none">Terms</a> <span aria-hidden="true">·</span> <a href="#" style="color: var(--m-color-fg-default); text-decoration: none">Site map</a></p>
+          <p class="m-cluster" data-gap="6" style="font-weight: var(--m-font-weight-medium)"><a href="#" class="m-cluster" data-gap="2" style="color: var(--m-color-fg-default); text-decoration: none">${icon('globe', 16)} English (UK)</a><a href="#" style="color: var(--m-color-fg-default); text-decoration: none">€ EUR</a></p>
+        </div>
+      </div>
+    </div>
+  </footer>`;
+// On a place page the band opens with where the place sits and nearby places, at the page's width
+const placeFooterLead = `<div class="m-stack" data-gap="8">
+          <nav class="m-breadcrumb" aria-label="Where this place is" style="${small}"><ol><li><a href="#">Hearthway</a></li><li><a href="#">Portugal</a></li><li><a href="#">Lisbon coast</a></li><li aria-current="page">Cascais</li></ol></nav>
+          <h2 style="${h2}">More places near Cascais</h2>
+          <div class="m-grid" style="--m-layout-grid-min: 14rem; --m-layout-grid-gap: var(--m-space-6)">
+            ${nearby('Sintra', 'Cottages and quintas')}${nearby('Ericeira', 'Surf houses')}${nearby('Comporta', 'Beach cabins')}${nearby('Lisbon', 'Flats with a view')}${nearby('Setúbal', 'Homes by the bay')}${nearby('Óbidos', 'Rooms in the walls')}
+          </div>
+        </div>`;
+
+const listDetail = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
   ${guestHeader(compactSearch)}
   <main class="m-container" style="--m-layout-container-max-lg: 90rem; padding-block: var(--m-space-4) var(--m-space-16)">
     <div class="m-stack" data-gap="12">
     ${results}
     <hr class="m-divider" style="--m-divider-spacing: 0">
-    <div class="m-container" style="--m-layout-container-padding: 0">
+    <div class="m-container" style="--m-layout-container-padding: 0px; --m-layout-container-max-lg: 70rem">
     ${detail}
     </div>
     </div>
   </main>
+  ${siteFooter(placeFooterLead)}
 </div>`;
 
 // ---------------------------------------------------------------------------------------------
@@ -548,7 +689,7 @@ const emptyState = `<div class="m-stack" data-gap="0" style="min-block-size: 100
       <h1 style="${h1}">Trips</h1>
       <section class="m-cluster" data-gap="8" data-align="center" style="padding-block: var(--m-space-8); ${hair}; border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)" aria-labelledby="tc-empty">
         <div class="m-stack" data-gap="4" style="flex: 1 1 22rem">
-          <span style="color: var(--m-color-brand-default)">${icon('compass', 40, 1.5)}</span>
+          ${icon('compass', 40, 1.5)}
           <h2 id="tc-empty" style="${h2}">Nothing planned yet</h2>
           <p>When you book a stay it shows up here, with directions, the door code and your host's details.</p>
           <div class="m-cluster" data-gap="3">
@@ -577,7 +718,7 @@ const plan = (id: string, name: string, fee: string, who: string, points: string
           ${tag ? `<div><span class="m-badge" data-tone="success">${tag}</span></div>` : ''}
           <div class="m-stack" data-gap="0"><span style="font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight)">${fee}</span><span class="m-muted" style="${small}">${who}</span></div>
           <ul class="m-stack" data-gap="3" style="padding: 0; list-style: none; ${small}">
-            ${points.map((p) => `<li class="m-cluster" data-gap="3" style="flex-wrap: nowrap" data-align="start"><span style="color: var(--m-color-success-fg); display: inline-flex">${icon('check', 16)}</span><span>${p}</span></li>`).join('')}
+            ${points.map((p) => `<li class="m-cluster" data-gap="3" style="flex-wrap: nowrap" data-align="start"><span style="display: inline-flex">${icon('check', 16)}</span><span>${p}</span></li>`).join('')}
           </ul>
         </label>`;
 
@@ -617,7 +758,7 @@ const pricing = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh"
               <div class="m-cluster" data-justify="between"><dt class="m-muted">Booking fee (13%)</dt><dd class="m-muted" style="margin: 0">−$125.45</dd></div>
               <div class="m-cluster" data-justify="between" style="padding-block-start: var(--m-space-3); ${hair}; font-weight: var(--m-font-weight-semibold)"><dt>You earn</dt><dd style="margin: 0; color: var(--m-color-success-fg)">$839.55</dd></div>
             </dl>
-            <button type="button" class="m-button" data-variant="primary" style="${gradientCta}">Use Host pays</button>
+            <button type="button" class="m-button" data-variant="primary" style="${inkCta}; inline-size: 100%">Use Host pays</button>
           </div>
         </section>
         <section class="m-stack" data-gap="0" style="flex: 2 1 26rem" aria-labelledby="tc-faq">
@@ -642,7 +783,7 @@ const pageError = (code: string, word: string, line: string, links: string[]) =>
         <div class="m-stack" data-gap="5" style="flex: 1 1 24rem">
           <p id="tc-e${code}" style="font-size: clamp(4rem, 12vw, 8rem); font-weight: var(--m-font-weight-bold); letter-spacing: -0.04em; line-height: 1">${word}</p>
           <p style="font-size: var(--m-font-size-3xl); line-height: var(--m-font-leading-tight); color: var(--m-color-fg-muted)">${line}</p>
-          <p class="m-muted" style="${small}; font-weight: var(--m-font-weight-semibold)">Error code: <code style="font-family: var(--m-font-family-mono)">${code}</code></p>
+          <p class="m-muted" style="${small}">Error code: <code style="font-family: var(--m-font-family-mono)">${code}</code></p>
           <div class="m-stack" data-gap="2">
             <span style="${small}">Try one of these instead:</span>
             <ul class="m-stack" data-gap="1" style="padding: 0; list-style: none; ${small}">${links.map((l) => `<li><a href="#" style="${link}">${l}</a></li>`).join('')}</ul>
@@ -701,11 +842,125 @@ const errors = `<div class="m-stack" data-gap="0">
           </div>
         </section>
       </div>
+      <div class="m-stack" data-gap="2">
+        <h2 style="${h2}">When a whole page can't load</h2>
+        <p class="m-muted">These replace the page. They are public pages: no search in the header, the word at 700, and a few places to go next.</p>
+      </div>
       ${pageError('404', 'Hmm.', "We can't find the page you were after.", ['Home', 'Search for a stay', 'Help centre', 'Hosting'])}
       ${pageError('500', 'Sorry.', 'Something went wrong on our side. Nothing was booked or charged.', ['Try again', 'Service status', 'Contact support'])}
       ${pageError('403', 'Not yet.', "You don't have access to this listing. Ask its host to add you as a co-host.", ['Request access', 'Switch account', 'Your listings'])}
     </div>
   </main>
+</div>`;
+
+// ---------------------------------------------------------------------------------------------
+// Reading: a public help article. The public family: an ink mark with the section's name, a single-field
+// search pill, a 40rem reading column with hairline-free sections, a hairline panel holding the page's one
+// gradient action, and the full footer. Section headings are 22/500 here, as on the source's articles.
+
+const helpMark = `<a class="m-navbar-brand" href="#" style="color: var(--m-color-fg-default); gap: var(--m-space-2); font-weight: var(--m-font-weight-semibold)">${icon('flame', 30, 2.25)} Help</a>`;
+const helpSearch = `<form role="search" class="m-cluster" data-gap="2" style="flex-wrap: nowrap; inline-size: min(100%, 24rem); padding: var(--m-space-1) var(--m-space-1) var(--m-space-1) var(--m-space-5); border: var(--m-border-width-thin) solid var(--m-color-border-default); border-radius: var(--m-radius-full); background: var(--m-color-bg-sunken)">
+      <input type="search" aria-label="Search the help guides" placeholder="Search guides and answers" style="flex: 1 1 auto; min-inline-size: 0; border: 0; background: transparent; color: inherit; font: inherit; font-weight: var(--m-font-weight-medium)">
+      <button type="submit" class="m-button" data-variant="primary" data-size="sm" data-icon-only aria-label="Search" style="--m-button-primary-bg: var(--m-color-brand-default); --m-button-primary-border: var(--m-color-brand-default); --m-button-radius: var(--m-radius-full); --m-button-height-sm: 2.25rem; flex: none">${icon('search', 16, 3)}</button>
+    </form>`;
+const helpActions = `<div class="m-navbar-actions">
+      <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Language and currency" style="--m-button-radius: var(--m-radius-full)">${icon('globe', 16)}</button>
+      <button type="button" class="m-button" data-size="sm" data-icon-only aria-label="Menu" style="--m-button-radius: var(--m-radius-full)">${icon('menu', 16)}</button>
+    </div>`;
+const related = (title: string, line: string) =>
+  `<li class="m-stack" data-gap="1"><a href="#" style="${link}">${title}</a><span style="${small}">${line}</span></li>`;
+
+const reading = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
+  ${guestHeader(helpSearch, helpActions, helpMark)}
+  <main class="m-container" style="padding-block: var(--m-space-6) var(--m-space-16)">
+    <div class="m-stack" data-gap="8">
+      <nav class="m-breadcrumb" aria-label="Breadcrumb" style="font-size: var(--m-font-size-xs)"><ol><li><a href="#">Help</a></li><li><a href="#">Booking</a></li><li><a href="#">Changes and cancelling</a></li><li aria-current="page">Changing the dates of a stay</li></ol></nav>
+      <div class="m-split" style="--m-layout-split-side: 18rem; --m-layout-split-gap: var(--m-space-16); flex-direction: row-reverse; justify-content: space-between; align-items: flex-start">
+        <aside class="m-card" data-variant="outline" data-size="sm" aria-label="Your trips" style="max-inline-size: 22rem">
+          <div class="m-card-body m-stack" data-gap="4">
+            <p>Sign in to see your stays and change them in a few taps.</p>
+            <a class="m-button" data-variant="primary" data-size="sm" href="#" style="--m-button-primary-bg: linear-gradient(to right, var(--m-color-accent-default), var(--m-color-accent-hover)); --m-button-radius: var(--m-radius-sm); inline-size: 100%">Sign in or join</a>
+          </div>
+        </aside>
+        <article class="m-stack" data-gap="6" aria-labelledby="tc-article" style="max-inline-size: 40rem; line-height: var(--m-font-leading-relaxed)">
+          <div class="m-stack" data-gap="1">
+            <p class="m-muted" style="${small}; font-weight: var(--m-font-weight-medium)">Guide · Guests</p>
+            <h1 id="tc-article" style="${h1}">Changing the dates of a stay</h1>
+          </div>
+          ${photo(1, 'calendar-days', 'A calendar on a kitchen table', '', '3 / 2', 'var(--m-radius-md)')}
+          <p>You can ask to move a stay to new dates as long as it hasn't started. Your host sees the request with the new price and has 24 hours to answer. Until they do, your original dates stay booked.</p>
+          <h2 style="${h2Public}">Before you ask</h2>
+          <ul class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-6)">
+            <li>Check the place is free on the new dates. Dates in grey on its calendar are taken.</li>
+            <li>See whether the <a href="#" style="${link}">price for the new dates</a> is higher. If it is, you pay the difference when the host says yes.</li>
+            <li>Read the <a href="#" style="${link}">cancelling rules</a>. A change counts from the day you ask, not the day it's accepted.</li>
+          </ul>
+          <h2 style="${h2Public}">Asking for new dates</h2>
+          <ol class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-6)">
+            <li>Open <a href="#" style="${link}">Trips</a> and choose the stay.</li>
+            <li>Choose Change dates, pick the new ones, and check the new total.</li>
+            <li>Send the request. We'll message you as soon as your host answers.</li>
+          </ol>
+          <p>If your host says no, nothing changes and nothing is charged. You can ask again, or <a href="#" style="${link}">cancel the stay</a> under its own rules.</p>
+          <section class="m-stack" data-gap="4" style="padding-block-start: var(--m-space-6)" aria-labelledby="tc-related">
+            <h2 id="tc-related" style="${h2Public}">Related guides</h2>
+            <ul class="m-stack" data-gap="4" style="padding: 0; list-style: none">
+              ${related('When a refund reaches you', 'How long each way of paying takes.')}
+              ${related('Adding a guest to a stay', 'Ask the host and pay any extra before you arrive.')}
+              ${related('If your host cancels', 'What we do, and what you get back.')}
+            </ul>
+          </section>
+        </article>
+      </div>
+    </div>
+  </main>
+  ${siteFooter()}
+</div>`;
+
+// ---------------------------------------------------------------------------------------------
+// Sign-in: the public header over a wall of pictures, quietened by a white veil; a centred white sheet
+// with 32px corners, lifted on the overlay shadow alone like a dialog, holds the mark, a 26/600
+// title, one field, the full-width gradient action, an "or" rule and two outlined 60px buttons for
+// other ways in. The full footer follows.
+
+const otherWay = (glyph: string, label: string) =>
+  `<button type="button" class="m-button" data-icon-only aria-label="${label}" style="--m-button-height-md: 3.75rem; --m-button-secondary-bg: var(--m-color-bg-surface); --m-button-secondary-border: var(--m-color-border-default); --m-button-secondary-hover-bg: var(--m-color-bg-sunken); --m-button-radius: var(--m-radius-md); inline-size: 3.75rem">${icon(glyph, 24, 1.5)}</button>`;
+const wall = [
+  [0, 'house'], [1, 'waves'], [2, 'trees'], [3, 'sun'], [4, 'mountain'], [5, 'tent'],
+  [2, 'utensils'], [0, 'map-pin'], [3, 'compass'], [1, 'bed-double'], [5, 'flame'], [4, 'snowflake'],
+]
+  .map(([n, g]) => photo(n as number, g as string, '', '', '3 / 4').replace(' role="img" aria-label=""', ''))
+  .join('');
+
+const signIn = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
+  ${guestHeader('')}
+  <main style="position: relative; flex: 1; display: grid; place-items: center; padding: var(--m-space-12) var(--m-space-6); overflow: hidden">
+    <div aria-hidden="true" class="m-grid" style="position: absolute; inset: 0; --m-layout-grid-min: 11rem; --m-layout-grid-gap: var(--m-space-8); padding: var(--m-space-8); align-content: start">${wall}</div>
+    <div aria-hidden="true" style="position: absolute; inset: 0; background: var(--m-color-bg-canvas); opacity: 0.55"></div>
+    <section class="m-card" aria-labelledby="tc-signin" style="position: relative; inline-size: min(100%, 30rem); --m-card-radius: 2rem; --m-card-border: transparent; --m-card-shadow: var(--m-shadow-overlay)">
+      <div class="m-card-body m-stack" data-gap="5" style="padding: var(--m-space-12) var(--m-space-6) var(--m-space-10)">
+        <div class="m-stack" data-gap="3" style="align-items: center; text-align: center">
+          <span style="color: var(--m-color-brand-default)">${icon('flame', 40, 2.25)}</span>
+          <h1 id="tc-signin" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Sign in or join</h1>
+        </div>
+        <form class="m-stack" data-gap="4">
+          <div class="m-field">
+            <label class="m-field-label" for="tc-who">Email or phone number</label>
+            <input class="m-input" id="tc-who" type="text" autocomplete="username" aria-describedby="tc-who-hint">
+            <p class="m-field-hint" id="tc-who-hint">We'll send a six-digit code to check it's you. <a href="#" style="${link}">How we use your details</a></p>
+          </div>
+          <button type="submit" class="m-button" data-variant="primary" style="--m-button-primary-bg: linear-gradient(to right, var(--m-color-accent-default), var(--m-color-accent-hover)); inline-size: 100%">Continue</button>
+        </form>
+        <div class="m-cluster" data-gap="4" style="flex-wrap: nowrap; ${small}" role="separator" aria-label="or">
+          <span aria-hidden="true" style="flex: 1; border-block-start: var(--m-border-width-thin) solid var(--m-color-border-muted)"></span>or<span aria-hidden="true" style="flex: 1; border-block-start: var(--m-border-width-thin) solid var(--m-color-border-muted)"></span>
+        </div>
+        <div class="m-cluster" data-gap="3" data-justify="center">
+          ${otherWay('key-round', 'Continue with a passkey')}${otherWay('mail', 'Email me a sign-in link')}
+        </div>
+      </div>
+    </section>
+  </main>
+  ${siteFooter()}
 </div>`;
 
 export const terracottaRecipes: ArchetypeRecipe[] = [
@@ -757,5 +1012,19 @@ export const terracottaRecipes: ArchetypeRecipe[] = [
     description:
       'A field error in burnt red with its icon, a form alert that says what did not happen, an ink toast with one action, and the full-page codes: a huge bold word, a plain line, the code, and helpful links.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Help article',
+    description:
+      'A public reading page: an ink mark with the section name and a single-field pill search, a breadcrumb, a 40rem column with a 32px title, a lead picture and 22/500 headings, underlined ink links, a hairline panel with the one gradient action, and the grey footer.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The public header over a quietened wall of pictures, a centred white sheet with 32px corners: the coral mark, a 26/600 title, one field, the full-width gradient Continue, an "or" rule and two outlined 60px buttons; the grey footer under it.',
+    html: signIn,
   },
 ];
