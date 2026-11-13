@@ -341,3 +341,6 @@ export function writePackageAssets(root: string = packageRoot()): string[] {
   }
   return Object.keys(files);
 }
+
+/** A language's generated reference (scales, colours, radius, shadows, motion, icons), as appended to its DESIGN.md. */
+export { designReference } from './archetypes/reference';
