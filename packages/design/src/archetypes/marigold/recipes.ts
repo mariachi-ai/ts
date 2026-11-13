@@ -273,7 +273,7 @@ const onboarding = `<div class="m-stack" data-gap="0" style="min-block-size: 100
     <progress class="m-progress" data-size="lg" value="2" max="5" style="flex: 1" aria-label="Step 2 of 5">Step 2 of 5</progress>
   </header>
   <main class="m-container" style="flex: 1; padding-block: var(--m-space-10)">
-    <div class="m-stack" data-gap="10" style="max-inline-size: 54rem; margin-inline: auto">
+    <div class="m-stack" data-gap="10" style="max-inline-size: 46rem; margin-inline: auto">
       <h1 style="${pageTitle}; text-align: center">What would you like to grow first?</h1>
       <div class="m-grid" style="--m-layout-grid-min: 10rem; --m-layout-grid-gap: var(--m-space-4)" role="radiogroup" aria-label="First goal">
 ${choice(I.leaf, 'success', 'Houseplants', '24 lessons')}
