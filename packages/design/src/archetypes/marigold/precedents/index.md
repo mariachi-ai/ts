@@ -1,9 +1,11 @@
 # Marigold: precedents
 
-The language's own screens: its seven recipes, built only from the library's classes and tokens, with
-invented content (a plant-care learning app). Each is measured by the probe at three widths; the
-numbers are in `fingerprint.json`. Screenshots are built with the package: `recipes/<id>.html` in the
-kit and the gallery. The source's screens stay in the private notes.
+The language's own screens: its nine recipes (the seven required shapes, then `reading` and `sign-in`),
+built only from the library's classes and tokens, with invented content (a plant-care learning app).
+Each is measured by the probe at three widths; the numbers are in `fingerprint.json`. Screenshots are
+built with the package: `recipes/<id>.html` in the kit and the gallery. The source's screens stay in
+the private notes. `dashboard` to `errors` (bar `pricing`) are the app family; `pricing`, `reading` and
+`sign-in` are public (DESIGN.md, The two families).
 
 | Id | Purpose | Kind | Patterns it uses |
 | --- | --- | --- | --- |
@@ -14,6 +16,8 @@ kit and the gallery. The source's screens stay in the private notes.
 | `empty-state` | Friends, before following anyone | empty | [nothing-here](../patterns/nothing-here.md), [show-progress](../patterns/show-progress.md) (the goals card stays) |
 | `pricing` | The paid plan against the free one, with questions | marketing | [offer-the-upgrade](../patterns/offer-the-upgrade.md) |
 | `errors` | Every size of error on one page: field, form, answer, background task, whole page | error | [show-an-error](../patterns/show-an-error.md), [choose-an-answer](../patterns/choose-an-answer.md) (the answer banners), [ask-for-details](../patterns/ask-for-details.md) (the profile form), [nothing-here](../patterns/nothing-here.md) (the whole-page block) |
+| `reading` | A how-to post on the product's blog: setting a watering reminder (public) | detail | DESIGN.md: The two families (public), Page shapes: Reading, Pictures (the three picture slots drawn as stand-ins) |
+| `sign-in` | The log-in screen: labelled fields, one green action, other ways in (public, account) | form, firstUse | [ask-for-details](../patterns/ask-for-details.md) |
 
 ## What each one measures (typical, wide)
 
@@ -27,12 +31,17 @@ characters; hues count saturated hue bins covering at least 0.2% of the window.
 | `onboarding` | 3 | 2 | 2 | 1.88 | 1 | 1 |
 | `settings` | 4 | 2 | 2 | 2.13 | 1 | 1 |
 | `empty-state` | 4 | 2 | 2 | 1.88 | 1 | 1 |
-| `pricing` | 4 | 2 | 2 | 3.65 | 2 | 1 |
+| `pricing` | 4 | 2 | 2 | 3.65 (1.88 on phones) | 2 | 1 |
 | `errors` | 4 | 2 | 2 | 1.88 | 2 | 2 |
+| `reading` | 4 | 2 | 2 | 1.88 | 2 | 0 (its one action is the white top-bar button) |
+| `sign-in` | 3 | 2 | 2 | 2.13 | 0 | 1 |
 
 ## Not yet a precedent
 
 - **A lesson screen** (one exercise, the answer and its banner) exists only in parts: the frame in
   `onboarding` and the banners in `errors`.
-- **A sign-in screen** exists only as patterns/ask-for-details.md; no recipe draws it.
+- **A landing page** exists only as words (DESIGN.md, Page shapes: Landing): the hero, feature rows,
+  the closing call and the green footer band.
+- **Recovery and "link sent"** exist only as words (patterns/ask-for-details.md); `sign-in` draws the
+  log-in form.
 - **A celebration after finishing** (a lesson complete, a run of days) isn't drawn by any recipe.

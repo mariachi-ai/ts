@@ -12,7 +12,7 @@ coming back tomorrow feels worth it.
    at the right, then one goal per row: the goal's name at 800 with a coloured icon at the right,
    and under it a thick 16px bar with the count (`26/40`) at its end.
 3. **Stat tiles** where a person's totals are shown: small outlined cards with a 2px lip, a coloured
-   20px icon and a heavy figure on the first line, a muted 13px name under it, two across.
+   20px icon and a heavy figure on the first line, a muted 15px name under it, two across.
 4. **A progress bar at the top** of anything that has steps (see
    [one-step-at-a-time](./one-step-at-a-time.md)).
 5. **Moments of completion** are told in the tone of the answer banner: a heavy title, one line with

@@ -30,7 +30,8 @@ reason to start, not a blank.
 ## What it does not do
 
 - It doesn't say "No results", "Empty" or "Nothing here" as the heading.
-- It doesn't use an illustration or a picture; one icon in a circle.
+- It doesn't use an illustration or a picture; one icon in a circle. (Pictures belong only in the
+  public pages' picture slots: DESIGN.md, Page shapes, Pictures.)
 - It doesn't put the buttons side by side; they stack, primary on top.
 - It doesn't remove the tabs or the title to make room.
 - It doesn't use grey for the circle; the circle always has a tint in a tone.
