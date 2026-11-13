@@ -5,7 +5,7 @@
 ## What Obsidian does (parts in order)
 
 - **In a field**: the border turns red; a red 13px message replaces the hint and says how to fix it.
-- **In a form or dialog**: a danger callout at the top (surface colour, hairline, 8px radius, a 16px red icon): "2 fields need fixing" and "The issue wasn't created."
+- **In a form or dialog**: a danger alert at the top (the faint red tint, a red hairline, 8px radius, a 16px red icon, the title and body in red text): "2 fields need fixing" and "The issue wasn't created."
 - **Elsewhere**: a toast bottom right (raised, hairline, overlay shadow) with what failed, what happened to the change, and one action ("Retry"); errors stay until dismissed.
 - **A whole page**: centred in the panel: a 32px outline icon in subtle grey, the code in small mono, a 17px semibold title, one sentence, one or two small buttons.
 

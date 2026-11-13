@@ -28,6 +28,7 @@
 - No coloured row backgrounds for state: state is a 14px glyph (shape plus colour), never a filled badge.
 - No row actions shown by default; no checkbox column; no pagination (lists scroll).
 - No large text: nothing in a row is above 13px.
+- Not on public pages: the writing index and changelog have no group bars or glyph rows. Posts are grouped by kind under 48px titles, three to a row split by hairlines, with older ones in 56px archive rows (DESIGN.md, Public lists).
 
 ## Why
 

@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Obsidian's seven layout recipes: framework-free HTML using only @mariachi/design classes and
+ * Obsidian's nine layout recipes (the seven required shapes, then reading and sign-in): framework-free HTML using only @mariachi/design classes and
  * tokens (no colour literals), with sample data from a made-up product team ("Lantern", squads
  * Platform, Mobile and Growth). They follow the language's real screen patterns: a darker sidebar
  * beside one inset panel with a hairline edge, 44px header bars, dense 36px rows with status and
@@ -78,6 +78,11 @@ const I = {
   lock: '<rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   checkCircle: '<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
   rotate: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+  book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+  code: '<path d="m16 18 6-6-6-6"/><path d="m8 6-6 6 6 6"/>',
+  message: '<path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/>',
 };
 
 // The language's own glyphs: status circles and priority bars, drawn from tokens
@@ -156,9 +161,12 @@ const avatar = (initials: string, name: string, size = 'sm') =>
   `<span class="m-avatar" data-size="${size}" role="img" aria-label="${name}" style="font-size: 0.625rem">${initials}</span>`;
 const iconBtn = (paths: string, name: string, size = 'sm') =>
   `<button type="button" class="m-button" data-variant="ghost" data-size="${size}" data-icon-only aria-label="${name}">${icon(paths, 16)}</button>`;
-// A squad's mark: a small rounded square in a tone
+// A squad's mark: a small rounded square in an identity hue (never indigo, which is kept for the primary)
 const mark = (tone: string, letter: string) =>
   `<span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 1rem; block-size: 1rem; border-radius: var(--m-radius-sm); background: var(--m-color-${tone}); color: var(--m-color-bg-canvas); font-size: 0.625rem; font-weight: var(--m-font-weight-semibold); flex: none">${letter}</span>`;
+// The product's own mark: monochrome in the default text colour, on every page (never indigo)
+const logo = (large = false) =>
+  `<span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: ${large ? '3rem' : '1.25rem'}; block-size: ${large ? '3rem' : '1.25rem'}; border-radius: ${large ? 'var(--m-radius-lg)' : 'var(--m-radius-sm)'}; background: var(--m-color-fg-default); color: var(--m-color-bg-canvas); font-size: ${large ? 'var(--m-font-size-2xl)' : '0.75rem'}; font-weight: var(--m-font-weight-semibold); flex: none">L</span>`;
 
 // The app sidebar: its own sections and order; the treatment is the reference's
 type NavItem = [string, string, string?];
@@ -174,7 +182,7 @@ ${items
 
 const sidebar = (current: string) => `<nav class="m-sidebar" aria-label="Main" style="min-block-size: 100%">
     <div class="m-cluster" data-justify="between" style="padding: var(--m-space-1) var(--m-space-1) var(--m-space-2)">
-      <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="font-weight: var(--m-font-weight-semibold)">${mark('accent-default', 'L')} Lantern ${icon(I.down, 12)}</button>
+      <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="font-weight: var(--m-font-weight-semibold)">${logo()} Lantern ${icon(I.down, 12)}</button>
       <span class="m-cluster" data-gap="1">${iconBtn(I.search, 'Search')}<button type="button" class="m-button" data-size="sm" data-icon-only aria-label="New issue">${icon(I.compose, 16)}</button></span>
     </div>
     <div class="m-sidebar-section">
@@ -201,7 +209,7 @@ const sidebar = (current: string) => `<nav class="m-sidebar" aria-label="Main" s
     <details class="m-sidebar-section m-sidebar-group" open>
       <summary class="m-sidebar-heading">Squads</summary>
       <ul>
-        <li><a class="m-sidebar-link" href="#">${mark('accent-default', 'P')} Platform</a>
+        <li><a class="m-sidebar-link" href="#">${mark('warning-solid', 'P')} Platform</a>
           ${navList(
             [
               ['queue', 'Queue', '14'],
@@ -420,7 +428,7 @@ const issues: Record<string, Issue[]> = {
       'Show retry count on delivery rows',
       'low',
       'progress',
-      [['accent-default', 'Feature']],
+      [['success-solid', 'Feature']],
       ['YT', 'Yuki Tanaka'],
       'Nov 11',
     ],
@@ -452,7 +460,7 @@ const issues: Record<string, Issue[]> = {
       'Return org instead of workspace in API payloads',
       'low',
       'backlog',
-      [['accent-default', 'API']],
+      [['fg-muted', 'API']],
       null,
       'Nov 4',
     ],
@@ -492,7 +500,7 @@ const prop = (name: string, value: string) =>
 const listDetail = shell(
   'Queue',
   bar(
-    `${mark('accent-default', 'P')} ${crumb('Platform', 'Queue')} ${viewTabs(['All', 'Active', 'Backlog'], 'Active', 'Views')}`,
+    `${mark('warning-solid', 'P')} ${crumb('Platform', 'Queue')} ${viewTabs(['All', 'Active', 'Backlog'], 'Active', 'Views')}`,
     `${iconBtn(I.bell, 'Subscribe')} ${iconBtn(I.more, 'More')}`,
   ),
   `    <div class="m-cluster" data-justify="between" style="padding: var(--m-space-1) var(--m-space-3) var(--m-space-1) var(--m-space-2); border-block-end: ${quiet}">
@@ -552,8 +560,8 @@ const cmdItem = (paths: string, text: string, keys: string[], active = false) =>
   `<button type="button" class="m-menu-item" role="option" aria-selected="${active}"${active ? ' style="background: var(--m-popover-item-hover-bg)"' : ''}>${icon(paths, 16)} <span style="flex: 1; text-align: start">${text}</span> <span class="m-menu-shortcut">${kbd(...keys)}</span></button>`;
 
 const onboarding = `<div class="m-stack" data-align="center" style="min-block-size: 100vh; background: var(--m-color-bg-canvas); padding: var(--m-space-8) var(--m-space-4) var(--m-space-16)">
-  <div class="m-cluster" data-justify="between" style="inline-size: 100%; max-inline-size: 64rem">
-    <span class="m-cluster" data-gap="2" style="${small}; font-weight: var(--m-font-weight-semibold)">${mark('accent-default', 'L')} Lantern</span>
+  <div class="m-cluster" data-justify="between" style="inline-size: 100%; max-inline-size: var(--m-layout-container-max-lg)">
+    <span class="m-cluster" data-gap="2" style="${small}; font-weight: var(--m-font-weight-semibold)">${logo()} Lantern</span>
     <button type="button" class="m-button" data-variant="ghost" data-size="sm">Skip setup</button>
   </div>
   <div class="m-container" data-size="sm" style="--m-layout-container-max-sm: 35rem; margin-block-start: clamp(var(--m-space-8), 10vh, var(--m-space-16))">
@@ -614,7 +622,7 @@ const settingsNav = (current: string) => {
     <div class="m-sidebar-section">
       <h2 class="m-sidebar-heading">Squads</h2>
       <ul>
-        <li><a class="m-sidebar-link" href="#">${mark('accent-default', 'P')} Platform</a></li>
+        <li><a class="m-sidebar-link" href="#">${mark('warning-solid', 'P')} Platform</a></li>
         <li><a class="m-sidebar-link" href="#">${mark('info-solid', 'M')} Mobile</a></li>
         <li><a class="m-sidebar-link" href="#">${mark('success-solid', 'G')} Growth</a></li>
       </ul>
@@ -708,7 +716,7 @@ const settings = `<div class="m-split" style="--m-layout-split-side: 14.5rem; --
 const emptyState = shell(
   'Sprints',
   bar(
-    `${mark('accent-default', 'P')} ${crumb('Platform', 'Sprints')} ${viewTabs(['Current', 'Upcoming', 'Past'], 'Current', 'Sprints')}`,
+    `${mark('warning-solid', 'P')} ${crumb('Platform', 'Sprints')} ${viewTabs(['Current', 'Upcoming', 'Past'], 'Current', 'Sprints')}`,
     iconBtn(I.more, 'More'),
   ),
   `    <div class="m-stack" data-gap="5" data-align="center" style="flex: 1; justify-content: center; padding: var(--m-space-16) var(--m-space-6); text-align: center">
@@ -761,10 +769,39 @@ const yearly = (on: boolean) =>
 const compareRow = (feature: string, cells: string[]) =>
   `<tr><th scope="row" style="font-weight: var(--m-font-weight-regular); color: var(--m-color-fg-muted)">${feature}</th>${cells.map((c) => `<td>${c === 'y' ? tick : c === 'n' ? no : c}</td>`).join('')}</tr>`;
 
-const pricing = `<div style="background: var(--m-color-bg-canvas); min-block-size: 100vh">
-  <header class="m-navbar" data-sticky data-translucent>
-    <a class="m-navbar-brand" href="#">${mark('accent-default', 'L')} Lantern</a>
-    <nav class="m-navbar-nav" aria-label="Main" style="margin-inline-start: auto">
+// The public site's footer: the mark alone, five groups of 13px links, a row of legal links; a hairline above
+const footerGroups: [string, string[]][] = [
+  ['Lantern', ['Queue', 'Sprints', 'Roadmaps', 'Reports', 'Pricing']],
+  ['Work with it', ['Command menu', 'Integrations', 'Phone app', 'API', 'Release notes']],
+  ['About us', ['Story', 'Customers', 'Jobs', 'Writing']],
+  ['Learn', ['Docs', 'Guides', 'System status', 'Trust']],
+  ['Follow', ['Forum', 'Newsletter', 'Video']],
+];
+const siteFooter = `<footer style="border-block-start: ${hair}; background: var(--m-color-bg-sunken); ${small}">
+    <div class="m-container" style="padding-block: var(--m-space-12)">
+      <div class="m-cluster" data-align="start" data-gap="8" style="row-gap: var(--m-space-10)">
+        <a href="#" aria-label="Lantern home" style="display: inline-flex; flex: 1 1 8rem">${logo()}</a>
+        ${footerGroups
+          .map(
+            ([h, links]) => `<nav class="m-stack" data-gap="4" aria-label="${h}" style="flex: 1 1 8rem">
+          <h2 style="${small}; font-weight: var(--m-font-weight-medium)">${h}</h2>
+          <ul class="m-stack" data-gap="2" style="padding: 0; list-style: none">${links.map((l) => `<li><a href="#" class="m-muted" style="text-decoration: none">${l}</a></li>`).join('')}</ul>
+        </nav>`,
+          )
+          .join('\n        ')}
+      </div>
+      <div class="m-cluster" data-gap="5" style="margin-block-start: var(--m-space-16)">
+        <a href="#" class="m-muted" style="text-decoration: none">Privacy</a>
+        <a href="#" class="m-muted" style="text-decoration: none">Terms</a>
+        <a href="#" class="m-muted" style="text-decoration: none">Cookie settings</a>
+      </div>
+    </div>
+  </footer>`;
+
+const pricing = `<div style="background: var(--m-color-bg-sunken); min-block-size: 100vh">
+  <header class="m-navbar" data-sticky data-translucent style="--m-navbar-padding-x: max(var(--m-layout-container-padding), calc((100% - var(--m-layout-container-max-lg)) / 2))">
+    <a class="m-navbar-brand" href="#">${logo()} Lantern</a>
+    <nav class="m-navbar-nav" aria-label="Main" style="justify-content: flex-end">
       <a class="m-navbar-link" href="#">Features</a>
       <a class="m-navbar-link" href="#">Changelog</a>
       <a class="m-navbar-link" href="#">Stories</a>
@@ -778,11 +815,11 @@ const pricing = `<div style="background: var(--m-color-bg-canvas); min-block-siz
   </header>
   <main>
     <section style="padding-block: var(--m-space-16) var(--m-space-12)">
-      <div class="m-container" style="--m-layout-container-max-lg: 84rem">
-        <h1 style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Plans</h1>
+      <div class="m-container">
+        <h1 style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Plans</h1>
       </div>
     </section>
-    <div class="m-container" style="--m-layout-container-max-lg: 84rem">
+    <div class="m-container">
       <div class="m-grid" style="--m-layout-grid-min: 15rem; --m-layout-grid-gap: var(--m-space-8) 0; margin-inline: calc(var(--m-space-6) * -1)">
         ${plan('Solo', '$0', '', 'Free for one person', ['One squad', '300 open issues', 'Command menu and shortcuts', 'Two integrations'], 'Start free', false, true)}
         ${plan('Crew', '$9', 'per member/month', yearly(true), ['Everything in Solo', 'Five squads', 'Unlimited issues', 'Sprints and roadmaps'], 'Start a trial')}
@@ -791,7 +828,7 @@ const pricing = `<div style="background: var(--m-color-bg-canvas); min-block-siz
       </div>
       <section class="m-stack" data-gap="4" aria-labelledby="ob-compare" style="margin-block-start: var(--m-space-16)">
         <h2 id="ob-compare" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight)">Compare plans</h2>
-        <div class="m-table-wrap">
+        <div class="m-table-wrap" style="--m-table-bg: transparent">
           <table class="m-table" style="--m-table-header-bg: transparent; --m-table-cell-padding-y: var(--m-space-3)">
             <thead><tr><th scope="col">Feature</th><th scope="col">Solo</th><th scope="col">Crew</th><th scope="col">Fleet</th><th scope="col">Charter</th></tr></thead>
             <tbody>
@@ -816,6 +853,7 @@ const pricing = `<div style="background: var(--m-color-bg-canvas); min-block-siz
       </section>
     </div>
   </main>
+  ${siteFooter}
 </div>`;
 
 /* ---------------------------------------------------------------- errors */
@@ -833,14 +871,14 @@ const fullPage = (paths: string, code: string, title: string, sentence: string, 
 
 const errors = shell(
   'Queue',
-  bar(`${mark('accent-default', 'P')} ${crumb('Platform', 'Queue', 'New issue')}`, iconBtn(I.more, 'More')),
+  bar(`${mark('warning-solid', 'P')} ${crumb('Platform', 'Queue', 'New issue')}`, iconBtn(I.more, 'More')),
   `    <div class="m-container" style="padding-block: var(--m-space-8) var(--m-space-12)">
       <div class="m-stack" data-gap="10">
         <section class="m-stack" data-gap="3" aria-labelledby="ob-form-errors">
           <h2 id="ob-form-errors" style="${meta}">In a form</h2>
           <div class="m-dialog" data-static data-size="md" role="dialog" aria-modal="false" aria-labelledby="ob-new-title">
             <header class="m-dialog-header">
-              <div><span class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><span class="m-badge" data-variant="solid" style="border-radius: var(--m-radius-md)">${mark('accent-default', 'P')} PLT</span><span class="m-subtle" aria-hidden="true">›</span><h3 class="m-dialog-title" id="ob-new-title" style="font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-medium)">New issue</h3></span></div>
+              <div><span class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><span class="m-badge" data-variant="solid" style="border-radius: var(--m-radius-md)">${mark('warning-solid', 'P')} PLT</span><span class="m-subtle" aria-hidden="true">›</span><h3 class="m-dialog-title" id="ob-new-title" style="font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-medium)">New issue</h3></span></div>
               ${iconBtn(I.x, 'Close')}
             </header>
             <div class="m-dialog-body m-stack" data-gap="4">
@@ -898,12 +936,155 @@ const errors = shell(
     </div>`,
 );
 
+/* ---------------------------------------------------------------- reading */
+
+// A public docs article: the site's darkest step everywhere, a docs sidebar split off by a hairline (no
+// inset panel), a 64px bar, a 40rem article, contents on the right, related articles at the end
+const docRow = (ic: keyof typeof I, text: string, current = false) =>
+  `<li><a class="m-sidebar-link" href="#"${current ? ' aria-current="page"' : ''}>${icon(I[ic], 16)} ${text}</a></li>`;
+const docSection = (heading: string, rows: string) => `<div class="m-sidebar-section">
+        <h2 class="m-sidebar-heading">${heading}</h2>
+        <ul>
+          ${rows}
+        </ul>
+      </div>`;
+const roundBtn = (paths: string, name: string) =>
+  `<button type="button" class="m-button" data-size="lg" data-icon-only aria-label="${name}" style="--m-button-radius: var(--m-radius-full)">${icon(paths, 16)}</button>`;
+const figure = (label: string) =>
+  `<figure role="img" aria-label="${label}" style="display: grid; place-items: center; aspect-ratio: 16 / 10; margin-block: var(--m-space-5); border-radius: var(--m-radius-lg); background: var(--m-color-bg-surface); color: var(--m-color-fg-subtle)">${icon(I.image, 24)}</figure>`;
+const contents: [string, number, boolean?][] = [
+  ['How a sprint runs', 0, true],
+  ['Start a sprint', 1],
+  ['Carry-over', 1],
+  ['Sprint reports', 0],
+  ['Related articles', 0],
+];
+const related = (ic: keyof typeof I, title: string, section: string) =>
+  `<a class="m-card" href="#" style="--m-card-bg: transparent; color: inherit; text-decoration: none">
+            <div class="m-card-body m-stack" data-gap="1">
+              <span class="m-muted" style="display: inline-flex; margin-block-end: var(--m-space-3)">${icon(I[ic], 16)}</span>
+              <span style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-medium)">${title}</span>
+              <span class="m-muted" style="${small}">${section}</span>
+            </div>
+          </a>`;
+
+const reading = `<div class="m-cluster" data-gap="0" data-align="stretch" style="flex-direction: row-reverse; min-block-size: 100vh; background: var(--m-color-bg-sunken)">
+  <div class="m-stack" data-gap="0" style="flex: 999 1 0; min-inline-size: 60%">
+    <header class="m-cluster" data-justify="between" style="min-block-size: 4rem; padding-inline: var(--m-space-6) var(--m-space-4); border-block-end: ${hair}">
+      <nav class="m-breadcrumb" aria-label="Breadcrumb" style="--m-breadcrumb-separator: '/'; --m-breadcrumb-separator-fg: var(--m-color-fg-muted)"><ol><li><a href="#">Working in squads</a></li><li><a href="#" aria-current="page">Sprints</a></li></ol></nav>
+      <div class="m-cluster" data-gap="2">${roundBtn(I.sun, 'Switch to light')}<a class="m-button" data-variant="primary" data-size="lg" href="#" style="${invert}">Start free</a></div>
+    </header>
+    <div class="m-cluster" data-align="start" data-gap="12" style="justify-content: center; padding: var(--m-space-12) var(--m-space-6) var(--m-space-16)">
+      <main style="flex: 0 1 40rem; min-inline-size: 0">
+        <article>
+          <h1 style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Sprints</h1>
+          <p class="m-prose" style="margin-block-start: var(--m-space-5)">Plan two weeks of work, watch what's left, and let unfinished issues roll into the next sprint on their own.</p>
+          ${figure('A squad\'s sprint view: this sprint\'s issues grouped by status, with the scope bar above them')}
+          <div class="m-prose" style="--m-prose-max-width: none">
+            <h2 id="ob-runs">How a sprint runs</h2>
+            <p>A sprint belongs to one squad and lasts two weeks by default. Issues you add while it runs count as added scope, so the report can tell planned work from work that arrived late.</p>
+            <p>You can change the length and the start day in the <a href="#">squad's settings</a>. A new length applies from the next sprint; the current one keeps its dates.</p>
+            <h3 id="ob-start">Start a sprint</h3>
+            <ol>
+              <li>Open the squad's Sprints view, or press <kbd class="m-kbd">G</kbd> <kbd class="m-kbd">S</kbd> from anywhere.</li>
+              <li>Press <kbd class="m-kbd">⇧</kbd> <kbd class="m-kbd">S</kbd> and pick the issues to bring in, or drag them from the backlog.</li>
+              <li>Check the dates and choose <strong>Start sprint</strong>.</li>
+            </ol>
+            <div class="m-alert" role="note" style="--m-alert-font-size: var(--m-font-size-md)">
+              <span class="m-alert-icon m-muted">${icon(I.info, 16)}</span>
+              <div class="m-alert-content"><p class="m-alert-body"><strong>Planning ahead.</strong> You can fill the next two sprints before they start; their issues stay in the backlog view until then.</p></div>
+            </div>
+            <h3 id="ob-carry">Carry-over</h3>
+            <p>When a sprint ends, open issues move to the next one with their status kept. Each moved issue gets a <code>carried</code> marker so repeat carry-overs stand out in the report.</p>
+            <h2 id="ob-reports">Sprint reports</h2>
+            <p>Every finished sprint keeps a report: scope at the start, scope added, what was done, and what carried over.</p>
+            ${figure('A sprint report: done, added and carried-over counts above a burn-up line')}
+            <p>Reports are read-only. To change what a past sprint counted, edit the issues; the report follows within a minute.</p>
+          </div>
+          <nav aria-labelledby="ob-related" class="m-stack" data-gap="4" style="margin-block-start: var(--m-space-16)">
+            <h2 id="ob-related" class="m-muted" style="${small}; font-weight: var(--m-font-weight-medium)">Related articles</h2>
+            <div class="m-grid" style="--m-layout-grid-min: 11rem">
+          ${related('sprint', 'Planning a sprint', 'Working in squads')}
+          ${related('queue', 'The squad queue', 'Working in squads')}
+          ${related('map', 'Roadmaps', 'Planning')}
+            </div>
+          </nav>
+        </article>
+      </main>
+      <nav aria-label="On this page" style="flex: 0 0 13rem; position: sticky; inset-block-start: var(--m-space-12)">
+        <ul style="padding: 0; list-style: none; border-inline-start: 2px solid var(--m-color-border-default); ${small}">
+          ${contents
+            .map(
+              ([t, depth, current]) =>
+                `<li><a href="#"${current ? ' aria-current="location"' : ''} style="display: block; padding-block: var(--m-space-1); padding-inline-start: calc(var(--m-space-3) * ${depth + 1}); margin-inline-start: -2px; border-inline-start: 2px solid ${current ? 'var(--m-color-fg-default)' : 'transparent'}; color: var(--m-color-fg-${current ? 'default' : 'muted'}); text-decoration: none">${t}</a></li>`,
+            )
+            .join('\n          ')}
+        </ul>
+      </nav>
+    </div>
+  </div>
+  <nav class="m-sidebar" aria-label="Docs" style="flex: 1 1 17.5rem; --m-sidebar-width: 17.5rem; --m-sidebar-padding: 0; --m-sidebar-border: var(--m-color-border-default); --m-sidebar-section-gap: 0; --m-sidebar-link-fg: var(--m-color-fg-muted); --m-sidebar-link-active-bg: transparent; --m-sidebar-link-padding-y: 0.375rem">
+    <div class="m-cluster" data-justify="between" style="flex-wrap: nowrap; min-block-size: 4rem; padding-inline: var(--m-space-5) var(--m-space-4); border-block-end: ${hair}">
+      <a href="#" class="m-cluster" data-gap="3" style="flex-wrap: nowrap; color: inherit; text-decoration: none">${logo()}<span aria-hidden="true" style="inline-size: 1px; block-size: 1.25rem; background: var(--m-color-border-default)"></span><span style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-medium)">Docs</span></a>
+      ${roundBtn(I.search, 'Search the docs')}
+    </div>
+    <div class="m-stack" data-gap="5" style="flex: 1; padding: var(--m-space-5) var(--m-space-3)">
+      ${docSection('Getting started', [docRow('compass', 'Start here'), docRow('layers', 'How Lantern fits together')].join('\n          '))}
+      ${docSection(
+        'Working in squads',
+        [
+          docRow('queue', 'The queue'),
+          `<li><a class="m-sidebar-link" href="#" aria-current="page">${icon(I.sprint, 16)} Sprints</a>
+            <ul>
+              <li><a class="m-sidebar-link" href="#">Planning a sprint</a></li>
+              <li><a class="m-sidebar-link" href="#">Carry-over rules</a></li>
+              <li><a class="m-sidebar-link" href="#">Reading a report</a></li>
+            </ul>
+          </li>`,
+          docRow('flag', 'Milestones'),
+        ].join('\n          '),
+      )}
+      ${docSection('Planning', [docRow('map', 'Roadmaps'), docRow('pkg', 'Releases')].join('\n          '))}
+      ${docSection('Connect', [docRow('plug', 'Integrations'), docRow('keyboard', 'Keyboard shortcuts')].join('\n          '))}
+    </div>
+    <ul style="padding: var(--m-space-4) var(--m-space-3); border-block-start: ${hair}">
+      ${docRow('book', 'Docs', true)}
+      ${docRow('code', 'API reference')}
+      ${docRow('doc', 'Guides')}
+      ${docRow('message', 'Contact support')}
+    </ul>
+  </nav>
+</div>`;
+
+/* ---------------------------------------------------------------- sign-in */
+
+// The sign-in screen: the app's family (the person's theme, the frame colour, indigo for the one primary)
+// in the public pill shape: an 18rem column of 44px pills, no navbar, no footer
+const method = (text: string, primary = false) =>
+  `<button type="button" class="m-button"${primary ? ' data-variant="primary"' : ''} style="--m-button-radius: var(--m-radius-full); inline-size: 100%; block-size: 2.75rem">${text}</button>`;
+
+const signIn = `<div class="m-stack" data-align="center" style="min-block-size: 100vh; justify-content: center; padding: var(--m-space-16) var(--m-space-4) 20vh; background: var(--m-color-bg-sunken)">
+  <main class="m-container" data-size="sm" style="--m-layout-container-padding: 0px">
+    <div class="m-stack" data-gap="6" data-align="center" style="text-align: center">
+      ${logo(true)}
+      <h1 style="margin-block-start: var(--m-space-2); font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-medium)">Sign in to Lantern</h1>
+      <div class="m-stack" data-gap="4" style="inline-size: 100%">
+        ${method('Sign in with Google', true)}
+        ${method('Sign in with email')}
+        ${method('Single sign-on')}
+        ${method('Use a passkey')}
+      </div>
+      <p class="m-muted" style="margin-block-start: var(--m-space-2); ${small}">New here? <a href="#" style="color: var(--m-color-fg-default); text-decoration: none">Create a workspace</a> or <a href="#" style="color: var(--m-color-fg-default); text-decoration: none">see what Lantern does</a></p>
+    </div>
+  </main>
+</div>`;
+
 export const obsidianRecipes: ArchetypeRecipe[] = [
   {
     name: 'dashboard',
     title: 'Dashboard',
     description:
-      'A team overview in the inset panel: a row of plain figures, a stacked bar chart and a sprint meter in hairline cards, then a full-bleed projects list.',
+      'A team overview in the inset panel: a row of plain figures and a stacked bar chart straight on the panel, a sprint side pane split off by a hairline, then a full-bleed projects list under a grey bar.',
     html: dashboard,
   },
   {
@@ -938,7 +1119,7 @@ export const obsidianRecipes: ArchetypeRecipe[] = [
     name: 'pricing',
     title: 'Pricing',
     description:
-      'The public page: a blurred bar, a faint indigo glow behind the title, plan columns split by hairlines with a yearly switch and pill buttons (inverted for the one to pick), then a comparison list and questions.',
+      'The public page on the site\'s darkest step: a blurred bar, a 48px title alone, plan columns split by hairlines with a yearly switch and pill buttons (inverted for the one to pick), a comparison list, questions and the site footer.',
     html: pricing,
   },
   {
@@ -947,5 +1128,19 @@ export const obsidianRecipes: ArchetypeRecipe[] = [
     description:
       'Field errors under the field and a summary above them in the new-issue dialog, an offline toast that keeps the change, and full pages for 404, 500 and no access.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A public docs article on the site\'s darkest step: a 280px docs sidebar split off by a hairline, a 64px bar with a "/" breadcrumb and an inverted pill, a 32px title, 15px reading text in a 40rem column with framed figures and a neutral callout, contents on the right, related articles at the end.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The sign-in screen: the product mark, a 17px title and an 18rem column of 44px pills, the first method solid indigo and the rest grey, then one muted line; no navbar or footer, on the frame colour in the person\'s theme.',
+    html: signIn,
   },
 ];

@@ -23,7 +23,7 @@
 
 - No cards, shadows or "most popular" ribbons; no coloured plan headers.
 - No glow, gradient or illustration behind the title (removed in the faithfulness pass: the source page has none).
-- No indigo buttons on public pages: the main action is inverted, the rest translucent grey.
+- No indigo buttons on the site: the main action is inverted, the rest translucent grey. (Sign-in is the one public-looking screen with an indigo pill, because it belongs to the app's family.)
 
 ## Why
 

@@ -2,10 +2,10 @@
 
 At most ten, ordered by how much the answer would change the library.
 
-1. **Buttons on first-use screens: 6px rectangles or 40px pills?** The app uses 6px buttons; the public pages and the sign-in screen use full pills, with the primary filling a narrow column. `onboarding` uses a 6px indigo button 20rem wide. Which family does setup belong to?
+1. **Onboarding and the sign-in email step: which shape?** Sign-in is observed: 44px pills in an 18rem column, the first indigo. Onboarding (behind sign-up) uses the app's 6px indigo button at 20rem, and the email step's field is inferred as 44px with 8px corners. Does setup continue sign-in's pills, and is the email field a pill or a rectangle?
 2. **Cards inside the app: when, if ever?** After the faithfulness pass only comments and settings panels are hairline boxes; charts, figures and lists sit on the panel. Is there a screen where the product does use cards in the app (a board view?) and what are its rules?
 3. **The light theme: equal twin or secondary?** The language measures in light by default but was studied dark; light keeps a 1px contact shadow on cards. Is light used enough that it should get its own measured source?
-4. **Why do public pages invert the main action while the app uses indigo?** Recorded, not explained. Is indigo reserved for inside the product on purpose?
+4. **Why does the site invert the main action while the app and sign-in use indigo?** Recorded, not explained: the site is always dark and never indigo; sign-in follows the person's theme and is. Is indigo reserved for inside the product on purpose, with sign-in counted as inside?
 5. **Headings in the app: are there any above 24px?** The app recipes top out at 24px (heading ratio 1.85); public pages go to 48–64px. Is there an app screen (a document, a project overview) with a display-size title?
 6. **Grouping bars versus header rows.** Lists group under grey bars with no header row; the projects list has a header row. What decides it: the number of columns, or the kind of item?
 7. **Empty groups.** Are groups with no items hidden or shown with a zero count? The library infers hidden.
