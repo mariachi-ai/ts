@@ -176,6 +176,23 @@ tags, all seven recipes, recipe markup that uses only known classes and tokens (
 the `DESIGN.md` sections with every component specified, a drawable icon for every action, and a
 gallery with every component and state.
 
+## Copying a language into a project (kits)
+
+A project can own its language instead of depending on the package, so the language never changes under it. The build writes `dist/kits/<id>/` for every language and preset. A kit is the base only:
+
+| File | What it is |
+| --- | --- |
+| `index.css` | Imports the three below, in order |
+| `fonts.css`, `fonts/*.woff2` | The body and heading families, self-hosted (Latin and Latin Extended, from `@fontsource`). Mono falls back to the system's |
+| `base.css` | The reset and base layers, no components |
+| `tokens.css` | The language's tokens, light and dark, on `[data-theme="<id>"]` |
+| `DESIGN.md` | The language in words, with the generated reference. The plain presets get a short generated one |
+| `kit.json` | The id, label, kind, mode, the Mariachi version and commit, the fonts, and a sha256 for every file as written |
+
+Copy the folder as it is (Ensemble puts it at `apps/web/src/design/`), import `index.css` first, and set `data-theme` on `<html>`. Every CSS file opens with a header naming the language, the commit and the library source. **Components aren't copied.** A project makes each one when it needs it: the component's CSS in `dist/css/components/<name>.css` reads only `--m-*` tokens, so it takes the language's look from the kit, and the language's `DESIGN.md` says how it draws it. The project's own changes go in its own CSS after the kit. `kit.json`'s shas tell a tool which files the project has edited. Moving a project to a newer kit is a deliberate step, never automatic.
+
+Kits are build output and aren't in the npm package.
+
 ## Markup contract
 
 - Components are classes prefixed `m-` (`.m-button`, `.m-card`). Parts are `.m-<component>-<part>`
