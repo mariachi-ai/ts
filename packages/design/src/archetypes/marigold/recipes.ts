@@ -72,9 +72,10 @@ const label =
   'font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-bold); text-transform: uppercase; letter-spacing: var(--m-font-tracking-wide); color: var(--m-color-fg-muted)';
 const heading = 'font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold)';
 const pageTitle = 'font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-bold); line-height: var(--m-font-leading-tight)';
-// The marketing headline: the display face at its heaviest, lowercase, tight
+// The marketing headline: the display face at the one heavy weight (the reference uses two weights a screen),
+// lowercase, tight
 const display =
-  'font-family: var(--m-font-family-display); font-size: var(--m-font-size-4xl); font-weight: 900; letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight); text-transform: lowercase';
+  'font-family: var(--m-font-family-display); font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight); text-transform: lowercase';
 const line = 'var(--m-border-width-thin) solid var(--m-color-border-default)';
 const hue = (tone: string) => `color: var(--m-color-${tone})`;
 const upper = 'text-transform: uppercase; letter-spacing: var(--m-font-tracking-wide)';
@@ -95,7 +96,7 @@ const navItems: [keyof typeof I, string][] = [
 
 const sidebar = (current: string) => `  <nav class="m-sidebar" aria-label="Main">
     <div class="m-stack" data-gap="6">
-      <a href="#" style="padding: var(--m-space-2) var(--m-space-4); font-family: var(--m-font-family-display); font-size: var(--m-font-size-2xl); font-weight: 900; letter-spacing: var(--m-font-tracking-tight); color: var(--m-color-brand-default); text-decoration: none">bramblewood</a>
+      <a href="#" style="padding: var(--m-space-2) var(--m-space-4); font-family: var(--m-font-family-display); font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-font-tracking-tight); color: var(--m-color-brand-default); text-decoration: none">bramblewood</a>
       <div class="m-sidebar-section">
         <ul style="${upper}; font-weight: var(--m-font-weight-bold)">
 ${navItems
@@ -170,7 +171,7 @@ const node = (state: 'done' | 'current' | 'locked', offset: number, ic: string, 
 const dashboard = shell(
   'Path',
   `      <main class="m-stack" data-gap="8" style="flex: 1 1 30rem; max-inline-size: 38rem; margin-inline: auto">
-        <section class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding: var(--m-space-4) var(--m-space-5); border-radius: var(--m-radius-lg); background: var(--m-color-brand-default); color: var(--m-color-brand-fg); box-shadow: var(--m-button-shadow)" aria-labelledby="mg-unit">
+        <section class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding: var(--m-space-4) var(--m-space-5); border-radius: var(--m-radius-lg); background: var(--m-color-brand-default); color: var(--m-color-brand-fg); border-block-end: var(--m-border-width-thick) solid var(--m-color-accent-default)" aria-labelledby="mg-unit">
           <div class="m-stack" data-gap="1">
             <span style="${upper}; font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-bold); opacity: 0.8">Section 2, unit 4</span>
             <h1 id="mg-unit" style="${heading}">Repot a root-bound plant</h1>
@@ -195,14 +196,14 @@ ${rail(`${groveCard}
 ${goalsCard}`)}`,
 );
 
-// The grove: a weekly ranking. Rows are separated by 2px lines, the learner's own row is in the pale
-// green with green text, and the promotion line is a labelled divider
+// The grove: a weekly ranking. Open rows with no lines between them, the learner's own row in the pale
+// well, and the promotion line as a labelled divider
 const ranked = (n: number, initials: string, name: string, seeds: number, me = false, tone = '') =>
-  `            <li class="m-cluster" data-gap="4" style="flex-wrap: nowrap; padding: var(--m-space-3) var(--m-space-4); border-radius: var(--m-radius-md)${me ? '; background: var(--m-color-brand-subtle); color: var(--m-color-success-fg)' : ''}">
+  `            <li class="m-cluster" data-gap="4" style="flex-wrap: nowrap; padding: var(--m-space-3) var(--m-space-4); border-radius: var(--m-radius-md)${me ? '; background: var(--m-color-bg-sunken)' : ''}">
               <span style="inline-size: 1.5rem; text-align: center; font-weight: var(--m-font-weight-bold); ${n <= 3 ? hue('warning-fg') : me ? '' : hue('fg-muted')}">${n}</span>
               <span class="m-avatar"${tone ? ` style="background: var(--m-color-${tone}-bg); color: var(--m-color-${tone}-fg)"` : ''} aria-hidden="true">${initials}</span>
               <span style="flex: 1; font-weight: var(--m-font-weight-bold)">${name}</span>
-              <span style="font-weight: var(--m-font-weight-semibold); font-variant-numeric: tabular-nums; ${me ? '' : hue('fg-muted')}">${seeds} seeds</span>
+              <span style="font-variant-numeric: tabular-nums; ${me ? '' : hue('fg-muted')}">${seeds} seeds</span>
             </li>`;
 
 const listDetail = shell(
@@ -247,41 +248,42 @@ ${rail(`        <section class="m-card" aria-labelledby="mg-person">
           </div>
           <h3 style="${label}">Stats</h3>
           <div class="m-grid" style="--m-layout-grid-min: 8rem; --m-layout-grid-gap: var(--m-space-3)">
-            <div class="m-card" data-size="sm" style="gap: 0; box-shadow: var(--m-shadow-sm)"><span class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-bold)"><span style="${hue('warning-fg')}">${icon(I.flame, 20)}</span>61</span><span class="m-muted" style="font-size: var(--m-font-size-xs)">Day run</span></div>
-            <div class="m-card" data-size="sm" style="gap: 0; box-shadow: var(--m-shadow-sm)"><span class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-bold)"><span style="${hue('info-fg')}">${icon(I.gem, 20)}</span>9,306</span><span class="m-muted" style="font-size: var(--m-font-size-xs)">Seeds earned</span></div>
-            <div class="m-card" data-size="sm" style="gap: 0; box-shadow: var(--m-shadow-sm)"><span class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-bold)"><span style="${hue('success-fg')}">${icon(I.tree, 20)}</span>Silver</span><span class="m-muted" style="font-size: var(--m-font-size-xs)">Best grove</span></div>
-            <div class="m-card" data-size="sm" style="gap: 0; box-shadow: var(--m-shadow-sm)"><span class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-bold)"><span style="${hue('danger-fg')}">${icon(I.crown, 20)}</span>3</span><span class="m-muted" style="font-size: var(--m-font-size-xs)">Grove wins</span></div>
+            <div class="m-card" data-size="sm" style="gap: 0; border-block-end-width: var(--m-border-width-thick)"><span class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-bold)"><span style="${hue('warning-fg')}">${icon(I.flame, 20)}</span>61</span><span class="m-muted" style="font-size: var(--m-font-size-sm)">Day run</span></div>
+            <div class="m-card" data-size="sm" style="gap: 0; border-block-end-width: var(--m-border-width-thick)"><span class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-bold)"><span style="${hue('info-fg')}">${icon(I.gem, 20)}</span>9,306</span><span class="m-muted" style="font-size: var(--m-font-size-sm)">Seeds earned</span></div>
+            <div class="m-card" data-size="sm" style="gap: 0; border-block-end-width: var(--m-border-width-thick)"><span class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-bold)"><span style="${hue('success-fg')}">${icon(I.tree, 20)}</span>Silver</span><span class="m-muted" style="font-size: var(--m-font-size-sm)">Best grove</span></div>
+            <div class="m-card" data-size="sm" style="gap: 0; border-block-end-width: var(--m-border-width-thick)"><span class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-bold)"><span style="${hue('danger-fg')}">${icon(I.crown, 20)}</span>3</span><span class="m-muted" style="font-size: var(--m-font-size-sm)">Grove wins</span></div>
           </div>
         </section>`)}`,
 );
 
-// Onboarding: one question per screen. A close button and a thick progress bar on top, a heavy
-// question, choice cards that outline in blue when picked, and a footer bar with the action
+// Onboarding: one question per screen. A close button and a thick progress bar on top, a heavy question
+// centred over a grid of choice tiles (the reference's first-use screen: square outlined tiles on a 4px lip,
+// four across on wide screens, a picture over a name and a muted count), the picked tile in the sky tint with
+// a blue outline, and a footer bar with the action. One question only: nothing else asked on the screen
 const choice = (ic: string, tone: string, name: string, hint: string, selected = false) =>
-  `          <label class="m-card" data-size="sm" style="flex-direction: row; align-items: center; gap: var(--m-space-4); cursor: pointer; box-shadow: var(--m-shadow-sm)${selected ? '; background: var(--m-color-info-bg); border-color: var(--m-color-info-border); color: var(--m-color-info-fg)' : ''}">
-            <input class="m-radio" type="radio" name="mg-goal"${selected ? ' checked' : ''}>
-            <span style="${hue(tone)}">${icon(ic, 28)}</span>
-            <span class="m-stack" data-gap="0"><span style="font-weight: var(--m-font-weight-bold)">${name}</span><span style="font-size: var(--m-font-size-sm)${selected ? '' : '; color: var(--m-color-fg-muted)'}">${hint}</span></span>
-          </label>`;
+  `          <button type="button" class="m-card" data-size="sm" role="radio" aria-checked="${selected}" style="align-items: center; gap: var(--m-space-3); padding-block: var(--m-space-6); text-align: center; font: inherit; color: inherit; cursor: pointer; border-block-end-width: var(--m-border-width-thick)${selected ? '; background: var(--m-color-info-bg); border-color: var(--m-color-info-border); color: var(--m-color-info-fg)' : ''}">
+            <span style="display: grid; place-items: center; inline-size: 4.5rem; block-size: 3.5rem; border-radius: var(--m-radius-md); background: var(--m-color-${tone}-bg); color: var(--m-color-${tone}-fg)">${icon(ic, 32)}</span>
+            <span style="font-weight: var(--m-font-weight-bold)">${name}</span>
+            <span style="font-size: var(--m-font-size-sm)${selected ? '' : '; color: var(--m-color-fg-muted)'}">${hint}</span>
+          </button>`;
 
 const onboarding = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
   <header class="m-cluster" data-gap="4" style="flex-wrap: nowrap; padding: var(--m-space-8) var(--m-space-6) var(--m-space-4); max-inline-size: 64rem; inline-size: 100%; margin-inline: auto">
     <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="Close" style="--m-button-ghost-fg: var(--m-color-fg-subtle)">${icon(I.x, 24)}</button>
     <progress class="m-progress" data-size="lg" value="2" max="5" style="flex: 1" aria-label="Step 2 of 5">Step 2 of 5</progress>
   </header>
-  <main class="m-container" data-size="md" style="flex: 1; padding-block: var(--m-space-8)">
-    <div class="m-stack" data-gap="6">
-      <h1 style="${pageTitle}">What would you like to grow first?</h1>
-      <div class="m-stack" data-gap="3" role="radiogroup" aria-label="First goal">
-${choice(I.leaf, 'success-fg', 'Houseplants', 'Keep the ones you have alive and thriving')}
-${choice(I.sprout, 'success-fg', 'Herbs on a windowsill', 'Basil, mint and parsley from seed', true)}
-${choice(I.shovel, 'warning-fg', 'A vegetable bed', 'Plan, plant and harvest one small bed')}
-${choice(I.sun, 'danger-fg', 'Flowers for a balcony', 'Pots that bloom from spring to autumn')}
-      </div>
-      <div class="m-field">
-        <label class="m-field-label" for="mg-ob-minutes">How many minutes a day?</label>
-        <select class="m-select" id="mg-ob-minutes"><option>5 minutes · Easy</option><option selected>10 minutes · Steady</option><option>15 minutes · Keen</option><option>20 minutes · Devoted</option></select>
-        <p class="m-field-hint">You can change this any time in Settings.</p>
+  <main class="m-container" style="flex: 1; padding-block: var(--m-space-10)">
+    <div class="m-stack" data-gap="10" style="max-inline-size: 46rem; margin-inline: auto">
+      <h1 style="${pageTitle}; text-align: center">What would you like to grow first?</h1>
+      <div class="m-grid" style="--m-layout-grid-min: 10rem; --m-layout-grid-gap: var(--m-space-4)" role="radiogroup" aria-label="First goal">
+${choice(I.leaf, 'success', 'Houseplants', '24 lessons')}
+${choice(I.sprout, 'success', 'Windowsill herbs', '18 lessons', true)}
+${choice(I.shovel, 'warning', 'A vegetable bed', '31 lessons')}
+${choice(I.sun, 'danger', 'Balcony flowers', '22 lessons')}
+${choice(I.droplet, 'info', 'Watering well', '12 lessons')}
+${choice(I.tree, 'success', 'Fruit trees', '27 lessons')}
+${choice(I.leaf, 'warning', 'Succulents', '15 lessons')}
+${choice(I.sun, 'info', 'Shade gardens', '19 lessons')}
       </div>
     </div>
   </main>
@@ -397,11 +399,11 @@ const perk = (name: string, has: boolean) =>
 const plan = (name: string, price: string, note: string, perks: [string, boolean][], picked = false) =>
   `        <section class="m-stack" data-gap="0" style="flex: 1 1 15rem; border: ${picked ? 'var(--m-border-width-thin) solid var(--m-color-info-border)' : line}; border-radius: var(--m-radius-lg); background: var(--m-color-bg-surface); overflow: hidden${picked ? '; box-shadow: var(--m-shadow-md); margin-block: calc(var(--m-space-3) * -1)' : ''}" aria-labelledby="mg-plan-${name.toLowerCase()}">
           <div class="m-stack" data-gap="1" style="padding: var(--m-space-5) var(--m-space-6); background: var(--m-color-${picked ? 'info-bg' : 'bg-sunken'})${picked ? '; color: var(--m-color-info-fg)' : ''}">
-            <div class="m-cluster" data-justify="between"><h2 id="mg-plan-${name.toLowerCase()}" style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-bold)">${name}</h2>${picked ? `<span class="m-badge" data-tone="info" data-variant="solid">${icon(I.check, 14)} Most picked</span>` : ''}</div>
+            <div class="m-cluster" data-justify="between"><h2 id="mg-plan-${name.toLowerCase()}" style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-bold)">${name}</h2>${picked ? `<span class="m-badge" data-tone="info" data-variant="solid" style="font-size: var(--m-font-size-sm)">${icon(I.check, 14)} Most picked</span>` : ''}</div>
             <span style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold); font-variant-numeric: tabular-nums; color: var(--m-color-fg-default)">${price}</span>
             <span style="font-size: var(--m-font-size-sm)${picked ? '' : '; color: var(--m-color-fg-muted)'}">${note}</span>
           </div>
-          <ul class="m-stack" data-gap="3" style="padding: var(--m-space-5) var(--m-space-6) var(--m-space-6); list-style: none; font-weight: var(--m-font-weight-semibold)">
+          <ul class="m-stack" data-gap="3" style="padding: var(--m-space-5) var(--m-space-6) var(--m-space-6); list-style: none">
 ${perks.map(([n, h]) => perk(n, h)).join('\n')}
           </ul>
         </section>`;
@@ -410,7 +412,7 @@ const perks = (a: boolean[]): [string, boolean][] =>
 
 const pricing = `<div class="m-stack" data-gap="0">
   <header class="m-navbar">
-    <a class="m-navbar-brand" href="#" style="color: var(--m-color-brand-default)">bramblewood</a>
+    <a class="m-navbar-brand" href="#" style="color: var(--m-color-brand-default); font-size: var(--m-font-size-xl)">bramblewood</a>
     <div class="m-navbar-actions" style="margin-inline-start: auto">
       <a class="m-button" data-size="sm" href="#">Log in</a>
     </div>
@@ -419,7 +421,7 @@ const pricing = `<div class="m-stack" data-gap="0">
     <div class="m-stack" data-gap="10">
       <div class="m-stack" data-gap="4" data-align="center" style="text-align: center">
         <h1 style="${display}; color: var(--m-color-brand-default)">grow further with plus</h1>
-        <p class="m-muted" style="font-size: var(--m-font-size-lg); max-inline-size: 34rem">Every lesson stays free. Plus takes away the waiting, adds practice made from your mistakes, and keeps your hearts full.</p>
+        <p class="m-muted" style="max-inline-size: 34rem">Every lesson stays free. Plus takes away the waiting, adds practice made from your mistakes, and keeps your hearts full.</p>
         <label class="m-field" data-layout="inline" style="font-weight: var(--m-font-weight-bold)"><input class="m-switch" type="checkbox" role="switch" checked> Pay yearly and save 35%</label>
       </div>
       <div class="m-cluster" data-align="stretch" data-gap="0" style="max-inline-size: 56rem; inline-size: 100%; margin-inline: auto; gap: var(--m-space-3)">
@@ -515,7 +517,7 @@ export const marigoldRecipes: ArchetypeRecipe[] = [
     name: 'onboarding',
     title: 'Onboarding',
     description:
-      'One question per screen: a close button and thick progress bar, a heavy question, choice cards that outline in blue when picked, and a footer bar with Skip and Continue.',
+      'One question per screen: a close button and thick progress bar, a heavy centred question over a grid of choice tiles on a lip (the picked one in the sky tint with a blue outline), and a footer bar with Skip and Continue.',
     html: onboarding,
   },
   {
