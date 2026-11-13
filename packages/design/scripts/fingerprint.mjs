@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Measures every design language's recipes with the fingerprint probe (docs/design-fingerprint.md), at the three
-// widths, and writes dist/archetypes/<id>/fingerprint.json and checks.json, the raw screens, and the
-// distinctiveness matrix (dist/fingerprints/matrix.json). Needs a built package and Chrome.
+// widths, and writes dist/archetypes/<id>/fingerprint.json and checks.json, and the raw screens and the
+// distinctiveness matrix to packages/design/.fingerprints/ (matrix.json). Needs a built package and Chrome.
 //
 //   pnpm --filter @mariachi/design fingerprint [id,id,…]
 //   pnpm --filter @mariachi/design fingerprint --matrix   (rebuild the matrix from the saved screens, no browser)
@@ -15,7 +15,7 @@ import { buildChecks, buildFingerprint, distance, probeSource, quantile, RECIPE_
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
-const out = path.join(dist, 'fingerprints');
+const out = path.join(root, '.fingerprints'); // outside dist, so a rebuild keeps the measured screens
 const matrixOnly = process.argv.includes('--matrix');
 const only = process.argv.slice(2).find((a) => !a.startsWith('--'))?.split(',');
 const ids = fs.readdirSync(path.join(dist, 'archetypes')).filter((d) => fs.existsSync(path.join(dist, 'archetypes', d, 'recipes')) && (!only || only.includes(d))).sort();

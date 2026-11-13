@@ -10,3 +10,6 @@ coverage/
 .pnpm-store/
 .e2e-project/
 .scaffold-test/
+
+# Measured screens from `pnpm --filter @mariachi/design fingerprint`
+packages/design/.fingerprints/

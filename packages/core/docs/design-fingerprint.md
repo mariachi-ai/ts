@@ -29,6 +29,8 @@ Every measure is taken **in the window** unless it says **page**.
 
 These definitions are used by the measures below.
 
+- **Left out:** cookie and consent notices (a fixed or sticky element whose text mentions cookies, consent or privacy choices) and everything inside them. They're never answered or removed; the probe just doesn't count them.
+
 - **Visible:** a box with width and height greater than 0, `visibility` not `hidden`, and `opacity` greater than 0. `aria-hidden` doesn't matter: decorative icons and pictures are still seen.
 - **Text run:** a non-empty text node (after trimming) whose parent is visible. Its size is the parent's computed `font-size`, rounded to 0.5 px. Its weight is the parent's `font-weight`. Its length is its character count.
 - **Body size:** the font size that carries the most characters in the window.
@@ -41,10 +43,11 @@ These definitions are used by the measures below.
   - `divider`: a top or bottom border only, at least half its parent's width.
 - **Media:** `img`, `video`, `canvas`, a `picture`, or an element with a `background-image`, at least 48 × 48 px and with no text inside. A box at least 95% of the window wide and 60% of it high is a backdrop, not media.
 - **Icon:** an `svg` (or an `img` of an SVG) of at most 32 × 32 px.
-- **Collection:** a parent with at least three visible children that share a tag and a first class name. It's a `list` when the children stack in one column, a `grid` when they sit in two or more columns and two or more rows, a `table` for `tbody` rows, and a `carousel` when its `scrollWidth` exceeds its `clientWidth` by more than 8 px with one row.
+- **Collection:** a parent (not inside an `svg`) with at least three visible children that share a tag and a first class name. It's a `list` when the children stack in one column, a `grid` when they sit in two or more columns and two or more rows, a `table` for `tbody` rows, and a `carousel` when its `scrollWidth` exceeds its `clientWidth` by more than 8 px with one row.
 - **Main column:** the element containing the largest share of the window's text characters that has at least three block children, excluding `nav`, `aside`, `header` and `footer`.
 - **Accent:** the product's action colour as drawn: the fill of its declared primary button (`.m-button[data-variant="primary"]`) when one is on the screen; otherwise the most common fill with OKLCH chroma > 0.1 on controls; otherwise `--m-color-accent-default`.
-- **Primary action:** a control whose background is within ΔE2000 5 of the accent, or the product's declared primary (`.m-button[data-variant="primary"]`).
+- **Fill:** an element's background colour, or, when that's transparent, the first colour stop of its background gradient.
+- **Primary action:** a control whose fill is within ΔE2000 5 of the accent, or the product's declared primary (`.m-button[data-variant="primary"]`).
 
 ## The measures
 
