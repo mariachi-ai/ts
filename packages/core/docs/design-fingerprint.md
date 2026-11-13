@@ -209,7 +209,7 @@ Every screen in the inventory has one kind: `list`, `detail`, `form`, `dashboard
 ```
 
 - **A check reports distance; it never fails.** The reviewer decides.
-- **The normal range** is the fingerprint's range for that kind of screen when two or more distinct screens show that kind, falling back to `all`.
+- **The normal range** is the fingerprint's range for that kind of screen, falling back to `all`. A kind shown by only one screen gets that screen's range across the widths, which is narrow; that narrowness is what tells libraries apart until there are more precedents of the kind.
 - **Which measures get a check:** only numbers measured on at least 5 screens with a clear range: the 10th percentile above 0 and the 90th within twice the 10th. A measure that varies freely, or sits at 0, carries no check.
 - **The message** uses the product's own words for things where it has them ("rows", not "list items").
 
