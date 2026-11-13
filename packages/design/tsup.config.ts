@@ -3,9 +3,10 @@ import { defineConfig } from 'tsup';
 export default defineConfig([
   {
     entry: { index: 'src/index.ts', build: 'src/build.ts' },
-    format: ['esm', 'cjs'],
+    // ESM only and no source maps: the package is copied into every project that installs it (#45)
+    format: ['esm'],
     dts: true,
-    sourcemap: true,
+    sourcemap: false,
     shims: true,
     splitting: false,
     external: ['lightningcss'],
@@ -15,7 +16,7 @@ export default defineConfig([
     entry: { behaviors: 'src/behaviors/index.ts' },
     format: ['esm'],
     dts: true,
-    sourcemap: true,
+    sourcemap: false,
     platform: 'browser',
     splitting: false,
   },
