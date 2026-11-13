@@ -323,69 +323,65 @@ const dashboard = shell(
     `${icon(I.gauge, 16)} ${crumb('Platform', 'Overview')} ${iconBtn(I.star, 'Add to favourites')}`,
     `${viewTabs(['This sprint', 'Last 90 days', 'All time'], 'Last 90 days', 'Range')} ${iconBtn(I.filter, 'Filter')} ${iconBtn(I.more, 'More')}`,
   ),
-  `    <div class="m-stack" data-gap="6" style="padding: var(--m-space-6) var(--m-space-6) var(--m-space-10)">
-      <div class="m-cluster" data-gap="10" style="row-gap: var(--m-space-4)">
-        ${stat('41', 'Open issues', '−6 this week')}
-        ${stat('12', 'In progress')}
-        ${stat('3.4d', 'Median cycle time')}
-        ${stat('83%', 'Sprint 24 scope done')}
-      </div>
-      <div class="m-cluster" data-gap="4" data-align="stretch">
-        <section class="m-card" aria-labelledby="ob-closed" style="flex: 2 1 28rem; min-inline-size: 0">
-          <div class="m-card-body m-stack" data-gap="3">
-            <div class="m-cluster" data-justify="between">
-              <h2 id="ob-closed" style="${small}; font-weight: var(--m-font-weight-medium)">Closed per week</h2>
-              <div class="m-cluster" data-gap="4" style="${meta}">
-                <span class="m-cluster" data-gap="2">${dot('accent-default')} Features</span>
-                <span class="m-cluster" data-gap="2">${dot('info-solid')} Fixes</span>
-                <span class="m-cluster" data-gap="2">${dot('border-strong')} Chores</span>
-              </div>
+  `    <div class="m-cluster" data-gap="0" data-align="stretch" style="border-block-end: ${quiet}">
+      <div class="m-stack" data-gap="8" style="flex: 2 1 28rem; min-inline-size: 0; padding: var(--m-space-6)">
+        <div class="m-cluster" data-gap="10" style="row-gap: var(--m-space-4)">
+          ${stat('41', 'Open issues', '−6 this week')}
+          ${stat('12', 'In progress')}
+          ${stat('3.4d', 'Median cycle time')}
+          ${stat('83%', 'Sprint 24 scope done')}
+        </div>
+        <section class="m-stack" data-gap="3" aria-labelledby="ob-closed">
+          <div class="m-cluster" data-justify="between">
+            <h2 id="ob-closed" style="${small}; font-weight: var(--m-font-weight-medium)">Closed per week</h2>
+            <div class="m-cluster" data-gap="4" style="${meta}">
+              <span class="m-cluster" data-gap="2">${dot('accent-default')} Features</span>
+              <span class="m-cluster" data-gap="2">${dot('info-solid')} Fixes</span>
+              <span class="m-cluster" data-gap="2">${dot('border-strong')} Chores</span>
             </div>
-            ${chart}
-            <div class="m-cluster" data-justify="between" style="${meta}; padding-inline: var(--m-space-2)">${weeks
-              .filter((_, i) => i % 2 === 0)
-              .map(([w]) => `<span>${w}</span>`)
-              .join('')}</div>
           </div>
-        </section>
-        <section class="m-card" aria-labelledby="ob-sprint" style="flex: 1 1 17rem">
-          <div class="m-card-body m-stack" data-gap="4">
-            <div class="m-cluster" data-justify="between">
-              <h2 id="ob-sprint" class="m-cluster" data-gap="2" style="${small}; font-weight: var(--m-font-weight-medium)">${icon(I.sprint, 14)} Sprint 24</h2>
-              <span style="${meta}">Nov 3 – Nov 16</span>
-            </div>
-            <div class="m-usage" data-level="ok" style="--m-usage-value: 83%">
-              <div class="m-usage-header"><span class="m-usage-label">Scope done</span><span class="m-usage-amount">29 of 35</span></div>
-              <div class="m-usage-bar" role="meter" aria-label="Scope done" aria-valuemin="0" aria-valuemax="100" aria-valuenow="83"></div>
-              <div class="m-usage-footer"><span>4 days left</span><span>2 added since start</span></div>
-            </div>
-            <ul class="m-stack" data-gap="2" style="${small}; padding: 0; list-style: none">
-              <li class="m-cluster" data-justify="between"><span class="m-cluster" data-gap="2">${status.done} Done</span><span class="m-muted">29</span></li>
-              <li class="m-cluster" data-justify="between"><span class="m-cluster" data-gap="2">${status.review} In review</span><span class="m-muted">2</span></li>
-              <li class="m-cluster" data-justify="between"><span class="m-cluster" data-gap="2">${status.progress} In progress</span><span class="m-muted">3</span></li>
-              <li class="m-cluster" data-justify="between"><span class="m-cluster" data-gap="2">${status.todo} Todo</span><span class="m-muted">1</span></li>
-            </ul>
-          </div>
+          ${chart}
+          <div class="m-cluster" data-justify="between" style="${meta}; padding-inline: var(--m-space-2)">${weeks
+            .filter((_, i) => i % 2 === 0)
+            .map(([w]) => `<span>${w}</span>`)
+            .join('')}</div>
         </section>
       </div>
-      <section class="m-stack" data-gap="2" aria-labelledby="ob-projects">
+      <aside class="m-stack" data-gap="4" aria-labelledby="ob-sprint" style="flex: 1 1 17rem; padding: var(--m-space-6) var(--m-space-5); border-inline-start: ${quiet}">
         <div class="m-cluster" data-justify="between">
-          <h2 id="ob-projects" style="${small}; font-weight: var(--m-font-weight-medium)">Projects</h2>
-          <button type="button" class="m-button" data-variant="ghost" data-size="sm">${icon(I.plus, 14)} New project</button>
+          <h2 id="ob-sprint" class="m-cluster" data-gap="2" style="${small}; font-weight: var(--m-font-weight-medium)">${icon(I.sprint, 14)} Sprint 24</h2>
+          <span style="${meta}">Nov 3 – Nov 16</span>
         </div>
-        <div class="m-table-wrap">
-          <table class="m-table">
-            <thead><tr><th scope="col">Name</th><th scope="col">Health</th><th scope="col">Progress</th><th scope="col">Lead</th><th scope="col">Target</th></tr></thead>
-            <tbody>
-            ${projectRow(I.box, 'Webhook delivery v2', 'success', 'On track', 72, ['TM', 'Theo Marsh'], 'Dec 5')}
-            ${projectRow(I.box, 'Edge settings cache', 'warning', 'At risk', 41, ['PN', 'Priya Nair'], 'Nov 28')}
-            ${projectRow(I.shield, 'Key rotation', 'success', 'On track', 58, ['CR', 'Callum Reid'], 'Jan 16')}
-            ${projectRow(I.layers, 'Audit log exports', 'danger', 'Off track', 23, ['ID', 'Ines Duarte'], 'Nov 21')}
-            </tbody>
-          </table>
+        <div class="m-usage" data-level="ok" style="--m-usage-value: 83%">
+          <div class="m-usage-header"><span class="m-usage-label">Scope done</span><span class="m-usage-amount">29 of 35</span></div>
+          <div class="m-usage-bar" role="meter" aria-label="Scope done" aria-valuemin="0" aria-valuemax="100" aria-valuenow="83"></div>
+          <div class="m-usage-footer"><span>4 days left</span><span>2 added since start</span></div>
         </div>
-      </section>
-    </div>`,
+        <ul class="m-stack" data-gap="2" style="${small}; padding: 0; list-style: none">
+          <li class="m-cluster" data-justify="between"><span class="m-cluster" data-gap="2">${status.done} Done</span><span class="m-muted">29</span></li>
+          <li class="m-cluster" data-justify="between"><span class="m-cluster" data-gap="2">${status.review} In review</span><span class="m-muted">2</span></li>
+          <li class="m-cluster" data-justify="between"><span class="m-cluster" data-gap="2">${status.progress} In progress</span><span class="m-muted">3</span></li>
+          <li class="m-cluster" data-justify="between"><span class="m-cluster" data-gap="2">${status.todo} Todo</span><span class="m-muted">1</span></li>
+        </ul>
+      </aside>
+    </div>
+    <section aria-labelledby="ob-projects">
+      <div class="m-cluster" data-justify="between" style="min-block-size: 2.25rem; padding-inline: var(--m-space-4) var(--m-space-3); background: var(--m-table-header-bg); border-block-end: ${quiet}">
+        <h2 id="ob-projects" class="m-cluster" data-gap="2" style="${small}; font-weight: var(--m-font-weight-medium)">Projects <span class="m-muted" style="font-weight: var(--m-font-weight-regular)">4</span></h2>
+        <button type="button" class="m-button" data-variant="ghost" data-size="sm">${icon(I.plus, 14)} New project</button>
+      </div>
+      <div class="m-table-wrap">
+        <table class="m-table" style="--m-table-header-bg: transparent">
+          <thead><tr><th scope="col">Name</th><th scope="col">Health</th><th scope="col">Progress</th><th scope="col">Lead</th><th scope="col">Target</th></tr></thead>
+          <tbody>
+          ${projectRow(I.box, 'Webhook delivery v2', 'success', 'On track', 72, ['TM', 'Theo Marsh'], 'Dec 5')}
+          ${projectRow(I.box, 'Edge settings cache', 'warning', 'At risk', 41, ['PN', 'Priya Nair'], 'Nov 28')}
+          ${projectRow(I.shield, 'Key rotation', 'success', 'On track', 58, ['CR', 'Callum Reid'], 'Jan 16')}
+          ${projectRow(I.layers, 'Audit log exports', 'danger', 'Off track', 23, ['ID', 'Ines Duarte'], 'Nov 21')}
+          </tbody>
+        </table>
+      </div>
+    </section>`,
 );
 
 /* ---------------------------------------------------------------- list and detail */
@@ -781,12 +777,9 @@ const pricing = `<div style="background: var(--m-color-bg-canvas); min-block-siz
     </div>
   </header>
   <main>
-    <section style="background: radial-gradient(60rem 22rem at 30% 0%, var(--m-color-accent-subtle), transparent 70%); padding-block: var(--m-space-16) var(--m-space-12)">
+    <section style="padding-block: var(--m-space-16) var(--m-space-12)">
       <div class="m-container" style="--m-layout-container-max-lg: 84rem">
-        <div class="m-stack" data-gap="3">
-          <h1 style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Plans</h1>
-          <p class="m-muted" style="font-size: var(--m-font-size-lg); max-inline-size: 36rem">Start on your own and add the team when you need it. Every plan includes the command menu, sprints and the API.</p>
-        </div>
+        <h1 style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Plans</h1>
       </div>
     </section>
     <div class="m-container" style="--m-layout-container-max-lg: 84rem">

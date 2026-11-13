@@ -258,9 +258,10 @@ All 36 of the library's components, as Obsidian draws them. Every one is in `gal
 
 ## Page shapes (recipes)
 
-- **Dashboard.** The panel's header bar with a range of view chips; a row of plain figures; a card
-  with a stacked bar chart beside a sprint card (usage meter and status counts); then a
-  full-bleed projects list with health, progress, lead and target.
+- **Dashboard.** The panel's header bar with a range of view chips; a row of plain figures and,
+  under them, a stacked bar chart, both straight on the panel (no cards); a sprint side pane split
+  off by a hairline on its left (usage meter and status counts); then a full-bleed projects list
+  under a grey bar, with health, progress, lead and target.
 - **List and detail.** Header bar and a Filter/Display bar; issues under grey status group bars in
   36px rows; the selected row marked with an indigo edge and open in a side panel with the title at
   24px, a muted description, property rows, activity and a comment composer.
@@ -272,11 +273,46 @@ All 36 of the library's components, as Obsidian draws them. Every one is in `gal
   control (select, switch, chips, keys) on the right.
 - **Empty state.** Centred in the panel: a 48px thin icon, a 15px heading at 510, one or two muted
   lines, the primary action with its key and a secondary.
-- **Pricing.** The public site: a blurred bar, a faint indigo glow behind a 48px title, plan
+- **Pricing.** The public site: a blurred bar, a 48px title alone (no glow, no lead line), plan
   columns split by hairlines (name 24px, price 17px, a billing line between hairlines, ticked
   features, a 40px pill at the bottom, inverted on the one to pick), a comparison list and
   questions.
 - **Errors.** The field, dialog, toast and full-page errors above, as one page.
+
+### Signature moves
+
+1. **One inset panel on a darker frame.** The sidebar sits on the sunken colour; all work happens in
+   one panel with an 8px margin, a hairline and 8px corners. Depth is one step of grey, never a
+   shadow.
+2. **Rows, not boxes.** Lists, settings and plans separate by hairlines and grey group bars; boxes are
+   kept for comments, settings sections and overlays.
+3. **A glyph for every state.** Status circles and priority bars at 14px lead each row; colour is the
+   second signal, never the first.
+4. **Indigo once per view.** One primary button, checked controls, focus and "done"; everything else
+   is grey on grey.
+5. **The key is always shown.** Menus, tooltips, empty states and the command menu print the
+   shortcut beside the action.
+6. **13px at 510.** Every piece of UI text is one size and one weight; meta is 12px; only titles
+   grow.
+
+### How a screen is assembled
+
+- **It opens with** the panel's 44px header bar: where you are (breadcrumb), the views of this place
+  (chips), quiet icon actions on the right. A list adds the Filter / Display bar under it.
+- **Reading order:** header bar → the content edge to edge (groups and rows, or figures then chart)
+  → a side pane on the right for the selected thing or its summary. Settings and documents read
+  down one 40rem column instead.
+- **How much one screen does:** one place, one list or one item, one primary action. Creating
+  happens in a dialog or the command menu, not on a new page.
+- **When narrow:** side panes wrap under the content; row titles truncate while glyphs, pills and
+  the avatar stay; on a phone the sidebar stacks above the panel.
+- **Too much content:** the list scrolls inside the panel (no pagination); groups collapse; the
+  Display menu hides properties.
+- **No content:** the header bar stays and the empty state centres in the panel (see
+  `patterns/empty.md`); empty groups are hidden.
+
+The jobs these shapes are built from are in `patterns/`, the refusals in `never.md`, and the
+recipes as precedents in `precedents/index.md`.
 
 ## Words
 
