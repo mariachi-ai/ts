@@ -344,3 +344,6 @@ export function writePackageAssets(root: string = packageRoot()): string[] {
 
 /** A language's generated reference (scales, colours, radius, shadows, motion, icons), as appended to its DESIGN.md. */
 export { designReference } from './archetypes/reference';
+
+/** The design fingerprint (docs/design-fingerprint.md): the probe, and fingerprint.json and checks.json from its measurements. */
+export * from './fingerprint';

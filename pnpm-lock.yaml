@@ -880,6 +880,9 @@ importers:
       lightningcss:
         specifier: ^1.33.0
         version: 1.33.0
+      playwright-core:
+        specifier: 1.64.1
+        version: 1.64.1
       stylelint:
         specifier: ^17.16.0
         version: 17.16.0(typescript@5.9.3)

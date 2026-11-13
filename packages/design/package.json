@@ -66,7 +66,8 @@
     "lint": "node scripts/generate-registry.mjs --check && biome lint src && stylelint \"src/**/*.css\"",
     "test:unit": "vitest run --passWithNoTests",
     "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "fingerprint": "node scripts/fingerprint.mjs"
   },
   "dependencies": {
     "@mariachi/core": "workspace:*",
@@ -101,6 +102,7 @@
     "@fontsource/barlow-condensed": "5.3.0",
     "@fontsource/lato": "5.3.0",
     "lightningcss": "^1.33.0",
+    "playwright-core": "1.64.1",
     "stylelint": "^17.16.0",
     "stylelint-config-standard": "^40.0.0",
     "tsup": "^8",
