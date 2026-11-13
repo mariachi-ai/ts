@@ -25,9 +25,9 @@ The tokens are in the `marigold` preset of `@mariachi/design` (`data-theme="mari
 - **Green means go, blue means chosen.** The bright green is the one action on a screen and the
   learner's progress. Sky blue is for links, the current nav item, picked answers and switches.
   Red, orange, yellow and violet are for small coloured moments: stats, icons, celebrations.
-- **Heavy, friendly type.** One rounded sans everywhere: 800 for headings and labels, 500 for body,
-  900 for big lowercase marketing headlines. Buttons, tabs, nav items and section labels are
-  uppercase with a little tracking.
+- **Heavy, friendly type, two weights.** One rounded sans everywhere, at two weights only: 800 for
+  headings, labels, figures and big lowercase marketing headlines, 500 for everything else. Buttons,
+  tabs, nav items and section labels are uppercase with a little tracking.
 - **Encourage, never scold.** Copy cheers people on and says what to do next; mistakes get a plain
   correction, not a warning.
 
@@ -43,7 +43,7 @@ The tokens are in the `marigold` preset of `@mariachi/design` (`data-theme="mari
 | Brand green: banners, the wordmark, highlights | `#58cc02` with dark ink `#131f24` | `#93d333` |
 | Primary button | `#58cc02`, hover `#61e002`, label `#131f24` | `#93d333` |
 | Semantic accent (rings, ticks) | the lip green `#58a700` | `#93d333` |
-| Links, selection, focus | text `#0b6fb0`; tint `#ddf4ff` with a `#84d8ff` outline; focus `#1590cc` | `#49c0f8` on `#1a3546` |
+| Links, selection, focus | text `#0070a0`; tint `#ddf4ff` with a `#84d8ff` outline; focus `#1590cc` | `#49c0f8` on `#1a3546` |
 | Correct / wrong | pale green `#d7ffb8` with `#3b7700`; pale red `#ffdfe0` with `#c21f1f` | `#1f3a1a` with `#93d333`; `#3a1f22` with `#ff7878` |
 | Warm moments | orange `#ff9600`, yellow `#ffc800` (text `#8c5a11`), violet `#ce82ff` | the same |
 
@@ -53,8 +53,11 @@ The tokens are in the `marigold` preset of `@mariachi/design` (`data-theme="mari
 - **Borders.** Every line is 2px, including table rows and dividers.
 - **The lip.** A solid band below each button in its own darker step: 4px under the green and red
   (`#58a700`, `#ea2b2b`), 2px of grey under the white button; ghost buttons have none. Pressed, the
-  lip goes and the button moves down 4px. Cards and tooltips take a
-  solid `0 2px 0` or `0 4px 0` lip in the line grey.
+  lip goes and the button moves down 4px. Tooltips and overlays take a solid `0 2px 0` or `0 4px 0`
+  lip in the line grey. **Tiles and choice cards that stand on a lip draw it as a thicker bottom
+  border** (`border-block-end-width: var(--m-border-width-thick)`, so 2px sides and a 4px bottom), as
+  the source draws its tiles; the green unit banner does the same in the lip green
+  (`--m-color-accent-default`).
 - **Motion.** 100ms for hover and press, 200ms for opening, 400ms for large moves; plain `ease`,
   with a small overshoot (`cubic-bezier(0.34, 1.56, 0.64, 1)`) for celebrations.
 - **Spacing.** A 4px unit with generous gaps:
@@ -75,15 +78,17 @@ scales are in the reference at the end.
 
 ## Type
 
-- **Family.** Nunito (variable, `@fontsource-variable/nunito`) for everything: body at 500, labels
-  and headings at 800, marketing headlines at 900. DM Mono for codes, small.
+- **Family.** Nunito (variable, `@fontsource-variable/nunito`) for everything: body at 500; labels,
+  headings and marketing headlines at 800. **Two weights a screen, never three:** the source's screens
+  measure one or two weights on every screen (51 of 51), so the preset maps medium to 500 and
+  semibold to 800. DM Mono for codes, small.
 - **Sizes:**
   - body 17px with a 1.45 line height;
   - buttons, tabs, nav items and section labels 15px, 800, uppercase, tracked 5%;
   - small print and badges 13px;
   - card titles and dialog titles 24px at 800;
   - page titles 32px at 800;
-  - marketing headlines 48px and 62px at 900, **lowercase**, tracked −2%, in the brand green
+  - marketing headlines 48px and 62px at 800, **lowercase**, tracked −2%, in the brand green
     ("grow further with plus").
 - **Case.** Sentence case for headings and body. Uppercase only for buttons, tabs, nav items, badges
   and grey section labels ("FRIENDS", "STATS").
@@ -124,7 +129,7 @@ scales are in the reference at the end.
   open yet is a grey round button with a lock, not a disabled one.
 - **Selected.** The sky tint with a light-blue 2px outline and blue text: picked answers, the
   current nav item, the current page. Switches and ticks are blue when on.
-- **Error.** The control's border turns red, and the message (13–15px, 700, red) replaces the hint
+- **Error.** The control's border turns red, and the message (13–15px, 800, red) replaces the hint
   under it.
 - **Loading.** A button keeps its size and shows a spinner (`aria-busy="true"`). Lists show skeleton
   blocks in the line grey with the pale-well shimmer.
@@ -153,8 +158,8 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
 - **Input, textarea.** 48px, 12px corners, the pale well, a 2px grey control border that darkens on
   hover and turns blue on focus, 17px text.
 - **Select.** The same well and border with a chevron.
-- **Field.** The label above in 17px at 700, then the control, then the hint (15px, muted) or the
-  error (red, 700). Fields stack 16px apart.
+- **Field.** The label above in 17px at 800, then the control, then the hint (15px, muted) or the
+  error (red, 800). Fields stack 16px apart.
 - **Checkbox, radio.** 24px with a 2px border; blue when on (a white tick or dot). On choice cards,
   the whole card is the target and turns blue.
 - **Switch.** 52 × 32px, a grey track and a blue one when on, a white knob with a small lip. It
@@ -162,7 +167,7 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
 
 **Navigation**
 - **Sidebar.** 256px, white, a 2px line on its edge.
-  - The wordmark at the top in 900, lowercase, in the brand green.
+  - The wordmark at the top in 800, lowercase, in the brand green.
   - Items are 15px uppercase at 800 in grey, each with a 24px icon, 12px corners.
   - The current item has the sky tint, a light-blue 2px outline and blue text.
   - Counts are red pills with dark ink. Section headings are 13px uppercase grey.
@@ -189,7 +194,7 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
   2px line ring.
 - **Divider.** A 2px grey line; with a label, the label is uppercase grey 15px.
 - **Accordion.** One 2px outlined card with 16px corners and rows split by 2px lines, 22px tall
-  padding, the question at 600 and a chevron on the right; the answer in muted text.
+  padding, the question at 500 and a chevron on the right; the answer in muted text.
 - **Code, kbd.** DM Mono in the pale well with 12px corners (8px inline). Keys are 8px-cornered
   boxes with a 2px grey outline and a lip.
 - **Prose.** 17px, 1.6 line height, about 40rem wide, links blue without underline, headings 800.
@@ -207,9 +212,9 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
   line of detail, one button ("Retry", "Undo").
 - **Dialog.** White, 16px corners and a 2px grey outline, over a 50% black scrim; a 24px heavy title and stacked
   or side-by-side buttons, primary last.
-- **Popover and menu.** White, 2px grey outline, 16px corners and a lip; items 15px at 600 with a 12px
+- **Popover and menu.** White, 2px grey outline, 16px corners and a lip; items 15px at 500 with a 12px
   hover in the pale well; uppercase grey group labels; a destructive item in red.
-- **Tooltip.** A white bubble with a grey 2px ring and lip, 12px corners, 15px at 700 ("Start" above
+- **Tooltip.** A white bubble with a grey 2px ring and lip, 12px corners, 15px at 800 ("Start" above
   the current lesson).
 - **Spinner.** A blue ring on the line-grey track.
 - **Skeleton.** Line-grey blocks with an 8px radius and a pale-well shimmer, stopping under reduced
@@ -227,7 +232,7 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
 
 ## Error handling
 
-- **In a field:** the border turns red and a red message at 700 replaces the hint. Check on blur and
+- **In a field:** the border turns red and a red message at 800 replaces the hint. Check on blur and
   on submit, never mid-typing.
 - **In a form:** a danger alert above the form saying how many things to fix and that nothing was
   saved yet ("2 things to fix. Your profile wasn't saved yet."). Focus moves to it.
@@ -251,11 +256,12 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
     a "Start" bubble, later ones grey with a lock.
   - The right column: stats (flame, gem, heart) and outlined cards with goals on thick bars.
 - **List and detail.** A big trophy icon and heavy title, a segmented control, then the ranking:
-  open rows with tinted initials, the top three's places in orange, the learner's own row in pale green with green
-  text, and a "Promotion zone" divider. A person's card with Follow and stat tiles on the right.
-- **Onboarding.** A close button and a thick progress bar on top, a heavy question, choice cards with
-  a coloured icon that outline in blue when picked, and a footer bar under a 2px line with Skip and
-  Continue.
+  open rows with tinted initials, the top three's places in orange, the learner's own row in the pale grey
+  well, and a "Promotion zone" divider. A person's card with Follow and stat tiles on the right.
+- **Onboarding.** A close button and a thick progress bar on top, one heavy question centred over a
+  grid of choice tiles (four across on wide screens; a coloured icon in a tinted tile, a name, a
+  muted count; outlined, on a 4px lip), the picked tile in the sky tint with a blue outline, and a
+  footer bar under a 2px line with Skip and Continue. Nothing else is asked on the screen.
 - **Settings.** A heavy title with Save, grey uppercase group labels, toggles in rows on 2px lines,
   inputs in the well, and the settings menu as outlined cards on the right.
 - **Empty state.** A big icon in a pale circle, a heavy heading, one sentence, stacked buttons.
@@ -264,6 +270,55 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
   outlined in blue with a sky-tint header and a "Most picked" badge; one large green action, and
   questions in an outlined accordion.
 - **Errors.** The field, form, answer, toast and full-page errors above, as one page.
+
+### Signature moves
+
+Each is `observed` (measured by the probe, or read from the source's computed styles), `inferred`, or
+`told`. Numbers are from the fingerprint (source: 17 public screens at three widths; Marigold: the
+seven recipes at three widths).
+
+1. **Everything pressable stands on a lip.** A darker 4px band under buttons, tiles and banners that
+   disappears when pressed. Tiles draw it as a thicker bottom border (2px sides, 4px bottom, 16px
+   corners): `observed` on every tile in the first window of the source's two public tile grids (28 of 28).
+2. **Two heavy weights.** 500 and 800, never a third: the source uses one or two weights on every
+   screen (51 of 51); Marigold's recipes now measure 1 to 2. `observed`
+3. **Outlines, never blurred shadows.** 2px grey lines around cards and rows; no soft shadow on any
+   measured source screen (shadow share 0 of 51); where the probe saw a drawn edge it was a border
+   only (11 of 11). `observed`
+4. **Green means go, blue means chosen.** One bright green action; picked things take the sky tint, a
+   light-blue outline and blue text together. One hue family per role: the source's screens show one
+   saturated hue typically (0 to 2); Marigold's show two (2 to 3 on app screens, where stats bring
+   their own colours). `observed`, the reason `inferred`
+5. **One thing at a time.** Flows have a close button and a thick progress bar on top, one question,
+   and the action in a footer bar; nothing else on the screen. `inferred` from public screenshots of
+   the source's app
+6. **Big, heavy, lowercase headlines on public pages,** in the brand green; sentence case
+   everywhere else. `observed` on 3 of the 7 studied marketing screens; the others are sentence case
+   (see questions.md)
+7. **Few sizes, one big jump.** Two to five text sizes a screen (source 2 to 5, typically 3;
+   Marigold 3 to 4), and the largest is about twice the body on app screens (source 1.0 to 2.9,
+   typically 1.9; Marigold 1.9 to 2.1, 3.65 on pricing). `observed`
+
+### How a screen is assembled
+
+- **What it opens with.** App screens: the side column, then a heavy title (or the green unit banner)
+  at the top of a centred column about 38rem wide, with a right column of outlined cards beside it.
+  Flows: a close button and the progress bar, nothing else. Public pages: a 70px white header with
+  the wordmark and one white button.
+- **Reading order.** The title, then the one thing the screen is for, then its action. The right
+  column (stats, goals, a person's card) is read second and is never needed to finish the job.
+- **How much one screen does.** One job and one green action (the path is the exception: done steps
+  are green too). Secondary actions are white buttons or blue uppercase links.
+- **When narrow.** The right column drops below the main column; button groups stack at full width,
+  primary first (or last in a footer); grids of tiles go from four across to two (the source's
+  tile grids measure 4 columns wide and 2 on phones).
+- **Too much content.** Lists and rankings scroll in place; there's no pagination in the app. Long
+  prose sits in a column of about 40rem (the source's text pages measure 340 to 830px of text width,
+  typically 630px).
+- **No content.** The frame stays (title, tabs, right column); the main column gets the
+  empty-state block (see patterns/nothing-here.md).
+- **Composition files.** `patterns/` holds one file per recurring job, `never.md` the refusals,
+  `precedents/index.md` the recipes as precedents, `brief.md` the one-page summary.
 
 ## Words
 
@@ -280,6 +335,6 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
 | Use green for the one action and for progress | Several green buttons competing on one screen |
 | Use the sky tint and blue outline for what's selected | Show selection with colour alone or a tick alone |
 | Set buttons, tabs and labels uppercase at 800 | Uppercase headings or body text |
-| Set marketing headlines lowercase at 900 in green | Title Case headlines, or headline type in grey |
+| Set marketing headlines lowercase at 800 in green | Title Case headlines, or headline type in grey |
 | Use rounded heavy icons, coloured for stats | Thin-stroke icons, or mixed icon sets |
 | Cheer people on in the copy | Blame, codes, or exclamation marks on errors |
