@@ -29,7 +29,7 @@ Every measure is taken **in the window** unless it says **page**.
 
 These definitions are used by the measures below.
 
-- **Visible:** a box with width and height greater than 0, `visibility` not `hidden`, `opacity` greater than 0, and no `aria-hidden="true"` ancestor.
+- **Visible:** a box with width and height greater than 0, `visibility` not `hidden`, and `opacity` greater than 0. `aria-hidden` doesn't matter: decorative icons and pictures are still seen.
 - **Text run:** a non-empty text node (after trimming) whose parent is visible. Its size is the parent's computed `font-size`, rounded to 0.5 px. Its weight is the parent's `font-weight`. Its length is its character count.
 - **Body size:** the font size that carries the most characters in the window.
 - **Control:** `a[href]`, `button`, `input` (except hidden), `select`, `textarea`, `summary`, or an element with role `button`, `link`, `tab`, `checkbox`, `radio`, `switch`, `menuitem` or `option`.
@@ -43,7 +43,7 @@ These definitions are used by the measures below.
 - **Icon:** an `svg` (or an `img` of an SVG) of at most 32 × 32 px.
 - **Collection:** a parent with at least three visible children that share a tag and a first class name. It's a `list` when the children stack in one column, a `grid` when they sit in two or more columns and two or more rows, a `table` for `tbody` rows, and a `carousel` when its `scrollWidth` exceeds its `clientWidth` by more than 8 px with one row.
 - **Main column:** the element containing the largest share of the window's text characters that has at least three block children, excluding `nav`, `aside`, `header` and `footer`.
-- **Accent:** the product's action colour: `--m-color-accent-default` where it's declared; otherwise the most common colour with OKLCH chroma > 0.1 on the backgrounds of controls.
+- **Accent:** the product's action colour as drawn: the fill of its declared primary button (`.m-button[data-variant="primary"]`) when one is on the screen; otherwise the most common fill with OKLCH chroma > 0.1 on controls; otherwise `--m-color-accent-default`.
 - **Primary action:** a control whose background is within ΔE2000 5 of the accent, or the product's declared primary (`.m-button[data-variant="primary"]`).
 
 ## The measures
@@ -67,7 +67,8 @@ Each measure has an id, its unit, and how it's computed. A value is recorded per
 | `space.empty` | share | Lay an 8 px grid over the window. A cell has ink when it touches a text line box, media, a control, an icon or a drawn border or shadow edge. Empty = 1 − ink cells ÷ all cells |
 | `space.steps` | px, shares | Every vertical gap between consecutive visible block siblings, and every container padding, snapped to the nearest step of the product's spacing scale (or to 4 px where it has none). Gives each step's share |
 | `space.sectionRatio` | ratio | Median gap between the main column's children ÷ median gap between siblings inside them |
-| `space.contentWidth` | share and px | The width of the union of text boxes in the main column ÷ the window width, and the same width in px |
+| `space.contentWidth` | share | The width of the union of text boxes in the main column ÷ the window width |
+| `space.contentWidthPx` | px | The same width in px |
 | `space.gutter` | px | Distance from the window's left edge to the main column's first text box |
 
 ### Density
@@ -108,7 +109,8 @@ Each measure has an id, its unit, and how it's computed. A value is recorded per
 
 | Id | Unit | Computed |
 | --- | --- | --- |
-| `emphasis.primaries` | count | Primary actions in the window (and **page**) |
+| `emphasis.primaries` | count | Primary actions in the window |
+| `emphasis.primariesPage` | count | Primary actions on the **page** |
 | `emphasis.primaryAt` | shares | Where each primary action sits: one of the nine cells of a 3 × 3 grid over the window, plus `pinned` (a sticky or fixed ancestor) and `inRow` (inside a collection item) |
 | `emphasis.primaryWidth` | share | Primary action width ÷ its parent's width |
 | `emphasis.destructive` | label | How a control labelled delete, remove, cancel subscription, or with a danger colour, is drawn: `dangerFill`, `dangerText`, `plain` |
@@ -144,7 +146,7 @@ Words are only measured on a real product. A language's own recipes carry invent
 
 ### States
 
-States aren't measured on ordinary screens. The inventory includes screens of kind `empty`, `loading` and `error`. For each, the probe records `centred` (the main content's centre within 10% of the window's centre), `media.role`, `emphasis.primaries` and `type.sizes`. `states.consistent` is the share of those screens that match the most common combination.
+States aren't measured on ordinary screens. The inventory includes screens of kind `empty`, `loading` and `error`. For each, the probe records `states.centred` (1 when the main column's centre is within 10% of the window's centre on both axes, else 0; measured on every screen), `media.role`, `emphasis.primaries` and `type.sizes`. `states.consistent` is the share of those screens that match the most common combination.
 
 ## Kinds of screen
 
@@ -205,7 +207,7 @@ Every screen in the inventory has one kind: `list`, `detail`, `form`, `dashboard
 
 - **A check reports distance; it never fails.** The reviewer decides.
 - **The normal range** is the fingerprint's range for that kind of screen, falling back to `all`.
-- **Which measures get a check:** only those with a clear range, where the 90th percentile is within twice the 10th. A measure that varies freely carries no check.
+- **Which measures get a check:** only numbers measured on at least 5 screens with a clear range: the 10th percentile above 0 and the 90th within twice the 10th. A measure that varies freely, or sits at 0, carries no check.
 - **The message** uses the product's own words for things where it has them ("rows", not "list items").
 
 ## Distance
