@@ -488,8 +488,8 @@ const errors = `<main class="m-container" data-size="md" style="padding-block: v
       <button type="submit" class="m-button" data-variant="primary">Create profile</button>
     </section>
     <section class="m-stack" data-gap="3" aria-label="Answer feedback">
-${banner('success', I.circleCheck, 'Nicely done!', 'Rosemary likes to dry out between waterings.', '<button type="button" class="m-button" data-variant="primary">Continue</button>')}
-${banner('danger', I.alert, 'Correct answer:', 'Yellow lower leaves usually mean too much water.', '<button type="button" class="m-button" data-variant="danger">Got it</button>')}
+${banner('success', I.circleCheck, 'Spot on!', 'Rosemary likes to dry out between waterings.', '<button type="button" class="m-button" data-variant="primary">Continue</button>')}
+${banner('danger', I.alert, 'The answer:', 'Yellow lower leaves usually mean too much water.', '<button type="button" class="m-button" data-variant="danger">Got it</button>')}
       <div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title">Lesson didn’t sync</div><div class="m-toast-body">Your 3 answers are saved on this device and will sync when you’re back online.</div></div><button type="button" class="m-button" data-size="sm">Retry</button></div>
     </section>
 ${errorPage('404', I.compass, 'info', 'We can’t find that page', 'The link may be old, or the lesson has moved to another unit.', `<a class="m-button" data-variant="primary" href="#">Back to my path</a>`)}

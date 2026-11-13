@@ -19,7 +19,7 @@ and what to do next.
 3. **One action at the bottom** checks or continues (see
    [one-step-at-a-time](./one-step-at-a-time.md)).
 4. **The verdict replaces the footer:** a banner in the pale green or pale red, 16px corners, a 36px
-   icon in a white circle, a heavy 24px title in the tone ("Nicely done!", "Correct answer:"), one
+   icon in a white circle, a heavy 24px title in the tone ("Spot on!", "The answer:"), one
    line that teaches, and one button on the right in the same tone: green Continue after a right
    answer, red Got it after a wrong one.
 

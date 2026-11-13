@@ -207,7 +207,7 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
 - **Alert.** A pale tint in the tone with a 2px outline in the tone, 16px corners, a 22–28px icon,
   and a heavy title in the tone's text colour. The answer banner under an exercise is its own
   pattern: the pale green or red tint with 16px corners, a 36px icon in a white circle, a 24px heavy
-  title ("Nicely done!", "Correct answer:"), one line, and the button on the right.
+  title ("Spot on!", "The answer:"), one line, and the button on the right.
 - **Toast.** White, 2px grey outline, 16px corners, a solid lip and a faint drop; title at 800, one
   line of detail, one button ("Retry", "Undo").
 - **Dialog.** White, 16px corners and a 2px grey outline, over a 50% black scrim; a 24px heavy title and stacked
@@ -322,7 +322,7 @@ seven recipes at three widths).
 
 ## Words
 
-- Short, warm, sentence case: "Nicely done!", "Find friends", "Try plus free for 14 days".
+- Short, warm, sentence case: "Spot on!", "Find friends", "Try plus free for 14 days".
 - Buttons are verbs, shown uppercase by the style, written in sentence case in the markup.
 - Celebrate progress with numbers ("6th place", "26/40"), never shame a miss.
 
