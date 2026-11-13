@@ -66,7 +66,8 @@ console.log();
 // The distinctiveness matrix: each language's own screens (each recipe held out in turn) against its checks,
 // against every other language's screens, and its screens against every other language's checks.
 const fps = Object.fromEntries(ids.filter((id) => screensOf[id]?.length).map((id) => [id, buildFingerprint(id, screensOf[id], { mode: 'language', measuredAt: '' })]));
-const checks = Object.fromEntries(Object.keys(fps).map((id) => [id, buildChecks(fps[id])]));
+const PAD = process.env.MARIACHI_SINGLE_PAD === undefined ? undefined : Number(process.env.MARIACHI_SINGLE_PAD);
+const checks = Object.fromEntries(Object.keys(fps).map((id) => [id, buildChecks(fps[id], { singlePad: PAD })]));
 const sp = spreads(Object.values(fps));
 const med = (xs) => quantile(xs, 0.5);
 const FLOOR = 0.05;
@@ -79,7 +80,7 @@ for (const L of measured) {
     const rest = screensOf[L].filter((s) => s.id !== recipe);
     const held = screensOf[L].filter((s) => s.id === recipe);
     if (!held.length) continue;
-    const c = buildChecks(buildFingerprint(L, rest, { mode: 'language', measuredAt: '' }));
+    const c = buildChecks(buildFingerprint(L, rest, { mode: 'language', measuredAt: '' }), { singlePad: PAD });
     for (const s of held) own.push(distance(s.result.measures, c, sp, s.kinds));
   }
   const strangers = measured.filter((M) => M !== L).flatMap((M) => screensOf[M].map((s) => distance(s.result.measures, checks[L], sp, s.kinds)));
