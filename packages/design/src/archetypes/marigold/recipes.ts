@@ -1,8 +1,8 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Marigold's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
- * (no colour literals), with sample data from a made-up plant-care learning app ("Bramblewood").
+ * Marigold's nine layout recipes (the seven required shapes, then reading and sign-in): framework-free HTML
+ * using only @mariachi/design classes and tokens (no colour literals), with sample data from a made-up plant-care learning app ("Bramblewood").
  * They follow the language's real screen patterns, translated to a desktop web layout: a white side
  * column with uppercase heavy nav labels and the current item in a sky-blue outlined tint; a centred
  * learning column with a green unit banner on a lip and round lesson buttons; a right column of
@@ -63,6 +63,8 @@ const I = {
     '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
   mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
   bell: '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+  key: '<path d="M2.586 17.414A2 2 0 0 0 2 18.828V21a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h1a1 1 0 0 0 1-1v-1a1 1 0 0 1 1-1h.172a2 2 0 0 0 1.414-.586l.814-.814a6.5 6.5 0 1 0-4-4z"/><circle cx="16.5" cy="7.5" r=".5" fill="currentColor"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
   volume:
     '<path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"/><path d="M16 9a5 5 0 0 1 0 6"/><path d="M19.364 18.364a9 9 0 0 0 0-12.728"/>',
 };
@@ -72,10 +74,11 @@ const label =
   'font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-bold); text-transform: uppercase; letter-spacing: var(--m-font-tracking-wide); color: var(--m-color-fg-muted)';
 const heading = 'font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold)';
 const pageTitle = 'font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-bold); line-height: var(--m-font-leading-tight)';
-// The marketing headline: the display face at the one heavy weight (the reference uses two weights a screen),
-// lowercase, tight
-const display =
-  'font-family: var(--m-font-family-display); font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight); text-transform: lowercase';
+// The public headline: the display face at the one heavy weight (the reference uses two weights a screen),
+// lowercase, tight, in the text green (`success-fg`, 5.5:1 on white; the brand green is 2.1:1 and never text).
+// `size` is the wide step; under 40rem every display headline steps down to 32px (the clamp is a step, not a ramp)
+const display = (size: '2xl' | '3xl' | '4xl') =>
+  `font-family: var(--m-font-family-display); font-size: ${size === '2xl' ? 'var(--m-font-size-2xl)' : `clamp(var(--m-font-size-2xl), (100vw - 40rem) * 99, var(--m-font-size-${size}))`}; font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight); text-transform: lowercase; color: var(--m-color-success-fg)`;
 const line = 'var(--m-border-width-thin) solid var(--m-color-border-default)';
 const hue = (tone: string) => `color: var(--m-color-${tone})`;
 const upper = 'text-transform: uppercase; letter-spacing: var(--m-font-tracking-wide)';
@@ -96,7 +99,7 @@ const navItems: [keyof typeof I, string][] = [
 
 const sidebar = (current: string) => `  <nav class="m-sidebar" aria-label="Main">
     <div class="m-stack" data-gap="6">
-      <a href="#" style="padding: var(--m-space-2) var(--m-space-4); font-family: var(--m-font-family-display); font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-font-tracking-tight); color: var(--m-color-brand-default); text-decoration: none">bramblewood</a>
+      <a href="#" style="padding: var(--m-space-2) var(--m-space-4); font-family: var(--m-font-family-display); font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-font-tracking-tight); color: var(--m-color-success-fg); text-decoration: none">bramblewood</a>
       <div class="m-sidebar-section">
         <ul style="${upper}; font-weight: var(--m-font-weight-bold)">
 ${navItems
@@ -412,7 +415,7 @@ const perks = (a: boolean[]): [string, boolean][] =>
 
 const pricing = `<div class="m-stack" data-gap="0">
   <header class="m-navbar">
-    <a class="m-navbar-brand" href="#" style="color: var(--m-color-brand-default); font-size: var(--m-font-size-xl)">bramblewood</a>
+    <a class="m-navbar-brand" href="#" style="color: var(--m-color-success-fg); font-size: var(--m-font-size-xl)">bramblewood</a>
     <div class="m-navbar-actions" style="margin-inline-start: auto">
       <a class="m-button" data-size="sm" href="#">Log in</a>
     </div>
@@ -420,7 +423,7 @@ const pricing = `<div class="m-stack" data-gap="0">
   <main class="m-container" style="padding-block: var(--m-space-12) var(--m-space-16)">
     <div class="m-stack" data-gap="10">
       <div class="m-stack" data-gap="4" data-align="center" style="text-align: center">
-        <h1 style="${display}; color: var(--m-color-brand-default)">grow further with plus</h1>
+        <h1 style="${display('4xl')}">grow further with plus</h1>
         <p class="m-muted" style="max-inline-size: 34rem">Every lesson stays free. Plus takes away the waiting, adds practice made from your mistakes, and keeps your hearts full.</p>
         <label class="m-field" data-layout="inline" style="font-weight: var(--m-font-weight-bold)"><input class="m-switch" type="checkbox" role="switch" checked> Pay yearly and save 35%</label>
       </div>
@@ -498,6 +501,137 @@ ${errorPage('403', I.lock, 'danger', 'This grove is private', 'Only members can 
   </div>
 </main>`;
 
+// Public pages share one top bar: white, 70px, the wordmark on the left and one white button on the right, its
+// content held to the 66rem page width. The blog and landing pages draw no line under it (the help and legal pages
+// do, so the default navbar keeps its 2px line)
+const publicBar = (links: string[], action: string, line = false) => `  <header class="m-navbar" style="--m-navbar-gap: var(--m-space-4); --m-navbar-padding-x: max(var(--m-layout-container-padding), (100% - var(--m-layout-container-max-lg)) / 2)${line ? '' : '; --m-navbar-border-width: 0'}">
+    <a class="m-navbar-brand" href="#" style="color: var(--m-color-success-fg); font-size: var(--m-font-size-xl)">bramblewood</a>
+${links.length ? `    <nav class="m-navbar-nav" aria-label="Main" style="${upper}">
+${links.map((l) => `      <a class="m-navbar-link" href="#">${l}</a>`).join('\n')}
+    </nav>
+` : ''}    <div class="m-navbar-actions" style="margin-inline-start: auto">
+      <a class="m-button" data-size="sm" href="#">${action}</a>
+    </div>
+  </header>`;
+
+// A picture slot. Marigold ships no pictures, so a recipe draws the stand-in: a pale tint in green or sky (the
+// two hues public pages use) with one icon centred in the tone. A product puts its own picture here at the same
+// ratio and corners, with no outline
+const pictureSlot = (ic: string, tone: 'success' | 'info', ratio: string, radius: string, size: number, label: string) =>
+  `<div role="img" aria-label="${label}" style="display: grid; place-items: center; aspect-ratio: ${ratio}; inline-size: 100%; border-radius: ${radius}; background: var(--m-color-${tone}-bg); color: var(--m-color-${tone}-fg)">${icon(ic, size)}</div>`;
+
+// A screenshot slot inside the prose: the product's own screen in a 2px grey frame with 16px corners
+const screenSlot = (label: string) =>
+  `<div role="img" aria-label="${label}" style="display: grid; place-items: center; flex: 1 1 9rem; max-inline-size: 12rem; aspect-ratio: 1 / 2; border: ${line}; border-radius: var(--m-radius-lg); background: var(--m-color-bg-sunken); color: var(--m-color-fg-subtle)">${icon(I.phone, 40)}</div>`;
+
+const related = (ic: string, tone: 'success' | 'info', kind: string, title: string) => `          <a class="m-stack" data-gap="3" href="#" style="color: inherit; text-decoration: none">
+            ${pictureSlot(ic, tone, '3 / 2', 'var(--m-radius-lg)', 40, '')}
+            <span style="${label}">${kind}</span>
+            <h3 style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-bold)">${title}</h3>
+          </a>`;
+
+const footerColumn = (head: string, links: string[]) => `      <div class="m-stack" data-gap="3" style="flex: 1 1 9rem">
+        <h2 style="font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-bold)">${head}</h2>
+        <ul class="m-stack" data-gap="2" style="padding: 0; list-style: none">
+${links.map((l) => `          <li><a href="#" style="color: var(--m-color-fg-muted); text-decoration: none">${l}</a></li>`).join('\n')}
+        </ul>
+      </div>`;
+
+// Reading: a how-to post on the product's blog. The public top bar with no line; a centred head (the lowercase
+// headline in the text green at 32px, one muted line, an uppercase meta line); a 3:2 lead picture with 32px corners;
+// the post in the 42rem reading column (24px section headings, links blue at 800 with no underline, screenshots in a
+// grey frame with a caption); more guides as three picture links; a white footer under a 2px line. No breadcrumb on
+// a blog post: the meta line does that job
+const prose = (text: string) => text.replace(/<a href="#">/g, '<a href="#" style="font-weight: var(--m-font-weight-bold)">');
+const reading = `<div class="m-stack" data-gap="0">
+${publicBar(['Guides', 'News', 'Inside the app'], 'Start learning')}
+  <main class="m-container" style="padding-block: var(--m-space-12) var(--m-space-16)">
+    <article class="m-stack" data-gap="10" style="max-inline-size: var(--m-prose-max-width); margin-inline: auto" aria-labelledby="mg-post">
+      <header class="m-stack" data-gap="4" data-align="center" style="text-align: center">
+        <h1 id="mg-post" style="${display('2xl')}">how to set a watering reminder that sticks</h1>
+        <p class="m-muted">Three taps, one time you already keep, and your plants stop guessing.</p>
+        <p class="m-cluster" data-gap="3" data-justify="center" style="${label}"><time datetime="2026-03-12">12 March 2026</time><span aria-hidden="true">·</span><span>The Bramblewood team</span></p>
+      </header>
+      ${pictureSlot(I.bell, 'success', '3 / 2', 'calc(var(--m-radius-lg) * 2)', 56, 'A reminder bell over a watering can')}
+      <div class="m-prose">
+${prose(`        <p>Most plants that don’t make it were watered on the wrong day, not with the wrong amount. A reminder fixes the day. It works best when it rides on a habit you <a href="#">already have</a>, like the first coffee or the walk home.</p>
+        <h2>Turn on reminders</h2>
+        <ol>
+          <li>Open <strong>Profile</strong> and choose <strong>Reminders</strong>.</li>
+          <li>Switch on <strong>Watering</strong>. Each plant in your groves gets its own day.</li>
+          <li>Pick the time, then tap <strong>Save changes</strong>.</li>
+        </ol>
+        <figure>
+          <div class="m-cluster" data-gap="6" data-justify="center">
+            ${screenSlot('The Reminders page with Watering switched on')}
+            ${screenSlot('The time picker set to 6:00 pm')}
+          </div>
+          <figcaption style="text-align: center">Reminders, then the time picker. Each plant keeps its own day.</figcaption>
+        </figure>
+        <h2>Pick a time you already keep</h2>
+        <p>A reminder at 6:00 pm works if you’re home at 6:00 pm. Choose the moment you pass your plants anyway, and the reminder becomes a nudge, not a chore. You can change it on any day in <a href="#">your reminder settings</a>.</p>
+        <h2>When you miss a day</h2>
+        <p>Nothing is lost. The plant’s card moves the next watering on by a day and says so. Your run of days stays safe for one missed reminder a week; read <a href="#">how runs work</a> for the rest.</p>`)}
+      </div>
+      <section class="m-stack" data-gap="6" style="padding-block-start: var(--m-space-10); border-block-start: ${line}" aria-labelledby="mg-more">
+        <h2 id="mg-more" style="${label}">More guides</h2>
+        <div class="m-grid" style="--m-layout-grid-min: 11rem">
+${related(I.droplet, 'info', 'Guides', 'Read a plant’s thirst from its leaves')}
+${related(I.sun, 'success', 'Guides', 'Find the right window in a dark flat')}
+${related(I.users, 'info', 'Inside the app', 'Groves: learn alongside friends')}
+        </div>
+      </section>
+    </article>
+  </main>
+  <footer style="border-block-start: ${line}">
+    <div class="m-container m-stack" data-gap="8" style="padding-block: var(--m-space-12)">
+      <div class="m-cluster" data-align="start" data-gap="8">
+${footerColumn('About us', ['Our story', 'Careers', 'Press'])}
+${footerColumn('Learn', ['Courses', 'Guides', 'Plus'])}
+${footerColumn('Help', ['Help centre', 'Contact us', 'Status'])}
+${footerColumn('Privacy and terms', ['Terms', 'Privacy', 'Cookies'])}
+      </div>
+      <p class="m-muted" style="font-size: var(--m-font-size-sm)">© 2026 Bramblewood</p>
+    </div>
+  </footer>
+</div>`;
+
+// Sign-in: the account screen. No navigation: a close button at the top left and one white button to switch forms
+// at the top right; a 24rem centred column with a centred 32px title; labelled fields in the well (no required
+// marker: every field here is required); the reset link inside the password field; one full-width green action;
+// an "or" divider and one white button per other way in; the small print last, centred
+const signIn = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
+  <header class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding: var(--m-space-6)">
+    <a class="m-button" data-variant="ghost" data-icon-only href="#" aria-label="Close" style="--m-button-ghost-fg: var(--m-color-fg-subtle)">${icon(I.x, 24)}</a>
+    <a class="m-button" data-size="sm" href="#">Join</a>
+  </header>
+  <main class="m-container" data-size="sm" style="flex: 1; padding-block: var(--m-space-8) var(--m-space-16)">
+    <div class="m-stack" data-gap="6">
+      <h1 id="mg-signin" style="${pageTitle}; text-align: center">Log in</h1>
+      <form class="m-stack" data-gap="4" action="#" method="post" aria-labelledby="mg-signin">
+        <div class="m-field">
+          <label class="m-field-label" for="mg-signin-user">Username or email</label>
+          <input class="m-input" id="mg-signin-user" name="username" autocomplete="username" required>
+        </div>
+        <div class="m-field">
+          <label class="m-field-label" for="mg-signin-pass">Password</label>
+          <div style="position: relative">
+            <input class="m-input" id="mg-signin-pass" name="password" type="password" autocomplete="current-password" required style="padding-inline-end: calc(var(--m-space-12) * 2)">
+            <a href="#" style="position: absolute; inset-block: 0; inset-inline-end: var(--m-space-4); display: flex; align-items: center; ${upper}; font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-bold); color: var(--m-color-fg-muted); text-decoration: none">Reset</a>
+          </div>
+        </div>
+        <button type="submit" class="m-button" data-variant="primary" style="inline-size: 100%">Log in</button>
+      </form>
+      <div class="m-divider" role="separator">or</div>
+      <div class="m-stack" data-gap="3">
+        <a class="m-button" href="#" style="inline-size: 100%">${icon(I.mail, 20)} Email me a link</a>
+        <a class="m-button" href="#" style="inline-size: 100%">${icon(I.key, 20)} Use a passkey</a>
+      </div>
+      <p class="m-muted" style="font-size: var(--m-font-size-sm); text-align: center">By logging in, you agree to our <a href="#" style="font-weight: var(--m-font-weight-bold); color: var(--m-color-fg-muted); text-decoration: none">Terms</a> and <a href="#" style="font-weight: var(--m-font-weight-bold); color: var(--m-color-fg-muted); text-decoration: none">Privacy policy</a>.</p>
+    </div>
+  </main>
+</div>`;
+
 export const marigoldRecipes: ArchetypeRecipe[] = [
   {
     name: 'dashboard',
@@ -510,7 +644,7 @@ export const marigoldRecipes: ArchetypeRecipe[] = [
     name: 'list-detail',
     title: 'List and detail',
     description:
-      'A weekly ranking under a big icon and heavy title: open rows with tinted initials, the learner’s own row in pale green, a promotion divider; a person’s card with stat tiles beside it.',
+      'A weekly ranking under a big icon and heavy title: open rows with tinted initials, the learner’s own row in the pale grey well, a promotion divider; a person’s card with stat tiles beside it.',
     html: listDetail,
   },
   {
@@ -537,7 +671,7 @@ export const marigoldRecipes: ArchetypeRecipe[] = [
     name: 'pricing',
     title: 'Pricing',
     description:
-      'A heavy lowercase headline in green, three plan columns side by side with the paid one raised and outlined in blue, ticks and crosses, one big action, and the questions as an outlined accordion.',
+      'A heavy lowercase headline in the text green, three plan columns side by side with the paid one raised and outlined in blue, ticks and crosses, one big action, and the questions as an outlined accordion.',
     html: pricing,
   },
   {
@@ -546,5 +680,19 @@ export const marigoldRecipes: ArchetypeRecipe[] = [
     description:
       'Field errors under the field, a summary alert above the form, right and wrong answer banners, a toast, and full pages for 404, 500 and no access.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A how-to post on the blog: the public top bar with no line, a centred lowercase headline in the text green, an uppercase meta line, a 3:2 lead picture, the post in the 42rem column with 24px headings and framed screenshots, more guides, and a white footer.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The log-in screen: a close button and a white Join button, a centred title, labelled fields in the well with the reset link inside the password field, one full-width green action, an “or” divider, white buttons for other ways in, and the small print.',
+    html: signIn,
   },
 ];

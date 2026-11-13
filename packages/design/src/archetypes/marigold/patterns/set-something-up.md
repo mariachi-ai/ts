@@ -6,7 +6,7 @@ find the other settings pages.
 ## What Marigold does, in order
 
 1. **A heavy page title with the save button on the same line,** at the right, small and green.
-2. **Groups under grey uppercase labels** (13px at 800, tracked), in a 38rem column.
+2. **Groups under grey uppercase labels** (15px at 800, tracked), in a 38rem column.
 3. **Switches as rows:** the setting's name at 800 and a muted one-line hint on the left, the switch
    on the right, each row on a 2px line. Switches apply at once.
 4. **Text settings as fields:** the label above (17px at 800), the input in the pale well with a 2px
