@@ -13,17 +13,21 @@
 ## Where it appears
 
 - Every app recipe: `dashboard`, `list-detail`, `empty-state`, `errors` (the shared shell); `settings` (its own sidebar).
-- `pricing`: public pages use a 72px translucent navbar instead (13px muted links; log in as ghost; the main action an inverted pill).
-- Source study: the docs pages' sidebar (8px-radius rows, observed `<40` radius 8 on 3 of 3 docs articles), the HTML app frame on the home page, public screenshots of the sidebar.
+- `pricing`: the site uses a 72px translucent navbar instead (13px muted links on the right; Log in as ghost; the main action an inverted 32px pill), aligned to the 80rem column.
+- `reading`: the docs have a sidebar of their own (below) and a 64px bar instead of the navbar.
+- `sign-in`: no navigation at all; the mark and one footnote line.
+- Source study: the docs sidebar (280px, page colour, hairline on its right, 32px rows; 8px row radius on 3 of 3 docs articles), the HTML app frame on the home page, public screenshots of the sidebar.
 
 ## Variations and triggers
 
-- **Phone:** the sidebar stacks above the panel (recipe behaviour at 390px).
-- **Public pages:** navbar on top, no sidebar.
+- **Phone (app):** the sidebar stacks above the panel (recipe behaviour at 390px).
+- **The site:** the navbar on top, no sidebar. On a phone the navbar is 64px with the mark, Log in, the main action and a menu button; the links move into the menu, never a sideways scroll.
+- **The docs:** a 280px docs sidebar on the page colour (not the frame colour of the app, because there is no panel), split from the article by a hairline on its right. Rows 32px, 13px at 510 in muted grey with 16px icons; the current row in default text with no fill; sub-pages under a thin guide line; other sections at the bottom over a hairline. On a phone it goes behind the menu button (the recipe, having no media queries, puts it after the article instead).
 
 ## What it does not do
 
 - No top navigation inside the app; no tabs as primary navigation.
+- No app sidebar (frame colour, grey current row, counts) on a public page; no navbar inside the app.
 - No icons-only rail; no coloured or filled current row; no badges as pills on counts.
 - No edge line between sidebar and panel: the panel's own hairline separates them.
 

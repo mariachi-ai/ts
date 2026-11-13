@@ -137,9 +137,10 @@ export const obsidian = extendTheme(minimal, {
     },
   },
   components: {
-    // A 232px sidebar beside one panel; settings and docs read in a 40rem column
+    // A 232px sidebar beside one panel. Columns: 18rem for sign-in, 40rem for settings and docs
+    // articles, 80rem for the public site (its index pages, pricing and footer measure 1280px)
     layout: {
-      containerMax: { sm: '30rem', md: '40rem', lg: '64rem' },
+      containerMax: { sm: '18rem', md: '40rem', lg: '80rem' },
       containerPadding: 'clamp(1rem, 4vw, 2rem)',
       gridGap: 'var(--m-space-4)',
       gridMin: '14rem',
@@ -203,7 +204,9 @@ export const obsidian = extendTheme(minimal, {
       textareaMinHeight: '4.5rem',
     },
     select: { chevronSize: '0.25rem' },
+    // No required marker: the public form marks none of its required fields; say "Optional" in the hint instead
     field: {
+      requiredMarker: '""',
       gap: '6px',
       labelFontSize: 'var(--m-font-size-sm)',
       labelFontWeight: 'var(--m-font-weight-medium)',
@@ -252,10 +255,10 @@ export const obsidian = extendTheme(minimal, {
       fontSize: 'var(--m-font-size-sm)',
       currentWeight: 'var(--m-font-weight-medium)',
     },
-    // The public site's bar: 72px, a blurred near-black, a hairline, 13px links
+    // The public site's bar: 72px, the site's page colour (the darkest step) blurred, a hairline, 13px links
     navbar: {
       height: 'calc(4.5rem * var(--m-density))',
-      bg: 'var(--m-color-bg-canvas)',
+      bg: 'var(--m-color-bg-sunken)',
       border: { light: '#ebebeb', dark: '#1e1f20' },
       translucentOpacity: '80%',
       backdropFilter: 'blur(20px)',
@@ -328,9 +331,10 @@ export const obsidian = extendTheme(minimal, {
         activeShadow: 'inset 0 0 0 1px var(--m-color-border-default)',
       },
     },
-    // Callouts: a hairline panel a step off the page; the tone lives in the icon and title
+    // The neutral callout (notes, info): the raised grey with a hairline, as the docs draw it. Toned
+    // alerts (success, warning, danger) keep their faint tint; there is no blue info box
     alert: {
-      bg: 'var(--m-color-bg-surface)',
+      bg: 'var(--m-color-bg-raised)',
       border: 'var(--m-color-border-default)',
       accentWidth: '1px',
       radius: 'var(--m-radius-container)',
@@ -447,14 +451,18 @@ export const obsidian = extendTheme(minimal, {
       height: '1.5em',
       paddingX: '0.35em',
     },
+    // Reading text: the secondary grey, headings 32/24/20, links in the default text colour, underlined
     prose: {
       maxWidth: '39rem',
+      fg: { light: '#3c4149', dark: '#d0d6e0' },
       lineHeight: 'var(--m-font-leading-relaxed)',
+      headingFlow: 'var(--m-space-12)',
       h1Size: 'var(--m-font-size-3xl)',
-      h2Size: 'var(--m-font-size-xl)',
-      h3Size: 'var(--m-font-size-lg)',
+      h2Size: 'var(--m-font-size-2xl)',
+      h3Size: 'var(--m-font-size-xl)',
       h2Border: 'transparent',
-      linkDecoration: 'none',
+      linkFg: 'var(--m-color-fg-default)',
+      linkDecoration: 'underline',
       quoteBorderWidth: '2px',
       tableHeaderBg: 'var(--m-color-bg-surface)',
     },

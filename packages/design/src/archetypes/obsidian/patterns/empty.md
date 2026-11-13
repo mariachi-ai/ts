@@ -29,4 +29,4 @@
 ## Why
 
 - `inferred`: the empty view teaches one concept in one sentence and gets out of the way.
-- `observed`: the language's recipes carry no media at all (media.role `none` on 21 of 21 screen-widths).
+- `observed`: the language's recipes carry no media at all (media.role `none` on 27 of 27 screen-widths).
