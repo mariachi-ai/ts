@@ -137,15 +137,32 @@ export function clearRange(range: [number, number]): boolean {
 }
 
 /** `checks.json`: the numeric measures with a clear range, by kind of screen where a kind has 3 or more values. */
-export function buildChecks(fp: Fingerprint): Checks {
+/** How check ranges are drawn. A kind shown by one screen (at several widths) gets its own range, padded by `singlePad` of its value (0 by default: with one screen per kind, the narrow ranges are what tell languages apart). */
+export interface CheckOptions { singlePad?: number }
+
+export function buildChecks(fp: Fingerprint, options: CheckOptions = {}): Checks {
+  const singlePad = options.singlePad ?? 0;
   // A kind gets its own range only when two or more distinct screens show it (not one screen at three widths)
   const screensByKind: Record<string, Set<string>> = {};
-  for (const s of fp.screens) for (const k of s.kind) (screensByKind[k] ??= new Set()).add(s.id);
+  for (const s of fp.screens) {
+    for (const k of s.kind) {
+      if (!screensByKind[k]) screensByKind[k] = new Set();
+      screensByKind[k].add(s.id);
+    }
+  }
   const checks: Check[] = [];
   for (const [id, s] of Object.entries(fp.measures)) {
     if (s.unit !== 'number' || !s.range || s.n < 5 || !clearRange(s.range) || !MESSAGES[id]) continue;
     const byKind: Record<string, [number, number]> = {};
-    for (const [k, v] of Object.entries(s.byKind)) if (v.range && v.n >= 3 && (screensByKind[k]?.size ?? 0) >= 2) byKind[k] = v.range;
+    for (const [k, v] of Object.entries(s.byKind)) {
+      if (!v.range || v.n < 3) continue;
+      if ((screensByKind[k]?.size ?? 0) >= 2) byKind[k] = v.range;
+      else {
+        // One screen of this kind: its own range, widened so a close screen isn't "outside" by a hair
+        const pad = singlePad * Math.max(Math.abs(v.range[0]), Math.abs(v.range[1]));
+        byKind[k] = [r3(v.range[0] - pad), r3(v.range[1] + pad)];
+      }
+    }
     checks.push({ id, measure: id, normal: { all: s.range, byKind }, message: MESSAGES[id] });
   }
   return { specVersion: SPEC_VERSION, library: fp.library, checks };

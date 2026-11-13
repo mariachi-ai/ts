@@ -123,7 +123,8 @@ const s = cs(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden'
     if (gc && gc[3] > 0.5) return gc;
     // A face drawn by a pseudo-element covering the control (a button whose face is its ::before)
     if (!e.matches(CONTROL)) return null;
-    const before = getComputedStyle(e, '::before'), bc = parseCssColor(before.backgroundColor);
+    const before = getComputedStyle(e, '::before');
+    const bc = parseCssColor(before.backgroundColor);
     return before.content !== 'none' && before.position === 'absolute' && bc && bc[3] > 0.5 ? bc : null;
   };
   const behind = (e: Element) => { for (let p = e.parentElement; p; p = p.parentElement) { const c = ownBg(p); if (c) return c; } return canvas; };
