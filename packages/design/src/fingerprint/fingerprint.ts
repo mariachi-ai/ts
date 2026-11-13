@@ -19,6 +19,8 @@ export const RECIPE_KINDS: Record<string, ScreenKind[]> = {
   'empty-state': ['empty'],
   pricing: ['marketing'],
   errors: ['error'],
+  reading: ['detail'],
+  'sign-in': ['form', 'firstUse'],
 };
 
 /** One screen measured at one width. */

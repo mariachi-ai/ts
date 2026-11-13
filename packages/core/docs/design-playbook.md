@@ -99,6 +99,7 @@ Each step lists its inputs, its outputs, its tool and its check. **Script** mean
 - **In:** the inventory and the theme.
 - **Out:** `archetypes/<id>/recipes.ts`.
   - **The seven required page shapes:** `dashboard`, `list-detail`, `onboarding`, `settings`, `empty-state`, `pricing`, `errors`.
+  - **Two more, added as each language is re-run:** `reading` (a public reading page, such as a help article or a post) and `sign-in`. They give a second screen of the detail and form kinds, and cover the public pages that the pilot's rebuild test found missing.
   - **More kinds where the source has them:** detail, form, dialog, loading.
   - **Built from:** the library's classes and tokens only, following the source's real screen patterns, with all content invented.
 - **Tool:** agent.
@@ -128,8 +129,10 @@ Each step lists its inputs, its outputs, its tool and its check. **Script** mean
     - why, marked `inferred` or `told`.
   - **How a screen is assembled:** what it opens with, the reading order, how much one screen does, what changes when narrow, and what happens with too much content or none. This goes in `DESIGN.md` under Page shapes.
   - **Signature moves (3–7)** and **`never.md`**, with evidence.
+  - **The two families.** Say which pages are the app and which are public (marketing, reading, sign-in), and what changes between them: the primary's colour and shape, the header, any sidebar, title sizes, the footer, and how a public page narrows to a phone. Builders in the pilot's rebuild test stalled on exactly this.
+  - **No contradictions.** Every number in `DESIGN.md`, `brief.md`, the patterns and the recipes agrees. The rebuild test found, for example, "three weights" beside captions specified at a fourth, and "icons are never the accent" beside recipes that paint them in it. Each of these becomes a rebuild miss.
 - **Tool:** agent.
-- **Check:** every pattern cites at least one precedent, and every never cites the screens that show it.
+- **Check:** every pattern cites at least one precedent; every never cites the screens that show it; and text colours specified anywhere meet contrast (4.5:1, or 3:1 for large text).
 
 ### 8. `DESIGN.md` and `brief.md`
 
