@@ -86,6 +86,8 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
 
 ## Design languages
 
+How a language is made, measured and tested, and how the same method builds a library for an existing product, a URL or a project: [design-playbook.md](./design-playbook.md). The measures behind its fingerprint and checks: [design-fingerprint.md](./design-fingerprint.md).
+
 A design language is a complete visual system an app is built from: a preset plus everything an
 agent needs to build a cohesive app with it. Each is taken faithfully from one real product's
 visual system, measured rather than invented, under an abstract name; no logos, illustrations,
