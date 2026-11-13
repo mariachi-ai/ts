@@ -191,6 +191,15 @@ for (const theme of Object.values(presets)) {
   fs.writeFileSync(path.join(dir, 'kit.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   count++;
 }
+// Each language's library files (the design-language playbook) go beside its DESIGN.md in dist/archetypes/<id>/.
+const LIBRARY = ['brief.md', 'never.md', 'preferences.md', 'questions.md', 'patterns', 'precedents'];
+for (const a of archetypes) {
+  for (const name of LIBRARY) {
+    const from = path.join(root, 'src', 'archetypes', a.id, name);
+    if (fs.existsSync(from)) fs.cpSync(from, path.join(dist, 'archetypes', a.id, name), { recursive: true });
+  }
+}
+
 // Check what was written: every sha matches its file, and every language has its body font.
 for (const id of fs.readdirSync(out)) {
   const m = JSON.parse(fs.readFileSync(path.join(out, id, 'kit.json'), 'utf8'));

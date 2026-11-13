@@ -8,7 +8,8 @@ marketplaces and booking apps where places, people and photos come first.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds nine page shapes as HTML using only the library's classes: the seven every
+  language has, then `reading` (a help article) and `sign-in`;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `terracotta` preset of `@mariachi/design` (`data-theme="terracotta"`,
@@ -24,10 +25,15 @@ The tokens are in the `terracotta` preset of `@mariachi/design` (`data-theme="te
   selection.
 - **Selection is ink.** Chosen tiles, checked boxes, switches, the current tab and focus rings are
   ink. The coral never means "selected".
-- **Soft lift, quiet lines.** Panels that hold an action float on a soft shadow with a hairline;
-  page sections are separated by hairlines and generous space, not boxes.
+- **Soft lift, quiet lines.** Only the panel that holds the commit action has both a hairline and
+  a soft shadow. Floating cards and the search pill lift on a shadow alone; information panels are a
+  hairline alone. Page sections are separated by hairlines and generous space, not boxes.
 - **Friendly words, exact numbers.** Sentence case, warm and short; prices are whole and clear, with
   the total underlined.
+- **Two families, one look.** The app (browse, a place, trips, account, host tools, flows) and the
+  public pages (marketing, reading, sign-in) share ink, white, photos and hairlines; they differ in
+  the header, the primary action, the title sizes and the third weight. See
+  [The two families](#the-two-families).
 
 ## Foundations
 
@@ -38,7 +44,7 @@ The tokens are in the `terracotta` preset of `@mariachi/design` (`data-theme="te
 | Hairlines | `#dddddd`; the lighter divider `#ebebeb` | `#2c2c2c`; `#222222` |
 | Control borders | `#8c8c8c`, ink on hover | `#6c6c6c`, light on hover |
 | Action (coral-magenta) | `#e31c5f`, hover `#d70466`, pressed `#bd1e59`; the gradient runs `#e31c5f` → `#d70466` | `#da1249`, hover `#e31c5f` |
-| Brand coral | `#ff385c` (brand mark, search disc, map pins, saved hearts) | the same |
+| Brand coral | `#ff385c` (brand mark, search disc, saved hearts; on a public page's map, the viewer's own place) | the same |
 | Links and accent text | ink `#222222`, underlined; the coral tint `#fff5f6` behind it | `#f7f7f7`; tint `#361a21` |
 | Neutral fill: secondary buttons, icon buttons | `#f2f2f2`, hover `#ebebeb` | `#2c2c2c`, hover `#3f3f3f` |
 | Errors | burnt red `#c13515` on `#fff5f3` | `#e74d2e` on `#241513` |
@@ -49,7 +55,8 @@ The tokens are in the `terracotta` preset of `@mariachi/design` (`data-theme="te
   the search bar, chips, badges, toggles and the booking action.
 - **Shadow.** Four steps, all neutral black:
   - `sm` (chips, photo badges): a 2% ring and `0 2px 4px` at 16%;
-  - `md` (the search bar, floating cards): a 2% ring and `0 8px 24px` at 10%;
+  - `md` (the search bar, floating cards): a 2% ring and `0 8px 24px` at 10%; the ring is their
+    edge, so they draw no border;
   - `lg` (the booking panel, menus): `0 6px 16px` at 12%;
   - `overlay` (dialogs, toasts): `0 8px 28px` at 28%.
   Dark mode draws them deeper with a faint light ring.
@@ -64,9 +71,17 @@ The tokens are in the `terracotta` preset of `@mariachi/design` (`data-theme="te
   - 48px between page sections, each opened by a hairline.
 - **Layout.**
   - A white header 80px tall, the search bar centred in it.
-  - Content to 70rem (1120px) on detail pages, up to 90rem on search grids, with gutters of
-    `clamp(1.5rem, 5vw, 5rem)`.
-  - Set-up flows in a 35rem column; settings beside a 20rem account column.
+  - **Page widths**, with gutters of `clamp(1.5rem, 5vw, 5rem)` (24px on a phone):
+    - 70rem (1120px) for a place page, a reading page and the account: `m-container` as it comes
+      (`observed`: the source's place pages are 1120px wide at 1440);
+    - 90rem for browse grids and results (`--m-layout-container-max-lg: 90rem`);
+    - 35rem for set-up flows and 30rem for the sign-in sheet;
+    - marketing sections to about 76rem, their text centred in narrower blocks.
+  - **The footer runs wider than the page.** Its band crosses the window and its columns run to
+    90rem on every page, so on a 70rem page they reach past the content's edges (`observed`: on the
+    source's place and help pages the footer's columns start 48px from the window's edge while the
+    content starts at 153px and 188px).
+  - Settings sit beside a 20rem account column.
   - Photo grids are auto-fit at about 15rem a column, gap 24px across and 40px down.
   - Results sit beside a map that takes about two fifths of the width.
 - **Density.** 1 by default. For host tools with long tables, set `--m-density: 0.85`.
@@ -79,24 +94,51 @@ are in the reference at the end.
 - **Families.** Figtree for everything, a friendly geometric grotesque with a double-storey a and a
   straight-tailed y; load `@fontsource-variable/figtree`. IBM Plex Mono for codes and references,
   small.
-- **Weights.** 400 for body, 500 for labels, card titles and buttons, 600 for headings and prices,
-  700 for display.
+- **Weights, by role.**
+  - 400: body, values, the grey lines.
+  - 500: titles (page 32px, listing 26px, card titles), labels, buttons and links; section headings
+    on public reading pages.
+  - 600: section and small headings in the app, every price and total (cards included), the word
+    mark, the sign-in title and the booking panel's uppercase captions.
+  - 700: display on public pages only, the marketing titles and the full-page error word. Never on an
+    app page.
+- **Three per page.** App pages use 400, 500 and 600. Marketing pages use 400, 500 and 700: their
+  sub-headings are 28/700 or 18/500, never 600. Reading and sign-in pages use 400, 500 and 600.
+  - `observed`: three weights in the first window of every studied source screen; the marketing
+    windows show 400, 500 and 700; the help articles 400 and 500 with the mark; the sign-in title is
+    26/600.
+  - The source draws the booking captions at 700, where its place page has no 600. The language
+    sets them at 600 so a place page keeps three weights (`inferred`; see
+    [questions.md](./questions.md)).
+- **Colour of text.** Running sentences (descriptions, the line under a title, an empty state's
+  sentence) are ink. Grey is for the short secondary lines under a card title, hints, captions and
+  values in a settings row.
 - **Sizes:**
   - body 16px, line height 1.375 (22px); long reading 1.5;
   - secondary lines and table text 14px; captions and badges 12px;
   - card titles 15–16px at 500;
-  - section headings 22px at 600, tracked −2%; page titles 32px; listing titles 26px at 500;
-  - display 48px and up at 700, tracked −2% to −4%, tight leading.
+  - section headings 22px, tracked −2%: at 600 in the app, at 500 on reading pages; page titles 32px
+    at 500; listing titles 26px at 500;
+  - the review score 72px on a phone to 100px wide, at 500, tracked −2%, line height 1 (`observed`);
+  - marketing display 60px at 700, tracked −3%, line height 64px; 40px on a phone for the first
+    title and 32px for the others (`observed`); the full-page error word up to 8rem at 700.
 - **Case.** Sentence case everywhere. Uppercase only for the tiny field captions inside a booking
-  panel ("ARRIVE", 10px, 700, tracked 4%).
-- **Figures.** Prices are whole where they can be (`$184 night`, `$920 total`); the total is
-  underlined. A struck-through price sits before a reduced one.
+  panel ("ARRIVE", 10px, 600, tracked 4%).
+- **Figures.** Prices are whole where they can be (`$184 night`, `$920 total`), at 600 wherever they
+  appear (a card, the panel, a total), and the total is underlined. A struck-through price sits before
+  a reduced one, at 400 in grey. `inferred`: the source's card prices were not measured (its search
+  page never settles), so one price weight everywhere is the language's choice.
 
 ## Icons
 
 - Lucide, outlined, **2px stroke**: 16px in buttons, chips and inline; 22–24px in lists of
   amenities and the account column (at 1.5px); 32px in choice tiles; 40px in empty states.
-- Icons are ink, never coral, except the saved heart (filled brand coral) and status icons.
+- **Icons are ink.** That covers every outline icon: amenities, rating categories, an empty
+  state's icon, a tip's icon, ticks in a list of features, map controls and the place pin.
+- **The only coloured icons:** the saved heart (filled brand coral), the white glyph on the coral
+  search disc, and status icons inside an alert, a toast or a field error, which take their tone.
+- `observed`: on the source every outline icon (amenities, review categories, the host invitation's
+  three tiles) is ink; its coloured icons are drawn illustrations, which the language does not carry.
 - The rating star is filled ink and small (12px) before the score.
 - **The same icon for the same action, every time:**
   - add `plus`, edit `pencil`, delete `trash-2`;
@@ -178,9 +220,22 @@ Sections are about 48px apart, each opened by a hairline.
 - **Sidebar.** The account column: a 32px "Account" title, then items at 16px with a 22px outline
   icon, 12px corners, the current one on the grey fill. No group headings unless there are more
   than eight items.
-- **Navbar.** White, 80px, the coral brand mark on the left, the search bar centred, and on the
-  right an ink text link ("Host a place") and round grey icon buttons. On scroll it gains a hairline
-  under it. In host tools the centre holds ink text links, the current one with a pale pill.
+- **Navbar.** White, 80px, the coral brand mark on the left (a word mark at 600), the search bar
+  centred, and on the right an ink text link ("Host a place") and a round grey menu button. Its own
+  hairline is the only line under it: the page's first section never draws a second one. In host
+  tools the centre holds ink text links, the current one with a pale pill.
+  - **On a phone** (`observed`): browse pages show only the search, one full-width pill; a place
+    page has no header, just round white back, send and save buttons over its photo; a reading page
+    keeps the mark, the section's name and a search icon; a marketing page keeps the mark.
+  - **In a recipe** (no media queries) the guest header is laid out as flow, so it responds by
+    itself: `display: flow-root` on the `m-navbar`, the mark floated to the start, the actions
+    floated to the end, and the search in its own box with `min-inline-size: 20rem`. While there is
+    room the search sits centred between them; on a phone it drops under them as one full-width row.
+    Keep the end to one short text link and one round button so the first row fits 390px. Host tools
+    put their links in `m-navbar-nav`, which scrolls sideways instead of wrapping.
+  - The source's phone web adds a bottom tab bar (explore, saved, sign in). Recipes don't draw it: no
+    library component appears only on phones. A product with its own CSS may add it below 744px,
+    with the current item in ink (the source paints it coral; the language keeps current items ink).
 - **Tabs.**
   - **Underline:** 14/500 grey labels, the current one ink with a 2px ink bar; category strips put a
     24px icon above each label.
@@ -194,9 +249,13 @@ Sections are about 48px apart, each opened by a hairline.
   rows highlight in `#f7f7f7`. A listing column starts with a 48px rounded photo.
 - **Card.**
   - **Photo card** (the default for anything browsable): a photo with 20px corners, the title at
-    15–16/500 with the rating on the right, two grey lines, and the underlined price. No frame.
-  - **Panel** (`m-card`): white, 12px corners, a hairline and the `lg` shadow, 24px padding: the
-    booking panel, earnings, to-dos.
+    15–16/500 with the rating on the right, two grey lines, and the underlined price at 600. No frame.
+  - **Panel** (`m-card`): white, 12px corners, a hairline and the `lg` shadow, 24px padding. Only
+    for a panel that holds the commit action: the booking panel, a price breakdown.
+  - **Outline** (`data-variant="outline"`): a hairline and no shadow, for information panels
+    (earnings, to-dos, a help panel).
+  - **Floating** (`--m-card-border: transparent; --m-card-shadow: var(--m-shadow-md)`): no edge, the
+    `md` shadow, for a row of cards that sit over the page (reservations, facts on a landing page).
   - **Sunken** (`data-variant="sunken"`): `#f7f7f7`, no border, for tips and promotions.
   - **Choice card:** a 1px hairline edge that becomes a 2px ink edge when chosen.
 - **Badge.** A pill, 12px at 600. On photos: white with a soft shadow ("Top rated"). Elsewhere a pale
@@ -209,6 +268,27 @@ Sections are about 48px apart, each opened by a hairline.
 - **Code, kbd.** IBM Plex Mono at 14px on the grey fill, 6px corners inline and 12px for blocks.
   Keys are small hairline boxes.
 - **Prose.** 16px with a 1.5 line height, about 40rem wide; links ink and underlined.
+- **Links.** Two kinds (`observed`):
+  - **In or under text** (inline links, Read more, a list of related articles, an error
+    page's next steps): ink, underlined, 500.
+  - **Lists of places to go** (footer columns, nearby places, breadcrumbs): plain ink at 400 with no
+    underline; the underline appears on hover in a product (the source's footer links underline on
+    hover; its nearby-places grid never does). Recipes have no hover rules, so they draw them plain.
+- **Map.** A picture layer with 20px corners at the column's full width, zoom buttons in a white
+  rounded stack on the right.
+  - Results: white price pills on the `sm` shadow, the chosen one ink.
+  - One place: a 48px ink disc with a white `house` glyph and a short point below, on the `sm`
+    shadow (`observed` on the source's place pages).
+  - Brand coral marks a place only on a public page's map, for the viewer's own place (`observed` on
+    the host invitation).
+- **Footer.** A `#f7f7f7` band across the window, its content to 90rem.
+  - Three link columns: a 14/500 ink heading, then 14/400 ink links about 36px apart.
+  - Under a light `#ebebeb` hairline, the legal row: "© 2026 Name · Privacy · Terms" at 14px on the
+    left; the language (with `globe`) and the currency at 14/500 on the right.
+  - On a place page the band opens with a breadcrumb of where the place is and a grid of nearby
+    places (name 14/500 ink, a grey 14px line, no underline), at the page's width.
+  - On a phone the columns stack (`m-grid`, about 15rem a column).
+  - `observed` on the source's place, help, browse and host pages.
 - **Progress.** An ink bar on a light grey track with round ends; set-up flows split it into one
   segment a step, square ended, along the foot of the page.
 - **Meter.** The same bar; it turns burnt red past the "high" mark.
@@ -262,28 +342,174 @@ Sections are about 48px apart, each opened by a hairline.
 - **Words.** Say what happened, whether money or dates changed, and what to do next. No blame, no
   codes in sentences, no exclamation marks.
 
+## The two families
+
+Every page belongs to one of two families. Decide which before building; the rest of this file
+applies to both unless it says otherwise.
+
+- **The app:** browse and results, a place page, trips and saved places, the account, checkout, and
+  the host tools (today, calendar, listings, fees) with the set-up flow. Recipes: `dashboard`,
+  `list-detail`, `onboarding`, `settings`, `empty-state`, `pricing`, and the in-page half of
+  `errors`.
+- **Public pages:** marketing (the invitation to host, a page explaining protection or gift
+  vouchers), reading (help articles and guides), sign-in, and the full-page errors. Recipes:
+  `reading`, `sign-in`, and the full-page half of `errors`. There is no marketing recipe; its shape
+  is below.
+
+| | App | Public |
+| --- | --- | --- |
+| Header | Guests: the coral mark, the pill search, "Host a place" and the menu. Host tools: the mark, ink text links, the menu and an avatar. Flows: the mark and outline pills only | Marketing: the mark alone and one gradient pill ("Share your place") on the right. Reading: an ink mark with the section's name, a single-field pill search, a globe and the menu. Sign-in: the guest header |
+| Primary action | The gradient for a guest's commitment (book, confirm and pay), full width in the lifted panel. Host tools and the set-up flow use the **ink** action | The gradient, once a page: in the header (marketing), in a hairline panel (reading), in the sheet (sign-in). Every other action is an ink pill or an underlined link |
+| Its shape | A pill in the booking panel; 12px corners elsewhere | A pill in a header; 12px in the sign-in sheet; 8px in a reading panel |
+| Sidebar | Only the account column in settings | None |
+| Titles | Page 32/500, listing 26/500, sections 22/600 | Marketing 60px/700 tracked −3%, sections the same size, centred. Reading 32/500 with sections at 22/500. Sign-in 26/600, centred |
+| Weights | 400, 500, 600 | Marketing 400, 500, 700. Reading and sign-in 400, 500, 600 |
+| Footer | The full footer under guest pages (browse, a place, trips). None in host tools, flows or the account (`inferred`: those pages are behind a login and were not seen) | The full footer under every public page |
+| On a phone | One row for the mark and the menu, the search full width under it. A place page opens on one photo; the booking action pins to a bottom bar | Marketing: the mark alone at the top, the gradient action in a pinned bottom bar. Reading: the panel's action moves above the article, full width. Sign-in: the sheet becomes the page |
+
+- `observed`: the headers, the gradient placements, the ink secondary pills, the title sizes and
+  weights, the footers and the phone behaviour, on the source's place, help, host-invitation and
+  sign-in pages. `inferred`: host tools use ink because the published screenshots of them do (they
+  are behind a login; [questions.md](./questions.md), question 2).
+- **What stays the same:** ink on white, coral only for commitment and the mark, frameless photos
+  with 20px corners, hairlines between sections, underlined ink for quiet actions, Figtree.
+
 ## Page shapes (recipes)
 
-- **Dashboard** (the host's day).
+- **Dashboard** (the host's day, app).
   - "Good morning, Ines" at 32px, a pill switch, then a sideways row of reservation panels.
-  - Earnings with this year's coral line over last year's dotted plum, a to-do panel and a sunken
-    tip, then the listings as photo cards.
-- **List and detail.**
-  - The compact search pill in the header, a row of rounded filter chips, a grid of photo cards and
-    a map with white price pins (the chosen one ink).
-  - The listing: title with underlined Send and Save, a five-photo mosaic with 12px outer corners,
-    hairline sections, amenities with 24px icons, and a sticky booking panel with the gradient pill
-    and the underlined price lines.
-- **Onboarding.** A bare header with outline pill buttons, a 32px question, choice tiles that take a
-  2px ink edge, then a segmented progress bar at the foot with an underlined Back and an ink Next.
-- **Settings.** "Account" and the icon list on the left; label-and-value rows split by hairlines with
-  underlined Edit, Add or Update; one row opened as a small form with an ink Save; notification
-  switches; closing the account last.
-- **Empty state.** The page title, then a hairline-bounded block: an outline icon, a 22px heading,
-  one sentence and an ink-outlined action, beside a placeholder photo.
-- **Pricing.** Three choice cards with large figures and ink ticks, a pill switch for the period, a
-  breakdown panel with the gradient pill, and questions in an accordion.
-- **Errors.** The field, form, toast and full-page errors above, as one page.
+  - Reservation cards float on the `md` shadow with no edge; earnings (this year's coral line over
+    last year's dotted plum) and the to-dos sit in hairline outline panels beside a sunken tip with an
+    ink icon; then the listings as photo cards.
+- **List and detail** (app).
+  - The compact search pill in the header, one row of rounded filter chips that scrolls sideways, a
+    grid of photo cards and a map (a picture layer) with white price pins laid over it (the chosen
+    one ink).
+  - The listing, set off by a full-width divider, in a 70rem column: the title with underlined Send
+    and Save, then the five-photo mosaic with 12px outer corners.
+  - Then two columns. The main one holds the summary, the host row, the description, **the
+    bedrooms** (a photo card per room, 12px corners, the room at 16/500 and its beds in grey 14px)
+    and the amenities with 24px icons. Beside it, the booking panel with the gradient pill and the
+    underlined price lines. The panel's wrapper takes `align-self: stretch`, so it is as tall as the
+    main column and the panel inside can stick.
+  - Then, at the full column width, each opened by a hairline:
+    - **Reviews:** the score huge and centred (72–100px at 500), a 22px line and a grey sentence,
+      a small underlined grey link; the categories in a row split by short vertical hairlines (12px
+      label and score, a 24px ink icon); reviews in two columns (a 48px avatar, the name at 500 with
+      a grey line, small ink stars with the date, three lines of ink text, an underlined Read more);
+      a grey-fill `See all 126 reviews`.
+    - **Location:** the place at 16/500, the map at the column's width with 20px corners and the
+      ink place pin, a sentence about the area and an underlined link.
+    - **Before you book:** a grid of three or four (a 24px ink icon, a 14/500 title, a grey 14px
+      line, an underlined Read more).
+  - The footer opens with where the place is and nearby places.
+  - **On a phone:** the mosaic becomes one photo. The recipe does it without a media query: the
+    mosaic is a wrapping flex row of a fixed height (`clamp(16rem, 30vw, 25rem)`) with `overflow:
+    hidden`, so the 2 × 2 block wraps to a second row and is cut off. The panel drops under the
+    main column.
+- **Onboarding** (app). A bare header with outline pill buttons, a 32px question, choice tiles that
+  take a 2px ink edge, then a segmented progress bar at the foot with an underlined Back and an ink
+  Next.
+- **Settings** (app). "Account" and the icon list on the left; label-and-value rows split by
+  hairlines with underlined Edit, Add or Update; one row opened as a small form with an ink Save;
+  notification switches; closing the account last.
+- **Empty state** (app). The page title, then a hairline-bounded block: an ink outline icon, a 22px
+  heading, one sentence and an ink-outlined action, beside a placeholder photo.
+- **Pricing** (app: a host tool, reached from Listings). The title and an ink sentence beside a
+  leading photo, then three choice cards with large figures and ink ticks, a pill switch for the
+  period, a breakdown panel with the **ink** action, and questions in an accordion.
+- **Errors.** The field, form, toast and busy action (app), then the full-page codes (public: the
+  word at 700, the rest at 400 and 500).
+- **Reading** (public: a help article).
+  - The reading header; a 12px breadcrumb; an eyebrow (14/500 grey), the 32/500 title, a lead
+    picture with 12px corners.
+  - The article in a 40rem column at 16px with a 1.5 line height: 22/500 section headings, lists,
+    underlined ink links, and related guides as underlined links with a 14px line under each.
+  - Beside it, a hairline panel (12px corners) with one sentence and the page's one gradient action
+    (8px corners, full width). In the recipe the panel comes first and the two sit in an `m-split`
+    with `flex-direction: row-reverse`, so the panel is on the right when wide and above the article
+    on a phone, as on the source.
+  - The footer.
+- **Sign-in** (public).
+  - The guest header over a wall of pictures quietened by a white veil.
+  - A centred white sheet, 30rem wide, 32px corners, on the overlay shadow: the coral mark (40px),
+    the 26/600 title, one field, the full-width gradient Continue (12px corners), an "or" rule in
+    light hairlines, then two outlined 60px buttons with 12px corners and 24px ink icons for other
+    ways in.
+  - The footer under it. On a phone the sheet takes the width.
+- **Marketing** (public, no recipe). Built from the classes above:
+  - **Header:** the mark alone on the left and one gradient pill ("Share your place") on the right; no
+    hairline until the page scrolls. On a phone the pill moves to a bottom bar (white at half
+    opacity, a light top hairline) and the header keeps the mark.
+  - **Hero:** two columns. The left holds the title (60px/700, tracked −3%, line height 64px,
+    centred), one line with an underlined figure, a grey 14px line with an underlined link, and one
+    input. The right holds a picture in a floating box (16px corners, the `md` shadow). There is no
+    lifted panel: the header's pill is the commit.
+  - **Sections:** each opens with a centred 60px/700 title over two lines with 120px or more of
+    space above it; most have no hairline.
+  - **How it works:** a row of three centred columns, each an 88px `#f7f7f7` tile with 16px corners
+    holding a 40px ink outline icon, a 28/700 title and a grey 18px sentence (line height 28px). On a
+    phone each becomes a row: a 64px tile on the left, a 20/700 title and a grey 16px sentence.
+  - **People:** floating cards (`#f7f7f7`, 30px corners, a faint shadow), a round photo, the name at
+    26/700, a grey line and two figures split by a hairline in a white inner pill; one ink pill action
+    under the row ("Find a host near you").
+  - **A picture with text:** a photo with 16px corners beside a 28/700 title, a grey 18px sentence
+    and an underlined link.
+  - **Questions:** a full-width `#f7f7f7` band with a centred 60px title and a row of question cards.
+  - **Testimonials:** none on the studied marketing pages. When a page needs them, use the review
+    shape from the place page (avatar, name, grey line, stars and date, three lines of ink text),
+    not quote cards (`inferred`).
+  - `observed` on the source's host invitation, wide and phone.
+
+### Signature moves
+
+1. **The photo leads.** Most first windows open on a picture: a photo card grid, a mosaic, a photo
+   beside the title. On the source's studied screens 69% of first windows have media, and on a place
+   page it covers about 40% of the window (`observed`, fingerprint). Photo cards have no frame.
+2. **One gradient action per view.** The coral-to-magenta pill or bar. In the app it is full width
+   in the lifted panel, with the figure it commits to above it; on public pages it is the header's
+   pill (marketing), the action in a hairline panel (reading) or the sign-in sheet's Continue.
+   Everything else is a grey fill, an ink pill or outline, or an underlined ink word. Host tools use
+   ink instead (`observed`, see [patterns/commit-to-the-main-action.md](./patterns/commit-to-the-main-action.md)).
+3. **The pill search with a coral disc.** Three questions in one shadowed pill; the disc is the only
+   coral in the header (`observed`).
+4. **Selection is ink.** A 2px ink edge, an ink bar, an ink disc; never coral (`observed`).
+5. **Hairlines, not boxes.** Page sections open with a full-width hairline and 40–48px of space;
+   on the source's studied screens 95% of collections are separated by space alone (`observed`,
+   fingerprint).
+6. **Underlined ink words for quiet actions:** Send, Save, Edit, Read more, the price lines
+   (`observed`).
+
+### How a screen is assembled
+
+- **It opens with** the white header, then either the search (browse), the title line with its
+  quiet actions (one thing), a large question (a flow), a breadcrumb and title (reading) or a
+  display title beside a picture (marketing). There is no page-level intro band in the app.
+- **Reading order:** picture, title, the facts in one grey line, then sections down one column; the
+  action panel sits to the right on wide screens and is sticky.
+- **How much one screen does:** one job and one commit action. A second job is a link to its own
+  page, not a tab or a second panel.
+- **When narrow:** the right panel drops under the content; grids go to one column of full-width
+  photo cards; chips and category tabs scroll sideways in one row; the search becomes one rounded
+  field under the mark's row.
+- **On a phone, a place page** (`observed`): one full-width photo with a "1 / 32" count, the title
+  centred under it, and the booking action pinned to a bottom bar (white, a light top hairline, the
+  price line on the left and the gradient pill). The bar is for phones only: from 744px up the panel
+  is sticky in its column, and once the panel's column ends, a sticky bar of links to the sections
+  (photos, amenities, reviews, location) with the price and a smaller gradient pill replaces the header. There
+  is never a bar pinned to the bottom of a wide screen.
+  - Recipes can't show a bar only on phones, so they don't pin one: the panel drops under the main
+    column. A product with its own CSS adds the bottom bar below 744px and hides the panel there.
+- **Too much content:** more sections down the page, each opened by a hairline, with `See all …` as a
+  grey-fill button that opens a dialog. Long lists page with round page numbers.
+- **No content:** the page title stays and the empty block takes the list's place (see
+  [patterns/say-nothing-is-here.md](./patterns/say-nothing-is-here.md)).
+- **Three weights, five or six sizes:** an app page uses 400, 500 and 600, a marketing page 400, 500
+  and 700, and every page five or six text sizes (`observed`: three weights on every studied source
+  screen with the consent banner removed). See [Type](#type).
+
+The patterns, by job, are in [`patterns/`](./patterns/); the refusals in [never.md](./never.md); the
+recipes as precedents in [precedents/index.md](./precedents/index.md).
 
 ## Words
 
@@ -300,4 +526,7 @@ Sections are about 48px apart, each opened by a hairline.
 | Underline links and the total price, in ink | Colour links blue or coral |
 | Lift panels that hold an action on the soft shadow | Use heavy or coloured shadows |
 | Separate page sections with hairlines and space | Box every section in a card |
-| Use one icon set, outlined at 2px | Mix filled and outlined icons, or colour icons for decoration |
+| Use one icon set, outlined at 2px, in ink | Mix filled and outlined icons, or paint an outline icon coral |
+| Keep each page to three weights: 600 in the app, 700 only for public display | Bold an app heading at 700, or mix 600 and 700 on one page |
+| Pin the booking action to a bottom bar on phones only | Pin a bar to the bottom of a wide screen |
+| Leave footer and nearby-place links plain, underlined on hover | Underline every link in a footer column, or colour it |

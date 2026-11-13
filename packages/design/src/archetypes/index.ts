@@ -57,5 +57,5 @@ import type { Archetype } from './types';
  */
 export const archetypes: Archetype[] = [halcyonArchetype, fennelArchetype, basaltArchetype, emberArchetype, cirrusArchetype, zephyrArchetype, onyxArchetype, terracottaArchetype, marigoldArchetype, linenArchetype, quillArchetype, folioArchetype, broadsheetArchetype, obsidianArchetype, anthraciteArchetype, cadenceArchetype, mosaicArchetype, bazaarArchetype, transitArchetype, hearthArchetype, harborArchetype, nacreArchetype, confettiArchetype, voltArchetype, sprintArchetype, summitArchetype, solaceArchetype, heatherArchetype, saffronArchetype, nocturneArchetype, vellumArchetype, chalkArchetype, ochreArchetype, marginArchetype, quireArchetype, meridianArchetype, flintArchetype, cometArchetype, marqueeArchetype, reelArchetype, refrainArchetype, keelArchetype, relayArchetype, lagoonArchetype, candidArchetype, trellisArchetype, kiteArchetype, doodleArchetype, tinkerArchetype];
 
-export { categories, iconActions, recipeNames } from './types';
+export { categories, extraRecipeNames, iconActions, recipeNames } from './types';
 export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './types';

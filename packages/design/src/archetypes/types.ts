@@ -8,7 +8,12 @@ export const recipeNames = [
   'pricing',
   'errors',
 ] as const;
-export type RecipeName = (typeof recipeNames)[number];
+/**
+ * Page shapes a language adds as it's re-run through the design-language playbook: a public reading page (a
+ * help article or a post) and the sign-in screen. Optional until every language has them, then required.
+ */
+export const extraRecipeNames = ['reading', 'sign-in'] as const;
+export type RecipeName = (typeof recipeNames)[number] | (typeof extraRecipeNames)[number];
 
 /** Categories for browsing the languages: each holds several, each with its own character. */
 export const categories = {

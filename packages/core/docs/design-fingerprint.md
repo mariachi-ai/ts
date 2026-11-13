@@ -17,7 +17,7 @@ Measures are versioned. A change to a definition bumps `specVersion`, and finger
 | Setting | Value |
 | --- | --- |
 | Widths | `wide` 1440 × 900, `narrow` 1024 × 768, `phone` 390 × 844, at device pixel ratio 1 |
-| Mode | Light, unless the screen is measured for dark (then `data-mode="dark"` or the product's own switch) |
+| Mode | The library's own mode: dark for a dark-first language or product (`data-mode="dark"` or the product's own switch), otherwise light |
 | Motion | No preference, so declared motion can be read; the probe waits for running animations to finish |
 | Settled | Fonts loaded (`document.fonts.ready`), no network request for 500 ms, running animations finished (or 1 s), then 300 ms more |
 | The window | The first viewport, scrolled to the top |
@@ -28,6 +28,8 @@ Every measure is taken **in the window** unless it says **page**.
 ## Sets of elements
 
 These definitions are used by the measures below.
+
+- **Left out:** cookie and consent notices (a fixed or sticky element whose text mentions cookies, consent or privacy choices) and everything inside them. They're never answered or removed; the probe just doesn't count them.
 
 - **Visible:** a box with width and height greater than 0, `visibility` not `hidden`, and `opacity` greater than 0. `aria-hidden` doesn't matter: decorative icons and pictures are still seen.
 - **Text run:** a non-empty text node (after trimming) whose parent is visible. Its size is the parent's computed `font-size`, rounded to 0.5 px. Its weight is the parent's `font-weight`. Its length is its character count.
@@ -41,10 +43,11 @@ These definitions are used by the measures below.
   - `divider`: a top or bottom border only, at least half its parent's width.
 - **Media:** `img`, `video`, `canvas`, a `picture`, or an element with a `background-image`, at least 48 × 48 px and with no text inside. A box at least 95% of the window wide and 60% of it high is a backdrop, not media.
 - **Icon:** an `svg` (or an `img` of an SVG) of at most 32 × 32 px.
-- **Collection:** a parent with at least three visible children that share a tag and a first class name. It's a `list` when the children stack in one column, a `grid` when they sit in two or more columns and two or more rows, a `table` for `tbody` rows, and a `carousel` when its `scrollWidth` exceeds its `clientWidth` by more than 8 px with one row.
+- **Collection:** a parent (not inside an `svg`) with at least three visible children that share a tag and a first class name. It's a `list` when the children stack in one column, a `grid` when they sit in two or more columns and two or more rows, a `table` for `tbody` rows, and a `carousel` when its `scrollWidth` exceeds its `clientWidth` by more than 8 px with one row.
 - **Main column:** the element containing the largest share of the window's text characters that has at least three block children, excluding `nav`, `aside`, `header` and `footer`.
 - **Accent:** the product's action colour as drawn: the fill of its declared primary button (`.m-button[data-variant="primary"]`) when one is on the screen; otherwise the most common fill with OKLCH chroma > 0.1 on controls; otherwise `--m-color-accent-default`.
-- **Primary action:** a control whose background is within ΔE2000 5 of the accent, or the product's declared primary (`.m-button[data-variant="primary"]`).
+- **Fill:** an element's background colour; when that's transparent, the first colour stop of its background gradient; for a control, failing both, the background of an absolutely positioned `::before` that draws its face.
+- **Primary action:** a control whose fill is within ΔE2000 5 of the accent, or the product's declared primary (`.m-button[data-variant="primary"]`).
 
 ## The measures
 
@@ -206,7 +209,7 @@ Every screen in the inventory has one kind: `list`, `detail`, `form`, `dashboard
 ```
 
 - **A check reports distance; it never fails.** The reviewer decides.
-- **The normal range** is the fingerprint's range for that kind of screen, falling back to `all`.
+- **The normal range** is the fingerprint's range for that kind of screen, falling back to `all`. A kind shown by only one screen gets that screen's range across the widths, which is narrow; that narrowness is what tells libraries apart until there are more precedents of the kind.
 - **Which measures get a check:** only numbers measured on at least 5 screens with a clear range: the 10th percentile above 0 and the 90th within twice the 10th. A measure that varies freely, or sits at 0, carries no check.
 - **The message** uses the product's own words for things where it has them ("rows", not "list items").
 

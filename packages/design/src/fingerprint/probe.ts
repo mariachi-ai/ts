@@ -102,20 +102,34 @@ export function measureScreen(): ScreenMeasures {
   const visible = (e: Element) => { const r = rectOf(e);
 const s = cs(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden' && px(s.opacity) > 0; };
   const inWin = (r: DOMRect) => r.bottom > 0 && r.top < H && r.right > 0 && r.left < W;
-  const vis = all.filter(visible);
+  // Cookie and consent notices are left out of every measure: a pinned panel that talks about cookies or consent
+  const consent = all.filter((e) => /fixed|sticky/.test(cs(e).position) && /\b(cookies?|consent|privacy choices)\b/i.test(e.textContent ?? ''));
+  const vis = all.filter((e) => visible(e) && !consent.some((c) => c === e || c.contains(e)));
   const visSet = new Set(vis);
   const lab = (c: [number, number, number, number]) => rgbToLab([c[0], c[1], c[2]]);
   const clipArea = (r: DOMRect) => Math.max(0, Math.min(r.right, W) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, H) - Math.max(r.top, 0));
 
+  const CONTROL = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="link"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="menuitem"], [role="option"]';
   // Effective backgrounds: the nearest opaque-ish background up the tree, else the page's
   const rootBg = parseCssColor(cs(document.documentElement).backgroundColor);
   const bodyBg = parseCssColor(cs(document.body).backgroundColor);
   const canvas: [number, number, number, number] = bodyBg && bodyBg[3] > 0.5 ? bodyBg : rootBg && rootBg[3] > 0.5 ? rootBg : [255, 255, 255, 1];
-  const ownBg = (e: Element) => { const c = parseCssColor(cs(e).backgroundColor); return c && c[3] > 0.5 ? c : null; };
+  // A fill: the background colour, or a gradient's first colour stop (a primary painted as a gradient is still a fill)
+  const ownBg = (e: Element) => {
+    const c = parseCssColor(cs(e).backgroundColor);
+    if (c && c[3] > 0.5) return c;
+    const g = cs(e).backgroundImage.match(/gradient\([^)]*?(rgba?\([^)]+\))/);
+    const gc = g ? parseCssColor(g[1]) : null;
+    if (gc && gc[3] > 0.5) return gc;
+    // A face drawn by a pseudo-element covering the control (a button whose face is its ::before)
+    if (!e.matches(CONTROL)) return null;
+    const before = getComputedStyle(e, '::before');
+    const bc = parseCssColor(before.backgroundColor);
+    return before.content !== 'none' && before.position === 'absolute' && bc && bc[3] > 0.5 ? bc : null;
+  };
   const behind = (e: Element) => { for (let p = e.parentElement; p; p = p.parentElement) { const c = ownBg(p); if (c) return c; } return canvas; };
 
   // Sets
-  const CONTROL = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="link"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="menuitem"], [role="option"]';
   const isControl = (e: Element) => e.matches(CONTROL);
   const controls = vis.filter(isControl);
   const drawn = (s: CSSStyleDeclaration, side: string) => px(s.getPropertyValue(`border-${side}-width`)) > 0 && s.getPropertyValue(`border-${side}-style`) !== 'none' && (parseCssColor(s.getPropertyValue(`border-${side}-color`))?.[3] ?? 0) > 0;
@@ -195,6 +209,7 @@ const s = cs(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden'
   type Coll = { parent: Element; items: Element[]; kind: string };
   const colls: Coll[] = [];
   for (const p of vis) {
+    if (p.closest('svg')) continue; // an icon's paths aren't a list
     const kids = [...p.children].filter((k) => visSet.has(k));
     if (kids.length < 3) continue;
     const sig = (k: Element) => `${k.tagName}.${(k.getAttribute('class') ?? '').split(/\s+/)[0]}`;
