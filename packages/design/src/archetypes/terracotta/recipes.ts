@@ -121,7 +121,7 @@ const listing = (n: number, glyph: string, title: string, sub: string, dates: st
             </div>
           </a>`;
 
-const h1 = 'font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
+const h1 = 'font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
 const h2 = 'font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
 const h3 = 'font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-semibold)';
 const small = 'font-size: var(--m-font-size-sm)';
@@ -135,21 +135,21 @@ const inkCta =
   '--m-button-primary-bg: var(--m-color-bg-inverse); --m-button-primary-border: var(--m-color-bg-inverse); --m-button-primary-fg: var(--m-color-fg-inverse); --m-button-primary-hover-bg: var(--m-color-fg-default); --m-button-primary-active-bg: var(--m-color-fg-default)';
 
 // The word mark: an outline glyph and the name in the signature coral
-const brand = `<a class="m-navbar-brand" href="#" style="color: var(--m-color-brand-default); gap: var(--m-space-1)">${icon('flame', 30, 2.25)} hearthway</a>`;
+const brand = `<a class="m-navbar-brand" href="#" style="color: var(--m-color-brand-default); gap: var(--m-space-1); font-weight: var(--m-font-weight-semibold)">${icon('flame', 30, 2.25)} hearthway</a>`;
 const userMenu = `<div class="m-navbar-actions">
       <a class="m-navbar-link" href="#">Host a place</a>
       <button type="button" class="m-button" data-size="sm" data-icon-only aria-label="Language and currency" style="--m-button-radius: var(--m-radius-full)">${icon('globe', 16)}</button>
       <button type="button" class="m-button" data-size="sm" data-icon-only aria-label="Menu" style="--m-button-radius: var(--m-radius-full)">${icon('menu', 16)}</button>
     </div>`;
 
-// The pill search bar: three segments split by hairlines and a coral search disc
+// The pill search bar: three segments split by hairlines and a coral search disc; its edge is the elevation's 1px ring, not a border
 const seg = (label: string, value: string, last = false) =>
   `<button type="button" class="m-stack" data-gap="0" style="flex: 1 1 0; min-inline-size: 0; text-align: start; padding: var(--m-space-3) var(--m-space-6); border: 0; border-radius: var(--m-radius-full); background: transparent; color: inherit; font: inherit; cursor: pointer${last ? '' : '; box-shadow: inset calc(-1 * var(--m-border-width-thin)) 0 0 var(--m-color-border-default)'}"><span style="font-size: var(--m-font-size-xs); font-weight: var(--m-font-weight-semibold)">${label}</span><span class="m-muted" style="${small}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">${value}</span></button>`;
-const searchBar = (where: string, when: string, who: string) => `<div role="search" class="m-cluster" data-gap="0" style="flex-wrap: nowrap; max-inline-size: 53rem; margin-inline: auto; inline-size: 100%; padding-inline-end: var(--m-space-2); border: var(--m-border-width-thin) solid var(--m-color-border-default); border-radius: var(--m-radius-full); background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-md)">
+const searchBar = (where: string, when: string, who: string) => `<div role="search" class="m-cluster" data-gap="0" style="flex-wrap: nowrap; max-inline-size: 53rem; margin-inline: auto; inline-size: 100%; padding-inline-end: var(--m-space-2); border-radius: var(--m-radius-full); background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-md)">
       ${seg('Where', where)}${seg('When', when)}${seg('Who', who, true)}
       <button type="button" class="m-button" data-variant="primary" data-icon-only aria-label="Search" style="--m-button-primary-bg: var(--m-color-brand-default); --m-button-primary-border: var(--m-color-brand-default); --m-button-primary-hover-bg: var(--m-color-accent-default); --m-button-radius: var(--m-radius-full); flex: none">${icon('search', 16, 3)}</button>
     </div>`;
-const compactSearch = `<div role="search" class="m-cluster" data-gap="0" style="flex-wrap: nowrap; padding: var(--m-space-1) var(--m-space-1) var(--m-space-1) var(--m-space-2); border: var(--m-border-width-thin) solid var(--m-color-border-default); border-radius: var(--m-radius-full); box-shadow: var(--m-shadow-sm); font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-medium)">
+const compactSearch = `<div role="search" class="m-cluster" data-gap="0" style="flex-wrap: nowrap; padding: var(--m-space-1) var(--m-space-1) var(--m-space-1) var(--m-space-2); border-radius: var(--m-radius-full); box-shadow: var(--m-shadow-sm); font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-medium)">
       <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="--m-button-radius: var(--m-radius-full); font-size: var(--m-font-size-sm)">Lisbon coast</button>
       <span aria-hidden="true" style="block-size: 1.5rem; border-inline-start: var(--m-border-width-thin) solid var(--m-color-border-default)"></span>
       <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="--m-button-radius: var(--m-radius-full); font-size: var(--m-font-size-sm)">Mar 6 – 11</button>
@@ -181,7 +181,7 @@ ${['Today', 'Calendar', 'Listings', 'Inbox']
     </div>
   </header>`;
 
-const stay = (initials: string, who: string, guests: string, place: string, dates: string, tone: string, status: string) => `<article class="m-card" data-size="sm" style="flex: 0 0 17rem">
+const stay = (initials: string, who: string, guests: string, place: string, dates: string, tone: string, status: string) => `<article class="m-card" data-size="sm" style="flex: 0 0 17rem; --m-card-border: transparent; --m-card-shadow: var(--m-shadow-md)">
             <div class="m-card-body m-stack" data-gap="3">
               <div class="m-cluster" data-justify="between"><span class="m-badge" data-tone="${tone}">${status}</span><span class="m-muted" style="${small}">${dates}</span></div>
               <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap"><span class="m-avatar">${initials}</span><span class="m-stack" data-gap="0"><span style="font-weight: var(--m-font-weight-semibold)">${who}</span><span class="m-muted" style="${small}">${guests}</span></span></div>
@@ -220,7 +220,7 @@ const dashboard = `<div class="m-stack" data-gap="0" style="min-block-size: 100v
         </div>
       </div>
       <div class="m-cluster" data-gap="6" data-align="start">
-        <section class="m-card" aria-labelledby="tc-earn" style="flex: 2 1 28rem">
+        <section class="m-card" data-variant="outline" aria-labelledby="tc-earn" style="flex: 2 1 28rem">
           <div class="m-card-body m-stack" data-gap="4">
             <div class="m-cluster" data-justify="between" data-align="start">
               <div class="m-stack" data-gap="1">
@@ -239,7 +239,7 @@ const dashboard = `<div class="m-stack" data-gap="0" style="min-block-size: 100v
           </div>
         </section>
         <div class="m-stack" data-gap="6" style="flex: 1 1 18rem">
-          <section class="m-card" aria-labelledby="tc-todo">
+          <section class="m-card" data-variant="outline" aria-labelledby="tc-todo">
             <div class="m-card-body m-stack" data-gap="4">
               <h2 id="tc-todo" style="${h3}">To do</h2>
               <ul class="m-stack" data-gap="0" style="padding: 0; list-style: none">
@@ -253,7 +253,7 @@ const dashboard = `<div class="m-stack" data-gap="0" style="min-block-size: 100v
             <div class="m-card-body m-stack" data-gap="3">
               <span style="color: var(--m-color-brand-default)">${icon('sparkles', 24)}</span>
               <h2 id="tc-tip" style="${h3}">Weekends in March are filling fast</h2>
-              <p class="m-muted" style="${small}">Homes like yours nearby are 82% booked. A nightly price of $168 would keep you in the top results.</p>
+              <p style="${small}">Homes like yours nearby are 82% booked. A nightly price of $168 would keep you in the top results.</p>
               <div><a href="#" style="${link}">See price tips</a></div>
             </div>
           </section>
@@ -276,14 +276,16 @@ const dashboard = `<div class="m-stack" data-gap="0" style="min-block-size: 100v
 // List and detail: search results beside a map, then a listing's own page
 
 const chip = (label: string, glyph = '', pressed = false) =>
-  `<button type="button" class="m-button" data-size="sm" aria-pressed="${pressed}" style="--m-button-height-sm: 2.125rem; --m-button-padding-x-sm: var(--m-space-3); --m-button-radius: var(--m-radius-full); --m-button-secondary-bg: ${pressed ? 'var(--m-color-bg-sunken)' : 'var(--m-color-bg-surface)'}; --m-button-secondary-border: ${pressed ? 'var(--m-color-fg-default)' : 'var(--m-color-border-default)'}; --m-button-secondary-hover-bg: var(--m-color-bg-surface); --m-button-font-size: var(--m-font-size-xs); --m-button-font-weight: var(--m-font-weight-regular)">${glyph ? icon(glyph, 14) : ''}${label}</button>`;
+  `<button type="button" class="m-button" data-size="sm" aria-pressed="${pressed}" style="--m-button-height-sm: 2.125rem; --m-button-padding-x-sm: var(--m-space-3); --m-button-radius: var(--m-radius-full); --m-button-secondary-bg: ${pressed ? 'var(--m-color-bg-sunken)' : 'var(--m-color-bg-surface)'}; --m-button-secondary-border: ${pressed ? 'var(--m-color-fg-default)' : 'var(--m-color-border-default)'}; --m-button-secondary-hover-bg: var(--m-color-bg-surface); --m-button-font-size: var(--m-font-size-xs); --m-button-font-weight: var(--m-font-weight-regular); flex: none; white-space: nowrap">${glyph ? icon(glyph, 14) : ''}${label}</button>`;
 const pin = (price: string, x: number, y: number, current = false) =>
   `<span class="m-badge" style="position: absolute; inset-inline-start: ${x}%; inset-block-start: ${y}%; font-size: var(--m-font-size-sm); --m-badge-height: 1.75rem; box-shadow: var(--m-shadow-sm); border-color: transparent${current ? '; background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)' : ''}">${price}</span>`;
-const mapPanel = `<div role="img" aria-label="Map of the results" style="position: relative; block-size: 100%; min-block-size: 32rem; border-radius: var(--m-radius-lg); overflow: hidden; background:
+// The map is a picture layer with the price pins and zoom laid over it
+const mapPanel = `<div style="position: relative; block-size: 100%; min-block-size: 32rem; border-radius: var(--m-radius-lg); overflow: hidden">
+            <div role="img" aria-label="Map of the results" style="position: absolute; inset: 0; background:
               radial-gradient(circle at 70% 85%, var(--m-color-info-bg) 0 22%, transparent 22.5%),
               linear-gradient(115deg, transparent 47%, var(--m-color-border-default) 47% 47.6%, transparent 47.6%),
               linear-gradient(20deg, transparent 62%, var(--m-color-border-default) 62% 62.5%, transparent 62.5%),
-              linear-gradient(160deg, var(--m-color-success-bg), var(--m-color-bg-sunken) 55%)">
+              linear-gradient(160deg, var(--m-color-success-bg), var(--m-color-bg-sunken) 55%)"></div>
             ${pin('$184', 18, 22)}${pin('$212', 52, 16)}${pin('$139', 34, 46, true)}${pin('$265', 66, 40)}${pin('$158', 44, 70)}${pin('$301', 12, 64)}
             <div class="m-stack" data-gap="0" style="position: absolute; inset-block-start: var(--m-space-4); inset-inline-end: var(--m-space-4); border-radius: var(--m-radius-md); background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-sm)">
               <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Zoom in">${icon('plus', 16)}</button>
@@ -292,7 +294,7 @@ const mapPanel = `<div role="img" aria-label="Map of the results" style="positio
           </div>`;
 
 const results = `<section class="m-stack" data-gap="6" aria-labelledby="tc-results">
-      <div class="m-cluster" data-gap="2" style="padding-block: var(--m-space-2)">
+      <div class="m-cluster" data-gap="2" style="padding-block: var(--m-space-2); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none">
         ${chip('Filters', 'sliders-horizontal')}
         <span aria-hidden="true" style="block-size: 1.5rem; border-inline-start: var(--m-border-width-thin) solid var(--m-color-border-default)"></span>
         ${chip('Sea view', '', true)}${chip('Book instantly')}${chip('Pool')}${chip('Workspace')}${chip('Pets welcome')}${chip('Free cancellation')}${chip('2+ bedrooms')}
@@ -343,7 +345,7 @@ const booking = `<aside class="m-card" style="position: sticky; inset-block-star
             </div>
           </aside>`;
 
-const detail = `<article class="m-stack" data-gap="8" aria-labelledby="tc-title" style="padding-block-start: var(--m-space-12); ${hair}">
+const detail = `<article class="m-stack" data-gap="8" aria-labelledby="tc-title">
       <div class="m-cluster" data-justify="between">
         <h2 id="tc-title" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); line-height: var(--m-font-leading-tight)">Whitewashed flat in Cascais</h2>
         <div class="m-cluster" data-gap="1">
@@ -386,9 +388,10 @@ const detail = `<article class="m-stack" data-gap="8" aria-labelledby="tc-title"
 
 const listDetail = `<div class="m-stack" data-gap="0">
   ${guestHeader(compactSearch)}
-  <main class="m-container" style="--m-layout-container-max-lg: 90rem; padding-block: var(--m-space-4) var(--m-space-16); ${hair.replace('default', 'muted')}">
+  <main class="m-container" style="--m-layout-container-max-lg: 90rem; padding-block: var(--m-space-4) var(--m-space-16)">
     <div class="m-stack" data-gap="12">
     ${results}
+    <hr class="m-divider" style="--m-divider-spacing: 0">
     <div class="m-container" style="--m-layout-container-padding: 0">
     ${detail}
     </div>
@@ -415,7 +418,7 @@ const onboarding = `<div class="m-stack" data-gap="0" style="min-block-size: 100
       <div class="m-stack" data-gap="2">
         <span class="m-muted" style="${small}">Step 1 of 3</span>
         <h1 id="tc-q" style="${h1}">What kind of place are you sharing?</h1>
-        <p class="m-muted" style="font-size: var(--m-font-size-lg)">Pick the one that fits best. You can change it later.</p>
+        <p style="font-size: var(--m-font-size-lg)">Pick the one that fits best. You can change it later.</p>
       </div>
       <fieldset class="m-grid" style="--m-layout-grid-min: 9rem; --m-layout-grid-gap: var(--m-space-3); border: 0; padding: 0; margin: 0">
         <legend class="m-sr-only">Kind of place</legend>
@@ -475,7 +478,7 @@ const notify = (label: string, hint: string, on: boolean) => `<label class="m-cl
 
 const settings = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
   ${guestHeader('')}
-  <main class="m-container" style="padding-block: var(--m-space-10) var(--m-space-16); ${hair.replace('default', 'muted')}">
+  <main class="m-container" style="padding-block: var(--m-space-10) var(--m-space-16)">
     <div class="m-split" style="--m-layout-split-side: 20rem; --m-layout-split-gap: var(--m-space-16)">
       <nav class="m-sidebar" aria-label="Account" style="border: 0; padding: 0">
         <div class="m-stack" data-gap="6">
@@ -527,7 +530,7 @@ ${settingsNav('Your details')}
         </section>
         <section class="m-stack" data-gap="3" style="padding-block-start: var(--m-space-6); ${hair}" aria-labelledby="tc-close">
           <h2 id="tc-close" style="${h3}">Close your account</h2>
-          <p class="m-muted" style="${small}">Your listings come down and future stays are cancelled. This can't be undone.</p>
+          <p style="${small}">Your listings come down and future stays are cancelled. This can't be undone.</p>
           <div><button type="button" class="m-button" data-variant="danger" data-size="sm">Close account</button></div>
         </section>
       </div>
@@ -540,14 +543,14 @@ ${settingsNav('Your details')}
 
 const emptyState = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
   ${guestHeader('')}
-  <main class="m-container" style="padding-block: var(--m-space-10) var(--m-space-16); ${hair.replace('default', 'muted')}">
+  <main class="m-container" style="padding-block: var(--m-space-10) var(--m-space-16)">
     <div class="m-stack" data-gap="8">
       <h1 style="${h1}">Trips</h1>
       <section class="m-cluster" data-gap="8" data-align="center" style="padding-block: var(--m-space-8); ${hair}; border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)" aria-labelledby="tc-empty">
         <div class="m-stack" data-gap="4" style="flex: 1 1 22rem">
           <span style="color: var(--m-color-brand-default)">${icon('compass', 40, 1.5)}</span>
           <h2 id="tc-empty" style="${h2}">Nothing planned yet</h2>
-          <p class="m-muted">When you book a stay it shows up here, with directions, the door code and your host's details.</p>
+          <p>When you book a stay it shows up here, with directions, the door code and your host's details.</p>
           <div class="m-cluster" data-gap="3">
             <a class="m-button" href="#" style="--m-button-secondary-bg: var(--m-color-bg-surface); --m-button-secondary-border: var(--m-color-fg-default); --m-button-secondary-hover-bg: var(--m-color-bg-sunken)">Find a place</a>
           </div>
@@ -582,10 +585,13 @@ const pricing = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh"
   ${hostNav('Listings')}
   <main class="m-container" style="padding-block: var(--m-space-12) var(--m-space-16)">
     <div class="m-stack" data-gap="10">
-      <div class="m-stack" data-gap="3" style="max-inline-size: 40rem">
-        <nav class="m-breadcrumb" aria-label="Breadcrumb"><ol><li><a href="#">Listings</a></li><li><a href="#">Whitewashed flat in Cascais</a></li><li aria-current="page">Pricing</li></ol></nav>
-        <h1 style="${h1}">Choose how the booking fee is paid</h1>
-        <p class="m-muted" style="font-size: var(--m-font-size-lg)">It applies to every new booking. Stays already booked keep the fee they were booked with.</p>
+      <div class="m-cluster" data-gap="10" data-align="center">
+        <div class="m-stack" data-gap="3" style="flex: 1 1 24rem; max-inline-size: 36rem">
+          <nav class="m-breadcrumb" aria-label="Breadcrumb"><ol><li><a href="#">Listings</a></li><li><a href="#">Whitewashed flat in Cascais</a></li><li aria-current="page">Pricing</li></ol></nav>
+          <h1 style="${h1}">Choose how the booking fee is paid</h1>
+          <p style="font-size: var(--m-font-size-lg)">It applies to every new booking. Stays already booked keep the fee they were booked with.</p>
+        </div>
+        <div style="flex: 1 1 22rem">${photo(0, 'house', 'The flat this pricing applies to', '', '16 / 9')}</div>
       </div>
       <div class="m-cluster" data-justify="between">
         <div class="m-tabs" data-variant="pill"><div class="m-tab-list" role="tablist" aria-label="Billing">
@@ -647,7 +653,7 @@ const pageError = (code: string, word: string, line: string, links: string[]) =>
 
 const errors = `<div class="m-stack" data-gap="0">
   ${guestHeader('')}
-  <main class="m-container" style="padding-block: var(--m-space-10) var(--m-space-16); ${hair.replace('default', 'muted')}">
+  <main class="m-container" style="padding-block: var(--m-space-10) var(--m-space-16)">
     <div class="m-stack" data-gap="12">
       <div class="m-cluster" data-gap="12" data-align="start">
         <section class="m-stack" data-gap="6" style="flex: 1 1 24rem" aria-labelledby="tc-form">
@@ -707,7 +713,7 @@ export const terracottaRecipes: ArchetypeRecipe[] = [
     name: 'dashboard',
     title: 'Host today',
     description:
-      "The host's day: a pill switch over a row of reservation cards, earnings against last year in coral and dotted plum, a to-do card, and the listings as photo cards.",
+      "The host's day: a pill switch over a row of floating reservation cards, earnings against last year in coral and dotted plum and a to-do list in hairline panels, and the listings as photo cards.",
     html: dashboard,
   },
   {
@@ -742,7 +748,7 @@ export const terracottaRecipes: ArchetypeRecipe[] = [
     name: 'pricing',
     title: 'Fee plans',
     description:
-      'Three radio cards that take a 2px ink edge when chosen, a pill switch for the billing period, a breakdown card with the coral pill, and questions in hairline rows.',
+      'The title beside a leading photo, then three radio cards that take a 2px ink edge when chosen, a pill switch for the billing period, a breakdown card with the coral pill, and questions in hairline rows.',
     html: pricing,
   },
   {
