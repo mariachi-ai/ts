@@ -173,8 +173,8 @@ export const obsidian = extendTheme(minimal, {
     // Panels: a step lighter than the page, a 1px hairline, 8px corners, no shadow in dark
     card: {
       border: 'var(--m-color-border-default)',
-      shadow: 'var(--m-shadow-sm)',
-      hoverShadow: 'var(--m-shadow-sm)',
+      shadow: { light: 'var(--m-shadow-sm)', dark: 'none' },
+      hoverShadow: { light: 'var(--m-shadow-sm)', dark: 'none' },
       hoverBorder: { light: '#dcdbdd', dark: '#34343a' },
       hoverTransform: 'none',
       gap: 'var(--m-space-3)',
