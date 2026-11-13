@@ -109,6 +109,7 @@ const s = cs(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden'
   const lab = (c: [number, number, number, number]) => rgbToLab([c[0], c[1], c[2]]);
   const clipArea = (r: DOMRect) => Math.max(0, Math.min(r.right, W) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, H) - Math.max(r.top, 0));
 
+  const CONTROL = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="link"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="menuitem"], [role="option"]';
   // Effective backgrounds: the nearest opaque-ish background up the tree, else the page's
   const rootBg = parseCssColor(cs(document.documentElement).backgroundColor);
   const bodyBg = parseCssColor(cs(document.body).backgroundColor);
@@ -119,12 +120,15 @@ const s = cs(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden'
     if (c && c[3] > 0.5) return c;
     const g = cs(e).backgroundImage.match(/gradient\([^)]*?(rgba?\([^)]+\))/);
     const gc = g ? parseCssColor(g[1]) : null;
-    return gc && gc[3] > 0.5 ? gc : null;
+    if (gc && gc[3] > 0.5) return gc;
+    // A face drawn by a pseudo-element covering the control (a button whose face is its ::before)
+    if (!e.matches(CONTROL)) return null;
+    const before = getComputedStyle(e, '::before'), bc = parseCssColor(before.backgroundColor);
+    return before.content !== 'none' && before.position === 'absolute' && bc && bc[3] > 0.5 ? bc : null;
   };
   const behind = (e: Element) => { for (let p = e.parentElement; p; p = p.parentElement) { const c = ownBg(p); if (c) return c; } return canvas; };
 
   // Sets
-  const CONTROL = 'a[href], button, input:not([type="hidden"]), select, textarea, summary, [role="button"], [role="link"], [role="tab"], [role="checkbox"], [role="radio"], [role="switch"], [role="menuitem"], [role="option"]';
   const isControl = (e: Element) => e.matches(CONTROL);
   const controls = vis.filter(isControl);
   const drawn = (s: CSSStyleDeclaration, side: string) => px(s.getPropertyValue(`border-${side}-width`)) > 0 && s.getPropertyValue(`border-${side}-style`) !== 'none' && (parseCssColor(s.getPropertyValue(`border-${side}-color`))?.[3] ?? 0) > 0;

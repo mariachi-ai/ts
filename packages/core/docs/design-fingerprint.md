@@ -46,7 +46,7 @@ These definitions are used by the measures below.
 - **Collection:** a parent (not inside an `svg`) with at least three visible children that share a tag and a first class name. It's a `list` when the children stack in one column, a `grid` when they sit in two or more columns and two or more rows, a `table` for `tbody` rows, and a `carousel` when its `scrollWidth` exceeds its `clientWidth` by more than 8 px with one row.
 - **Main column:** the element containing the largest share of the window's text characters that has at least three block children, excluding `nav`, `aside`, `header` and `footer`.
 - **Accent:** the product's action colour as drawn: the fill of its declared primary button (`.m-button[data-variant="primary"]`) when one is on the screen; otherwise the most common fill with OKLCH chroma > 0.1 on controls; otherwise `--m-color-accent-default`.
-- **Fill:** an element's background colour, or, when that's transparent, the first colour stop of its background gradient.
+- **Fill:** an element's background colour; when that's transparent, the first colour stop of its background gradient; for a control, failing both, the background of an absolutely positioned `::before` that draws its face.
 - **Primary action:** a control whose fill is within ΔE2000 5 of the accent, or the product's declared primary (`.m-button[data-variant="primary"]`).
 
 ## The measures
