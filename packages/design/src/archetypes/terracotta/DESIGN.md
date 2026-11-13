@@ -24,8 +24,9 @@ The tokens are in the `terracotta` preset of `@mariachi/design` (`data-theme="te
   selection.
 - **Selection is ink.** Chosen tiles, checked boxes, switches, the current tab and focus rings are
   ink. The coral never means "selected".
-- **Soft lift, quiet lines.** Panels that hold an action float on a soft shadow with a hairline;
-  page sections are separated by hairlines and generous space, not boxes.
+- **Soft lift, quiet lines.** Only the panel that holds the commit action has both a hairline and
+  a soft shadow. Floating cards and the search pill lift on a shadow alone; information panels are a
+  hairline alone. Page sections are separated by hairlines and generous space, not boxes.
 - **Friendly words, exact numbers.** Sentence case, warm and short; prices are whole and clear, with
   the total underlined.
 
@@ -49,7 +50,8 @@ The tokens are in the `terracotta` preset of `@mariachi/design` (`data-theme="te
   the search bar, chips, badges, toggles and the booking action.
 - **Shadow.** Four steps, all neutral black:
   - `sm` (chips, photo badges): a 2% ring and `0 2px 4px` at 16%;
-  - `md` (the search bar, floating cards): a 2% ring and `0 8px 24px` at 10%;
+  - `md` (the search bar, floating cards): a 2% ring and `0 8px 24px` at 10%; the ring is their
+    edge, so they draw no border;
   - `lg` (the booking panel, menus): `0 6px 16px` at 12%;
   - `overlay` (dialogs, toasts): `0 8px 28px` at 28%.
   Dark mode draws them deeper with a faint light ring.
@@ -79,13 +81,17 @@ are in the reference at the end.
 - **Families.** Figtree for everything, a friendly geometric grotesque with a double-storey a and a
   straight-tailed y; load `@fontsource-variable/figtree`. IBM Plex Mono for codes and references,
   small.
-- **Weights.** 400 for body, 500 for labels, card titles and buttons, 600 for headings and prices,
-  700 for display.
+- **Weights.** 400 for body; 500 for labels, card titles, buttons and large page titles; 600 for
+  section and small headings, prices and the word mark; 700 only for display and the full-page error
+  word. A screen uses three weights: 400, 500 and 600.
+- **Colour of text.** Running sentences (descriptions, the line under a title, an empty state's
+  sentence) are ink. Grey is for the short secondary lines under a card title, hints, captions and
+  values in a settings row.
 - **Sizes:**
   - body 16px, line height 1.375 (22px); long reading 1.5;
   - secondary lines and table text 14px; captions and badges 12px;
   - card titles 15–16px at 500;
-  - section headings 22px at 600, tracked −2%; page titles 32px; listing titles 26px at 500;
+  - section headings 22px at 600, tracked −2%; page titles 32px at 500; listing titles 26px at 500;
   - display 48px and up at 700, tracked −2% to −4%, tight leading.
 - **Case.** Sentence case everywhere. Uppercase only for the tiny field captions inside a booking
   panel ("ARRIVE", 10px, 700, tracked 4%).
@@ -178,9 +184,9 @@ Sections are about 48px apart, each opened by a hairline.
 - **Sidebar.** The account column: a 32px "Account" title, then items at 16px with a 22px outline
   icon, 12px corners, the current one on the grey fill. No group headings unless there are more
   than eight items.
-- **Navbar.** White, 80px, the coral brand mark on the left, the search bar centred, and on the
-  right an ink text link ("Host a place") and round grey icon buttons. On scroll it gains a hairline
-  under it. In host tools the centre holds ink text links, the current one with a pale pill.
+- **Navbar.** White, 80px, the coral brand mark on the left (a word mark at 600), the search bar
+  centred, and on the right an ink text link ("Host a place") and round grey icon buttons. Its own
+  hairline is the only line under it: the page's first section never draws a second one. In host tools the centre holds ink text links, the current one with a pale pill.
 - **Tabs.**
   - **Underline:** 14/500 grey labels, the current one ink with a 2px ink bar; category strips put a
     24px icon above each label.
@@ -195,8 +201,12 @@ Sections are about 48px apart, each opened by a hairline.
 - **Card.**
   - **Photo card** (the default for anything browsable): a photo with 20px corners, the title at
     15–16/500 with the rating on the right, two grey lines, and the underlined price. No frame.
-  - **Panel** (`m-card`): white, 12px corners, a hairline and the `lg` shadow, 24px padding: the
-    booking panel, earnings, to-dos.
+  - **Panel** (`m-card`): white, 12px corners, a hairline and the `lg` shadow, 24px padding. Only
+    for a panel that holds the commit action: the booking panel, a price breakdown.
+  - **Outline** (`data-variant="outline"`): a hairline and no shadow, for information panels
+    (earnings, to-dos, a help panel).
+  - **Floating** (`--m-card-border: transparent; --m-card-shadow: var(--m-shadow-md)`): no edge, the
+    `md` shadow, for a row of cards that sit over the page (reservations, facts on a landing page).
   - **Sunken** (`data-variant="sunken"`): `#f7f7f7`, no border, for tips and promotions.
   - **Choice card:** a 1px hairline edge that becomes a 2px ink edge when chosen.
 - **Badge.** A pill, 12px at 600. On photos: white with a soft shadow ("Top rated"). Elsewhere a pale
@@ -266,12 +276,14 @@ Sections are about 48px apart, each opened by a hairline.
 
 - **Dashboard** (the host's day).
   - "Good morning, Ines" at 32px, a pill switch, then a sideways row of reservation panels.
-  - Earnings with this year's coral line over last year's dotted plum, a to-do panel and a sunken
-    tip, then the listings as photo cards.
+  - Reservation cards float on the `md` shadow with no edge; earnings (this year's coral line over
+    last year's dotted plum) and the to-dos sit in hairline outline panels beside a sunken tip; then
+    the listings as photo cards.
 - **List and detail.**
-  - The compact search pill in the header, a row of rounded filter chips, a grid of photo cards and
-    a map with white price pins (the chosen one ink).
-  - The listing: title with underlined Send and Save, a five-photo mosaic with 12px outer corners,
+  - The compact search pill in the header, one row of rounded filter chips that scrolls sideways, a
+    grid of photo cards and a map (a picture layer) with white price pins laid over it (the chosen
+    one ink).
+  - The listing, set off by a full-width divider: title with underlined Send and Save, a five-photo mosaic with 12px outer corners,
     hairline sections, amenities with 24px icons, and a sticky booking panel with the gradient pill
     and the underlined price lines.
 - **Onboarding.** A bare header with outline pill buttons, a 32px question, choice tiles that take a
@@ -281,9 +293,48 @@ Sections are about 48px apart, each opened by a hairline.
   switches; closing the account last.
 - **Empty state.** The page title, then a hairline-bounded block: an outline icon, a 22px heading,
   one sentence and an ink-outlined action, beside a placeholder photo.
-- **Pricing.** Three choice cards with large figures and ink ticks, a pill switch for the period, a
-  breakdown panel with the gradient pill, and questions in an accordion.
+- **Pricing.** The title and an ink sentence beside a leading photo, then three choice cards with
+  large figures and ink ticks, a pill switch for the period, a breakdown panel with the gradient
+  pill, and questions in an accordion.
 - **Errors.** The field, form, toast and full-page errors above, as one page.
+
+### Signature moves
+
+1. **The photo leads.** Most first windows open on a picture: a photo card grid, a mosaic, a photo
+   beside the title. On the source's studied screens 69% of first windows have media, and on a place
+   page it covers about 40% of the window (`observed`, fingerprint). Photo cards have no frame.
+2. **One gradient action per view.** The coral-to-magenta pill or bar, full width, inside a lifted
+   panel, with the figure it commits to above it. Everything else is a grey fill, an ink outline or
+   an underlined ink word (`observed`, see [patterns/commit-to-the-main-action.md](./patterns/commit-to-the-main-action.md)).
+3. **The pill search with a coral disc.** Three questions in one shadowed pill; the disc is the only
+   coral in the header (`observed`).
+4. **Selection is ink.** A 2px ink edge, an ink bar, an ink disc; never coral (`observed`).
+5. **Hairlines, not boxes.** Page sections open with a full-width hairline and 40–48px of space;
+   on the source's studied screens 95% of collections are separated by space alone (`observed`,
+   fingerprint).
+6. **Underlined ink words for quiet actions:** Send, Save, Edit, Read more, the price lines
+   (`observed`).
+
+### How a screen is assembled
+
+- **It opens with** the white header, then either the search (browse), the title line with its
+  quiet actions (one thing), or a large question (a flow). There is no page-level intro band.
+- **Reading order:** picture, title, the facts in one grey line, then sections down one column; the
+  action panel sits to the right on wide screens and is sticky.
+- **How much one screen does:** one job and one commit action. A second job is a link to its own
+  page, not a tab or a second panel.
+- **When narrow:** the right panel drops under the content; grids go to one column of full-width
+  photo cards; chips and category tabs scroll sideways in one row; the search becomes one rounded
+  field. On a phone a place page opens on one full-width photo (`observed`).
+- **Too much content:** more sections down the page, each opened by a hairline, with `See all …` as a
+  grey-fill button that opens a dialog. Long lists page with round page numbers.
+- **No content:** the page title stays and the empty block takes the list's place (see
+  [patterns/say-nothing-is-here.md](./patterns/say-nothing-is-here.md)).
+- **Three weights, five or six sizes:** a screen uses 400, 500 and 600, and five or six text sizes
+  (`observed`: three weights on every studied source screen with the consent banner removed).
+
+The patterns, by job, are in [`patterns/`](./patterns/); the refusals in [never.md](./never.md); the
+recipes as precedents in [precedents/index.md](./precedents/index.md).
 
 ## Words
 
