@@ -4,6 +4,7 @@
 // distinctiveness matrix (dist/fingerprints/matrix.json). Needs a built package and Chrome.
 //
 //   pnpm --filter @mariachi/design fingerprint [id,id,…]
+//   pnpm --filter @mariachi/design fingerprint --matrix   (rebuild the matrix from the saved screens, no browser)
 //   MARIACHI_CHROME=/path/to/chrome to use a specific browser (default: the installed Chrome channel)
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
@@ -15,17 +16,21 @@ import { buildChecks, buildFingerprint, distance, probeSource, quantile, RECIPE_
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const out = path.join(dist, 'fingerprints');
-const only = process.argv[2]?.split(',');
+const matrixOnly = process.argv.includes('--matrix');
+const only = process.argv.slice(2).find((a) => !a.startsWith('--'))?.split(',');
 const ids = fs.readdirSync(path.join(dist, 'archetypes')).filter((d) => fs.existsSync(path.join(dist, 'archetypes', d, 'recipes')) && (!only || only.includes(d))).sort();
 let commit = 'unknown';
 try { commit = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim(); } catch {}
 
+const screensOf = {};
+if (matrixOnly) {
+  for (const id of ids) { const f = path.join(out, `${id}.screens.json`); if (fs.existsSync(f)) screensOf[id] = JSON.parse(fs.readFileSync(f, 'utf8')); }
+} else {
 const browser = await chromium.launch(process.env.MARIACHI_CHROME ? { executablePath: process.env.MARIACHI_CHROME } : { channel: 'chrome' });
 const ctx = await browser.newContext({ deviceScaleFactor: 1, reducedMotion: 'no-preference', colorScheme: 'light' });
 const page = await ctx.newPage();
 fs.mkdirSync(out, { recursive: true });
 
-const screensOf = {};
 for (const id of ids) {
   const screens = [];
   for (const [recipe, kinds] of Object.entries(RECIPE_KINDS)) {
@@ -52,16 +57,18 @@ for (const id of ids) {
 }
 await browser.close();
 console.log();
+}
 
 // The distinctiveness matrix: each language's own screens (each recipe held out in turn) against its checks,
 // against every other language's screens, and its screens against every other language's checks.
-const fps = Object.fromEntries(ids.map((id) => [id, buildFingerprint(id, screensOf[id], { mode: 'language', measuredAt: '' })]));
-const checks = Object.fromEntries(ids.map((id) => [id, buildChecks(fps[id])]));
+const fps = Object.fromEntries(ids.filter((id) => screensOf[id]?.length).map((id) => [id, buildFingerprint(id, screensOf[id], { mode: 'language', measuredAt: '' })]));
+const checks = Object.fromEntries(Object.keys(fps).map((id) => [id, buildChecks(fps[id])]));
 const sp = spreads(Object.values(fps));
 const med = (xs) => quantile(xs, 0.5);
 const FLOOR = 0.05;
 const rows = [];
-for (const L of ids) {
+const measured = ids.filter((id) => screensOf[id]?.length);
+for (const L of measured) {
   const own = [];
   for (const recipe of Object.keys(RECIPE_KINDS)) {
     const rest = screensOf[L].filter((s) => s.id !== recipe);
@@ -70,8 +77,9 @@ for (const L of ids) {
     const c = buildChecks(buildFingerprint(L, rest, { mode: 'language', measuredAt: '' }));
     for (const s of held) own.push(distance(s.result.measures, c, sp, s.kinds));
   }
-  const strangers = ids.filter((M) => M !== L).flatMap((M) => screensOf[M].map((s) => distance(s.result.measures, checks[L], sp, s.kinds)));
-  const toOthers = ids.filter((M) => M !== L).map((M) => ({ M, d: med(screensOf[L].map((s) => distance(s.result.measures, checks[M], sp, s.kinds))) })).sort((a, b) => a.d - b.d);
+  const strangers = measured.filter((M) => M !== L).flatMap((M) => screensOf[M].map((s) => distance(s.result.measures, checks[L], sp, s.kinds)));
+  // The nearest other language: whose screens fit this language's own checks best (same checks on both sides)
+  const toOthers = measured.filter((M) => M !== L).map((M) => ({ M, d: med(screensOf[M].map((s) => distance(s.result.measures, checks[L], sp, s.kinds))) })).sort((a, b) => a.d - b.d);
   const ownD = med(own);
   const base = Math.max(ownD, FLOOR);
   const row = { id: L, checks: checks[L].checks.length, own: +ownD.toFixed(3), stranger: +med(strangers).toFixed(3), strangerRatio: +(med(strangers) / base).toFixed(2), nearest: toOthers[0].M, nearestRatio: +(toOthers[0].d / base).toFixed(2) };
