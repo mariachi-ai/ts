@@ -18,8 +18,8 @@ Measures are versioned. A change to a definition bumps `specVersion`, and finger
 | --- | --- |
 | Widths | `wide` 1440 × 900, `narrow` 1024 × 768, `phone` 390 × 844, at device pixel ratio 1 |
 | Mode | Light, unless the screen is measured for dark (then `data-mode="dark"` or the product's own switch) |
-| Motion | `prefers-reduced-motion: reduce` |
-| Settled | Fonts loaded (`document.fonts.ready`), no network request for 500 ms, then 300 ms more |
+| Motion | No preference, so declared motion can be read; the probe waits for running animations to finish |
+| Settled | Fonts loaded (`document.fonts.ready`), no network request for 500 ms, running animations finished (or 1 s), then 300 ms more |
 | The window | The first viewport, scrolled to the top |
 | The page | The whole document |
 
@@ -43,7 +43,7 @@ These definitions are used by the measures below.
 - **Icon:** an `svg` (or an `img` of an SVG) of at most 32 × 32 px.
 - **Collection:** a parent with at least three visible children that share a tag and a first class name. It's a `list` when the children stack in one column, a `grid` when they sit in two or more columns and two or more rows, a `table` for `tbody` rows, and a `carousel` when its `scrollWidth` exceeds its `clientWidth` by more than 8 px with one row.
 - **Main column:** the element containing the largest share of the window's text characters that has at least three block children, excluding `nav`, `aside`, `header` and `footer`.
-- **Accent:** the product's action colour: `--m-color-accent-default` where it's declared; otherwise the most common colour with chroma > 30 (OKLCH × 100) on the backgrounds of controls.
+- **Accent:** the product's action colour: `--m-color-accent-default` where it's declared; otherwise the most common colour with OKLCH chroma > 0.1 on the backgrounds of controls.
 - **Primary action:** a control whose background is within ΔE2000 5 of the accent, or the product's declared primary (`.m-button[data-variant="primary"]`).
 
 ## The measures
@@ -94,8 +94,8 @@ Each measure has an id, its unit, and how it's computed. A value is recorded per
 | --- | --- | --- |
 | `colour.accentArea` | share | Area of elements whose background is the accent, plus text boxes whose colour is the accent, ÷ the window area |
 | `colour.accentOn` | shares | The accent's elements by kind: `primary`, `link`, `badge`, `icon`, `selection`, `other` |
-| `colour.hues` | count | Distinct hues (12 bins of 30°) among colours with chroma > 20 covering at least 0.2% of the window |
-| `colour.meaning` | share | The share of saturated area (chroma > 20) that's on status elements (`[role=status]`, `[role=alert]`, badges, alerts) |
+| `colour.hues` | count | Distinct hues (12 bins of 30° of OKLCH hue) among saturated colours (OKLCH chroma > 0.08) covering at least 0.2% of the window |
+| `colour.meaning` | share | The share of saturated area (OKLCH chroma > 0.08) that's on status elements (`[role=status]`, `[role=alert]`, badges, alerts) |
 
 ### Shape
 
@@ -127,7 +127,7 @@ Each measure has an id, its unit, and how it's computed. A value is recorded per
 
 | Id | Unit | Computed |
 | --- | --- | --- |
-| `motion.durations` | ms | Non-zero `transition-duration` and `animation-duration` values on visible elements, as a histogram. It's static: what's declared, with motion reduced off for this one read |
+| `motion.durations` | ms | Non-zero `transition-duration` and `animation-duration` values on visible elements, as a histogram. It's static: what's declared |
 | `motion.properties` | names | The properties in `transition-property`, by count |
 
 ### Words
