@@ -17,7 +17,7 @@ Measures are versioned. A change to a definition bumps `specVersion`, and finger
 | Setting | Value |
 | --- | --- |
 | Widths | `wide` 1440 × 900, `narrow` 1024 × 768, `phone` 390 × 844, at device pixel ratio 1 |
-| Mode | Light, unless the screen is measured for dark (then `data-mode="dark"` or the product's own switch) |
+| Mode | The library's own mode: dark for a dark-first language or product (`data-mode="dark"` or the product's own switch), otherwise light |
 | Motion | No preference, so declared motion can be read; the probe waits for running animations to finish |
 | Settled | Fonts loaded (`document.fonts.ready`), no network request for 500 ms, running animations finished (or 1 s), then 300 ms more |
 | The window | The first viewport, scrolled to the top |
@@ -206,7 +206,7 @@ Every screen in the inventory has one kind: `list`, `detail`, `form`, `dashboard
 ```
 
 - **A check reports distance; it never fails.** The reviewer decides.
-- **The normal range** is the fingerprint's range for that kind of screen, falling back to `all`.
+- **The normal range** is the fingerprint's range for that kind of screen when two or more distinct screens show that kind, falling back to `all`.
 - **Which measures get a check:** only numbers measured on at least 5 screens with a clear range: the 10th percentile above 0 and the 90th within twice the 10th. A measure that varies freely, or sits at 0, carries no check.
 - **The message** uses the product's own words for things where it has them ("rows", not "list items").
 

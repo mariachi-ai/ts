@@ -27,6 +27,8 @@ if (matrixOnly) {
   for (const id of ids) { const f = path.join(out, `${id}.screens.json`); if (fs.existsSync(f)) screensOf[id] = JSON.parse(fs.readFileSync(f, 'utf8')); }
 } else {
 const browser = await chromium.launch(process.env.MARIACHI_CHROME ? { executablePath: process.env.MARIACHI_CHROME } : { channel: 'chrome' });
+const { archetypes } = await import('../dist/index.js');
+const darkFirst = new Set(archetypes.filter((a) => a.tags.mode === 'dark-first').map((a) => a.id));
 const ctx = await browser.newContext({ deviceScaleFactor: 1, reducedMotion: 'no-preference', colorScheme: 'light' });
 const page = await ctx.newPage();
 fs.mkdirSync(out, { recursive: true });
@@ -39,6 +41,8 @@ for (const id of ids) {
     for (const [width, [w, h]] of Object.entries(WIDTHS)) {
       await page.setViewportSize({ width: w, height: h });
       await page.goto(`file://${file}`, { waitUntil: 'networkidle' });
+      // A dark-first language is measured in its own mode
+      if (darkFirst.has(id)) await page.evaluate(() => document.documentElement.setAttribute('data-mode', 'dark'));
       await page.evaluate(async () => {
         await document.fonts.ready;
         await Promise.race([Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 1000))]);
@@ -68,6 +72,7 @@ const med = (xs) => quantile(xs, 0.5);
 const FLOOR = 0.05;
 const rows = [];
 const measured = ids.filter((id) => screensOf[id]?.length);
+if (measured.length < 2) { console.log('One language measured: no matrix (it needs at least two).'); process.exit(0); }
 for (const L of measured) {
   const own = [];
   for (const recipe of Object.keys(RECIPE_KINDS)) {

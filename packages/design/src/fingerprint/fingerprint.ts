@@ -138,11 +138,14 @@ export function clearRange(range: [number, number]): boolean {
 
 /** `checks.json`: the numeric measures with a clear range, by kind of screen where a kind has 3 or more values. */
 export function buildChecks(fp: Fingerprint): Checks {
+  // A kind gets its own range only when two or more distinct screens show it (not one screen at three widths)
+  const screensByKind: Record<string, Set<string>> = {};
+  for (const s of fp.screens) for (const k of s.kind) (screensByKind[k] ??= new Set()).add(s.id);
   const checks: Check[] = [];
   for (const [id, s] of Object.entries(fp.measures)) {
     if (s.unit !== 'number' || !s.range || s.n < 5 || !clearRange(s.range) || !MESSAGES[id]) continue;
     const byKind: Record<string, [number, number]> = {};
-    for (const [k, v] of Object.entries(s.byKind)) if (v.range && v.n >= 3) byKind[k] = v.range;
+    for (const [k, v] of Object.entries(s.byKind)) if (v.range && v.n >= 3 && (screensByKind[k]?.size ?? 0) >= 2) byKind[k] = v.range;
     checks.push({ id, measure: id, normal: { all: s.range, byKind }, message: MESSAGES[id] });
   }
   return { specVersion: SPEC_VERSION, library: fp.library, checks };
