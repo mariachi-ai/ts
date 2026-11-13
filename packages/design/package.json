@@ -19,13 +19,11 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": "./dist/index.js"
     },
     "./build": {
       "types": "./dist/build.d.ts",
-      "import": "./dist/build.js",
-      "require": "./dist/build.cjs"
+      "import": "./dist/build.js"
     },
     "./mariachi.css": "./dist/css/mariachi.css",
     "./mariachi.min.css": "./dist/css/mariachi.min.css",
@@ -33,9 +31,7 @@
     "./components.css": "./dist/css/components.css",
     "./components/*.css": "./dist/css/components/*.css",
     "./themes/*.css": "./dist/css/themes/*.css",
-    "./tokens/*.json": "./dist/tokens/*.json",
     "./tailwind.css": "./dist/css/tailwind.css",
-    "./catalog.json": "./dist/catalog.json",
     "./archetypes/*": "./dist/archetypes/*",
     "./behaviors": {
       "types": "./dist/behaviors.d.ts",
@@ -43,7 +39,7 @@
     },
     "./package.json": "./package.json"
   },
-  "main": "./dist/index.cjs",
+  "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "sideEffects": [
@@ -51,6 +47,11 @@
   ],
   "files": [
     "dist",
+    "!dist/archetypes/gallery.css",
+    "!dist/archetypes/*/gallery.html",
+    "!dist/archetypes/*/recipes",
+    "!dist/tokens",
+    "!dist/catalog.json",
     "README.md"
   ],
   "publishConfig": {

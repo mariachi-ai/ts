@@ -46,18 +46,22 @@
     "@mariachi/database-postgres": "workspace:*",
     "commander": "^13",
     "drizzle-kit": "^0.30",
-    "jiti": "^2.4",
-    "@mariachi/design": "workspace:*"
+    "jiti": "^2.4"
   },
   "peerDependencies": {
+    "@mariachi/design": "workspace:>=0.0.5 <1",
     "@mariachi/explorer": "workspace:>=0.0.5 <1"
   },
   "peerDependenciesMeta": {
+    "@mariachi/design": {
+      "optional": true
+    },
     "@mariachi/explorer": {
       "optional": true
     }
   },
   "devDependencies": {
+    "@mariachi/design": "workspace:*",
     "drizzle-orm": "^0.38",
     "postgres": "^3.4",
     "tsup": "^8",

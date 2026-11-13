@@ -20,10 +20,10 @@ Browse it: [explorer.md](../core/docs/explorer.md)
 | `@mariachi/design/mariachi.css` | Foundation and every component, no theme (`mariachi.min.css` minified) |
 | `@mariachi/design/base.css`, `components.css`, `components/<name>.css` | Pieces, for importing only what you use |
 | `@mariachi/design/themes/<preset>.css` | One preset, scoped to `[data-theme="<preset>"]` |
-| `@mariachi/design/tokens/<preset>.json` | The preset as W3C Design Tokens (DTCG) |
 | `@mariachi/design/tailwind.css` | Tailwind v4 theme mapped onto the tokens |
-| `@mariachi/design/catalog.json` | Components (anatomy, tokens, examples, a11y), presets and tokens |
-| `@mariachi/design/archetypes/<id>/DESIGN.md`, `gallery.html`, `recipes/<name>.html` | A design language: its rules in words with the generated reference, every component and state drawn, and its page shapes |
+| `@mariachi/design/archetypes/<id>/DESIGN.md` | A design language: its rules in words, with the generated reference |
+
+The package carries only what an app or tool reads. The build also writes `dist/tokens/<preset>.json` (W3C Design Tokens), `dist/catalog.json`, and each language's `gallery.html` and `recipes/<name>.html`. They're in the repo for the explorer and design tools, not in the package.
 
 ## Public API
 

@@ -103,14 +103,14 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
   …), by Lucide name, with the stroke and sizes;
 - **seven layout recipes** (`dashboard`, `list-detail`, `onboarding`, `settings`, `empty-state`,
   `pricing`, `errors`) as framework-free HTML using only the library's classes and tokens, following
-  the language's real screen patterns. The catalog holds the HTML, and
-  `@mariachi/design/archetypes/<id>/recipes/<name>.html` is each one as a page;
+  the language's real screen patterns. The catalog holds the HTML, and the build writes each one
+  as a page to `dist/archetypes/<id>/recipes/<name>.html` (in the repo and the explorer, not the package);
 - **`DESIGN.md`**, the language in words: principles, foundations, type, icons, charts, the states of
   every control, all 36 components, error handling, page shapes, and do and don't. A **reference**
   generated from the preset is appended: the actual type and spacing scales, layout and density,
   radius, shadows, motion, every colour in light and dark, and the icon map. It ships at
   `@mariachi/design/archetypes/<id>/DESIGN.md`, and a project copies it to `docs/design.md`;
-- **a gallery**, `@mariachi/design/archetypes/<id>/gallery.html`, generated from the preset:
+- **a gallery**, `dist/archetypes/<id>/gallery.html` (in the repo and the explorer, not the package), generated from the preset:
   - the foundations and the icons;
   - every control in every state (default, hover, focus, pressed, disabled, error, loading);
   - errors, loading and empty patterns;
@@ -276,8 +276,8 @@ override CSS or the config for you.
   bands, logo marks and brand panels. It defaults to the accent, so a preset sets it only when its
   brand differs. It's checked as text on the brand (`brand.fg`) and text on its tint, never against
   the page, because it's not for controls or text.
-- `@mariachi/design/tokens/<preset>.json` is the preset in W3C Design Tokens (DTCG) format, for
-  Figma (Tokens Studio) and other tools.
+- The build writes each preset in W3C Design Tokens (DTCG) format to `dist/tokens/<preset>.json`, for
+  Figma (Tokens Studio) and other tools. It's in the repo, not the package.
 - `@mariachi/design/tailwind.css` maps Tailwind v4's theme onto the tokens: `@import "tailwindcss";`,
   then this file and a preset theme. `bg-surface`, `text-fg-muted`, `rounded-control` and spacing
   utilities follow the active preset.

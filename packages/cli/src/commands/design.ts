@@ -22,7 +22,18 @@ export async function loadDesignConfig(cwd: string, file?: string): Promise<{ fi
   return { file: found, config };
 }
 
-const design = (): Promise<DesignBuild> => import('@mariachi/design/build');
+/** `@mariachi/design` is an optional peer: only `mariachi design` loads it, so a project that never runs it doesn't install it. */
+const design = async (): Promise<DesignBuild> => {
+  try {
+    return await import('@mariachi/design/build');
+  } catch (err) {
+    const code = (err as { code?: string }).code;
+    if (code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND') {
+      throw new ConfigError('cli/design-missing', 'mariachi design needs @mariachi/design: pnpm add -D @mariachi/design (it matches your @mariachi version)');
+    }
+    throw err;
+  }
+};
 
 function printCheck(check: Awaited<ReturnType<DesignBuild['buildDesign']>>['check'], format: DesignBuild['formatContrastFailure']): void {
   const passed = check.results.length - check.failures.length;
