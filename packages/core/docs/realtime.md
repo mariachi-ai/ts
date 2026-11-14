@@ -45,13 +45,19 @@ Clients can subscribe only to channels the `ChannelAuthorizer` allows. The defau
 | anything else | denied | denied |
 
 Pass `authorize: (identity, channel, action) => boolean | Promise<boolean>` to replace it.
+
+The default policy matches a channel against the caller's whole tenant id and user id. An id that
+contains a colon is refused: `tenant:a:b:chat` would read both as tenant `a`'s channel `b:chat` and
+as tenant `a:b`'s channel `chat`. Build the names you broadcast to with `tenantChannel`,
+`userChannel` and `tenantUserChannel`, which refuse such an id (`realtime/invalid-channel`)
+instead of sending one tenant's messages to another's subscribers.
 `allowClientPublish` is off by default, so clients only receive. When it's on, `onClientPublish` can
 validate or transform the data, and the sender doesn't receive its own message.
 
 ## Sending from the server
 
 ```ts
-await realtime.broadcast(ctx, `tenant:${ctx.tenantId}:orders`, { type: 'order.updated', id });
+await realtime.broadcast(ctx, tenantChannel(ctx.tenantId!, 'orders'), { type: 'order.updated', id });   // tenant:<id>:orders
 await realtime.sendToUser(ctx, userId, { type: 'notification', text });  // all of the user's connections, within ctx.tenantId
 await realtime.getOnlineUsers(ctx);                                       // tenant-scoped
 await realtime.isUserOnline(ctx, userId);

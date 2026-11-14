@@ -7,6 +7,9 @@ import {
   MemoryBackplaneHub,
   MemoryPresenceStore,
   defaultChannelAuthorizer,
+  tenantChannel,
+  tenantUserChannel,
+  userChannel,
   type ConnectionIdentity,
   type RealtimeConfig,
   type RealtimeSocket,
@@ -66,6 +69,49 @@ describe('defaultChannelAuthorizer', () => {
     expect(allow(alice, 'public:status', 'publish')).toBe(false);
     expect(allow(alice, 'admin')).toBe(false);
     expect(allow({ userId: 'x', tenantId: null }, 'tenant:null')).toBe(false);
+    expect(allow(alice, 'tenant')).toBe(false);
+    expect(allow(alice, 'tenant:t1:')).toBe(false);
+    expect(allow(alice, 'tenant:t10:chat')).toBe(false);
+    expect(allow(alice, 'user:alice2')).toBe(false);
+    expect(allow(alice, 'user:alice:inbox')).toBe(true);
+    expect(allow(alice, 'user')).toBe(false);
+    expect(allow(alice, 'public:')).toBe(false);
+  });
+
+  it('matches whole ids, so an id with dots or dashes works and one with a colon is refused', () => {
+    const allow = (id: ConnectionIdentity, ch: string) => defaultChannelAuthorizer(id, ch, 'subscribe');
+    const solo: ConnectionIdentity = { userId: 'auth0|123', tenantId: 'user.app.auth0%7C123' };
+    expect(allow(solo, 'tenant:user.app.auth0%7C123:notes')).toBe(true);
+    expect(allow(solo, 'user:auth0|123:inbox')).toBe(true);
+
+    // `tenant:a:b:chat` would be both tenant a's channel "b:chat" and tenant a:b's channel "chat".
+    const colon: ConnectionIdentity = { userId: 'urn:user:9', tenantId: 'a:b' };
+    expect(allow(colon, 'tenant:a:b:chat')).toBe(false);
+    expect(allow(colon, 'tenant:a:b')).toBe(false);
+    expect(allow(colon, 'user:urn:user:9')).toBe(false);
+    // A tenant whose id is a prefix of another's doesn't reach it.
+    expect(allow({ userId: 'u', tenantId: 'a' }, 'tenant:a:b:chat')).toBe(true);
+    expect(allow({ userId: 'u', tenantId: 'ab' }, 'tenant:a:b:chat')).toBe(false);
+  });
+});
+
+describe('channel names', () => {
+  it('are built the way the default authorizer reads them', () => {
+    expect(tenantChannel('t1')).toBe('tenant:t1');
+    expect(tenantChannel('t1', 'chat', 'general')).toBe('tenant:t1:chat:general');
+    expect(userChannel('alice', 'inbox')).toBe('user:alice:inbox');
+    expect(tenantUserChannel('t1', 'alice', 'inbox')).toBe('tenant:t1:user:alice:inbox');
+    expect(defaultChannelAuthorizer(alice, tenantChannel('t1', 'chat'), 'subscribe')).toBe(true);
+    expect(defaultChannelAuthorizer(alice, tenantUserChannel('t1', 'alice', 'inbox'), 'subscribe')).toBe(true);
+    expect(defaultChannelAuthorizer(bob, tenantUserChannel('t1', 'alice', 'inbox'), 'subscribe')).toBe(false);
+  });
+
+  it("refuse an id that could be read as another tenant's or user's channel", () => {
+    const invalid = expect.objectContaining({ code: 'realtime/invalid-channel' });
+    expect(() => tenantChannel('a:b', 'chat')).toThrow(invalid);
+    expect(() => userChannel('urn:user:9')).toThrow(invalid);
+    expect(() => tenantUserChannel('t1', 'a:b')).toThrow(invalid);
+    expect(() => tenantChannel('')).toThrow(invalid);
   });
 });
 
