@@ -85,9 +85,10 @@ export function buildConfigFromEnv(env: Env = process.env): AppConfigInput {
     }),
     email: compact({
       adapter: env.EMAIL_ADAPTER,
-      apiKey: env.RESEND_API_KEY,
+      apiKey: env.EMAIL_API_KEY ?? env.RESEND_API_KEY,
       from: env.EMAIL_FROM,
       smtpUrl: env.SMTP_URL,
+      apiUrl: env.EMAIL_API_URL,
     }),
     search: compact({
       adapter: env.SEARCH_ADAPTER,

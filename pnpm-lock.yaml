@@ -1234,6 +1234,9 @@ importers:
       drizzle-orm:
         specifier: ^0.38
         version: 0.38.4(@opentelemetry/api@1.9.0)(@types/pg@8.6.1)(postgres@3.4.8)(react@19.2.4)
+      nodemailer:
+        specifier: ^10.5.0
+        version: 10.5.0
       tsup:
         specifier: ^8
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
@@ -6476,6 +6479,10 @@ packages:
 
   node-mock-http@1.0.5:
     resolution: {integrity: sha512-KQyt/wLjG3TAc7DOUhpqWzgd4ERxR80JOlTK5VE5R1S12IaPVN5qkj4klBce9HPG1Njuup4Sb5bljaT34lIyjw==}
+
+  nodemailer@10.5.0:
+    resolution: {integrity: sha512-L/w/HH5MqpzMDuZD7fQdt/+KqymuvrpaApaIjAH2XA3ILePwlcvXCVVvP75xVrXCEt2ggK2marrrHHFB5Qu0kA==}
+    engines: {node: '>=20.0.0'}
 
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
@@ -13930,6 +13937,8 @@ snapshots:
     optional: true
 
   node-mock-http@1.0.5: {}
+
+  nodemailer@10.5.0: {}
 
   normalize-path@3.0.0: {}
 

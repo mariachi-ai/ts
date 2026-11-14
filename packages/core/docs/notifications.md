@@ -15,7 +15,7 @@ import { DrizzleNotificationStore } from '@mariachi/notifications/postgres';
 
 const store = new DrizzleNotificationStore(db);          // inbox, preferences and delivery log
 const notifications = new DefaultNotifications({
-  email: createEmailAdapter(config),                     // resend in production, smtp (Mailpit) locally
+  email: createEmailAdapter(config),                     // config.email.adapter: resend, smtp, postmark, sendgrid or custom
   sms: new TwilioSmsAdapter({ accountSid, authToken, from: '+15550100' }),
   push: new FcmPushAdapter({ projectId, accessToken: () => google.getAccessToken() }),
   inApp: store,
@@ -34,8 +34,46 @@ jobs.registerJob(defineJob({
 }));
 ```
 
-Add the tables from `@mariachi/notifications/schema`. For local email, run Mailpit from
-`docker-compose.dev.yml` and set `email.adapter: 'smtp'`.
+Add the tables from `@mariachi/notifications/schema`.
+
+## Email providers
+
+`createEmailAdapter(config)` reads `config.email` (env in brackets):
+
+| `adapter` (`EMAIL_ADAPTER`) | Needs | Notes |
+| --- | --- | --- |
+| `resend` (default) | `apiKey` (`EMAIL_API_KEY` or `RESEND_API_KEY`), `from` (`EMAIL_FROM`) | |
+| `smtp` | `smtpUrl` (`SMTP_URL`), `from`; the optional peer `nodemailer` (`pnpm add nodemailer`) | Any SMTP relay, Amazon SES's SMTP endpoint included |
+| `postmark` | `apiKey` (the server token), `from` | Over `fetch`, no SDK |
+| `sendgrid` | `apiKey`, `from` | Over `fetch`, no SDK |
+| `custom` | `instance`: your own `EmailAdapter` | Or pass the adapter straight to `DefaultNotifications` |
+
+`SMTP_URL` is `smtp://user:pass@host:587` or `smtps://user:pass@host:465`, with special characters
+in the user and password percent-encoded. `smtps` is TLS from the first byte. `smtp` upgrades with
+STARTTLS: it's required when the URL has credentials and the host isn't the local machine, and used
+when offered otherwise; `?tls=required`, `?tls=opportunistic` or `?tls=none` overrides that. With no
+`SMTP_URL` the adapter sends to `127.0.0.1:1025`, which is Mailpit in `docker-compose.dev.yml`.
+
+A message can carry `cc`, `bcc`, `replyTo`, `headers` and `attachments` (`{ filename, content,
+contentType? }`), and `from` as `Ada <ada@example.com>`; every built-in adapter sends all of them.
+
+An `EmailAdapter` is one method, so another provider (an HTTP email API of your platform's, say) is
+a small class. `config.email.apiUrl` (`EMAIL_API_URL`) is there for its base URL:
+
+```ts
+class PlatformEmail implements EmailAdapter {
+  constructor(private readonly options: { apiUrl: string; apiKey: string }) {}
+  async send(message: EmailMessage): Promise<{ id: string }> {
+    const res = await fetch(`${this.options.apiUrl}/send`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${this.options.apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to: message.to, subject: message.subject, html: message.html, text: message.text, replyTo: message.replyTo }),
+    });
+    if (!res.ok) throw new NotificationError('notifications/provider-failed', `Email API responded ${res.status}`, { status: res.status });
+    return (await res.json()) as { id: string };
+  }
+}
+```
 
 ## Send
 

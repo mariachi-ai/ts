@@ -1,73 +1,141 @@
-import { connect } from 'node:net';
 import { NotificationError } from '@mariachi/core';
 import type { EmailAdapter, EmailMessage } from '../../types';
+import { addressList, recipients } from './address';
+
+/** The part of a nodemailer transport this adapter uses. */
+export interface SmtpTransport {
+  sendMail(mail: Record<string, unknown>): Promise<{ messageId?: string }>;
+  close?(): void;
+}
 
 export interface SmtpEmailConfig {
+  /**
+   * `smtp://user:pass@host:587` or `smtps://user:pass@host:465`. Percent-encode special characters
+   * in the user and password. `smtps` is TLS from the first byte. `smtp` upgrades with STARTTLS:
+   * required when the URL has credentials (unless the host is the local machine), otherwise used
+   * when the server offers it. `?tls=required`, `?tls=opportunistic` or `?tls=none` overrides that.
+   */
+  url?: string;
+  /** Used with `port` when there's no `url`: a local sink such as Mailpit. Default `127.0.0.1`. */
+  host?: string;
+  /** Default 1025 with `host`. A `url` without a port uses 587 (`smtp`) or 465 (`smtps`). */
+  port?: number;
+  /** The default sender, when a message has no `from`. */
+  from: string;
+  /** A ready transport, in place of one built from `url` or `host` (tests, a custom nodemailer setup). */
+  transport?: SmtpTransport;
+}
+
+export interface SmtpOptions {
   host: string;
   port: number;
-  from: string;
+  secure: boolean;
+  requireTLS?: boolean;
+  ignoreTLS?: boolean;
+  auth?: { user: string; pass: string };
+}
+
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+
+/** What nodemailer's transport is built with, from an SMTP URL (see `SmtpEmailConfig.url`). */
+export function parseSmtpUrl(value: string): SmtpOptions {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new NotificationError('notifications/invalid-smtp-url', 'SMTP URL is not a URL (expected smtp://user:pass@host:port)');
+  }
+  if (url.protocol !== 'smtp:' && url.protocol !== 'smtps:') {
+    throw new NotificationError('notifications/invalid-smtp-url', `SMTP URL must start with smtp:// or smtps://, not ${url.protocol}//`);
+  }
+  if (!url.hostname) throw new NotificationError('notifications/invalid-smtp-url', 'SMTP URL has no host');
+  const secure = url.protocol === 'smtps:';
+  const options: SmtpOptions = { host: url.hostname, port: url.port ? Number(url.port) : secure ? 465 : 587, secure };
+  if (url.username) options.auth = { user: decodeURIComponent(url.username), pass: decodeURIComponent(url.password) };
+
+  const tls = url.searchParams.get('tls') ?? (options.auth && !LOOPBACK.has(url.hostname) ? 'required' : 'opportunistic');
+  if (tls !== 'required' && tls !== 'opportunistic' && tls !== 'none') {
+    throw new NotificationError('notifications/invalid-smtp-url', `SMTP URL has tls=${tls}; use required, opportunistic or none`);
+  }
+  if (!secure) {
+    if (tls === 'required') options.requireTLS = true;
+    if (tls === 'none') options.ignoreTLS = true;
+  }
+  return options;
+}
+
+type CreateTransport = (options: SmtpOptions) => SmtpTransport;
+
+async function loadCreateTransport(): Promise<CreateTransport> {
+  try {
+    const mod = (await import('nodemailer')) as unknown as { createTransport?: CreateTransport; default?: { createTransport: CreateTransport } };
+    const create = mod.createTransport ?? mod.default?.createTransport;
+    if (!create) throw new NotificationError('notifications/provider-failed', 'nodemailer has no createTransport export', { provider: 'smtp' });
+    return create;
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException | undefined)?.code;
+    if (code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND') {
+      throw new NotificationError('dependency/missing-peer', 'SmtpEmailAdapter requires the optional peer dependency "nodemailer". Install it with: pnpm add nodemailer', {
+        pkg: 'nodemailer',
+        feature: 'SmtpEmailAdapter',
+      });
+    }
+    throw error;
+  }
 }
 
 /**
- * Minimal SMTP client for local Mailpit (no auth, no TLS). It speaks just enough
- * of the protocol to hand a message to a development sink.
+ * Email over SMTP through nodemailer (an optional peer dependency, imported on the first send):
+ * any SMTP relay with a username and password over TLS, or a local sink such as Mailpit.
  */
 export class SmtpEmailAdapter implements EmailAdapter {
-  constructor(private readonly config: SmtpEmailConfig) {}
+  private readonly options: SmtpOptions;
+  private transport?: Promise<SmtpTransport>;
 
-  async send(message: EmailMessage): Promise<{ id: string }> {
-    const from = message.from ?? this.config.from;
-    const recipients = (Array.isArray(message.to) ? message.to : [message.to]).filter(Boolean);
-    if (recipients.length === 0) throw new NotificationError('notifications/missing-recipient', 'SMTP message has no recipient');
-    const id = crypto.randomUUID();
-    const body = [
-      `From: ${from}`,
-      `To: ${recipients.join(', ')}`,
-      `Subject: ${message.subject}`,
-      'MIME-Version: 1.0',
-      `Content-Type: ${message.html ? 'text/html' : 'text/plain'}; charset=utf-8`,
-      '',
-      message.html ?? message.text ?? '',
-    ].join('\r\n');
-    await this.deliver(from, recipients, body);
-    return { id };
+  constructor(private readonly config: SmtpEmailConfig) {
+    this.options = config.url ? parseSmtpUrl(config.url) : { host: config.host ?? '127.0.0.1', port: config.port ?? 1025, secure: false };
+    if (config.transport) this.transport = Promise.resolve(config.transport);
   }
 
-  private deliver(from: string, recipients: string[], body: string): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const socket = connect({ host: this.config.host, port: this.config.port });
-      const fail = (error: Error) => {
-        socket.destroy();
-        reject(error instanceof NotificationError ? error : new NotificationError('notifications/email-send-failed', error.message));
-      };
-      let buffer = '';
-      const queue = [
-        'EHLO mariachi',
-        `MAIL FROM:<${from}>`,
-        ...recipients.map((r) => `RCPT TO:<${r}>`),
-        'DATA',
-        `${body}\r\n.`,
-        'QUIT',
-      ];
-      const next = () => {
-        const command = queue.shift();
-        if (command) socket.write(`${command}\r\n`);
-      };
-      socket.on('error', fail);
-      socket.on('data', (chunk) => {
-        buffer += chunk.toString('utf8');
-        if (!buffer.includes('\n')) return;
-        const line = buffer.trim();
-        buffer = '';
-        const code = Number(line.slice(0, 3));
-        if (code >= 400) return fail(new NotificationError('notifications/email-send-failed', `SMTP ${line}`));
-        if (queue.length === 0) {
-          socket.end();
-          resolve();
-          return;
-        }
-        next();
-      });
+  private connection(): Promise<SmtpTransport> {
+    this.transport ??= loadCreateTransport().then((create) => create(this.options));
+    this.transport.catch(() => {
+      this.transport = undefined;
     });
+    return this.transport;
+  }
+
+  async send(message: EmailMessage): Promise<{ id: string }> {
+    const to = recipients(message.to, 'SMTP');
+    const transport = await this.connection();
+    try {
+      const info = await transport.sendMail({
+        from: message.from ?? this.config.from,
+        to,
+        cc: addressList(message.cc),
+        bcc: addressList(message.bcc),
+        replyTo: message.replyTo,
+        subject: message.subject,
+        html: message.html,
+        text: message.text ?? (message.html ? undefined : ''),
+        headers: message.headers,
+        attachments: message.attachments?.map((file) => ({ filename: file.filename, content: file.content, contentType: file.contentType })),
+      });
+      return { id: info.messageId ?? crypto.randomUUID() };
+    } catch (error) {
+      const detail = error as { message?: string; code?: string; responseCode?: number };
+      throw new NotificationError('notifications/provider-failed', `SMTP: ${detail.message ?? 'send failed'}`, {
+        provider: 'smtp',
+        code: detail.code,
+        responseCode: detail.responseCode,
+      });
+    }
+  }
+
+  /** Closes the pooled connection, if one was opened. */
+  async close(): Promise<void> {
+    const transport = await this.transport?.catch(() => undefined);
+    transport?.close?.();
+    this.transport = undefined;
   }
 }

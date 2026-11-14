@@ -1,6 +1,7 @@
 import { Resend } from 'resend';
 import { NotificationError } from '@mariachi/core';
 import type { EmailAdapter, EmailMessage } from '../../types';
+import { addressList, recipients } from './address';
 
 export interface ResendEmailAdapterOptions {
   apiKey: string;
@@ -21,12 +22,20 @@ export class ResendEmailAdapter implements EmailAdapter {
     if (!from) {
       throw new NotificationError('notifications/invalid-input', 'Email "from" is required');
     }
-    const to = Array.isArray(message.to) ? message.to : [message.to];
+    const to = recipients(message.to, 'Resend');
+    const cc = addressList(message.cc);
+    const bcc = addressList(message.bcc);
     const payload = {
       from,
       to,
       subject: message.subject,
+      ...(cc.length && { cc }),
+      ...(bcc.length && { bcc }),
       ...(message.replyTo && { replyTo: message.replyTo }),
+      ...(message.headers && { headers: message.headers }),
+      ...(message.attachments?.length && {
+        attachments: message.attachments.map((file) => ({ filename: file.filename, content: Buffer.from(file.content), contentType: file.contentType })),
+      }),
     };
     const withContent =
       message.html && message.text

@@ -33,6 +33,14 @@ describe('loadConfig', () => {
     expect(() => loadConfig({}, { env: { AI_COST_TABLE: '{nope' } })).toThrow(ConfigError);
   });
 
+  it('reads email settings from env', () => {
+    const config = loadConfig({}, {
+      env: { EMAIL_ADAPTER: 'smtp', SMTP_URL: 'smtps://user:pass@smtp.example.com', EMAIL_FROM: 'App <app@example.com>', EMAIL_API_KEY: 'key-1', RESEND_API_KEY: 'key-2', EMAIL_API_URL: 'https://mail.example.com/api' },
+    });
+    expect(config.email).toEqual({ adapter: 'smtp', apiKey: 'key-1', from: 'App <app@example.com>', smtpUrl: 'smtps://user:pass@smtp.example.com', apiUrl: 'https://mail.example.com/api' });
+    expect(loadConfig({}, { env: { RESEND_API_KEY: 'key-2' } }).email?.apiKey).toBe('key-2');
+  });
+
   it('throws ConfigError with readable issues on invalid input', () => {
     expect(() => loadConfig({}, { env: { DATABASE_URL: 'not a url' } })).toThrow(ConfigError);
     try {
