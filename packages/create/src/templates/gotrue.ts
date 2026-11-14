@@ -26,6 +26,8 @@ export function gotrueFiles(name: string): Record<string, string> {
     [`${LAYOUT.controllersDir}/sign-in.controller.ts`]: SIGN_IN_CONTROLLER,
     [`${LAYOUT.controllersDir}/sign-in.controller.test.ts`]: SIGN_IN_CONTROLLER_TEST,
     'src/api/pages/sign-in.ts': SIGN_IN_PAGE,
+    'src/api/pages/sign-in.test.ts': SIGN_IN_PAGE_TEST,
+    'src/api/pages/fake-browser.ts': FAKE_BROWSER,
   };
 }
 
@@ -458,6 +460,8 @@ export class SignInController extends BaseController {
       return httpResponse(200, SIGN_IN_HTML, {
         'content-type': 'text/html; charset=utf-8',
         'content-security-policy': contentSecurityPolicy(browserAuthUrl(auth)),
+        // A link lands here with a one-time code in the query; it's never sent on in a Referer
+        'referrer-policy': 'no-referrer',
         'cache-control': 'no-store',
       });
     });
@@ -526,8 +530,9 @@ describe('SignInController', () => {
 // The page's script is plain browser JavaScript in a string: no template literals or backslashes inside.
 const SIGN_IN_PAGE = `/**
  * An example sign-in flow against GoTrue with plain fetch: password sign-in, sign-up, a magic link
- * and sign-out. The session is kept in sessionStorage and sent to the API as a bearer token.
- * supabase-js does the same (see README.md).
+ * and sign-out. Emailed links use PKCE: the link comes back with a one-time code, which only the
+ * browser that asked for it can exchange for a session. The session is kept in sessionStorage and
+ * sent to the API as a bearer token. supabase-js does the same with \`flowType: 'pkce'\` (see README.md).
  */
 export const SIGN_IN_HTML = \`<!doctype html>
 <html lang="en">
@@ -569,6 +574,9 @@ export const SIGN_IN_HTML = \`<!doctype html>
 
 /** The page's script, after the two settings \`signInScript\` puts in front of it (\`AUTH\`, \`ANON_KEY\`). */
 export const SIGN_IN_JS = \`const KEY = 'session';
+// PKCE: an emailed link comes back with a one-time code, and the code is only good with the verifier this
+// browser kept when it asked for the link. It's in localStorage because the link opens in a new tab.
+const VERIFIER = 'sign-in-verifier';
 const byId = (id) => document.getElementById(id);
 const here = () => location.origin + location.pathname;
 
@@ -602,6 +610,22 @@ async function gotrue(path, body, token) {
   return data;
 }
 
+function base64url(bytes) {
+  let text = '';
+  for (const byte of bytes) text += String.fromCharCode(byte);
+  return btoa(text).split('+').join('-').split('/').join('_').split('=').join('');
+}
+
+// A new verifier, kept in this browser, and its SHA-256 challenge for GoTrue to hold until the code comes back.
+async function challenge() {
+  // Browser code, outside the framework's error types. mariachi-validate-ignore no-raw-error
+  if (!crypto.subtle) throw new Error('this page needs https (or localhost) to ask for a link');
+  const verifier = base64url(crypto.getRandomValues(new Uint8Array(48)));
+  const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+  localStorage.setItem(VERIFIER, verifier);
+  return { code_challenge: base64url(new Uint8Array(digest)), code_challenge_method: 's256' };
+}
+
 // The stored session, refreshed when its access token is (nearly) expired.
 async function current() {
   const session = load();
@@ -628,14 +652,29 @@ async function render() {
   } else show('GET /api/me answered ' + res.status, body);
 }
 
-// After a magic or confirmation link, GoTrue redirects here with the session (or an error) in the hash.
-function fromRedirect() {
-  if (!location.hash) return;
-  const params = new URLSearchParams(location.hash.slice(1));
+// After a magic or confirmation link, GoTrue redirects here with a one-time code (or an error) in the query.
+// A session is never taken from the address bar: a link that carried tokens could sign someone in as its sender.
+async function fromRedirect() {
+  if (!location.search && !location.hash) return;
+  const query = new URLSearchParams(location.search);
+  const hash = new URLSearchParams(location.hash.slice(1));
+  // Out of the address bar first, so the code isn't kept in history
   history.replaceState(null, '', location.pathname);
-  if (params.get('access_token')) {
-    save({ access_token: params.get('access_token'), refresh_token: params.get('refresh_token'), expires_at: params.get('expires_at'), expires_in: params.get('expires_in') });
-  } else if (params.get('error_description')) show(params.get('error_description'));
+  const code = query.get('code');
+  if (code) {
+    const verifier = localStorage.getItem(VERIFIER);
+    localStorage.removeItem(VERIFIER);
+    if (!verifier) return show('This link was not asked for in this browser, or was already used. Ask for a new one here.');
+    try {
+      save(await gotrue('/token?grant_type=pkce', { auth_code: code, code_verifier: verifier }));
+    } catch (error) {
+      show('The link did not work: ' + error.message);
+    }
+    return;
+  }
+  const failure = query.get('error_description') || hash.get('error_description');
+  if (failure) show(failure);
+  else if (hash.get('access_token')) show('This page takes sign-in links by one-time code only. Ask for a new link here.');
 }
 
 const credentials = () => ({ email: byId('email').value.trim(), password: byId('password').value });
@@ -652,8 +691,9 @@ byId('password-form').addEventListener('submit', async (event) => {
 
 byId('sign-up').addEventListener('click', async () => {
   try {
-    const result = await gotrue('/signup?redirect_to=' + encodeURIComponent(here()), credentials());
+    const result = await gotrue('/signup?redirect_to=' + encodeURIComponent(here()), Object.assign(credentials(), await challenge()));
     if (result.access_token) {
+      localStorage.removeItem(VERIFIER);
       save(result);
       await render();
     } else show('Check your email for the confirmation link.');
@@ -664,7 +704,7 @@ byId('sign-up').addEventListener('click', async () => {
 
 byId('magic-link').addEventListener('click', async () => {
   try {
-    await gotrue('/otp?redirect_to=' + encodeURIComponent(here()), { email: credentials().email, create_user: true });
+    await gotrue('/otp?redirect_to=' + encodeURIComponent(here()), Object.assign({ email: credentials().email, create_user: true }, await challenge()));
     show('Check your email for the sign-in link.');
   } catch (error) {
     show('Could not send the link: ' + error.message);
@@ -674,19 +714,212 @@ byId('magic-link').addEventListener('click', async () => {
 byId('sign-out').addEventListener('click', async () => {
   const session = load();
   sessionStorage.removeItem(KEY);
+  localStorage.removeItem(VERIFIER);
   if (session) await gotrue('/logout', {}, session.accessToken).catch(() => undefined);
   show('Signed out.');
   await render();
 });
 
-fromRedirect();
-render();
+// Tests wait on this
+const ready = fromRedirect().then(render);
 \`;
 
 /** The script as served: where the browser reaches GoTrue, and the key hosted Supabase wants, written in as JSON. */
 export function signInScript(options: { authUrl: string; anonKey?: string }): string {
   return \`const AUTH = \${JSON.stringify(options.authUrl)};\\nconst ANON_KEY = \${JSON.stringify(options.anonKey ?? null)};\\n\${SIGN_IN_JS}\`;
 }
+`;
+
+// Test support in the generated project: enough of a browser to run the page's script under vitest.
+const FAKE_BROWSER = `import { webcrypto } from 'node:crypto';
+import { createContext, Script } from 'node:vm';
+
+/**
+ * Test support: a browser small enough to run the sign-in page's script. It has the elements the
+ * script reads, both storages, the address bar and \`fetch\`. Not for production code.
+ */
+export interface FakePage {
+  /** The address bar, after any history.replaceState */
+  url(): string;
+  /** sessionStorage: this tab's */
+  session: Map<string, string>;
+  /** localStorage: the browser's, shared by its tabs. Pass one page's to the next to open a second tab. */
+  local: Map<string, string>;
+  /** The text of the element with this id */
+  text(id: string): string;
+  /** Types into an input */
+  type(id: string, value: string): void;
+  /** Clicks a button, or submits a form, and waits for the script's handler */
+  fire(id: string, event: 'click' | 'submit'): Promise<void>;
+}
+
+export interface FakePageOptions {
+  /** The script as served: signInScript({ ... }) */
+  script: string;
+  /** The address the page is opened at, with any query and hash a link brought */
+  url: string;
+  /** Every request the script makes. Relative addresses (/api/me) arrive as written. */
+  fetch: (input: string, init?: RequestInit) => Promise<Response>;
+  local?: Map<string, string>;
+}
+
+const storage = (map: Map<string, string>) => ({
+  getItem: (key: string) => map.get(key) ?? null,
+  setItem: (key: string, value: string) => void map.set(key, String(value)),
+  removeItem: (key: string) => void map.delete(key),
+});
+
+/** Opens the page: runs the script and waits until it has dealt with the address it was opened at. */
+export async function openPage(options: FakePageOptions): Promise<FakePage> {
+  let url = new URL(options.url);
+  const session = new Map<string, string>();
+  const local = options.local ?? new Map<string, string>();
+  const elements = new Map<string, { value: string; hidden: boolean; textContent: string; handlers: Map<string, (event: unknown) => unknown> }>();
+  const element = (id: string) => {
+    let found = elements.get(id);
+    if (!found) {
+      const handlers = new Map<string, (event: unknown) => unknown>();
+      found = { value: '', hidden: false, textContent: '', handlers };
+      Object.assign(found, { addEventListener: (name: string, handler: (event: unknown) => unknown) => void handlers.set(name, handler) });
+      elements.set(id, found);
+    }
+    return found;
+  };
+  const context = createContext({
+    document: { getElementById: element },
+    location: {
+      get origin() { return url.origin; },
+      get pathname() { return url.pathname; },
+      get search() { return url.search; },
+      get hash() { return url.hash; },
+    },
+    history: { replaceState: (_state: unknown, _title: string, to: string) => void (url = new URL(to, url)) },
+    sessionStorage: storage(session),
+    localStorage: storage(local),
+    fetch: options.fetch,
+    crypto: webcrypto,
+    URLSearchParams,
+    TextEncoder,
+    btoa,
+  });
+  new Script(options.script).runInContext(context);
+  await new Script('ready').runInContext(context);
+  return {
+    url: () => url.href,
+    session,
+    local,
+    text: (id) => element(id).textContent,
+    type: (id, value) => void (element(id).value = value),
+    fire: async (id, event) => {
+      await element(id).handlers.get(event)?.({ preventDefault() {} });
+    },
+  };
+}
+`;
+
+const SIGN_IN_PAGE_TEST = `import { createHash } from 'node:crypto';
+import { describe, expect, it } from 'vitest';
+import { openPage } from './fake-browser';
+import { signInScript } from './sign-in';
+
+const script = signInScript({ authUrl: 'https://auth.example.test${AUTH_PATH}' });
+const page = 'https://app.example.test/api/sign-in';
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+const session = { access_token: 'access-1', refresh_token: 'refresh-1', expires_in: 3600 };
+
+/** A fetch that records every request and answers GoTrue's token endpoint and GET /api/me. */
+function recorder(answers: Record<string, () => Response> = {}) {
+  const calls: Array<{ url: string; body: Record<string, unknown>; authorization?: string }> = [];
+  const fetch = async (input: string, init?: RequestInit) => {
+    const headers = (init?.headers ?? {}) as Record<string, string>;
+    calls.push({ url: input, body: init?.body ? JSON.parse(String(init.body)) : {}, authorization: headers.authorization });
+    const path = input.replace('https://auth.example.test${AUTH_PATH}', '');
+    for (const [prefix, answer] of Object.entries(answers)) if (path.startsWith(prefix)) return answer();
+    if (path === '/api/me') return json({ userId: 'user-1' });
+    return json({});
+  };
+  return { calls, fetch };
+}
+
+describe('the sign-in page', () => {
+  it('asks for a link with a PKCE challenge and keeps the verifier in this browser', async () => {
+    const { calls, fetch } = recorder();
+    const tab = await openPage({ script, url: page, fetch });
+    tab.type('email', 'ada@example.test');
+    await tab.fire('magic-link', 'click');
+
+    const verifier = tab.local.get('sign-in-verifier') as string;
+    expect(verifier).toMatch(/^[A-Za-z0-9_-]{43,128}$/);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.url).toBe('https://auth.example.test${AUTH_PATH}/otp?redirect_to=' + encodeURIComponent(page));
+    expect(calls[0]?.body).toEqual({
+      email: 'ada@example.test',
+      create_user: true,
+      code_challenge: createHash('sha256').update(verifier).digest('base64url'),
+      code_challenge_method: 's256',
+    });
+    // The verifier itself never leaves the browser with the request
+    expect(JSON.stringify(calls[0])).not.toContain(verifier);
+    expect(tab.session.size).toBe(0);
+  });
+
+  it('turns the code a link brings into a session, with the verifier, once', async () => {
+    const { calls, fetch } = recorder({ '/token?grant_type=pkce': () => json(session) });
+    const local = new Map([['sign-in-verifier', 'the-verifier']]);
+    const tab = await openPage({ script, url: page + '?code=one-time-code', fetch, local });
+
+    expect(calls[0]).toMatchObject({ url: 'https://auth.example.test${AUTH_PATH}/token?grant_type=pkce', body: { auth_code: 'one-time-code', code_verifier: 'the-verifier' } });
+    expect(JSON.parse(tab.session.get('session') as string)).toMatchObject({ accessToken: 'access-1', refreshToken: 'refresh-1' });
+    expect(calls[1]).toMatchObject({ url: '/api/me', authorization: 'Bearer access-1' });
+    // The code is out of the address bar and the verifier is spent
+    expect(tab.url()).toBe(page);
+    expect(local.has('sign-in-verifier')).toBe(false);
+    expect(tab.text('status')).toBe('Signed in.');
+  });
+
+  it('does nothing with a code it has no verifier for (a link opened in another browser)', async () => {
+    const { calls, fetch } = recorder({ '/token': () => json(session) });
+    const tab = await openPage({ script, url: page + '?code=one-time-code', fetch });
+    expect(calls).toEqual([]);
+    expect(tab.session.size).toBe(0);
+    expect(tab.url()).toBe(page);
+    expect(tab.text('status')).toMatch(/not asked for in this browser/);
+  });
+
+  it('says so when GoTrue refuses the code, and stays signed out', async () => {
+    const { fetch } = recorder({ '/token?grant_type=pkce': () => json({ msg: 'invalid flow state' }, 404) });
+    const tab = await openPage({ script, url: page + '?code=used', fetch, local: new Map([['sign-in-verifier', 'v']]) });
+    expect(tab.session.size).toBe(0);
+    expect(tab.text('status')).toBe('The link did not work: invalid flow state');
+  });
+
+  it('never takes a session from the address bar', async () => {
+    const { calls, fetch } = recorder();
+    const tab = await openPage({ script, url: page + '#access_token=planted&refresh_token=planted&expires_in=3600', fetch });
+    expect(tab.session.size).toBe(0);
+    expect(calls).toEqual([]);
+    expect(tab.url()).toBe(page);
+    expect(tab.text('status')).toMatch(/one-time code only/);
+  });
+
+  it('shows the error a link came back with', async () => {
+    const { fetch } = recorder();
+    const tab = await openPage({ script, url: page + '?error=access_denied&error_description=Email+link+is+invalid+or+has+expired', fetch });
+    expect(tab.text('status')).toBe('Email link is invalid or has expired');
+    expect(tab.url()).toBe(page);
+  });
+
+  it('signs in with a password and calls GET /api/me with the token', async () => {
+    const { calls, fetch } = recorder({ '/token?grant_type=password': () => json(session) });
+    const tab = await openPage({ script, url: page, fetch });
+    tab.type('email', 'ada@example.test');
+    tab.type('password', 'correct horse');
+    await tab.fire('password-form', 'submit');
+    expect(calls[0]?.body).toEqual({ email: 'ada@example.test', password: 'correct horse' });
+    expect(calls[1]).toMatchObject({ url: '/api/me', authorization: 'Bearer access-1' });
+    expect(tab.text('status')).toBe('Signed in.');
+  });
+});
 `;
 
 const AGENTS_AUTH = `# Agent guide
@@ -772,7 +1005,7 @@ serves it there. The same with supabase-js:
 \`\`\`ts
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient('https://<project>.supabase.co', '<publishable key>');
+const supabase = createClient('https://<project>.supabase.co', '<publishable key>', { auth: { flowType: 'pkce' } });
 await supabase.auth.signInWithPassword({ email, password });
 await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: \`\${window.location.origin}/api/sign-in\` } });
 const { data } = await supabase.auth.getSession();
@@ -785,8 +1018,13 @@ This page is an example to start from, not a finished sign-in. Before you ship o
   refresh token. Keep GoTrue's refresh-token rotation on (its default), and in production keep the
   refresh token on the server (a session cookie the API sets) with only short-lived access tokens
   in the browser.
-- **It uses the implicit flow**: after a magic or confirmation link, GoTrue returns the session in
-  the URL's hash. Prefer PKCE, which returns a one-time code instead (\`flowType: 'pkce'\` in supabase-js).
+- **Emailed links use PKCE.** The page keeps a random verifier in \`localStorage\` and sends GoTrue its
+  SHA-256 challenge; the link comes back with a one-time code in the query, and only the verifier
+  turns it into a session. So a link works once, and only in the browser that asked for it (opened
+  on another device, it says so and offers a new one). The page never takes a session from the
+  address bar, which is what the older implicit flow does. With supabase-js, pass
+  \`{ auth: { flowType: 'pkce' } }\` to \`createClient\`. Asking for a second link replaces the first one's verifier.
+  PKCE needs \`crypto.subtle\`, which browsers offer on https and on localhost only.
 - **GoTrue only redirects to addresses on its allow list** (\`GOTRUE_URI_ALLOW_LIST\`; "Redirect URLs"
   in Supabase). Add this app's \`/api/sign-in\` there, for each host you run it on, or the links in
   its emails are refused.
