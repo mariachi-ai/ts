@@ -10,7 +10,7 @@
       "listKits",
       "readKit",
       "addKit",
-      "installedKits"
+      "installedKit"
     ]
   },
   "type": "module",

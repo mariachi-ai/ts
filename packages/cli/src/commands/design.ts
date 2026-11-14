@@ -168,12 +168,11 @@ export function registerDesignCommand(program: Command): void {
   cmd
     .command('add <kit>')
     .description("Copy a design language (or a plain preset) into the project as its own: tokens, base styles, fonts, motion and DESIGN.md")
-    .option('-d, --dir <dir>', "the project's design folder; the kit goes in <dir>/<kit>/", 'src/design')
+    .option('-d, --dir <dir>', "the kit's folder; design.css, the project's own, is made beside it", 'src/design')
     .option('--force', 'replace a copy the project has edited (the edits are listed, then lost)')
-    .option('--keep-others', "keep another kit that's already in <dir>; by default taking a kit removes the old one's folder")
     .option('--dry-run', 'say what would happen; write nothing')
     .option('--json', 'machine-readable output')
-    .action(async (kit: string, opts: { dir: string; force?: boolean; keepOthers?: boolean; dryRun?: boolean; json?: boolean }) => {
+    .action(async (kit: string, opts: { dir: string; force?: boolean; dryRun?: boolean; json?: boolean }) => {
       try {
         const { runAdd } = await designKits();
         process.exitCode = runAdd(kit, opts, { cwd: process.cwd(), out: (line) => console.log(line), err: (line) => console.error(line) });

@@ -7,21 +7,21 @@ const rel = (cwd: string, file: string) => (path.relative(cwd, file) || '.').spl
 /** The lines `design add` prints for a result. Paths are shown from `cwd`. */
 export function formatAddResult(result: AddKitResult, cwd: string = process.cwd()): string[] {
   const { kit } = result;
-  const dir = rel(cwd, result.dir);
+  const dir = `${rel(cwd, result.dir)}/`;
   const would = result.dryRun ? 'would be ' : '';
   const from = `@mariachi/design ${kit.version}, commit ${kit.commit}`;
+  const name = `${kit.label} (${kit.id})`;
   const lines: string[] = [];
-  if (result.status === 'unchanged') lines.push(`unchanged ${dir}/ is ${kit.label} (${kit.id}) exactly as packed (${from})`);
+  if (result.status === 'unchanged') lines.push(`unchanged ${dir} is ${name} exactly as packed (${from})`);
+  else if (result.status === 'switched') lines.push(`${would}switched ${dir} from ${result.previous?.id} to ${name}: ${result.files.length} files (${from})`);
   else if (result.status === 'updated') {
     const was = result.previous && result.previous.version !== kit.version ? ` from ${result.previous.version}` : '';
-    lines.push(`${would}updated ${dir}/ ${kit.label} (${kit.id})${was}: ${result.files.length} files (${from})`);
-  } else lines.push(`${would}added ${dir}/ ${kit.label} (${kit.id}): ${result.files.length} files (${from})`);
-  for (const removed of result.removed) lines.push(`${would}removed ${rel(cwd, removed.dir)}/ (the kit before this one)`);
-  for (const lost of result.discarded) {
-    for (const [what, files] of [['edited', lost.edited], ['missing', lost.missing], ['added by the project', lost.extra]] as const) {
-      for (const file of files) lines.push(`${would}discarded ${lost.id}/${file} (${what})`);
-    }
+    lines.push(`${would}updated ${dir} ${name}${was}: ${result.files.length} files (${from})`);
+  } else lines.push(`${would}added ${dir} ${name}: ${result.files.length} files (${from})`);
+  for (const [what, files] of [['edited', result.discarded.edited], ['missing', result.discarded.missing], ["the project's own file, written over", result.discarded.extra]] as const) {
+    for (const file of files) lines.push(`${would}discarded ${dir}${file} (${what})`);
   }
+  for (const file of result.left) lines.push(`left ${dir}${file} (the project's own file; a kit's folder is for the kit)`);
   const css = rel(cwd, result.designCss.path);
   lines.push(result.designCss.created ? `${would}created ${css} (the project's own changes; never written again)` : `kept ${css} (the project's own; not touched)`);
   if (result.status !== 'unchanged') {
@@ -34,15 +34,14 @@ export function formatAddResult(result: AddKitResult, cwd: string = process.cwd(
   return lines;
 }
 
-/** The lines for a refusal (`design-kits/edited`): the files the project changed, per kit. */
-export function formatChanges(kits: Array<{ id: string } & KitChanges>): string[] {
-  const lines: string[] = [];
-  for (const kit of kits) {
-    for (const file of kit.edited) lines.push(`  edited   ${kit.id}/${file}`);
-    for (const file of kit.missing) lines.push(`  missing  ${kit.id}/${file}`);
-    for (const file of kit.extra) lines.push(`  added    ${kit.id}/${file}`);
-  }
-  return lines;
+/** The lines for a refusal (`design-kits/edited`): the files the project changed. */
+export function formatChanges(changes: KitChanges, dir = ''): string[] {
+  const at = dir ? `${dir.replace(/\/$/, '')}/` : '';
+  return [
+    ...changes.edited.map((file) => `  edited   ${at}${file}`),
+    ...changes.missing.map((file) => `  missing  ${at}${file}`),
+    ...changes.extra.map((file) => `  in the way  ${at}${file} (the project's own file, where the new kit has one)`),
+  ];
 }
 
 /** The lines `design list` prints for the kits: languages by category, then the plain presets. */

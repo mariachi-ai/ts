@@ -19,17 +19,16 @@ export const DEFAULT_DESIGN_DIR = 'src/design';
 const USAGE = [
   'Usage:',
   '  mariachi-design-kits list [--json]',
-  '  mariachi-design-kits add <kit> [--dir src/design] [--force] [--keep-others] [--dry-run] [--json]',
+  '  mariachi-design-kits add <kit> [--dir src/design] [--force] [--dry-run] [--json]',
   '',
-  'add copies a kit into <dir>/<kit>/ (tokens, base styles, fonts, motion, DESIGN.md, kit.json) and makes',
-  '<dir>/design.css once for the project\'s own changes. Taking a kit when another is there removes the old',
-  "one's folder. A copy the project has edited is reported and left alone unless --force.",
+  'add copies a kit into <dir> (tokens, base styles, fonts, motion, DESIGN.md, kit.json) and makes design.css',
+  "beside that folder, once, for the project's own changes. Taking a kit when another is there replaces the",
+  'old one in the same folder. A copy the project has edited is reported and left alone unless --force.',
 ];
 
 export interface AddCommandOptions {
   dir?: string;
   force?: boolean;
-  keepOthers?: boolean;
   dryRun?: boolean;
   json?: boolean;
 }
@@ -40,7 +39,6 @@ export function runAdd(id: string, opts: AddCommandOptions, io: CliIO): number {
     const result = addKit(id, {
       dir: path.resolve(io.cwd, opts.dir ?? DEFAULT_DESIGN_DIR),
       force: opts.force,
-      keepOthers: opts.keepOthers,
       dryRun: opts.dryRun,
       store: io.store,
     });
@@ -52,7 +50,7 @@ export function runAdd(id: string, opts: AddCommandOptions, io: CliIO): number {
     if (opts.json) io.out(JSON.stringify({ error: { code: error.code, message: error.message, ...error.metadata } }, null, 2));
     else {
       io.err(`error ${error.message}`);
-      if (error.code === 'design-kits/edited') for (const line of formatChanges(error.metadata?.kits as Array<{ id: string } & KitChanges>)) io.err(line);
+      if (error.code === 'design-kits/edited') for (const line of formatChanges(error.metadata as unknown as KitChanges, path.relative(io.cwd, String(error.metadata?.dir)))) io.err(line);
     }
     return 1;
   }
@@ -76,7 +74,6 @@ export function run(argv: string[], io: CliIO): number {
       options: {
         dir: { type: 'string', short: 'd' },
         force: { type: 'boolean' },
-        'keep-others': { type: 'boolean' },
         'dry-run': { type: 'boolean' },
         json: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
@@ -101,7 +98,6 @@ export function run(argv: string[], io: CliIO): number {
         {
           dir: values.dir as string | undefined,
           force: values.force as boolean | undefined,
-          keepOthers: values['keep-others'] as boolean | undefined,
           dryRun: values['dry-run'] as boolean | undefined,
           json: values.json as boolean | undefined,
         },

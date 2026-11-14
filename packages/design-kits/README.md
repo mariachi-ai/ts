@@ -5,7 +5,7 @@ design language a project copies in and owns, so its look never changes under it
 
 ```bash
 npx @mariachi/design-kits list
-npx @mariachi/design-kits add linen            # src/design/linen/ and src/design/design.css
+npx @mariachi/design-kits add linen            # the kit in src/design/, and src/design.css
 ```
 
 With the Mariachi CLI it's `mariachi design add linen` (install this package beside it:
@@ -30,31 +30,35 @@ Components aren't in a kit. A project makes each one when it needs it, as `DESIG
 ## What `add` does
 
 ```
-src/design/
-  linen/         the kit, exactly as built: every file matches its sha256 in kit.json
+src/
+  design/        the kit, exactly as built: every file matches its sha256 in kit.json
   design.css     the project's own changes; made once, never written again
 ```
 
-Then, in the project: import `linen/index.css`, `linen/motion/motion.css` and `design.css` in that
+Then, in the project: import `design/index.css`, `design/motion/motion.css` and `design.css` in that
 order, set `data-theme="linen"` on `<html>` (the mode follows the system; `data-mode="light"` or
-`"dark"` pins it), and call `enhance()` from `linen/motion/motion.js` once at start.
+`"dark"` pins it), and call `enhance()` from `design/motion/motion.js` once at start.
+
+A project has one kit, and `data-theme` names the language, so the folder doesn't. The imports stay the
+same when the language changes.
 
 | Situation | What happens |
 | --- | --- |
-| The kit is there, exactly as packed | Nothing is written; it says `unchanged` |
-| The project edited, removed or added files in the kit's folder | The files are listed, nothing is written, exit 1. `--force` replaces the folder and lists what was discarded |
-| Another kit is there | A switch: the old kit's folder is removed whole (same rule for edits). `--keep-others` leaves it |
-| A folder with the kit's name isn't a kit | Refused, unless `--force` |
+| The kit is there, as packed | Nothing is written; it says `unchanged` |
+| The project edited or removed a kit file | The files are listed, nothing is written, exit 1. `--force` replaces them and lists what was discarded |
+| Another kit is there | A switch, in place: the old kit's files are removed and the new one's written (same rule for edits) |
+| The project has a file of its own in the folder | It stays, and is reported. If the new kit has a file of that name, it counts as an edit |
+| The folder has files and no kit | Refused, with or without `--force`. A kit takes a folder of its own |
 | This package was upgraded | A re-run moves a clean copy to the new version. Nothing updates on its own |
 | `design.css` exists | Left alone, always |
 
-Flags: `--dir <dir>` (default `src/design`), `--force`, `--keep-others`, `--dry-run`, `--json`.
-Nothing outside `<dir>` is read or written.
+Flags: `--dir <dir>` (default `src/design`), `--force`, `--dry-run`, `--json`. Only kit files are ever
+removed, and nothing is written but the kit's folder and, once, the `design.css` beside it.
 
 ## From code
 
 ```ts
-import { addKit, installedKits, listKits, readKit } from '@mariachi/design-kits';
+import { addKit, installedKit, listKits, readKit } from '@mariachi/design-kits';
 
 listKits();                                  // [{ id, label, kind, category, mode, fonts, files, bytes }]
 const kit = readKit('linen');                // { manifest, manifestBytes, files: Map<path, Buffer> }, checked against kit.json
@@ -63,12 +67,12 @@ const result = addKit('linen', { dir: 'src/design' });
 result.status;                               // 'added' | 'switched' | 'updated' | 'unchanged'
 result.next.imports;                         // the three stylesheets, in order
 
-installedKits('src/design');                 // each kit there, with edited / missing / extra files
+installedKit('src/design');                  // the kit there, with edited / missing / extra files, or null
 ```
 
-`addKit` throws `DesignKitsError`: `design-kits/edited` (with the files in `metadata.kits`),
-`design-kits/unknown-kit`, `design-kits/not-a-kit`, `design-kits/invalid-dir`. A packed file that doesn't
-match its sha256 is `design-kits/corrupt`.
+`addKit` throws `DesignKitsError`: `design-kits/edited` (with `edited`, `missing` and `extra` in its
+metadata), `design-kits/unknown-kit`, `design-kits/not-a-kit`, `design-kits/invalid-dir`. A packed file
+that doesn't match its sha256 is `design-kits/corrupt`.
 
 ## How the kits are packed
 

@@ -200,21 +200,28 @@ Copy the folder as it is (Ensemble puts it at `apps/web/src/design/`), import `i
 ```bash
 pnpm add -D @mariachi/design-kits
 mariachi design list --kits                     # every language and plain preset, with its fonts and size
-mariachi design add linen                       # src/design/linen/ and src/design/design.css
-mariachi design add linen --dir web/styles      # another design folder
+mariachi design add linen                       # the kit in src/design/, and src/design.css
+mariachi design add linen --dir web/styles/kit  # another folder; design.css goes beside it
 
 npx @mariachi/design-kits add linen             # the same, with nothing installed
 ```
 
-`design add` writes `<dir>/<kit>/` exactly as built (each file matches its sha256 in `kit.json`) and prints what to do next: the three imports in order (`<kit>/index.css`, `<kit>/motion/motion.css`, `design.css`), `data-theme="<kit>"` on `<html>`, and `enhance()`. Its rules:
+```
+src/
+  design/        the kit, exactly as built: index.css, tokens.css, fonts/, motion/, DESIGN.md, kit.json …
+  design.css     the project's own changes; made once, never written again
+```
 
-- **`design.css` is the project's.** It's made once, beside the kit, for the project's own changes, and never written again: not on a re-run, not on a change of language, not with `--force`.
-- **An edited copy is reported, not replaced.** If the project changed, removed or added files in the kit's folder, the command lists them, writes nothing and exits 1. Move the changes to `design.css`, or pass `--force` to discard them (they're listed again as discarded).
-- **Taking another kit is a switch.** The old kit's folder is removed whole, under the same rule for edits. `--keep-others` leaves it.
+A project has one kit, and `<html data-theme>` names the language, so the folder doesn't: the imports (`./design/index.css`, `./design/motion/motion.css`, `./design.css`, in that order) stay the same when the language changes. `design add` writes every file exactly as built (each matches its sha256 in `kit.json`) and prints those imports, `data-theme="<kit>"` and the `enhance()` call. Its rules:
+
+- **`design.css` is the project's.** It's made once, beside the kit's folder, and never written again: not on a re-run, not on a change of language, not with `--force`.
+- **An edited copy is reported, not replaced.** If the project changed or removed a kit file, the command lists the files, writes nothing and exits 1. Move the changes to `design.css`, or pass `--force` to discard them (they're listed again as discarded).
+- **Taking another kit is a switch, in place.** The old kit's files are removed and the new one's written in the same folder, under the same rule for edits.
+- **Only kit files are ever removed.** A file of the project's own in the folder stays and is reported, unless the new kit has a file of that name (then it counts as an edit). A folder that has files and no kit is refused, with or without `--force`: a kit takes a folder of its own.
 - **A re-run with nothing to do says so** and writes nothing. After upgrading `@mariachi/design-kits`, a re-run moves a clean copy to the new version; that's the deliberate step.
 - `--dry-run` reports without writing; `--json` prints the result (or the error, with the files) for a tool.
 
-The same from code: `addKit(id, { dir, force, keepOthers, dryRun })`, `listKits()`, `readKit(id)` and `installedKits(dir)` from `@mariachi/design-kits`.
+The same from code: `addKit(id, { dir, force, dryRun })`, `listKits()`, `readKit(id)` and `installedKit(dir)` from `@mariachi/design-kits`.
 
 ## Markup contract
 

@@ -57,36 +57,38 @@ describe('mariachi design add / list', () => {
   };
 
   it('copies a kit into the project exactly as @mariachi/design built it, and makes design.css once', async () => {
-    const dir = path.join(tmp(), 'src', 'design');
+    const src = path.join(tmp(), 'src');
+    const dir = path.join(src, 'design');
     const added = await cli('add', 'linen', '--dir', dir);
     expect(added.exitCode).toBe(0);
-    expect(added.out[0]).toMatch(/^added .*linen\/ Linen \(linen\): \d+ files \(@mariachi\/design /);
+    expect(added.out[0]).toMatch(/^added .*design\/ Linen \(linen\): \d+ files \(@mariachi\/design /);
 
     const built = path.join(path.dirname(require.resolve('@mariachi/design/package.json')), 'dist', 'kits', 'linen');
-    const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'linen', 'kit.json'), 'utf8')) as { files: Record<string, string> };
-    expect(fs.readFileSync(path.join(dir, 'linen', 'kit.json')).equals(fs.readFileSync(path.join(built, 'kit.json')))).toBe(true);
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'kit.json'), 'utf8')) as { files: Record<string, string> };
+    expect(fs.readFileSync(path.join(dir, 'kit.json')).equals(fs.readFileSync(path.join(built, 'kit.json')))).toBe(true);
     for (const rel of Object.keys(manifest.files)) {
-      expect(fs.readFileSync(path.join(dir, 'linen', rel)).equals(fs.readFileSync(path.join(built, rel))), rel).toBe(true);
+      expect(fs.readFileSync(path.join(dir, rel)).equals(fs.readFileSync(path.join(built, rel))), rel).toBe(true);
     }
 
-    fs.writeFileSync(path.join(dir, 'design.css'), '/* mine */');
+    fs.writeFileSync(path.join(src, 'design.css'), '/* mine */');
     const again = await cli('add', 'linen', '--dir', dir);
     expect(again.out[0]).toMatch(/^unchanged /);
-    expect(fs.readFileSync(path.join(dir, 'design.css'), 'utf8')).toBe('/* mine */');
+    expect(fs.readFileSync(path.join(src, 'design.css'), 'utf8')).toBe('/* mine */');
   });
 
   it('exits 1 and names the files when the project edited its copy; --force replaces it', async () => {
-    const dir = path.join(tmp(), 'design');
+    const dir = path.join(tmp(), 'src', 'design');
     await cli('add', 'linen', '--dir', dir);
-    fs.appendFileSync(path.join(dir, 'linen', 'tokens.css'), '/* mine */');
+    fs.appendFileSync(path.join(dir, 'tokens.css'), '/* mine */');
     const refused = await cli('add', 'marigold', '--dir', dir);
     expect(refused.exitCode).toBe(1);
-    expect(refused.err).toContain('  edited   linen/tokens.css');
-    expect(fs.readdirSync(dir).sort()).toEqual(['design.css', 'linen']);
+    expect(refused.err.some((line) => /^ {2}edited {3}.*tokens\.css$/.test(line))).toBe(true);
+    expect(JSON.parse(fs.readFileSync(path.join(dir, 'kit.json'), 'utf8')).id).toBe('linen');
 
     const forced = await cli('add', 'marigold', '--dir', dir, '--force');
     expect(forced.exitCode).toBe(0);
-    expect(fs.readdirSync(dir).sort()).toEqual(['design.css', 'marigold']);
+    expect(forced.out[0]).toMatch(/^switched .* from linen to Marigold \(marigold\)/);
+    expect(JSON.parse(fs.readFileSync(path.join(dir, 'kit.json'), 'utf8')).id).toBe('marigold');
   });
 
   it('lists the kits beside the presets and components', async () => {

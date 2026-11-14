@@ -22,10 +22,11 @@ describe("@mariachi/design's kits, packed", () => {
   });
 
   it('copies every kit into a project byte for byte as built', () => {
-    const dir = path.join(tmp('project'), 'design');
+    // One folder, each kit switched in over the last: what's there is always exactly the kit as built
+    const dir = path.join(tmp('project'), 'src', 'design');
     for (const { id } of store.list()) {
-      addKit(id, { dir, store, keepOthers: true });
-      expect(snapshot(path.join(dir, id)), id).toEqual(snapshot(path.join(built, id)));
+      addKit(id, { dir, store });
+      expect(snapshot(dir), id).toEqual(snapshot(path.join(built, id)));
     }
   });
 
