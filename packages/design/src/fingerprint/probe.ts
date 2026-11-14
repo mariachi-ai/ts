@@ -356,6 +356,27 @@ const out: number[] = []; for (let i = 1; i < k.length; i++) { const d = k[i].to
 const s = kinds.includes('shadow'); if (b && s) bs.both++; else if (b) bs.borderOnly++; else if (s) bs.shadowOnly++; }
   m['shape.borderAndShadow'] = shares(bs);
 
+  // Spec 1.1: what a page shows most, which the counts above can't see. The ground: the median lightness of what
+  // sits under nine points across the window (a card, a shell or the canvas), so a dark language reads dark.
+  const groundAt = (x: number, y: number) => { for (let e: Element | null = document.elementFromPoint(x, y); e; e = e.parentElement) { const c = ownBg(e); if (c) return c; } return canvas; };
+  const grounds: number[] = [];
+  for (const fx of [0.2, 0.5, 0.8]) for (const fy of [0.25, 0.5, 0.75]) { const c = groundAt(W * fx, H * fy); grounds.push(rgbToOklch([c[0], c[1], c[2]])[0]); }
+  m['colour.ground'] = round(med(grounds)!, 3);
+  // The action colour's hue (OKLCH), turned so the wrap falls at yellow (rare for an action colour) and kept above 0;
+  // none when the action colour is near grey, where hue means nothing
+  const accentLch = accent ? rgbToOklch([accent[0], accent[1], accent[2]]) : null;
+  m['colour.accentHue'] = accentLch && accentLch[1] >= 0.04 ? round(((accentLch[2] - 100 + 360) % 360) + 1, 1) : null;
+  // Control corners: the median radius of buttons and fields of an ordinary size (0 for a square language)
+  const ctlR = controls.filter((e) => { const r = rectOf(e); return r.height >= 24 && r.height < 64 && r.width >= 40; }).map((e) => {
+    const r = rectOf(e);
+    const rad = cs(e).borderTopLeftRadius;
+    return Math.min(rad.endsWith('%') ? (px(rad) / 100) * r.width : px(rad), r.height / 2);
+  });
+  m['shape.controlRadius'] = ctlR.length ? round(med(ctlR)!, 1) : null;
+  // How panels are set apart, as two numbers: the share raised by a shadow and the share set on a tint
+  m['structure.elevated'] = separated.length ? sepShares.shadow : null;
+  m['structure.tinted'] = separated.length ? sepShares.tint : null;
+
   // Emphasis
   const prim = controls.filter(isPrimary);
   const primWin = prim.filter((e) => inWin(rectOf(e)));

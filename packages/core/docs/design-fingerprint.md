@@ -6,6 +6,8 @@ A design library's fingerprint is a product's habits, measured on its rendered s
 - the agent's prompt, which never estimates these numbers from screenshots;
 - `fingerprint.json` and `checks.json` (schemas at the end).
 
+**Version 1.1 (2026-11-14)** adds five measures, marked *1.1*: the page's ground, the action colour's hue, control corners, and how panels are set apart (raised, tinted). Version 1 counted habits but couldn't see colour or shape, so languages that look nothing alike could measure close. It also stops words being a check on a language. `specVersion` stays 1; a reader of 1 ignores the new measures.
+
 The playbook that uses it is [design-playbook.md](./design-playbook.md).
 
 Measures are versioned. A change to a definition bumps `specVersion`, and fingerprints from different versions aren't compared.
@@ -100,6 +102,8 @@ Each measure has an id, its unit, and how it's computed. A value is recorded per
 | `colour.accentOn` | shares | The accent's elements by kind: `primary`, `link`, `badge`, `icon`, `selection`, `other` |
 | `colour.hues` | count | Distinct hues (12 bins of 30° of OKLCH hue) among saturated colours (OKLCH chroma > 0.08) covering at least 0.2% of the window |
 | `colour.meaning` | share | The share of saturated area (OKLCH chroma > 0.08) that's on status elements (`[role=status]`, `[role=alert]`, badges, alerts) |
+| `colour.ground` | 0–1 | *1.1.* The median OKLCH lightness of what sits under nine points across the window (at 20/50/80% across and 25/50/75% down): the first element up from each point with an opaque fill, else the canvas. A dark language reads near 0.2, a light one near 1 |
+| `colour.accentHue` | degrees | *1.1.* The action colour's OKLCH hue, turned so 100° (yellow, rare for an action colour) becomes 1: `((h − 100) mod 360) + 1`. None when the action colour's chroma is under 0.04 |
 
 ### Shape
 
@@ -107,6 +111,9 @@ Each measure has an id, its unit, and how it's computed. A value is recorded per
 | --- | --- | --- |
 | `shape.radiusBySize` | px | Median `border-radius` of separated containers and controls by height: < 40, 40–120, 120–400, > 400 px |
 | `shape.borderAndShadow` | shares | Over separated containers: border only, shadow only, both |
+| `shape.controlRadius` | px | *1.1.* The median corner radius of buttons and fields between 24 and 64 px tall and at least 40 px wide (capped at half the height). 0 for a square language |
+| `structure.elevated` | share | *1.1.* Of the separated containers, the share set apart by a shadow |
+| `structure.tinted` | share | *1.1.* Of the separated containers, the share set apart by a tint |
 
 ### Emphasis
 
@@ -211,6 +218,8 @@ Every screen in the inventory has one kind: `list`, `detail`, `form`, `dashboard
 - **A check reports distance; it never fails.** The reviewer decides.
 - **The normal range** is the fingerprint's range for that kind of screen, falling back to `all`. A kind shown by only one screen gets that screen's range across the widths, which is narrow; that narrowness is what tells libraries apart until there are more precedents of the kind.
 - **Which measures get a check:** only numbers measured on at least 5 screens with a clear range: the 10th percentile above 0 and the 90th within twice the 10th. A measure that varies freely, or sits at 0, carries no check.
+  - *1.1:* where 0 is a habit (`shape.controlRadius`, `structure.elevated`, `structure.tinted`), a range of exactly 0 is clear: square corners, or never a shadow, is something a language keeps.
+  - *1.1:* `words.*` never earn a check on a language: its recipes' words are invented. They do on a real product (`existing`, `url`).
 - **The message** uses the product's own words for things where it has them ("rows", not "list items").
 
 ## Distance

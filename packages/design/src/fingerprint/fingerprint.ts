@@ -128,13 +128,25 @@ const MESSAGES: Record<string, string> = {
   'emphasis.primaries': 'This screen has {value} main actions. Yours have {low} to {high}.',
   'icons.size': 'Icons here are {value}px. Yours are {low} to {high}px.',
   'media.area': 'Pictures cover {pct} of this screen. On yours they cover {lowPct} to {highPct}.',
+  'colour.ground': 'This page is {pct} light. Yours are {lowPct} to {highPct}.',
+  'colour.accentHue': 'The main colour here is a different hue from yours.',
+  'shape.controlRadius': 'Buttons and fields here have {value}px corners. Yours have {low} to {high}px.',
+  'structure.elevated': '{pct} of the panels here are raised by a shadow. On yours it’s {lowPct} to {highPct}.',
+  'structure.tinted': '{pct} of the panels here are set on a tint. On yours it’s {lowPct} to {highPct}.',
   'words.headingLength': 'Headings here are {value} words long. Yours are {low} to {high}.',
   'words.buttonLength': 'Button labels here are {value} words. Yours are {low} to {high}.',
 };
 
-/** Whether a range is clear enough to check: the 90th percentile within twice the 10th. */
-export function clearRange(range: [number, number]): boolean {
+/**
+ * Measures where 0 is a habit, not an absence (spec 1.1): a square language's corners, a language that never raises a
+ * panel or never tints one. For these, a range of exactly 0 is clear.
+ */
+export const ZERO_IS_A_HABIT = new Set(['shape.controlRadius', 'structure.elevated', 'structure.tinted']);
+
+/** Whether a range is clear enough to check: the 90th percentile within twice the 10th (or exactly 0 where 0 is a habit). */
+export function clearRange(range: [number, number], measure?: string): boolean {
   const [lo, hi] = range;
+  if (measure && ZERO_IS_A_HABIT.has(measure) && lo === 0 && hi === 0) return true;
   return lo > 0 && hi <= 2 * lo;
 }
 
@@ -154,7 +166,7 @@ export function buildChecks(fp: Fingerprint, options: CheckOptions = {}): Checks
   }
   const checks: Check[] = [];
   for (const [id, s] of Object.entries(fp.measures)) {
-    if (s.unit !== 'number' || !s.range || s.n < 5 || !clearRange(s.range) || !MESSAGES[id]) continue;
+    if (s.unit !== 'number' || !s.range || s.n < 5 || !clearRange(s.range, id) || !MESSAGES[id]) continue;
     // A language's recipes carry invented words, so words earn a check only on a real product (spec 1, design-library.md)
     if (fp.source.mode === 'language' && id.startsWith('words.')) continue;
     const byKind: Record<string, [number, number]> = {};

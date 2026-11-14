@@ -63,6 +63,12 @@ describe('fingerprint', () => {
     expect(buildChecks(lang).checks.map((c) => c.id)).toEqual([]);
     expect(buildChecks(real).checks.map((c) => c.id)).toEqual(['words.buttonLength']);
   });
+  it('counts a range of exactly 0 as clear where 0 is a habit (square corners, no shadows)', () => {
+    expect(clearRange([0, 0], 'shape.controlRadius')).toBe(true);
+    expect(clearRange([0, 0], 'structure.elevated')).toBe(true);
+    expect(clearRange([0, 4], 'shape.controlRadius')).toBe(false);
+    expect(clearRange([0, 0], 'type.sizes')).toBe(false);
+  });
   it('treats a range stuck at 0 or spread wide as not clear', () => {
     expect(clearRange([0, 0])).toBe(false);
     expect(clearRange([2, 9])).toBe(false);
