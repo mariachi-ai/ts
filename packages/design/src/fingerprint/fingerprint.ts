@@ -194,19 +194,26 @@ export function distance(values: Record<string, MeasureValue>, checks: Checks, s
     if (typeof v !== 'number') continue;
     const [lo, hi] = kinds.map((k) => c.normal.byKind[k]).find(Boolean) ?? c.normal.all;
     const out = v < lo ? lo - v : v > hi ? v - hi : 0;
-    const sp = spread[c.measure] || 1;
-    sum += (out / sp) ** 2; n++;
+    // A measure every language shares (no spread across them) can't tell libraries apart: it counts as inside,
+    // rather than an outsized distance from dividing by about zero. One with no spread measured counts in plain units.
+    const sp = spread[c.measure];
+    if (sp === 0) {
+      n++;
+      continue;
+    }
+    const scale = sp ?? 1;
+    sum += (out / scale) ** 2; n++;
   }
   return n ? Math.sqrt(sum / n) : 0;
 }
 
-/** Each numeric measure's spread across libraries: the 10th-to-90th percentile width of their typical values. */
+/** Each numeric measure's spread across libraries: the 10th-to-90th percentile width of their typical values (0 when they all share it). */
 export function spreads(fingerprints: Fingerprint[]): Record<string, number> {
   const out: Record<string, number> = {};
   const ids = new Set(fingerprints.flatMap((f) => Object.keys(f.measures)));
   for (const id of ids) {
     const t = fingerprints.map((f) => f.measures[id]).filter((m) => m?.unit === 'number').map((m) => m.typical as number);
-    if (t.length >= 3) out[id] = Math.max(1e-6, quantile(t, 0.9) - quantile(t, 0.1));
+    if (t.length >= 3) out[id] = quantile(t, 0.9) - quantile(t, 0.1);
   }
   return out;
 }

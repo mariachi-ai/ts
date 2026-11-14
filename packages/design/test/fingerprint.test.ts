@@ -65,7 +65,12 @@ describe('fingerprint', () => {
     const checks = buildChecks(fp);
     expect(distance({ 'type.sizes': 4 }, checks, { 'type.sizes': 2 })).toBe(0);
     expect(distance({ 'type.sizes': 6.5 }, checks, { 'type.sizes': 2 })).toBe(1);
-    expect(spreads([fp, fp, fp])['type.sizes']).toBeGreaterThan(0);
+    expect(spreads([fp, fp, fp])['type.sizes']).toBe(0);
+  });
+  it('leaves out a check every library shares, instead of dividing by no spread', () => {
+    const checks = buildChecks(fp);
+    expect(distance({ 'type.sizes': 9 }, checks, { 'type.sizes': 0 })).toBe(0);
+    expect(distance({ 'type.sizes': 9 }, checks, {})).toBeGreaterThan(0);
   });
   it('interpolates quantiles', () => {
     expect(quantile([1, 2, 3, 4], 0.5)).toBe(2.5);
