@@ -37,7 +37,7 @@ they join a team), wrap the verifier:
 import { withPersonalTenants } from '@mariachi/auth';
 import { isPersonalTenant } from '@mariachi/core';
 
-const auth = withPersonalTenants(createOidcAuth({ issuer, audience }), { namespace: 'main' });
+const auth = withPersonalTenants(provider, { namespace: 'main' });   // any provider, JWTAdapter or SessionManager
 api.withAuthStrategy('session', bearerStrategy(auth));
 
 // A user with no organization now arrives with ctx.tenantId = 'user:main:<userId>'.
