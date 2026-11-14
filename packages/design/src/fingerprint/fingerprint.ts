@@ -155,6 +155,8 @@ export function buildChecks(fp: Fingerprint, options: CheckOptions = {}): Checks
   const checks: Check[] = [];
   for (const [id, s] of Object.entries(fp.measures)) {
     if (s.unit !== 'number' || !s.range || s.n < 5 || !clearRange(s.range) || !MESSAGES[id]) continue;
+    // A language's recipes carry invented words, so words earn a check only on a real product (spec 1, design-library.md)
+    if (fp.source.mode === 'language' && id.startsWith('words.')) continue;
     const byKind: Record<string, [number, number]> = {};
     for (const [k, v] of Object.entries(s.byKind)) {
       if (!v.range || v.n < 3) continue;
