@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomBytes } from 'node:crypto';
 import { rm } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -32,8 +32,24 @@ type FakePage = {
   type(id: string, value: string): void;
   fire(id: string, event: 'click' | 'submit'): Promise<void>;
 };
-let openPage: (options: { script: string; url: string; fetch: (input: string, init?: RequestInit) => Promise<Response>; local?: Map<string, string> }) => Promise<FakePage>;
+let openPage: (options: {
+  script: string;
+  url: string;
+  fetch: (input: string, init?: RequestInit) => Promise<Response>;
+  local?: Map<string, string>;
+  session?: Map<string, string>;
+}) => Promise<FakePage>;
 let script: string;
+/** The same page with AUTH_LINK_SESSIONS on */
+let allowing: string;
+const jwtSecret = randomBytes(32).toString('hex');
+
+/** A service-role token, as an app's backend holds, for GoTrue's admin API. */
+function serviceRoleToken(): string {
+  const part = (value: unknown) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  const body = `${part({ alg: 'HS256', typ: 'JWT' })}.${part({ role: 'service_role', aud: 'authenticated', exp: Math.floor(Date.now() / 1000) + 300 })}`;
+  return `${body}.${createHmac('sha256', jwtSecret).update(body).digest('base64url')}`;
+}
 
 beforeAll(async () => {
   await rm(app, { recursive: true, force: true });
@@ -73,7 +89,7 @@ beforeAll(async () => {
     GOTRUE_URI_ALLOW_LIST: PAGE,
     GOTRUE_DB_DRIVER: 'postgres',
     DATABASE_URL: 'postgres://supabase_auth_admin:auth@pg:5432/app',
-    GOTRUE_JWT_SECRET: randomBytes(32).toString('hex'),
+    GOTRUE_JWT_SECRET: jwtSecret,
     GOTRUE_JWT_AUD: 'authenticated',
     GOTRUE_JWT_DEFAULT_GROUP_NAME: 'authenticated',
     GOTRUE_API_HOST: '0.0.0.0',
@@ -111,6 +127,7 @@ beforeAll(async () => {
 
   const { signInScript } = await import(pathToFileURL(join(app, 'src/api/pages/sign-in.ts')).href);
   script = signInScript({ authUrl: gotrue });
+  allowing = signInScript({ authUrl: gotrue, linkSessions: true });
 }, 240_000);
 
 afterAll(async () => {
@@ -167,8 +184,7 @@ describe('the generated sign-in page against a real GoTrue', () => {
     asked.type('email', email);
     await asked.fire('magic-link', 'click');
     expect(asked.text('status')).toBe('Check your email for the sign-in link.');
-    const verifier = asked.local.get('sign-in-verifier');
-    expect(verifier).toMatch(/^[A-Za-z0-9_-]{64}$/);
+    expect(asked.local.get('sign-in-verifier')).toMatch(/^[A-Za-z0-9_-]{64}\.\d+$/);
 
     const link = await emailedLink(email);
     expect(link.searchParams.get('token')).toMatch(/^pkce_/);
@@ -269,5 +285,46 @@ describe('the generated sign-in page against a real GoTrue', () => {
     expect(victim.me).toEqual([]);
     expect(victim.gotrueCalls).toEqual([]);
     expect(planted.url()).toBe(PAGE);
+  }, 60_000);
+
+  it("takes an admin-made link's session only when the app allows it, and only after showing whose it is", async () => {
+    // GoTrue's admin API makes the link (an invite, an impersonation link). No browser asked, so it can't be PKCE.
+    const email = 'invited@example.test';
+    const made = await fetch(`${gotrue}/admin/generate_link`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${serviceRoleToken()}` },
+      body: JSON.stringify({ type: 'magiclink', email, redirect_to: PAGE }),
+    });
+    expect(made.status).toBe(200);
+    const { action_link: actionLink } = (await made.json()) as { action_link: string };
+    const back = await follow(new URL(actionLink));
+    // The session itself, in the hash
+    expect(back.origin + back.pathname).toBe(PAGE);
+    expect(new URLSearchParams(back.hash.slice(1)).get('access_token')).toBeTruthy();
+
+    // By default the page doesn't take it
+    const refusing = browserFetch();
+    const closed = await openPage({ script, url: back.href, fetch: refusing.fetch });
+    expect(closed.session.size).toBe(0);
+    expect(refusing.gotrueCalls).toEqual([]);
+
+    // With AUTH_LINK_SESSIONS it asks GoTrue whose it is, shows that, and waits
+    const net = browserFetch();
+    const tab = await openPage({ script: allowing, url: back.href, fetch: net.fetch });
+    expect(net.gotrueCalls).toEqual(['/user']);
+    expect(tab.text('link-account')).toBe(email);
+    expect(tab.session.size).toBe(0);
+    expect(net.me).toEqual([]);
+    expect(tab.url()).toBe(PAGE);
+
+    await tab.fire('link-accept', 'click');
+    expect((await user(stored(tab)?.accessToken as string)).email).toBe(email);
+    expect(net.me).toHaveLength(1);
+
+    // A made-up token in the same place is asked about, refused by GoTrue, and never offered
+    const forged = await openPage({ script: allowing, url: `${PAGE}#access_token=not.a.token&refresh_token=x&expires_in=3600`, fetch: browserFetch().fetch });
+    await forged.fire('link-accept', 'click');
+    expect(forged.session.size).toBe(0);
+    expect(forged.text('status')).toBe('The link is invalid or has expired. Ask for a new one here.');
   }, 60_000);
 });
