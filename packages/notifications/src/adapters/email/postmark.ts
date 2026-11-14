@@ -1,12 +1,13 @@
 import { NotificationError } from '@mariachi/core';
 import type { EmailAdapter, EmailMessage } from '../../types';
 import { addressList, recipients, toBase64 } from './address';
+import { providerFailure } from './failure';
 
 export interface PostmarkEmailConfig {
   /** The server token (`X-Postmark-Server-Token`). */
   apiKey: string;
   from?: string;
-  /** Postmark's message stream. Default: the server's transactional stream (`outbound`). */
+  /** Postmark's message stream, when a message names none (`EmailMessage.stream`). Default: the server's transactional stream (`outbound`). */
   messageStream?: string;
   /** Default `https://api.postmarkapp.com`. */
   apiUrl?: string;
@@ -40,7 +41,7 @@ export class PostmarkEmailAdapter implements EmailAdapter {
           ContentType: file.contentType ?? 'application/octet-stream',
         })),
       }),
-      ...(this.config.messageStream && { MessageStream: this.config.messageStream }),
+      ...((message.stream ?? this.config.messageStream) && { MessageStream: message.stream ?? this.config.messageStream }),
     };
     const send = this.config.fetch ?? ((input, init) => globalThis.fetch(input, init));
     const res = await send(`${(this.config.apiUrl ?? 'https://api.postmarkapp.com').replace(/\/+$/, '')}/email`, {
@@ -50,11 +51,7 @@ export class PostmarkEmailAdapter implements EmailAdapter {
     });
     const data = (await res.json().catch(() => ({}))) as { MessageID?: string; ErrorCode?: number; Message?: string };
     if (!res.ok || data.ErrorCode || !data.MessageID) {
-      throw new NotificationError('notifications/provider-failed', `Postmark: ${data.Message ?? `responded ${res.status}`}`, {
-        provider: 'postmark',
-        status: res.status,
-        errorCode: data.ErrorCode,
-      });
+      throw providerFailure('postmark', `Postmark: ${data.Message ?? `responded ${res.status}`}`, { status: res.status, errorCode: data.ErrorCode });
     }
     return { id: data.MessageID };
   }

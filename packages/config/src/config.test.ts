@@ -41,6 +41,17 @@ describe('loadConfig', () => {
     expect(loadConfig({}, { env: { RESEND_API_KEY: 'key-2' } }).email?.apiKey).toBe('key-2');
   });
 
+  it("never gives one email provider another's key", () => {
+    // The adapter defaults to Resend, so a generic key with no adapter named would go there.
+    expect(() => loadConfig({}, { env: { EMAIL_API_KEY: 'someone-elses-key' } })).toThrow(expect.objectContaining({ code: 'config/email-adapter-required' }));
+    expect(() => loadConfig({}, { env: { EMAIL_API_KEY: 'someone-elses-key', RESEND_API_KEY: 'resend-key' } })).toThrow(ConfigError);
+    // Resend's key stays with Resend.
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'postmark', RESEND_API_KEY: 'resend-key' } }).email).toEqual({ adapter: 'postmark' });
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'custom', EMAIL_API_KEY: 'platform-key', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('platform-key');
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'resend', EMAIL_API_KEY: 'explicit', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('explicit');
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'resend', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('resend-key');
+  });
+
   it('throws ConfigError with readable issues on invalid input', () => {
     expect(() => loadConfig({}, { env: { DATABASE_URL: 'not a url' } })).toThrow(ConfigError);
     try {

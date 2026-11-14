@@ -25,6 +25,12 @@ export interface EmailMessage {
   replyTo?: string;
   /** Extra message headers. */
   headers?: Record<string, string>;
+  /**
+   * The provider's sending stream for this message (`transactional`, a newsletter stream, ...), for
+   * providers that separate them. Postmark sends it as `MessageStream`; adapters whose provider has
+   * no such thing ignore it.
+   */
+  stream?: string;
   attachments?: EmailAttachment[];
   /** Not read by the built-in adapters; for a custom adapter whose provider renders templates. */
   templateId?: string;

@@ -2,6 +2,10 @@ import { Resend } from 'resend';
 import { NotificationError } from '@mariachi/core';
 import type { EmailAdapter, EmailMessage } from '../../types';
 import { addressList, recipients } from './address';
+import { providerFailure } from './failure';
+
+/** Resend's error names that a later attempt can get past; every other name is a refusal. */
+const RETRYABLE = new Set(['rate_limit_exceeded', 'application_error', 'internal_server_error', 'concurrent_idempotent_requests']);
 
 export interface ResendEmailAdapterOptions {
   apiKey: string;
@@ -45,7 +49,7 @@ export class ResendEmailAdapter implements EmailAdapter {
           : { ...payload, text: message.text ?? '' };
     const { data, error } = await this.resend.emails.send(withContent);
     if (error) {
-      throw new NotificationError('notifications/provider-failed', `Resend: ${error.message}`, { provider: 'resend', name: error.name });
+      throw providerFailure('resend', `Resend: ${error.message}`, { name: error.name, retryable: RETRYABLE.has(error.name) });
     }
     if (!data?.id) {
       throw new NotificationError('notifications/provider-failed', 'Resend did not return an id', { provider: 'resend' });

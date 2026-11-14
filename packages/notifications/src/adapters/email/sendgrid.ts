@@ -1,6 +1,7 @@
 import { NotificationError } from '@mariachi/core';
 import type { EmailAdapter, EmailMessage } from '../../types';
 import { addressList, parseAddress, recipients, toBase64 } from './address';
+import { providerFailure } from './failure';
 
 export interface SendGridEmailConfig {
   apiKey: string;
@@ -48,12 +49,9 @@ export class SendGridEmailAdapter implements EmailAdapter {
     });
     if (!res.ok) {
       const data = (await res.json().catch(() => ({}))) as { errors?: Array<{ message?: string }> };
-      throw new NotificationError('notifications/provider-failed', `SendGrid: ${data.errors?.[0]?.message ?? `responded ${res.status}`}`, {
-        provider: 'sendgrid',
-        status: res.status,
-      });
+      throw providerFailure('sendgrid', `SendGrid: ${data.errors?.[0]?.message ?? `responded ${res.status}`}`, { status: res.status });
     }
-    // 202 with an empty body; the id is in a header.
-    return { id: res.headers.get('x-message-id') ?? crypto.randomUUID() };
+    // 202 with an empty body; the id is in a header. Without one, say so: a made-up id would look like SendGrid's in delivery tracking.
+    return { id: res.headers.get('x-message-id') ?? `sendgrid-unknown-${crypto.randomUUID()}` };
   }
 }

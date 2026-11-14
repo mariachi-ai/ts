@@ -68,9 +68,25 @@ describe('parseSmtpUrl', () => {
 
   it('takes an explicit tls mode', () => {
     expect(parseSmtpUrl('smtp://relay.internal:25?tls=required').requireTLS).toBe(true);
-    expect(parseSmtpUrl('smtp://user:pass@smtp.example.com?tls=none')).toMatchObject({ ignoreTLS: true });
-    expect(parseSmtpUrl('smtp://user:pass@smtp.example.com?tls=none').requireTLS).toBeUndefined();
-    expect(parseSmtpUrl('smtp://user:pass@smtp.example.com?tls=opportunistic').requireTLS).toBeUndefined();
+    expect(parseSmtpUrl('smtp://relay.internal:25?tls=none')).toMatchObject({ ignoreTLS: true });
+    expect(parseSmtpUrl('smtp://user:pass@smtp.example.com?tls=required').requireTLS).toBe(true);
+  });
+
+  it('refuses to send a password to a remote host without TLS, unless told to in so many words', () => {
+    for (const mode of ['none', 'opportunistic']) {
+      expect(() => parseSmtpUrl(`smtp://user:pass@smtp.example.com?tls=${mode}`)).toThrow(expect.objectContaining({ code: 'notifications/invalid-smtp-url', message: expect.stringContaining('in the clear') }));
+    }
+    const insecure = parseSmtpUrl('smtp://user:pass@relay.internal:25?tls=none-insecure');
+    expect(insecure).toMatchObject({ ignoreTLS: true, auth: { user: 'user', pass: 'pass' } });
+    expect(insecure.requireTLS).toBeUndefined();
+  });
+
+  it('treats every loopback address and the Docker host as the local machine', () => {
+    for (const host of ['localhost', '127.0.0.1', '127.0.0.53', '[::1]', 'host.docker.internal']) {
+      expect(parseSmtpUrl(`smtp://user:pass@${host}:1025`).requireTLS, host).toBeUndefined();
+      expect(parseSmtpUrl(`smtp://user:pass@${host}:1025?tls=none`).ignoreTLS, host).toBe(true);
+    }
+    expect(parseSmtpUrl('smtp://user:pass@127.example.com').requireTLS).toBe(true);
   });
 
   it('refuses anything that is not an SMTP URL', () => {
@@ -163,10 +179,20 @@ describe('SmtpEmailAdapter', () => {
     const port = await new Promise<number>((resolve) => server.listen(0, '127.0.0.1', () => resolve((server.address() as { port: number }).port)));
     const adapter = new SmtpEmailAdapter({ url: `smtp://mailer:wrong@127.0.0.1:${port}`, from: 'app@example.com' });
     cleanup.push(() => adapter.close(), () => new Promise<void>((resolve) => server.close(() => resolve())));
+    // A 5xx reply is a refusal: sending again won't help.
     await expect(adapter.send({ to: 'grace@example.com', subject: 'S', text: 'T' })).rejects.toMatchObject({
-      code: 'notifications/provider-failed',
-      metadata: { provider: 'smtp', responseCode: 535 },
+      code: 'notifications/rejected',
+      metadata: { provider: 'smtp', responseCode: 535, retryable: false },
     });
+  });
+
+  it('retries a temporary SMTP failure and a dropped connection', async () => {
+    const failing = (error: object): SmtpTransport => ({ sendMail: async () => { throw Object.assign(new Error('nope'), error); } });
+    const send = (transport: SmtpTransport) => new SmtpEmailAdapter({ from: 'app@example.com', transport }).send({ to: 'a@example.com', subject: 'S', text: 'T' });
+    await expect(send(failing({ responseCode: 451 }))).rejects.toMatchObject({ code: 'notifications/provider-failed', metadata: { retryable: true, responseCode: 451 } });
+    await expect(send(failing({ code: 'ECONNRESET' }))).rejects.toMatchObject({ code: 'notifications/provider-failed', metadata: { retryable: true, smtpCode: 'ECONNRESET' } });
+    const noId: SmtpTransport = { sendMail: async () => ({}) };
+    expect((await send(noId)).id).toMatch(/^smtp-unknown-/);
   });
 
   it('passes every field of the message to the transport', async () => {
@@ -212,14 +238,29 @@ describe('PostmarkEmailAdapter', () => {
     });
   });
 
+  it("sends a message's own stream in place of the configured one", async () => {
+    const { seen, fetch } = recorder({ MessageID: 'pm-2', ErrorCode: 0 });
+    const adapter = new PostmarkEmailAdapter({ apiKey: 't', from: 'app@example.com', messageStream: 'outbound', fetch });
+    await adapter.send({ to: 'a@example.com', subject: 'S', text: 'T', stream: 'newsletter' });
+    await adapter.send({ to: 'a@example.com', subject: 'S', text: 'T' });
+    expect(seen.map((request) => request.body.MessageStream)).toEqual(['newsletter', 'outbound']);
+  });
+
   it("reports Postmark's error and needs a sender", async () => {
     const { fetch } = recorder({ ErrorCode: 300, Message: 'Invalid email request' }, { status: 422 });
     const adapter = new PostmarkEmailAdapter({ apiKey: 't', from: 'app@example.com', fetch });
     await expect(adapter.send({ to: 'a@example.com', subject: 'S', text: 'T' })).rejects.toMatchObject({
-      code: 'notifications/provider-failed',
+      code: 'notifications/rejected',
       message: 'Postmark: Invalid email request',
-      metadata: { provider: 'postmark', status: 422, errorCode: 300 },
+      metadata: { provider: 'postmark', status: 422, errorCode: 300, retryable: false },
     });
+    for (const status of [408, 429, 500, 503]) {
+      const down = recorder({ Message: 'try later' }, { status });
+      await expect(new PostmarkEmailAdapter({ apiKey: 't', from: 'app@example.com', fetch: down.fetch }).send({ to: 'a@example.com', subject: 'S', text: 'T' })).rejects.toMatchObject({
+        code: 'notifications/provider-failed',
+        metadata: { status, retryable: true },
+      });
+    }
     await expect(new PostmarkEmailAdapter({ apiKey: 't', fetch }).send({ to: 'a@example.com', subject: 'S', text: 'T' })).rejects.toMatchObject({ code: 'notifications/invalid-input' });
   });
 });
@@ -249,9 +290,15 @@ describe('SendGridEmailAdapter', () => {
   it("reports SendGrid's error", async () => {
     const { fetch } = recorder({ errors: [{ message: 'The from address does not match a verified Sender Identity.' }] }, { status: 403 });
     await expect(new SendGridEmailAdapter({ apiKey: 'k', from: 'app@example.com', fetch }).send({ to: 'a@example.com', subject: 'S', html: '<p>x</p>' })).rejects.toMatchObject({
-      code: 'notifications/provider-failed',
-      metadata: { provider: 'sendgrid', status: 403 },
+      code: 'notifications/rejected',
+      metadata: { provider: 'sendgrid', status: 403, retryable: false },
     });
+  });
+
+  it("marks the id when SendGrid doesn't return one", async () => {
+    const { fetch } = recorder(null, { status: 202 });
+    const result = await new SendGridEmailAdapter({ apiKey: 'k', from: 'app@example.com', fetch }).send({ to: 'a@example.com', subject: 'S', text: 'T' });
+    expect(result.id).toMatch(/^sendgrid-unknown-/);
   });
 });
 

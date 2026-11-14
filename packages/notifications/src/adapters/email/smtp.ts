@@ -1,6 +1,7 @@
 import { NotificationError } from '@mariachi/core';
 import type { EmailAdapter, EmailMessage } from '../../types';
 import { addressList, recipients } from './address';
+import { providerFailure } from './failure';
 
 /** The part of a nodemailer transport this adapter uses. */
 export interface SmtpTransport {
@@ -13,7 +14,10 @@ export interface SmtpEmailConfig {
    * `smtp://user:pass@host:587` or `smtps://user:pass@host:465`. Percent-encode special characters
    * in the user and password. `smtps` is TLS from the first byte. `smtp` upgrades with STARTTLS:
    * required when the URL has credentials (unless the host is the local machine), otherwise used
-   * when the server offers it. `?tls=required`, `?tls=opportunistic` or `?tls=none` overrides that.
+   * when the server offers it. `?tls=required`, `?tls=opportunistic` or `?tls=none` overrides that,
+   * except that a URL with credentials for a remote host must use TLS: `opportunistic` and `none`
+   * are refused there, because either can send the password in the clear. `?tls=none-insecure`
+   * is the one way to do that on purpose (a relay on a private network, say).
    */
   url?: string;
   /** Used with `port` when there's no `url`: a local sink such as Mailpit. Default `127.0.0.1`. */
@@ -35,7 +39,10 @@ export interface SmtpOptions {
   auth?: { user: string; pass: string };
 }
 
-const LOOPBACK = new Set(['localhost', '127.0.0.1', '::1', '[::1]']);
+/** The local machine: loopback names and addresses, and Docker's name for the host. */
+function isLocalHost(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '::1' || hostname === '[::1]' || hostname === 'host.docker.internal' || /^127(\.\d{1,3}){3}$/.test(hostname);
+}
 
 /** What nodemailer's transport is built with, from an SMTP URL (see `SmtpEmailConfig.url`). */
 export function parseSmtpUrl(value: string): SmtpOptions {
@@ -53,13 +60,20 @@ export function parseSmtpUrl(value: string): SmtpOptions {
   const options: SmtpOptions = { host: url.hostname, port: url.port ? Number(url.port) : secure ? 465 : 587, secure };
   if (url.username) options.auth = { user: decodeURIComponent(url.username), pass: decodeURIComponent(url.password) };
 
-  const tls = url.searchParams.get('tls') ?? (options.auth && !LOOPBACK.has(url.hostname) ? 'required' : 'opportunistic');
-  if (tls !== 'required' && tls !== 'opportunistic' && tls !== 'none') {
-    throw new NotificationError('notifications/invalid-smtp-url', `SMTP URL has tls=${tls}; use required, opportunistic or none`);
+  const exposed = Boolean(options.auth) && !isLocalHost(url.hostname);
+  const tls = url.searchParams.get('tls') ?? (exposed ? 'required' : 'opportunistic');
+  if (tls !== 'required' && tls !== 'opportunistic' && tls !== 'none' && tls !== 'none-insecure') {
+    throw new NotificationError('notifications/invalid-smtp-url', `SMTP URL has tls=${tls}; use required, opportunistic, none or none-insecure`);
   }
   if (!secure) {
+    if (exposed && (tls === 'opportunistic' || tls === 'none')) {
+      throw new NotificationError(
+        'notifications/invalid-smtp-url',
+        `SMTP URL has credentials for ${url.hostname} with tls=${tls}, which can send the password in the clear; use tls=required (the default), smtps://, or tls=none-insecure to accept that`,
+      );
+    }
     if (tls === 'required') options.requireTLS = true;
-    if (tls === 'none') options.ignoreTLS = true;
+    if (tls === 'none' || tls === 'none-insecure') options.ignoreTLS = true;
   }
   return options;
 }
@@ -121,14 +135,10 @@ export class SmtpEmailAdapter implements EmailAdapter {
         headers: message.headers,
         attachments: message.attachments?.map((file) => ({ filename: file.filename, content: file.content, contentType: file.contentType })),
       });
-      return { id: info.messageId ?? crypto.randomUUID() };
+      return { id: info.messageId ?? `smtp-unknown-${crypto.randomUUID()}` };
     } catch (error) {
       const detail = error as { message?: string; code?: string; responseCode?: number };
-      throw new NotificationError('notifications/provider-failed', `SMTP: ${detail.message ?? 'send failed'}`, {
-        provider: 'smtp',
-        code: detail.code,
-        responseCode: detail.responseCode,
-      });
+      throw providerFailure('smtp', `SMTP: ${detail.message ?? 'send failed'}`, { smtpCode: detail.code, responseCode: detail.responseCode });
     }
   }
 

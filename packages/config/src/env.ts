@@ -29,6 +29,22 @@ function json<T>(v: string | undefined, name: string): T | undefined {
   }
 }
 
+/**
+ * The email key for the adapter in use, so one provider's key never goes to another: `EMAIL_API_KEY`
+ * belongs to the adapter `EMAIL_ADAPTER` names, and `RESEND_API_KEY` is only ever Resend's. The
+ * adapter defaults to Resend, so `EMAIL_API_KEY` without `EMAIL_ADAPTER` is refused instead of
+ * being sent there.
+ */
+function emailApiKey(env: Env): string | undefined {
+  if (!env.EMAIL_ADAPTER) {
+    if (env.EMAIL_API_KEY) {
+      throw new ConfigError('config/email-adapter-required', 'EMAIL_API_KEY is set without EMAIL_ADAPTER: set EMAIL_ADAPTER to the provider the key is for (resend, postmark, sendgrid, custom)');
+    }
+    return env.RESEND_API_KEY;
+  }
+  return env.EMAIL_ADAPTER === 'resend' ? (env.EMAIL_API_KEY ?? env.RESEND_API_KEY) : env.EMAIL_API_KEY;
+}
+
 function compact<T extends Record<string, unknown>>(obj: T): T | undefined {
   const entries = Object.entries(obj).filter(([, v]) => v !== undefined);
   return entries.length ? (Object.fromEntries(entries) as T) : undefined;
@@ -85,7 +101,7 @@ export function buildConfigFromEnv(env: Env = process.env): AppConfigInput {
     }),
     email: compact({
       adapter: env.EMAIL_ADAPTER,
-      apiKey: env.EMAIL_API_KEY ?? env.RESEND_API_KEY,
+      apiKey: emailApiKey(env),
       from: env.EMAIL_FROM,
       smtpUrl: env.SMTP_URL,
       apiUrl: env.EMAIL_API_URL,

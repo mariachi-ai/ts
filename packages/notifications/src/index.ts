@@ -51,6 +51,7 @@ export { SmtpEmailAdapter, parseSmtpUrl, type SmtpEmailConfig, type SmtpOptions,
 export { PostmarkEmailAdapter, type PostmarkEmailConfig } from './adapters/email/postmark';
 export { SendGridEmailAdapter, type SendGridEmailConfig } from './adapters/email/sendgrid';
 export { parseAddress, type EmailAddress } from './adapters/email/address';
+export { providerFailure, isRetryable, NOTIFICATION_REJECTED, NOTIFICATION_PROVIDER_FAILED, type ProviderFailureDetail } from './adapters/email/failure';
 export { TwilioSmsAdapter, type TwilioSmsConfig } from './adapters/sms/twilio';
 export { FcmPushAdapter, type FcmPushConfig } from './adapters/push/fcm';
 export { MemoryInAppStore, MemoryPreferenceStore, MemoryDeliveryStore } from './store/memory';
