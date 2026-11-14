@@ -97,7 +97,8 @@ export const halcyon = extendTheme(minimal, {
       weight: { regular: '360', medium: '420', semibold: '480', bold: '560' },
       leading: { tight: '1.15', normal: '1.6', relaxed: '1.7' },
       tracking: { tight: '-0.016em', normal: '0', wide: '0.06em' },
-      body: { weight: '360' },
+      // App text is 400; 360 stays for actions, the top bar, figures and public ledes; 380 for titles
+      body: { weight: '400' },
       heading: { weight: '380', tracking: '0' },
     },
     control: {
@@ -182,8 +183,11 @@ export const halcyon = extendTheme(minimal, {
       wrapBorder: 'transparent',
       wrapRadius: '0',
     },
+    // 15px items, 30px tall on a 36px pitch; group labels small at 480
     sidebar: {
       bg: 'var(--m-color-bg-sunken)',
+      fontSize: 'var(--m-font-size-md)',
+      itemGap: '0.375rem',
       link: {
         fg: 'var(--m-color-fg-default)',
         activeFg: 'var(--m-color-fg-default)',
@@ -191,8 +195,9 @@ export const halcyon = extendTheme(minimal, {
         hoverBg: { light: '#f1f1f4', dark: '#2c2c3a' },
         activeWeight: 'var(--m-font-weight-regular)',
         radius: '8px',
+        paddingY: 'calc(0.1875rem * var(--m-density))',
       },
-      heading: { transform: 'none', tracking: '0', weight: 'var(--m-font-weight-regular)' },
+      heading: { transform: 'none', tracking: '0', weight: 'var(--m-font-weight-semibold)' },
     },
     badge: {
       radius: '4px',
@@ -209,6 +214,8 @@ export const halcyon = extendTheme(minimal, {
     tooltip: { fontSize: 'var(--m-font-size-sm)', fontWeight: 'var(--m-font-weight-regular)', shadow: 'none' },
     progress: { height: { md: '0.375rem' }, fill: 'var(--m-color-accent-default)' },
     checkbox: { size: '1rem' },
+    // Field labels and messages in the running text's weight, not a heavier one
+    field: { labelFontWeight: 'var(--m-font-body-weight)', errorFontWeight: 'var(--m-font-body-weight)' },
     kbd: {
       radius: '9999px',
       border: 'var(--m-color-border-default)',
