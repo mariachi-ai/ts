@@ -13,7 +13,9 @@
       var(--m-skeleton-bg) 70%
     );
     background-size: 200% 100%;
-    animation: m-shimmer var(--m-skeleton-duration) linear infinite;
+    /* Where the sweep is out of sight, so a still or pulsing skeleton shows no highlight */
+    background-position: -50% 0;
+    animation: var(--m-skeleton-animation) var(--m-skeleton-duration) linear infinite;
   }
 
   .m-skeleton[data-shape="circle"] {

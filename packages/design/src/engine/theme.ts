@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { contract, type ComponentContract, tokenByPath, tokenByVar, tokenList } from '../contract';
+import { contract, type ComponentContract, overlayComponentPaths, tokenByPath, tokenByVar, tokenList } from '../contract';
 import type { SemanticContract } from '../contract/semantic';
 import { isTokenDef, type TokenInput, type TokenOverrides, type TokenValue } from '../contract/tokens';
 import { DesignError } from '../errors';
@@ -145,6 +145,11 @@ export function defineTheme(definition: ThemeDefinition): Theme {
   const flat: Record<string, TokenValue> = {};
   for (const token of tokenList) {
     if (!token.path.startsWith('components.') && token.def.default !== undefined) flat[token.path] = token.def.default;
+  }
+  // The motion overlay's component tokens are carried by every theme, so every kit's tokens.css has them
+  for (const path of overlayComponentPaths) {
+    const value = tokenByPath.get(path)?.def.default;
+    if (value !== undefined) flat[path] = value;
   }
   const values = applyOverrides(flat, flattenValues(tokens));
   const withComponents = applyOverrides(values, flattenValues({ components }));

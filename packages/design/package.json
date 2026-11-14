@@ -72,6 +72,7 @@
   },
   "dependencies": {
     "@mariachi/core": "workspace:*",
+    "@mariachi/motion": "workspace:*",
     "zod": "^3.25.76"
   },
   "peerDependencies": {

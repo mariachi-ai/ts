@@ -1,13 +1,17 @@
 import { componentList, componentTokens } from '../components';
 import type { ContrastPair } from './contrast-pairs';
 import { semanticContrastPairs } from './contrast-pairs';
+import { motionTokens, overlayComponentPaths } from './motion';
 import { semantic } from './semantic';
 import { type FlatToken, flattenContract } from './tokens';
 
-/** The whole contract: semantic tokens plus every component's tokens under `components`. */
-export const contract = { ...semantic, components: componentTokens };
+/**
+ * The whole contract: semantic tokens plus every component's tokens under `components`, with the
+ * motion overlay's loader and chart tokens beside them (see `motion.ts`).
+ */
+export const contract = { ...semantic, components: { ...componentTokens, ...motionTokens } };
 export type Contract = typeof contract;
-export type ComponentContract = typeof componentTokens;
+export type ComponentContract = typeof contract.components;
 
 export const tokenList: FlatToken[] = flattenContract(contract);
 export const tokenByPath = new Map(tokenList.map((t) => [t.path, t]));
@@ -27,6 +31,6 @@ export const contrastPairs: ContrastPair[] = [
   ),
 ];
 
-export { semantic, semanticContrastPairs };
+export { motionTokens, overlayComponentPaths, semantic, semanticContrastPairs };
 export type { ContrastPair };
 export { componentList };

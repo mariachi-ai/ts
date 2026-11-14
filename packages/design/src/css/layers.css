@@ -1,5 +1,6 @@
 /*
  * Layer order. Unlayered app CSS beats every layer; apps that use layers themselves can put their
- * overrides in `mariachi.overrides`, which comes last.
+ * overrides in `mariachi.overrides`, which comes last. `mariachi.motion` is @mariachi/motion's
+ * (loading, entrances, open and close), after the components so it can animate them.
  */
-@layer mariachi.reset, mariachi.theme, mariachi.base, mariachi.components, mariachi.overrides;
+@layer mariachi.reset, mariachi.theme, mariachi.base, mariachi.components, mariachi.motion, mariachi.overrides;
