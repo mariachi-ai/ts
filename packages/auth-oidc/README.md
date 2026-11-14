@@ -63,7 +63,8 @@ createOidcAuth({ issuer: 'https://id.acme.com/realms/app', audience: 'app-api',
   rolesClaim: (claims) => (claims.realm_access as { roles?: string[] } | undefined)?.roles });
 
 // Microsoft Entra ID: the tenant is `tid`; `scp` and `roles` are read by default. Its `sub` differs
-// per application for the same person, so `oid` is the stable user id.
+// per application for the same person, so `oid` is the stable user id. `oid` is only unique within
+// one directory: in a multi-tenant app, always keep `tid` as the tenant alongside it.
 createOidcAuth({ issuer: `https://login.microsoftonline.com/${tenantId}/v2.0`, audience: clientId, tenantClaim: 'tid', userIdClaim: 'oid' });
 
 // Amazon Cognito access tokens have no `aud`: say so, and check what they have instead.
@@ -86,7 +87,7 @@ createOidcAuth({
 | `tokenType` | none | `'access'`: refuse anything that doesn't show it's an access token (`typ: at+jwt` header, Cognito's `token_use: access`, or Keycloak's `typ: Bearer` claim) |
 | `requireTokenType` | none | Require exactly this `typ` header, e.g. `at+jwt` |
 | `authorizedParty` | none | Clients allowed to have obtained the token, checked against `azp` (or `client_id`). Set it when tokens carry several audiences |
-| `userIdClaim` | `sub` | |
+| `userIdClaim` | `sub` | Must be an id the provider assigns and never changes. `email`, `preferred_username`, `upn`, `unique_name`, `name` and similar are refused at construction: a user who can edit that claim could become someone else. A function here must return such an immutable id too |
 | `rolesAsScopes` | `false` | Also list the roles among the scopes |
 | `jwksUrl` | from discovery | Skips discovery |
 | `discoveryUrl` | `<issuer>/.well-known/openid-configuration` | For a document served elsewhere, such as an internal address |

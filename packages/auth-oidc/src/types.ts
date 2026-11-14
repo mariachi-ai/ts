@@ -44,8 +44,15 @@ export interface OidcConfig {
    */
   authorizedParty?: string | string[];
   /**
-   * The claim holding the user's id. Default `sub`. Microsoft Entra ID's `sub` differs per
-   * application for the same person; its `oid` is the stable one.
+   * The claim holding the user's id. Default `sub`. It must be an id the provider assigns and
+   * never changes. Microsoft Entra ID's `sub` differs per application for the same person, so its
+   * `oid` is the one to use there (together with `tid` as the tenant, for a multi-tenant app,
+   * since `oid` is only unique within a directory).
+   *
+   * Claims a user can set or change (`email`, `preferred_username`, `upn`, `unique_name`, `name`
+   * and the like) are refused: whoever can put a victim's address in their own profile would be
+   * signed in as the victim. A function source carries the same duty and can't be checked, so
+   * only return such an immutable id from it.
    */
   userIdClaim?: ClaimSource<string>;
   /** Where to read the JWKS, skipping discovery. */

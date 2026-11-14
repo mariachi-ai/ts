@@ -230,6 +230,11 @@ describe('OidcAuthProvider', () => {
     // Entra ID: `sub` is per application, `oid` is the person.
     expect((await provider({ userIdClaim: 'oid' }).verify(await sign({ oid: 'person-1' }))).userId).toBe('person-1');
     await expect(provider({ userIdClaim: 'oid' }).verify(await sign({}))).rejects.toMatchObject(invalid);
+    // A claim the user can edit must never be the user id: put a victim's address in your profile and you'd be them.
+    for (const claim of ['email', 'preferred_username', 'upn', 'unique_name', 'name', 'Email', 'phone_number']) {
+      expect(() => provider({ userIdClaim: claim }), claim).toThrow(expect.objectContaining({ code: 'auth/invalid-config', message: expect.stringContaining("can't identify them") }));
+    }
+    expect(() => provider({ userIdClaim: 'sub' })).not.toThrow();
     // A single role as a string, as some providers send it.
     expect((await provider({ rolesClaim: ['roles', 'role'] }).verify(await sign({ role: 'member' }))).roles).toEqual(['member']);
   });

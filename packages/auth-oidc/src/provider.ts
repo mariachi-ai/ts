@@ -5,6 +5,9 @@ import type { AsymmetricAlgorithm, ClaimSource, OidcClaims, OidcConfig } from '.
 
 const HMAC = /^HS/i;
 
+/** Claims a user can set or change at their provider, which must never identify them (account takeover by editing a profile). */
+const MUTABLE_IDENTITY_CLAIMS = new Set(['email', 'preferred_username', 'upn', 'unique_name', 'name', 'nickname', 'given_name', 'family_name', 'phone_number']);
+
 function read<T>(claims: OidcClaims, source: ClaimSource<T>): unknown {
   return typeof source === 'function' ? source(claims) : claims[source];
 }
@@ -83,6 +86,12 @@ export class OidcAuthProvider implements AuthProvider {
     }
     if (config.audience === null && !config.validate) {
       throw new AuthError('auth/invalid-config', 'OIDC: `audience: null` needs a `validate` function, or any token from this issuer would be accepted');
+    }
+    if (typeof config.userIdClaim === 'string' && MUTABLE_IDENTITY_CLAIMS.has(config.userIdClaim.toLowerCase())) {
+      throw new AuthError(
+        'auth/invalid-config',
+        `OIDC: \`userIdClaim: '${config.userIdClaim}'\` is a claim a user can set or change, so it can't identify them; use an id the provider assigns, such as \`sub\` or Entra's \`oid\``,
+      );
     }
     this.algorithms = config.algorithms?.length ? config.algorithms : ['RS256', 'ES256'];
     if (this.algorithms.some((algorithm) => HMAC.test(algorithm))) {
