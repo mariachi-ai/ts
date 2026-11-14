@@ -97,6 +97,7 @@ export function buildConfigFromEnv(env: Env = process.env): AppConfigInput {
     ai: compact({
       adapter: env.AI_ADAPTER,
       apiKey: env.AI_API_KEY ?? env.OPENAI_API_KEY,
+      baseUrl: env.AI_BASE_URL,
       model: env.AI_MODEL,
       fallbackModels: list(env.AI_FALLBACK_MODELS),
       anthropicApiKey: env.ANTHROPIC_API_KEY,

@@ -10,6 +10,8 @@
       "createAI",
       "DefaultAI",
       "AnthropicAdapter",
+      "OpenAIAdapter",
+      "GoogleAdapter",
       "FallbackAdapter",
       "runAgent"
     ]
@@ -67,7 +69,8 @@
   "peerDependencies": {
     "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
     "drizzle-orm": "^0.38",
-    "@ai-sdk/anthropic": "^4"
+    "@ai-sdk/anthropic": "^4",
+    "@ai-sdk/google": "^4"
   },
   "peerDependenciesMeta": {
     "@mariachi/database-postgres": {
@@ -78,10 +81,14 @@
     },
     "@ai-sdk/anthropic": {
       "optional": true
+    },
+    "@ai-sdk/google": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@ai-sdk/anthropic": "^4.0.61",
+    "@ai-sdk/google": "^4.0.121",
     "@mariachi/database-postgres": "workspace:*",
     "drizzle-orm": "^0.38",
     "tsup": "^8",

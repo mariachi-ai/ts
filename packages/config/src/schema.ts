@@ -81,6 +81,8 @@ export const AppConfigSchema = z.object({
     .object({
       adapter: z.string().default('openai'),
       apiKey: z.string().optional(),
+      /** Where the provider's API is, for a proxy, a gateway or a local model server (`createAI`'s `baseURL`). */
+      baseUrl: z.string().url().optional(),
       model: z.string().optional(),
       /** Tried in order on the primary provider when the model fails. */
       fallbackModels: z.array(z.string()).optional(),
