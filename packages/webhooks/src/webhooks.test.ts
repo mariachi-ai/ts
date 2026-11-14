@@ -7,23 +7,62 @@ import { SignatureAuthController, WebhookController, WebhookServer, redactHeader
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child() { return silent; } };
 const SECRET = 'whsec';
 
+const check = (sig: string, raw: Buffer, secret: string) => {
+  const expected = Buffer.from(createHmac('sha256', secret).update(raw).digest('hex'));
+  const given = Buffer.from(sig);
+  return expected.length === given.length && timingSafeEqual(expected, given);
+};
+
+/** A custom scheme with one shared secret: the tenant comes from the signed body. */
 class AcmeAuth extends SignatureAuthController {
   readonly provider = 'acme';
   readonly signatureHeader = 'x-acme-signature';
-  protected readonly eventIdHeader = 'x-acme-delivery';
-  protected async verifySignature(sig: string, raw: Buffer) {
-    const expected = Buffer.from(createHmac('sha256', SECRET).update(raw).digest('hex'));
-    const given = Buffer.from(sig);
-    return expected.length === given.length && timingSafeEqual(expected, given);
+  protected secret() {
+    return SECRET;
   }
-  protected resolveTenant(req: IncomingRequest) {
+  protected verifySignature(sig: string, raw: Buffer, secret: string) {
+    return check(sig, raw, secret);
+  }
+  protected tenantFromPayload(payload: unknown) {
+    return (payload as { tenant?: string } | undefined)?.tenant;
+  }
+}
+
+/** The same scheme with a secret per tenant: the path names the tenant. */
+class PerTenantAuth extends SignatureAuthController {
+  readonly provider = 'acme-tenants';
+  readonly signatureHeader = 'x-acme-signature';
+  protected tenantFromRequest(req: IncomingRequest) {
     return req.params.tenant;
+  }
+  protected tenantSecret(tenantId: string) {
+    return ({ t42: ['rotated-42', 'secret-42'], t99: 'secret-99' } as Record<string, string | string[]>)[tenantId];
+  }
+  protected verifySignature(sig: string, raw: Buffer, secret: string) {
+    return check(sig, raw, secret);
+  }
+}
+
+/** The mistake the base class refuses: a tenant from the path, under one shared secret. */
+class UnsafeAuth extends SignatureAuthController {
+  readonly provider = 'unsafe';
+  readonly signatureHeader = 'x-acme-signature';
+  protected secret() {
+    return SECRET;
+  }
+  protected tenantFromRequest(req: IncomingRequest) {
+    return req.params.tenant;
+  }
+  protected verifySignature(sig: string, raw: Buffer, secret: string) {
+    return check(sig, raw, secret);
   }
 }
 
 class AcmeController extends WebhookController {
   readonly prefix = 'acme';
-  readonly auth = new AcmeAuth();
+  constructor(readonly auth: SignatureAuthController = new AcmeAuth()) {
+    super();
+  }
   init() {
     this.post(':tenant/events', { mode: 'direct', procedure: 'acme.event' }, async (_ctx, body) => body);
   }
@@ -64,23 +103,61 @@ describe('webhooks', () => {
       { communication, logStore: store, idempotency: new InMemoryIdempotencyStore() },
     ).registerController(new AcmeController());
 
-    const payload = '{"type":"invoice.paid"}';
+    const payload = '{"type":"invoice.paid","tenant":"t42"}';
     const sig = createHmac('sha256', SECRET).update(payload).digest('hex');
     const headers = { 'content-type': 'application/json', 'x-acme-signature': sig, 'x-acme-delivery': 'evt_1', authorization: 'Bearer x' };
-    const first = await server.inject({ method: 'POST', url: '/acme/t42/events', headers, payload });
+    // Posted to another tenant's path: the tenant is the one in the signed body.
+    const first = await server.inject({ method: 'POST', url: '/acme/t99/events', headers, payload });
     expect(first.statusCode).toBe(200);
     expect(calls[0].ctx.tenantId).toBe('t42');
-    expect(calls[0].input).toEqual({ type: 'invoice.paid' });
+    expect(calls[0].input).toEqual({ type: 'invoice.paid', tenant: 't42' });
     expect(entries[0].headers['x-acme-signature']).toBe('[redacted]');
     expect(entries[0].headers.authorization).toBe('[redacted]');
     expect(entries[0].status).toBe('processed');
 
     const dup = await server.inject({ method: 'POST', url: '/acme/t42/events', headers, payload });
     expect(dup.json()).toMatchObject({ duplicate: true });
+    // A replay under a new delivery id is still a duplicate: that header isn't signed, the body is.
+    const replay = await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { ...headers, 'x-acme-delivery': 'evt_2' }, payload });
+    expect(replay.json()).toMatchObject({ duplicate: true });
     expect(calls).toHaveLength(1);
 
-    const bad = await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { ...headers, 'x-acme-delivery': 'evt_2' }, payload: '{"type":"tampered"}' });
+    const bad = await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { ...headers, 'x-acme-delivery': 'evt_3' }, payload: '{"type":"tampered"}' });
     expect(bad.statusCode).toBe(401);
+  });
+
+  it('a custom scheme with a secret per tenant only counts a delivery for the tenant whose secret signed it', async () => {
+    const calls: Array<{ ctx: Context }> = [];
+    const communication = { call: async (ctx: Context) => { calls.push({ ctx }); return { ok: true }; } } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication, idempotency: new InMemoryIdempotencyStore() }).registerController(
+      new AcmeController(new PerTenantAuth()),
+    );
+    const payload = '{"type":"invoice.paid"}';
+    const post = (tenant: string, secret: string) =>
+      server.inject({ method: 'POST', url: `/acme/${tenant}/events`, headers: { 'content-type': 'application/json', 'x-acme-signature': createHmac('sha256', secret).update(payload).digest('hex') }, payload });
+
+    expect((await post('t42', 'secret-42')).statusCode).toBe(200);
+    expect((await post('t99', 'secret-42')).statusCode).toBe(401);
+    expect((await post('t7', 'secret-42')).statusCode).toBe(401);
+    // The same body for another tenant, signed by that tenant, is its own delivery.
+    expect((await post('t99', 'secret-99')).json()).not.toMatchObject({ duplicate: true });
+    expect(calls.map((call) => call.ctx.tenantId)).toEqual(['t42', 't99']);
+    // Either of a tenant's secrets is accepted during a rotation; the repeat is a duplicate.
+    expect((await post('t42', 'rotated-42')).json()).toMatchObject({ duplicate: true });
+  });
+
+  it('refuses a tenant taken from the path under one shared secret', async () => {
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new AcmeController(new UnsafeAuth()));
+    const payload = '{"type":"invoice.paid"}';
+    const res = await server.inject({
+      method: 'POST',
+      url: '/acme/t42/events',
+      headers: { 'content-type': 'application/json', 'x-acme-signature': createHmac('sha256', SECRET).update(payload).digest('hex') },
+      payload,
+    });
+    expect(res.statusCode).toBeGreaterThanOrEqual(500);
+    expect(res.json<{ error: { code: string } }>().error.code).toBe('webhooks/unauthenticated-tenant');
   });
 
   it('redactHeaders masks credentials and signatures', () => {
