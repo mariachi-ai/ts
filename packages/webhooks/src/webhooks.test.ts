@@ -17,7 +17,7 @@ const check = (sig: string, raw: Buffer, secret: string) => {
 class AcmeAuth extends SignatureAuthController {
   readonly provider = 'acme';
   readonly signatureHeader = 'x-acme-signature';
-  protected secret() {
+  protected signingSecrets() {
     return SECRET;
   }
   protected verifySignature(sig: string, raw: Buffer, secret: string) {
@@ -35,7 +35,7 @@ class PerTenantAuth extends SignatureAuthController {
   protected tenantFromRequest(req: IncomingRequest) {
     return req.params.tenant;
   }
-  protected tenantSecret(tenantId: string) {
+  protected tenantSigningSecrets(tenantId: string) {
     return ({ t42: ['rotated-42', 'secret-42'], t99: 'secret-99' } as Record<string, string | string[]>)[tenantId];
   }
   protected verifySignature(sig: string, raw: Buffer, secret: string) {
@@ -47,7 +47,7 @@ class PerTenantAuth extends SignatureAuthController {
 class UnsafeAuth extends SignatureAuthController {
   readonly provider = 'unsafe';
   readonly signatureHeader = 'x-acme-signature';
-  protected secret() {
+  protected signingSecrets() {
     return SECRET;
   }
   protected tenantFromRequest(req: IncomingRequest) {
@@ -166,5 +166,32 @@ describe('webhooks', () => {
       cookie: '[redacted]',
       'x-custom': '[redacted]',
     });
+  });
+});
+describe('SignatureAuthController subclasses', () => {
+  it('may keep their secret in a field called `secret`, the obvious name for it', async () => {
+    class FieldAuth extends SignatureAuthController {
+      readonly provider = 'field';
+      readonly signatureHeader = 'x-acme-signature';
+      constructor(private readonly secret: string) {
+        super();
+      }
+      protected signingSecrets() {
+        return this.secret;
+      }
+      protected verifySignature(sig: string, raw: Buffer, secret: string) {
+        return check(sig, raw, secret);
+      }
+    }
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new AcmeController(new FieldAuth(SECRET)));
+    const payload = '{"type":"invoice.paid"}';
+    const res = await server.inject({
+      method: 'POST',
+      url: '/acme/t42/events',
+      headers: { 'content-type': 'application/json', 'x-acme-signature': createHmac('sha256', SECRET).update(payload).digest('hex') },
+      payload,
+    });
+    expect(res.statusCode).toBe(200);
   });
 });

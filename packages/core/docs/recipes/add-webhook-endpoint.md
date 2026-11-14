@@ -73,7 +73,7 @@ class AcmeWebhookAuth extends SignatureAuthController {
   constructor(private readonly signingSecret: string) {
     super();
   }
-  protected secret() {
+  protected signingSecrets() {
     return this.signingSecret;                       // or several, during a rotation
   }
   protected verifySignature(signature: string, rawBody: Buffer, secret: string) {
@@ -92,7 +92,7 @@ class AcmeWebhookAuth extends SignatureAuthController {
 
 The base class keeps both rules for you: it deduplicates on a digest of the raw body (override
 `dedupKey` only to return an id the signature covers), and it takes a tenant from the verified body,
-or from the request only when you also implement `tenantSecret(tenantId)` so the delivery verifies
+or from the request only when you also implement `tenantSigningSecrets(tenantId)` so the delivery verifies
 under that tenant's own secret. Provider packages ship ready-made
 controllers (`ClerkWebhookController`, `FusionAuthWebhookHandler`), and billing verifies Stripe's
 billing events itself.

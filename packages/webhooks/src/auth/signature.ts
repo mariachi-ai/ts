@@ -16,7 +16,7 @@ type Secrets = string | string[];
  *   header the signature doesn't cover is never used: whoever replays a captured delivery can change it.
  * - **A tenant is authenticated.** It comes from the verified body (`tenantFromPayload`), or from the
  *   request (`tenantFromRequest`) only when the delivery then verifies under that tenant's own
- *   secret (`tenantSecret`). A tenant read from the path under one shared secret is refused at the
+ *   secret (`tenantSigningSecrets`). A tenant read from the path under one shared secret is refused at the
  *   first delivery, since a valid delivery could be posted to any tenant's path.
  */
 export abstract class SignatureAuthController extends AuthController {
@@ -29,18 +29,21 @@ export abstract class SignatureAuthController extends AuthController {
    */
   protected abstract verifySignature(signature: string, rawBody: Buffer, secret: string, req: IncomingRequest): boolean | Promise<boolean>;
 
-  /** The secret every delivery is signed with, or several while one is being rotated. */
-  protected secret(_req: IncomingRequest): Secrets | undefined | Promise<Secrets | undefined> {
+  /**
+   * The secret every delivery is signed with, or several while one is being rotated. (Not named
+   * `secret`: a subclass that keeps its secret in a field of that name would shadow the method.)
+   */
+  protected signingSecrets(_req: IncomingRequest): Secrets | undefined | Promise<Secrets | undefined> {
     return undefined;
   }
 
-  /** The tenant the request names (a path parameter, usually). Needs `tenantSecret`. */
+  /** The tenant the request names (a path parameter, usually). Needs `tenantSigningSecrets`. */
   protected tenantFromRequest(_req: IncomingRequest): string | undefined {
     return undefined;
   }
 
   /** That tenant's own secret. Return nothing for a tenant that has none, and the delivery is refused. */
-  protected tenantSecret(_tenantId: string, _req: IncomingRequest): Secrets | undefined | Promise<Secrets | undefined> {
+  protected tenantSigningSecrets(_tenantId: string, _req: IncomingRequest): Secrets | undefined | Promise<Secrets | undefined> {
     return undefined;
   }
 
@@ -69,19 +72,19 @@ export abstract class SignatureAuthController extends AuthController {
     let tenantId = this.tenantFromRequest(req);
     let secrets: string[];
     if (tenantId) {
-      secrets = list(await this.tenantSecret(tenantId, req));
+      secrets = list(await this.tenantSigningSecrets(tenantId, req));
       if (secrets.length === 0) {
-        if (list(await this.secret(req)).length > 0) {
+        if (list(await this.signingSecrets(req)).length > 0) {
           throw new ConfigError(
             'webhooks/unauthenticated-tenant',
-            `${this.provider} webhook: tenantFromRequest needs tenantSecret. With one shared secret, a valid delivery could be posted to any tenant's path; take the tenant from the signed body with tenantFromPayload`,
+            `${this.provider} webhook: tenantFromRequest needs tenantSigningSecrets. With one shared secret, a valid delivery could be posted to any tenant's path; take the tenant from the signed body with tenantFromPayload`,
           );
         }
         ctx.logger.warn({ provider: this.provider }, 'webhook names a tenant with no secret; rejecting');
         return null;
       }
     } else {
-      secrets = list(await this.secret(req));
+      secrets = list(await this.signingSecrets(req));
       if (secrets.length === 0) throw new ConfigError('webhooks/invalid-secret', `${this.provider} webhook: no secret configured`);
     }
 
