@@ -1,0 +1,58 @@
+{
+  "name": "@mariachi/design-kits",
+  "version": "0.0.5",
+  "description": "Every @mariachi/design language and preset as a kit a project copies in and owns: tokens, base styles, self-hosted fonts, motion and DESIGN.md, with a sha256 per file.",
+  "mariachi": {
+    "category": "design",
+    "status": "alpha",
+    "useWhen": "Giving a project its own copy of a design language (mariachi design add <kit>), so the look never changes under it",
+    "entry": [
+      "listKits",
+      "readKit",
+      "addKit",
+      "installedKits"
+    ]
+  },
+  "type": "module",
+  "bin": {
+    "mariachi-design-kits": "./dist/bin.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./kits.json": "./dist/kits.json",
+    "./package.json": "./package.json"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rm -rf dist .build && tsup && node scripts/pack.mjs",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .build .turbo",
+    "lint": "biome lint src",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariachi/core": "workspace:*",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@mariachi/design": "workspace:*",
+    "tsup": "^8",
+    "typescript": "^5.7",
+    "vitest": "^3"
+  }
+}

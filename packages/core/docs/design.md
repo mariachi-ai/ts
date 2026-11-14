@@ -186,14 +186,35 @@ A project can own its language instead of depending on the package, so the langu
 | --- | --- |
 | `index.css` | Imports the three below, in order |
 | `fonts.css`, `fonts/*.woff2` | The body and heading families, self-hosted (Latin and Latin Extended, from `@fontsource`). Mono falls back to the system's |
+| `fonts/<family>.LICENSE.txt` | Each family's licence (SIL Open Font License), which goes wherever its files go |
 | `base.css` | The reset and base layers, no components |
 | `tokens.css` | The language's tokens, light and dark, on `[data-theme="<id>"]` |
+| `motion/` | `@mariachi/motion`'s `motion.css`, `motion.js` and `charts.js` with their types: loading, motion and charts. Import `motion/motion.css` after `index.css` and call `enhance()` once |
 | `DESIGN.md` | The language in words, with the generated reference. The plain presets get a short generated one |
 | `kit.json` | The id, label, kind, mode, the Mariachi version and commit, the fonts, and a sha256 for every file as written |
 
 Copy the folder as it is (Ensemble puts it at `apps/web/src/design/`), import `index.css` first, and set `data-theme` on `<html>`. Every CSS file opens with a header naming the language, the commit and the library source. **Components aren't copied.** A project makes each one when it needs it: the component's CSS in `dist/css/components/<name>.css` reads only `--m-*` tokens, so it takes the language's look from the kit, and the language's `DESIGN.md` says how it draws it. The project's own changes go in its own CSS after the kit. `kit.json`'s shas tell a tool which files the project has edited. Moving a project to a newer kit is a deliberate step, never automatic.
 
-Kits are build output and aren't in the npm package.
+`@mariachi/design`'s npm package leaves the kits out. They ship in `@mariachi/design-kits`, and one command copies one in:
+
+```bash
+pnpm add -D @mariachi/design-kits
+mariachi design list --kits                     # every language and plain preset, with its fonts and size
+mariachi design add linen                       # src/design/linen/ and src/design/design.css
+mariachi design add linen --dir web/styles      # another design folder
+
+npx @mariachi/design-kits add linen             # the same, with nothing installed
+```
+
+`design add` writes `<dir>/<kit>/` exactly as built (each file matches its sha256 in `kit.json`) and prints what to do next: the three imports in order (`<kit>/index.css`, `<kit>/motion/motion.css`, `design.css`), `data-theme="<kit>"` on `<html>`, and `enhance()`. Its rules:
+
+- **`design.css` is the project's.** It's made once, beside the kit, for the project's own changes, and never written again: not on a re-run, not on a change of language, not with `--force`.
+- **An edited copy is reported, not replaced.** If the project changed, removed or added files in the kit's folder, the command lists them, writes nothing and exits 1. Move the changes to `design.css`, or pass `--force` to discard them (they're listed again as discarded).
+- **Taking another kit is a switch.** The old kit's folder is removed whole, under the same rule for edits. `--keep-others` leaves it.
+- **A re-run with nothing to do says so** and writes nothing. After upgrading `@mariachi/design-kits`, a re-run moves a clean copy to the new version; that's the deliberate step.
+- `--dry-run` reports without writing; `--json` prints the result (or the error, with the files) for a tool.
+
+The same from code: `addKit(id, { dir, force, keepOthers, dryRun })`, `listKits()`, `readKit(id)` and `installedKits(dir)` from `@mariachi/design-kits`.
 
 ## Markup contract
 

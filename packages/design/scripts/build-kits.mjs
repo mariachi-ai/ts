@@ -4,7 +4,8 @@
 // a project makes each one when it needs it, from the language's reference (catalog, component CSS, DESIGN.md).
 //
 //   <id>/index.css    imports the three below, in order
-//   <id>/fonts.css    @font-face for the body and heading families, with fonts/*.woff2
+//   <id>/fonts.css    @font-face for the body and heading families, with fonts/*.woff2 and each family's
+//                     licence as fonts/<family>.LICENSE.txt (the fonts are redistributed, so it goes with them)
 //   <id>/base.css     the reset and base layers (no components)
 //   <id>/tokens.css   the language's tokens, light and dark, scoped to [data-theme="<id>"]
 //   <id>/DESIGN.md    the language in words, with the generated reference
@@ -59,7 +60,14 @@ if (motionMissing.length) {
 }
 const motionFiles = MOTION_FILES.map((f) => [f, fs.readFileSync(path.join(motionRoot, 'dist', f))]);
 
-/** The woff2 files and @font-face rules for one family, or null when there's no open package for it. */
+/** The family's licence text, as its package ships it: [file to read, name in fonts/]. A font without one isn't copied. */
+function license(dir, s) {
+  const file = path.join(dir, 'LICENSE');
+  if (!fs.existsSync(file)) throw new Error(`${dir} has no LICENSE; a font can't go into a kit without its licence`);
+  return [file, `${s}.LICENSE.txt`];
+}
+
+/** The woff2 files, the licence and the @font-face rules for one family, or null when there's no open package for it. */
 function fontFace(family) {
   const s = slug(family);
   const variable = pkgDir(`@fontsource-variable/${s}`);
@@ -75,7 +83,7 @@ function fontFace(family) {
           `@font-face {\n  font-family: '${name}';\n  font-style: normal;\n  font-display: swap;\n  font-weight: 100 900;\n  src: url(./fonts/${f}) format('woff2-variations');\n  unicode-range: ${range};\n}\n`,
       ),
     );
-    return { family, source: `@fontsource-variable/${s}`, files: files.map(([f]) => [path.join(variable, 'files', f), f]), css };
+    return { family, source: `@fontsource-variable/${s}`, license: license(variable, s), files: files.map(([f]) => [path.join(variable, 'files', f), f]), css };
   }
   const fixed = pkgDir(`@fontsource/${s}`);
   if (fs.existsSync(fixed)) {
@@ -89,7 +97,7 @@ function fontFace(family) {
         css.push(`@font-face {\n  font-family: '${family}';\n  font-style: normal;\n  font-display: swap;\n  font-weight: ${w};\n  src: url(./fonts/${f}) format('woff2');\n  unicode-range: ${range};\n}\n`);
       }
     }
-    return files.length ? { family, source: `@fontsource/${s}`, files, css } : null;
+    return files.length ? { family, source: `@fontsource/${s}`, license: license(fixed, s), files, css } : null;
   }
   return null;
 }
@@ -174,7 +182,8 @@ for (const theme of Object.values(presets)) {
       continue;
     }
     for (const [from, name] of face.files) write(`fonts/${name}`, fs.readFileSync(from));
-    fonts.push({ family, source: face.source, files: face.files.map(([, name]) => `fonts/${name}`) });
+    write(`fonts/${face.license[1]}`, fs.readFileSync(face.license[0]));
+    fonts.push({ family, source: face.source, license: `fonts/${face.license[1]}`, files: face.files.map(([, name]) => `fonts/${name}`) });
     faceCss.push(...face.css);
   }
   if (!fonts.some((f) => f.files.length)) fs.rmSync(path.join(dir, 'fonts'), { recursive: true });
@@ -218,6 +227,7 @@ for (const id of fs.readdirSync(out)) {
   }
   const a = byId.get(id);
   if (a && !m.fonts.find((f) => f.family === a.type.body)?.files.length) throw new Error(`dist/kits/${id}: no font files for its body family ${a.type.body}`);
+  for (const f of m.fonts) if (f.files.length && !m.files[f.license]) throw new Error(`dist/kits/${id}: ${f.family}'s files are there without its licence`);
   if (!m.motion?.files.every((f) => m.files[f])) throw new Error(`dist/kits/${id}: kit.json doesn't record every motion file`);
 }
 console.log(`@mariachi/design: wrote ${count} kits to dist/kits`);

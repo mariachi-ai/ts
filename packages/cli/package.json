@@ -50,10 +50,14 @@
   },
   "peerDependencies": {
     "@mariachi/design": "workspace:>=0.0.5 <1",
+    "@mariachi/design-kits": "workspace:>=0.0.5 <1",
     "@mariachi/explorer": "workspace:>=0.0.5 <1"
   },
   "peerDependenciesMeta": {
     "@mariachi/design": {
+      "optional": true
+    },
+    "@mariachi/design-kits": {
       "optional": true
     },
     "@mariachi/explorer": {
@@ -62,6 +66,7 @@
   },
   "devDependencies": {
     "@mariachi/design": "workspace:*",
+    "@mariachi/design-kits": "workspace:*",
     "drizzle-orm": "^0.38",
     "postgres": "^3.4",
     "tsup": "^8",
