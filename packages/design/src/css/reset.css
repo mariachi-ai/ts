@@ -9,6 +9,12 @@
     margin: 0;
   }
 
+  /* Keep the browser's centring of modal dialogs and popovers, which the line above would remove */
+  dialog,
+  [popover] {
+    margin: auto;
+  }
+
   html {
     -webkit-text-size-adjust: none;
     text-size-adjust: none;

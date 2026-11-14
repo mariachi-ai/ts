@@ -7,6 +7,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type Archetype, archetypes, categories } from './archetypes';
+import { withMotionOverlay } from './archetypes/overlay';
 import { designReference, galleryCss, galleryPage } from './archetypes/reference';
 import { componentList, contrastPairs, tokenList } from './contract';
 import type { ComponentExample } from './contract/component';
@@ -126,10 +127,10 @@ export async function buildDesign(config: DesignConfig | ResolvedDesign, options
     }
   }
   if (design.config.name) {
-    parts.push(emitThemeCss(design.theme));
+    parts.push(emitThemeCss(withMotionOverlay(design.theme)));
   } else {
-    parts.push(emitThemeCss(design.base));
-    const overrides = emitOverridesCss(design.base, design.theme);
+    parts.push(emitThemeCss(withMotionOverlay(design.base)));
+    const overrides = emitOverridesCss(withMotionOverlay(design.base), withMotionOverlay(design.theme));
     if (overrides) parts.push(overrides);
   }
   let css = parts.join('\n');
@@ -316,7 +317,9 @@ export function packageAssets(root: string = packageRoot()): PackageAssets {
   }
   files['css/components.css'] = header + components.join('\n');
   files['css/mariachi.css'] = `${header}${base}\n${components.join('\n')}`;
-  for (const theme of Object.values(presets as Record<string, Theme>)) {
+  for (const preset of Object.values(presets as Record<string, Theme>)) {
+    // With the motion overlay's chart colours from the language, so every kit's tokens.css has them
+    const theme = withMotionOverlay(preset);
     files[`css/themes/${theme.name}.css`] = emitThemeCss(theme);
     files[`tokens/${theme.name}.json`] = `${JSON.stringify(emitDtcg(theme), null, 2)}\n`;
   }

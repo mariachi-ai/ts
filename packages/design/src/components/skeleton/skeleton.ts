@@ -21,10 +21,12 @@ export const skeleton = defineComponent({
     circleSize: t.length('Circle diameter', '2.5rem'),
     blockHeight: t.length('Default block height', '8rem'),
     duration: t.duration('One shimmer sweep', 'calc(var(--m-motion-duration-slow) * 5)'),
+    animation: t.keyword('How it moves: m-shimmer (a sweep), m-pulse (breathing) or none (still)', 'm-shimmer'),
   },
   a11y: [
     'Skeletons are decorative: add aria-hidden="true" to them and aria-busy="true" to the container being loaded.',
     'Announce completion with the real content or a live region; the skeleton itself says nothing.',
     'The shimmer stops under prefers-reduced-motion.',
+    'More shapes (row, card, media, lines) and loading regions are in @mariachi/motion.',
   ],
 });

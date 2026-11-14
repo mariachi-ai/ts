@@ -1,0 +1,955 @@
+/*
+ * @mariachi/motion: loading, motion and chart styles for every Mariachi design language.
+ *
+ * Tokens only. Every colour, corner, duration and easing is a --m-* custom property (a language's
+ * overlay sets them in its tokens.css) with a plain fallback, so the file works on its own too.
+ * Nothing here has a look of its own: a skeleton is the same skeleton in every language, and the
+ * overlay makes it rounded and warm, or square and still.
+ *
+ * Under prefers-reduced-motion: reduce (the block at the end), movement becomes a short fade or
+ * nothing, shimmer stops, spinners pulse in place, and charts appear drawn.
+ *
+ * Private custom properties are --_*; the markup may set --i (a stagger index) and --lines.
+ */
+@layer mariachi.reset, mariachi.theme, mariachi.base, mariachi.components, mariachi.motion, mariachi.overrides;
+
+/* Full-page navigations cross-fade (a language's overlay can choose slide for navigate()) */
+@view-transition {
+  navigation: auto;
+}
+
+@layer mariachi.motion {
+  /* ------------------------------------------------------------------------------------------
+   * Keyframes. m-spin, m-pulse and m-shimmer are the same as @mariachi/design's, so either
+   * file's copy gives the same motion.
+   */
+  @keyframes m-spin {
+    to {
+      transform: rotate(1turn);
+    }
+  }
+
+  @keyframes m-pulse {
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  @keyframes m-shimmer {
+    from {
+      background-position: 100% 0;
+    }
+
+    to {
+      background-position: -100% 0;
+    }
+  }
+
+  @keyframes m-enter {
+    from {
+      opacity: 0;
+      transform: var(--m-motion-enter-transform, translateY(0.375rem));
+    }
+  }
+
+  @keyframes m-leave {
+    to {
+      opacity: 0;
+      transform: var(--m-motion-enter-transform, translateY(0.375rem));
+    }
+  }
+
+  @keyframes m-fade-in {
+    from {
+      opacity: 0;
+    }
+  }
+
+  @keyframes m-fade-out {
+    to {
+      opacity: 0;
+    }
+  }
+
+  /* Lines carry pathLength="1", so one dash is the whole line */
+  @keyframes m-chart-draw {
+    from {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+    }
+
+    to {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 0;
+    }
+  }
+
+  @keyframes m-chart-grow {
+    from {
+      transform: scaleY(0);
+    }
+  }
+
+  @keyframes m-chart-sweep {
+    from {
+      stroke-dasharray: 0 100;
+    }
+  }
+
+  @keyframes m-route-out {
+    to {
+      opacity: 0;
+      transform: translateX(-1.5rem);
+    }
+  }
+
+  @keyframes m-route-in {
+    from {
+      opacity: 0;
+      transform: translateX(1.5rem);
+    }
+  }
+
+  @keyframes m-indeterminate {
+    from {
+      transform: translateX(-100%);
+    }
+
+    to {
+      transform: translateX(250%);
+    }
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * Skeletons. `.m-skeleton` on an empty element, aria-hidden="true", inside a region with
+   * aria-busy="true". data-shape: text (default), circle, block, media, row, card, lines.
+   */
+  .m-skeleton {
+    --_radius: var(--m-skeleton-radius, var(--m-radius-sm, 0.25rem));
+    --_bg: var(--m-skeleton-bg, color-mix(in oklab, currentcolor 10%, transparent));
+    --_hl: var(--m-skeleton-highlight, color-mix(in oklab, currentcolor 4%, transparent));
+    --_h: var(--m-skeleton-text-height, 0.875em);
+
+    /* A line's end radius: the skeleton radius, at most half the line */
+    --_r: min(var(--m-skeleton-radius, var(--m-radius-sm, 0.25rem)), calc(var(--_h) / 2));
+
+    display: block;
+    box-sizing: border-box;
+    block-size: var(--_h);
+    border-radius: var(--_radius);
+    background-color: var(--_bg);
+    background-image: linear-gradient(90deg, var(--_bg) 30%, var(--_hl) 50%, var(--_bg) 70%);
+    background-size: 200% 100%;
+
+    /* Where the sweep is out of sight, so a still or pulsing skeleton shows no highlight */
+    background-position: -50% 0;
+    animation: var(--m-skeleton-animation, m-shimmer) var(--m-skeleton-duration, 1.6s) linear infinite;
+  }
+
+  .m-skeleton[data-shape="circle"] {
+    --_radius: var(--m-radius-full, 9999px);
+
+    flex: none;
+    inline-size: var(--m-skeleton-circle-size, 2.5rem);
+    block-size: var(--m-skeleton-circle-size, 2.5rem);
+  }
+
+  .m-skeleton[data-shape="block"] {
+    --_radius: var(--m-skeleton-block-radius, var(--m-radius-container, 0.5rem));
+
+    block-size: var(--m-skeleton-block-height, 8rem);
+  }
+
+  /* A picture or video at its aspect ratio: set aspect-ratio inline to match what's coming */
+  .m-skeleton[data-shape="media"] {
+    --_radius: var(--m-skeleton-block-radius, var(--m-radius-container, 0.5rem));
+
+    block-size: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  /*
+   * row, card and lines are one element drawn as several shapes with a mask, so the shimmer runs
+   * through all of them. Line ends are rounded by the skeleton radius (up to a pill).
+   */
+
+  /* A list row: an avatar, a title and a meta line */
+  .m-skeleton[data-shape="row"] {
+    --_d: var(--m-skeleton-circle-size, 2.5rem);
+    --_gap: var(--m-space-3, 0.75rem);
+    --_x: calc(var(--_d) + var(--_gap));
+    --_lg: calc(var(--_h) * 0.6);
+    --_b: max(var(--_d), calc(var(--_h) * 2 + var(--_lg)));
+    --_y1: calc((var(--_b) - var(--_h) * 2 - var(--_lg)) / 2);
+    --_y2: calc(var(--_y1) + var(--_h) + var(--_lg));
+
+    block-size: var(--_b);
+    border-radius: 0;
+    mask:
+      radial-gradient(closest-side, currentcolor 96%, transparent) 0 calc((var(--_b) - var(--_d)) / 2) / var(--_d) var(--_d) no-repeat,
+      linear-gradient(currentcolor 0 0) calc(var(--_x) + var(--_r) - 1px) var(--_y1) / calc((100% - var(--_x)) * 0.55 - var(--_r) * 2 + 2px) var(--_h) no-repeat,
+      radial-gradient(farthest-side at 100% 50%, currentcolor 90%, transparent) var(--_x) var(--_y1) / var(--_r) var(--_h) no-repeat,
+      radial-gradient(farthest-side at 0 50%, currentcolor 90%, transparent) calc(55% + var(--_x) * 0.45 - var(--_r) * 0.45) var(--_y1) / var(--_r) var(--_h) no-repeat,
+      linear-gradient(currentcolor 0 0) calc(var(--_x) + var(--_r) - 1px) var(--_y2) / calc((100% - var(--_x)) * 0.3 - var(--_r) * 2 + 2px) var(--_h) no-repeat,
+      radial-gradient(farthest-side at 100% 50%, currentcolor 90%, transparent) var(--_x) var(--_y2) / var(--_r) var(--_h) no-repeat,
+      radial-gradient(farthest-side at 0 50%, currentcolor 90%, transparent) calc(30% + var(--_x) * 0.7 - var(--_r) * 0.7) var(--_y2) / var(--_r) var(--_h) no-repeat;
+  }
+
+  /* A card: a picture, a title and a meta line */
+  .m-skeleton[data-shape="card"] {
+    --_radius: var(--m-skeleton-block-radius, var(--m-radius-container, 0.5rem));
+    --_m: var(--m-skeleton-block-height, 8rem);
+    --_lg: calc(var(--_h) * 0.6);
+    --_y1: calc(var(--_m) + var(--_h));
+    --_y2: calc(var(--_y1) + var(--_h) + var(--_lg));
+
+    block-size: calc(var(--_y2) + var(--_h));
+
+    /* Only the picture's corners: the lines under it have their own ends */
+    border-radius: var(--_radius) var(--_radius) 0 0;
+    mask:
+      linear-gradient(currentcolor 0 0) 0 0 / 100% var(--_m) no-repeat,
+      linear-gradient(currentcolor 0 0) calc(var(--_r) - 1px) var(--_y1) / calc(70% - var(--_r) * 2 + 2px) var(--_h) no-repeat,
+      radial-gradient(farthest-side at 100% 50%, currentcolor 90%, transparent) 0 var(--_y1) / var(--_r) var(--_h) no-repeat,
+      radial-gradient(farthest-side at 0 50%, currentcolor 90%, transparent) calc(70% - var(--_r) * 0.3) var(--_y1) / var(--_r) var(--_h) no-repeat,
+      linear-gradient(currentcolor 0 0) calc(var(--_r) - 1px) var(--_y2) / calc(45% - var(--_r) * 2 + 2px) var(--_h) no-repeat,
+      radial-gradient(farthest-side at 100% 50%, currentcolor 90%, transparent) 0 var(--_y2) / var(--_r) var(--_h) no-repeat,
+      radial-gradient(farthest-side at 0 50%, currentcolor 90%, transparent) calc(45% - var(--_r) * 0.55) var(--_y2) / var(--_r) var(--_h) no-repeat;
+  }
+
+  /* A paragraph: style="--lines: 3" full lines, the last one shorter */
+  .m-skeleton[data-shape="lines"] {
+    --_lg: calc(var(--_h) * 0.75);
+    --_p: calc(var(--_h) + var(--_lg));
+
+    block-size: calc(var(--lines, 3) * var(--_p) - var(--_lg));
+
+    /* The repeating layers paint in the content box: every line but the last */
+    padding-block-end: var(--_p);
+    border-radius: 0;
+    mask:
+      repeating-linear-gradient(currentcolor 0 var(--_h), transparent var(--_h) var(--_p)) calc(var(--_r) - 1px) 0 / calc(100% - var(--_r) * 2 + 2px) 100% no-repeat content-box,
+      radial-gradient(var(--_r) calc(var(--_h) / 2) at 100% calc(var(--_h) / 2), currentcolor 90%, transparent) 0 0 / var(--_r) var(--_p) repeat-y content-box,
+      radial-gradient(var(--_r) calc(var(--_h) / 2) at 0 calc(var(--_h) / 2), currentcolor 90%, transparent) 100% 0 / var(--_r) var(--_p) repeat-y content-box,
+      linear-gradient(currentcolor 0 0) calc(var(--_r) - 1px) 100% / calc(65% - var(--_r) * 2 + 2px) var(--_h) no-repeat border-box,
+      radial-gradient(farthest-side at 100% 50%, currentcolor 90%, transparent) 0 100% / var(--_r) var(--_h) no-repeat border-box,
+      radial-gradient(farthest-side at 0 50%, currentcolor 90%, transparent) calc(65% - var(--_r) * 0.35) 100% / var(--_r) var(--_h) no-repeat border-box;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * A region that loads: <section aria-busy="true"> shows its [data-when="loading"] children and
+   * hides its [data-when="loaded"] ones; aria-busy="false" swaps them, and the loaded ones enter.
+   * A region nested inside another follows its own aria-busy.
+   */
+  @scope ([aria-busy="true"]) to (:scope [aria-busy]) {
+    /* !important: a hidden state wins over the app's own display (as [hidden] should) */
+    [data-when="loaded"] {
+      display: none !important;
+    }
+  }
+
+  @scope ([aria-busy="false"]) to (:scope [aria-busy]) {
+    [data-when="loading"] {
+      display: none !important;
+    }
+
+    [data-when="loaded"] {
+      animation: m-enter var(--m-motion-duration-enter, 240ms) var(--m-motion-easing-enter, ease-out) backwards;
+    }
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * Spinners. One ring, drawn by pseudo-elements: on pictures without a placeholder and in busy
+   * buttons. Its weight is --m-loader-stroke; it takes the text colour it sits in.
+   */
+  .m-media-frame::after,
+  [data-busy]::before {
+    content: "";
+    display: inline-block;
+    box-sizing: border-box;
+    inline-size: 1em;
+    block-size: 1em;
+    border: var(--m-loader-stroke, 2px) solid color-mix(in oklab, currentcolor 22%, transparent);
+    border-block-start-color: currentcolor;
+    border-radius: var(--m-radius-full, 9999px);
+    vertical-align: -0.125em;
+    animation: m-spin calc(var(--m-motion-duration-slow, 320ms) * 2.5) linear infinite;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * Pictures. <img class="m-media" data-placeholder="data:…">: blur-up from the tiny placeholder,
+   * then sharp. Without a placeholder it fades in, and a .m-media-frame around it shows a spinner
+   * until it loads. enhance() marks it loaded; without enhance() pictures show as normal.
+   */
+  .m-media {
+    display: block;
+    max-inline-size: 100%;
+    background-image: var(--_placeholder, none);
+    background-position: center;
+    background-size: cover;
+    transition:
+      filter var(--m-motion-duration-slow, 320ms) var(--m-motion-easing-standard, ease-out),
+      opacity var(--m-motion-duration-slow, 320ms) var(--m-motion-easing-standard, ease-out);
+  }
+
+  :root[data-m-motion] .m-media:not([data-loaded]) {
+    opacity: 0;
+  }
+
+  :root[data-m-motion] .m-media[data-placeholder]:not([data-loaded]) {
+    opacity: 1;
+
+    /* Keeps the blur inside the picture's box */
+    clip-path: inset(0 round var(--m-skeleton-block-radius, 0));
+    filter: blur(1rem);
+  }
+
+  .m-media[data-loaded="error"] {
+    opacity: 1;
+    filter: none;
+  }
+
+  .m-media-frame {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border-radius: var(--m-skeleton-block-radius, var(--m-radius-container, 0.5rem));
+    background-color: var(--m-skeleton-bg, color-mix(in oklab, currentcolor 10%, transparent));
+    color: var(--m-color-fg-muted, currentcolor);
+    font-size: var(--m-font-size-xl, 1.25rem);
+  }
+
+  .m-media-frame > .m-media {
+    inline-size: 100%;
+    block-size: 100%;
+    object-fit: cover;
+  }
+
+  .m-media-frame::after {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--m-motion-duration-fast, 120ms) var(--m-motion-easing-standard, ease-out);
+  }
+
+  :root[data-m-motion] .m-media-frame:has(.m-media:not([data-loaded], [data-placeholder]))::after {
+    opacity: 1;
+  }
+
+  /* Progress of unknown length on any element: <div class="m-progress" data-indeterminate> */
+  .m-progress[data-indeterminate] {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .m-progress[data-indeterminate]::after {
+    content: "";
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    inline-size: 40%;
+    border-radius: inherit;
+    background: var(--m-progress-fill, var(--m-color-accent-default, currentcolor));
+    animation: m-indeterminate calc(var(--m-motion-duration-slow, 320ms) * 4) var(--m-motion-easing-standard, ease-in-out) infinite;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * A busy button: data-busy (busy() sets it, with aria-busy="true"). The spinner takes the place
+   * of its leading icon; a button with no icon keeps its label for screen readers and shows the
+   * spinner over it. Either way its width holds, and clicks are ignored.
+   */
+  [data-busy] {
+    position: relative;
+    cursor: progress;
+  }
+
+  [data-busy]::before {
+    flex: none;
+  }
+
+  /* With a leading icon: the spinner replaces it */
+  [data-busy]:has(> svg:first-child, > [data-icon]:first-child) > :is(svg, [data-icon]):first-child {
+    display: none;
+  }
+
+  /* Without one: the label stays (for its width and for screen readers), hidden under the spinner */
+  [data-busy]:not(:has(> svg:first-child, > [data-icon]:first-child)) {
+    -webkit-text-fill-color: transparent;
+  }
+
+  [data-busy]:not(:has(> svg:first-child, > [data-icon]:first-child))::before {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+  }
+
+  /* The library's button: its own text colour for the spinner, instead of its aria-busy ring */
+  .m-button[data-busy] {
+    color: var(--_fg);
+  }
+
+  .m-button[data-busy]::after {
+    content: none;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * An optimistic change: data-pending while it's being saved (dimmed, with a small mark).
+   */
+  [data-pending] {
+    opacity: 0.6;
+    transition: opacity var(--m-motion-duration-fast, 120ms) var(--m-motion-easing-standard, ease-out);
+  }
+
+  [data-pending]::after {
+    content: "";
+    display: inline-block;
+    inline-size: 0.375em;
+    block-size: 0.375em;
+    margin-inline-start: 0.5em;
+    border-radius: var(--m-radius-full, 9999px);
+    background: currentcolor;
+    vertical-align: middle;
+    animation: m-pulse var(--m-motion-duration-slow, 320ms) ease-in-out infinite;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * Entrances. data-enter on anything: it enters when it appears (the overlay's
+   * --m-motion-enter-transform says whether that's a fade, a slide or a scale). data-stagger on a
+   * list: its children enter one after another, capped by --m-motion-stagger-max. A keyframe
+   * entrance, so it never replaces the element's own transitions, and it needs no JavaScript.
+   */
+  [data-enter],
+  [data-stagger] > * {
+    animation: m-enter var(--m-motion-duration-enter, 240ms) var(--m-motion-easing-enter, ease-out) backwards;
+  }
+
+  [data-stagger] > * {
+    animation-delay: min(calc(var(--i, 0) * var(--m-motion-stagger, 40ms)), var(--m-motion-stagger-max, 320ms));
+  }
+
+  /* --i without JavaScript, for the first 12 (enhance() sets it on any number, and on new items) */
+  [data-stagger] > :nth-child(2) { --i: 1; }
+  [data-stagger] > :nth-child(3) { --i: 2; }
+  [data-stagger] > :nth-child(4) { --i: 3; }
+  [data-stagger] > :nth-child(5) { --i: 4; }
+  [data-stagger] > :nth-child(6) { --i: 5; }
+  [data-stagger] > :nth-child(7) { --i: 6; }
+  [data-stagger] > :nth-child(8) { --i: 7; }
+  [data-stagger] > :nth-child(9) { --i: 8; }
+  [data-stagger] > :nth-child(10) { --i: 9; }
+  [data-stagger] > :nth-child(11) { --i: 10; }
+  [data-stagger] > :nth-child(12) { --i: 11; }
+  [data-stagger] > :nth-child(n + 13) { --i: 12; }
+
+  /* Exits: leave(el) sets data-leaving, waits for this, then removes it */
+  [data-leaving] {
+    pointer-events: none;
+    animation: m-leave var(--m-motion-duration-exit, 160ms) var(--m-motion-easing-exit, ease-in) forwards;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * Dialogs, sheets, popovers and toasts open and close with @starting-style and allow-discrete,
+   * no JavaScript needed. Shown-inline examples (data-static) are left alone.
+   */
+  dialog:not([data-static]),
+  [popover]:not([data-static]) {
+    --_from: var(--m-motion-enter-transform, translateY(0.375rem));
+
+    opacity: 0;
+    transform: var(--_from);
+    transition-property: opacity, transform, overlay, display;
+    transition-duration: var(--m-motion-duration-exit, 160ms);
+    transition-timing-function: var(--m-motion-easing-exit, ease-in);
+    transition-behavior: allow-discrete;
+  }
+
+  dialog[open]:not([data-static]),
+  [popover]:popover-open:not([data-static]) {
+    opacity: 1;
+    transform: none;
+    transition-duration: var(--m-motion-duration-enter, 240ms);
+    transition-timing-function: var(--m-motion-easing-enter, ease-out);
+
+    @starting-style {
+      opacity: 0;
+      transform: var(--_from);
+    }
+  }
+
+  dialog:not([data-static])::backdrop {
+    opacity: 0;
+    transition-property: opacity, overlay, display;
+    transition-duration: var(--m-motion-duration-exit, 160ms);
+    transition-timing-function: var(--m-motion-easing-exit, ease-in);
+    transition-behavior: allow-discrete;
+  }
+
+  dialog[open]:not([data-static])::backdrop {
+    opacity: 1;
+    transition-duration: var(--m-motion-duration-enter, 240ms);
+    transition-timing-function: var(--m-motion-easing-enter, ease-out);
+
+    @starting-style {
+      opacity: 0;
+    }
+  }
+
+  /*
+   * A sheet: <dialog class="m-sheet"> (with the library's m-dialog for its look), pinned to an edge
+   * with data-side="end" (default), "start" or "bottom". It slides in from that edge.
+   */
+  dialog.m-sheet {
+    --_from: var(--_sheet-from, translateX(100%));
+
+    position: fixed;
+    inset-block: 0;
+    inset-inline: auto 0;
+    inline-size: min(28rem, 100vw);
+    max-inline-size: 100vw;
+    block-size: 100dvh;
+    max-block-size: 100dvh;
+    margin: 0;
+    border-start-end-radius: 0;
+    border-end-end-radius: 0;
+  }
+
+  dialog.m-sheet[data-side="start"] {
+    --_sheet-from: translateX(-100%);
+
+    inset-inline: 0 auto;
+    border-radius: 0 var(--m-radius-container, 0.5rem) var(--m-radius-container, 0.5rem) 0;
+  }
+
+  dialog.m-sheet[data-side="bottom"] {
+    --_sheet-from: translateY(100%);
+
+    inset-block: auto 0;
+    inset-inline: 0;
+    inline-size: 100%;
+    block-size: auto;
+    max-block-size: 85dvh;
+    border-radius: var(--m-radius-container, 0.5rem) var(--m-radius-container, 0.5rem) 0 0;
+  }
+
+  dialog.m-sheet:not([data-side="start"], [data-side="bottom"]):dir(rtl) {
+    --_sheet-from: translateX(-100%);
+  }
+
+  dialog.m-sheet[data-side="start"]:dir(rtl) {
+    --_sheet-from: translateX(100%);
+  }
+
+  /* Toasts enter when added and leave with data-state="closing" (or leave()) */
+  .m-toast:not([data-state="closing"], [data-leaving]) {
+    animation: none;
+    transition:
+      opacity var(--m-motion-duration-enter, 240ms) var(--m-motion-easing-enter, ease-out),
+      transform var(--m-motion-duration-enter, 240ms) var(--m-motion-easing-enter, ease-out);
+
+    @starting-style {
+      opacity: 0;
+      transform: var(--m-motion-enter-transform, translateY(0.375rem));
+    }
+  }
+
+  .m-toast[data-state="closing"] {
+    pointer-events: none;
+    animation: m-leave var(--m-motion-duration-exit, 160ms) var(--m-motion-easing-exit, ease-in) forwards;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * Page and route transitions: a short cross-fade; navigate() sets data-m-route="slide" when the
+   * overlay's --m-motion-route is slide. view-transition-name on shared parts keeps them in place.
+   */
+  ::view-transition-old(root),
+  ::view-transition-new(root) {
+    animation-duration: var(--m-motion-route-duration, 200ms);
+    animation-timing-function: var(--m-motion-easing-standard, ease);
+  }
+
+  :root[data-m-route="slide"]::view-transition-old(root) {
+    animation-name: m-route-out;
+    animation-timing-function: var(--m-motion-easing-exit, ease-in);
+  }
+
+  :root[data-m-route="slide"]::view-transition-new(root) {
+    animation-name: m-route-in;
+    animation-timing-function: var(--m-motion-easing-enter, ease-out);
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * Charts (chart() in charts.js). Series colours are --m-chart-1 … --m-chart-5 (a language's
+   * charts.categorical); axes and grid are its neutrals. Lines draw on, areas fade in under them,
+   * bars grow from their base one after another, donuts sweep. data-static turns that off.
+   */
+  .m-chart {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: var(--m-space-3, 0.75rem);
+    min-inline-size: 0;
+    margin: 0;
+    color: var(--m-color-fg-muted, currentcolor);
+    font-size: var(--m-font-size-xs, 0.75rem);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .m-chart svg {
+    display: block;
+    inline-size: 100%;
+    block-size: auto;
+    overflow: visible;
+  }
+
+  .m-chart [data-series="1"] {
+    --_c: var(--m-chart-1, var(--m-color-accent-default, currentcolor));
+  }
+
+  .m-chart [data-series="2"] {
+    --_c: var(--m-chart-2, var(--m-color-info-solid, currentcolor));
+  }
+
+  .m-chart [data-series="3"] {
+    --_c: var(--m-chart-3, var(--m-color-success-solid, currentcolor));
+  }
+
+  .m-chart [data-series="4"] {
+    --_c: var(--m-chart-4, var(--m-color-warning-solid, currentcolor));
+  }
+
+  .m-chart [data-series="5"] {
+    --_c: var(--m-chart-5, var(--m-color-danger-solid, currentcolor));
+  }
+
+  .m-chart-grid {
+    stroke: var(--m-color-border-muted, color-mix(in oklab, currentcolor 12%, transparent));
+    stroke-width: 1;
+    shape-rendering: crispedges;
+  }
+
+  .m-chart-baseline {
+    stroke: var(--m-color-border-default, color-mix(in oklab, currentcolor 24%, transparent));
+    stroke-width: 1;
+    shape-rendering: crispedges;
+  }
+
+  .m-chart-axis {
+    fill: var(--m-color-fg-muted, currentcolor);
+    font-size: var(--m-font-size-xs, 0.75rem);
+  }
+
+  .m-chart-line {
+    fill: none;
+    stroke: var(--_c);
+    stroke-width: var(--m-chart-stroke, 2px);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  .m-chart-area {
+    stroke: none;
+  }
+
+  .m-chart-stop {
+    stop-color: var(--_c);
+  }
+
+  .m-chart-dot {
+    fill: var(--_c);
+    stroke: var(--m-color-bg-surface, var(--m-color-bg-canvas, transparent));
+    stroke-width: 2;
+  }
+
+  .m-chart-bar {
+    fill: var(--_c);
+    rx: var(--m-chart-bar-radius, 2px);
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+
+  .m-chart-bar[data-negative] {
+    transform-origin: 50% 0;
+  }
+
+  .m-chart-arc {
+    fill: none;
+    stroke: var(--_c);
+  }
+
+  .m-chart-total {
+    fill: var(--m-color-fg-default, currentcolor);
+    font-family: var(--m-font-heading-family, inherit);
+    font-size: var(--m-font-size-2xl, 1.5rem);
+    font-weight: var(--m-font-heading-weight, 600);
+  }
+
+  .m-chart-total-label {
+    fill: var(--m-color-fg-muted, currentcolor);
+    font-size: var(--m-font-size-xs, 0.75rem);
+  }
+
+  .m-chart-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--m-space-2, 0.5rem) var(--m-space-4, 1rem);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .m-chart-legend li {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--m-space-2, 0.5rem);
+  }
+
+  .m-chart-legend li::before {
+    content: "";
+    inline-size: 0.625rem;
+    block-size: 0.625rem;
+    border-radius: var(--m-chart-bar-radius, 2px);
+    background: var(--_c);
+  }
+
+  .m-chart-legend-value {
+    color: var(--m-color-fg-default, currentcolor);
+    font-weight: var(--m-font-weight-medium, 500);
+  }
+
+  .m-chart[data-kind="donut"] {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--m-space-6, 1.5rem);
+  }
+
+  .m-chart[data-kind="donut"] svg {
+    inline-size: min(100%, 11rem);
+  }
+
+  .m-chart[data-kind="donut"] .m-chart-legend {
+    flex: 1 1 8rem;
+    flex-direction: column;
+  }
+
+  .m-chart[data-kind="donut"] .m-chart-legend li {
+    justify-content: space-between;
+  }
+
+  .m-chart[data-kind="donut"] .m-chart-legend-value {
+    margin-inline-start: auto;
+  }
+
+  .m-chart[data-kind="sparkline"] {
+    display: inline-flex;
+    inline-size: 7.5rem;
+    vertical-align: middle;
+  }
+
+  /* A number that counts up, with its change */
+  .m-chart[data-kind="stat"] {
+    gap: var(--m-space-1, 0.25rem);
+    font-size: var(--m-font-size-sm, 0.875rem);
+  }
+
+  .m-chart-label {
+    margin: 0;
+    color: var(--m-color-fg-muted, currentcolor);
+  }
+
+  .m-chart-value {
+    margin: 0;
+    color: var(--m-color-fg-default, currentcolor);
+    font-family: var(--m-font-heading-family, inherit);
+    font-size: var(--m-font-size-3xl, 1.875rem);
+    font-weight: var(--m-font-heading-weight, 600);
+    letter-spacing: var(--m-font-heading-tracking, normal);
+    line-height: var(--m-font-leading-tight, 1.2);
+  }
+
+  .m-chart-change {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--m-space-2, 0.5rem);
+    margin: 0;
+  }
+
+  .m-chart-delta {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25em;
+    padding: 0.125em 0.5em;
+    border-radius: var(--m-radius-full, 9999px);
+    background: var(--m-color-bg-sunken, color-mix(in oklab, currentcolor 8%, transparent));
+    color: var(--m-color-fg-default, currentcolor);
+    font-weight: var(--m-font-weight-medium, 500);
+  }
+
+  .m-chart-delta[data-trend="good"] {
+    background: var(--m-color-success-bg, color-mix(in oklab, currentcolor 8%, transparent));
+    color: var(--m-color-success-fg, currentcolor);
+  }
+
+  .m-chart-delta[data-trend="bad"] {
+    background: var(--m-color-danger-bg, color-mix(in oklab, currentcolor 8%, transparent));
+    color: var(--m-color-danger-fg, currentcolor);
+  }
+
+  .m-chart-delta svg {
+    inline-size: 0.75em;
+    block-size: 0.75em;
+    fill: currentcolor;
+  }
+
+  .m-chart[data-kind="stat"] > svg {
+    margin-block-start: var(--m-space-2, 0.5rem);
+  }
+
+  /* The data, as a table for screen readers (and for copying) */
+  .m-chart-table {
+    position: absolute;
+    inline-size: 1px;
+    block-size: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* The animations */
+  .m-chart:not([data-static]) .m-chart-line {
+    animation: m-chart-draw var(--m-chart-draw, 600ms) var(--m-motion-easing-enter, ease-out) backwards;
+    animation-delay: calc(var(--i, 0) * var(--m-motion-stagger, 40ms) * 3);
+  }
+
+  .m-chart:not([data-static]) .m-chart-area,
+  .m-chart:not([data-static]) .m-chart-dot {
+    animation: m-fade-in var(--m-chart-draw, 600ms) var(--m-motion-easing-standard, ease-out) backwards;
+    animation-delay: calc(var(--m-chart-draw, 600ms) * 0.5 + var(--i, 0) * var(--m-motion-stagger, 40ms) * 3);
+  }
+
+  .m-chart:not([data-static]) .m-chart-bar {
+    animation: m-chart-grow var(--m-chart-draw, 600ms) var(--m-motion-easing-enter, ease-out) backwards;
+    animation-delay: min(calc(var(--i, 0) * var(--m-motion-stagger, 40ms)), var(--m-motion-stagger-max, 320ms));
+  }
+
+  .m-chart:not([data-static]) .m-chart-arc {
+    animation: m-chart-sweep calc(var(--m-chart-draw, 600ms) * var(--_share, 1)) linear backwards;
+    animation-delay: calc(var(--m-chart-draw, 600ms) * var(--_at, 0));
+  }
+
+  .m-chart:not([data-static]) .m-chart-legend,
+  .m-chart:not([data-static]) .m-chart-total,
+  .m-chart:not([data-static]) .m-chart-total-label {
+    animation: m-fade-in var(--m-motion-duration-enter, 240ms) var(--m-motion-easing-standard, ease-out) backwards;
+  }
+
+  /* ------------------------------------------------------------------------------------------
+   * Reduced motion. Movement becomes a short fade or nothing: entrances and exits fade, sheets and
+   * dialogs fade in place, page transitions cross-fade, shimmer stops, spinners pulse where they
+   * are, charts appear drawn (count-ups show the final number: that's motion.js).
+   */
+  @media (prefers-reduced-motion: reduce) {
+    .m-skeleton {
+      background-image: none;
+      animation: none;
+    }
+
+    .m-media-frame::after,
+    [data-busy]::before {
+      border-color: currentcolor;
+      opacity: 0.6;
+      animation: m-pulse calc(var(--m-motion-duration-slow, 320ms) * 5) ease-in-out infinite;
+    }
+
+    :root[data-m-motion] .m-media-frame:has(.m-media:not([data-loaded], [data-placeholder]))::after {
+      opacity: 0.6;
+    }
+
+    .m-media {
+      transition: opacity min(var(--m-motion-duration-enter, 240ms), 120ms) linear;
+    }
+
+    :root[data-m-motion] .m-media[data-placeholder]:not([data-loaded]) {
+      filter: none;
+    }
+
+    .m-progress[data-indeterminate]::after {
+      inline-size: 100%;
+      opacity: 0.6;
+      animation: m-pulse calc(var(--m-motion-duration-slow, 320ms) * 5) ease-in-out infinite;
+    }
+
+    [data-pending],
+    [data-pending]::after {
+      transition: none;
+      animation: none;
+    }
+
+    [data-enter],
+    [data-stagger] > *,
+    [data-when="loaded"] {
+      animation-name: m-fade-in;
+      animation-duration: min(var(--m-motion-duration-enter, 240ms), 120ms);
+      animation-delay: 0ms;
+    }
+
+    [data-leaving],
+    .m-toast[data-state="closing"] {
+      animation-name: m-fade-out;
+      animation-duration: min(var(--m-motion-duration-exit, 160ms), 120ms);
+    }
+
+    dialog:not([data-static]),
+    [popover]:not([data-static]),
+    dialog.m-sheet {
+      --_sheet-from: none;
+      --_from: none;
+
+      transition-duration: min(var(--m-motion-duration-exit, 160ms), 120ms);
+    }
+
+    dialog[open]:not([data-static]),
+    [popover]:popover-open:not([data-static]),
+    dialog:not([data-static])::backdrop,
+    dialog[open]:not([data-static])::backdrop {
+      transition-duration: min(var(--m-motion-duration-enter, 240ms), 120ms);
+    }
+
+    .m-toast:not([data-state="closing"], [data-leaving]) {
+      transition: opacity min(var(--m-motion-duration-enter, 240ms), 120ms) linear;
+
+      @starting-style {
+        transform: none;
+      }
+    }
+
+    ::view-transition-old(root),
+    ::view-transition-new(root),
+    :root[data-m-route="slide"]::view-transition-old(root),
+    :root[data-m-route="slide"]::view-transition-new(root) {
+      animation-duration: min(var(--m-motion-route-duration, 200ms), 120ms);
+    }
+
+    :root[data-m-route="slide"]::view-transition-old(root) {
+      animation-name: m-fade-out;
+    }
+
+    :root[data-m-route="slide"]::view-transition-new(root) {
+      animation-name: m-fade-in;
+    }
+
+    .m-chart:not([data-static]) .m-chart-line,
+    .m-chart:not([data-static]) .m-chart-area,
+    .m-chart:not([data-static]) .m-chart-dot,
+    .m-chart:not([data-static]) .m-chart-bar,
+    .m-chart:not([data-static]) .m-chart-arc,
+    .m-chart:not([data-static]) .m-chart-legend,
+    .m-chart:not([data-static]) .m-chart-total,
+    .m-chart:not([data-static]) .m-chart-total-label {
+      animation: none;
+    }
+  }
+}
