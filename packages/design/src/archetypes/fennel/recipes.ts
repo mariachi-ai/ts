@@ -558,11 +558,11 @@ const pricing = `<div class="m-stack" data-gap="0">
     </header>
     <main class="m-container" style="padding-block: var(--m-space-16)">
       <div class="m-stack" data-gap="6" data-align="center" style="text-align: center">
-        <h1 style="${display}; font-size: clamp(3rem, 8vw, 5.5rem); max-inline-size: 14ch">Built to cost you less</h1>
+        <h1 style="${display}; font-size: clamp(3rem, 8vw, 5.5rem); max-inline-size: 14ch">Small fees, said plainly</h1>
         <p style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-semibold); max-inline-size: 36rem">Other providers hide fees in the exchange rate. We show every fee up front and use the mid-market rate, so you know what you pay.</p>
         <a href="#" class="m-cluster" data-gap="1" style="color: inherit; ${strong}; text-decoration: underline; text-underline-offset: 3px">See business pricing ${icon(I.right, 16)}</a>
       </div>
-      <h2 style="${display}; font-size: clamp(2.25rem, 5vw, 3.75rem); text-align: center; margin-block: var(--m-space-16) var(--m-space-8)">Pay only for what you use</h2>
+      <h2 style="${display}; font-size: clamp(2.25rem, 5vw, 3.75rem); text-align: center; margin-block: var(--m-space-16) var(--m-space-8)">Every fee, shown up front</h2>
       <div class="m-stack" data-gap="0" style="max-inline-size: 42rem; margin-inline: auto; padding: var(--m-space-2) var(--m-space-8); border-radius: 2.5rem; background: var(--m-color-bg-raised); color: var(--m-color-fg-default); box-shadow: var(--m-shadow-lg)">
 ${doRow('Send money', 'Low-cost transfers to 160 countries, at the mid-market rate', true)}
 ${doRow('Receive money', 'Account details in 9 currencies, free to get paid')}
