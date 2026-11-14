@@ -66,12 +66,17 @@ const I = {
   headset:
     '<path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/><path d="M21 16v2a4 4 0 0 1-4 4h-5"/>',
   minus: '<path d="M5 12h14"/>',
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  menu: '<path d="M4 12h16"/><path d="M4 6h16"/><path d="M4 18h16"/>',
+  thumbsUp: '<path d="M7 10v12"/><path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"/>',
 };
 
 // Shared styles, all from tokens
 const mono = 'font-family: var(--m-font-family-mono)';
 const muted = 'color: var(--m-color-fg-muted)';
 const small = 'font-size: var(--m-font-size-sm)';
+// Large (40px) buttons carry 16px labels, the published large button size
+const big = 'font-size: var(--m-font-size-lg)';
 const hair = 'var(--m-border-width-thin) solid var(--m-color-border-default)';
 const h1 =
   'font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
@@ -125,7 +130,10 @@ const navList = (items: [keyof typeof I, string, string?][], current: string) =>
     )
     .join('\n');
 
-const shell = (current: string, crumbs: string[], main: string) => `<div class="m-split" style="--m-layout-split-side: 16rem; --m-layout-split-gap: 0; min-block-size: 100vh">
+// On a phone the page comes first and the sidebar follows it, as the source's own sidebars fold away
+// behind a menu at phone width (wrap-reverse puts the content's line above the sidebar's when they wrap;
+// it also swaps the cross axis, so a split that aligns its columns to the top uses flex-end)
+const shell = (current: string, crumbs: string[], main: string) => `<div class="m-split" style="--m-layout-split-side: 16rem; --m-layout-split-gap: 0; min-block-size: 100vh; flex-wrap: wrap-reverse">
   <nav class="m-sidebar" aria-label="Main">
     <div class="m-stack" data-gap="3" style="padding: var(--m-space-1)">
       <button type="button" class="m-button" data-variant="ghost" style="justify-content: space-between; inline-size: 100%; padding-inline: var(--m-space-2)">
@@ -374,8 +382,8 @@ const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color
     <div class="m-stack" data-gap="8">
       <div class="m-stack" data-gap="2">
         <a href="#" class="m-cluster" data-gap="2" style="${small}; ${muted}; text-decoration: none">${icon(I.arrowLeft, 16)} Back</a>
-        <h1 style="${h1}; font-size: var(--m-font-size-4xl); letter-spacing: -0.05em">Set up your first job</h1>
-        <p style="${muted}; font-size: var(--m-font-size-lg)">Point Relayworks at the code, choose when it runs, and it will take the first run for you.</p>
+        <h1 style="${h1}">Set up your first job</h1>
+        <p style="${muted}">Point Relayworks at the code, choose when it runs, and it will take the first run for you.</p>
       </div>
       <div class="m-split" style="--m-layout-split-side: 18rem; --m-layout-split-gap: var(--m-space-8); align-items: flex-start">
         <aside class="m-stack" data-gap="6" aria-label="Source">
@@ -384,7 +392,7 @@ const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color
             <span class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-medium)">${icon(I.repo, 16)} kestrel/billing</span>
             <span class="m-cluster" data-gap="2" style="${small}; ${muted}">${icon(I.branch, 14)}<span style="${mono}">main</span></span>
           </div>
-          <ol class="m-stack" data-gap="3" style="padding: 0; list-style: none; ${small}">
+          <ol class="m-stack" data-gap="3" style="padding: 0; list-style: none">
             <li class="m-cluster" data-gap="2" style="${muted}"><span style="color: var(--m-color-success-fg); display: inline-flex">${icon(I.checkCircle, 16)}</span> Connect a repository</li>
             <li class="m-cluster" data-gap="2" style="font-weight: var(--m-font-weight-medium)"><span style="display: inline-flex">${icon(I.info, 16)}</span> Configure the job</li>
             <li class="m-cluster" data-gap="2" style="${muted}"><span style="display: inline-flex">${icon(I.clock, 16)}</span> First run</li>
@@ -393,7 +401,7 @@ const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color
         </aside>
         <form class="m-card" style="padding: 0; gap: 0" aria-labelledby="mr-ob-title">
           <div class="m-stack" data-gap="5" style="padding: var(--m-space-6)">
-            <h2 id="mr-ob-title" style="${h2}">Configure job</h2>
+            <h2 id="mr-ob-title" style="${h3}">Configure job</h2>
             <div class="m-field">
               <label class="m-field-label" for="mr-ob-name">Job name</label>
               <input class="m-input" id="mr-ob-name" value="invoice-sync" aria-describedby="mr-ob-name-h">
@@ -436,7 +444,7 @@ const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color
             </div>
           </div>
           <div style="padding: var(--m-space-4) var(--m-space-6); border-block-start: ${hair}; background: var(--m-color-bg-sunken); border-end-start-radius: var(--m-radius-container); border-end-end-radius: var(--m-radius-container)">
-            <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Create job</button>
+            <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%; ${big}">Create job</button>
           </div>
         </form>
       </div>
@@ -473,7 +481,7 @@ const settings = shell(
   `    <main class="m-container" style="padding-block: var(--m-space-8) var(--m-space-12)">
       <div class="m-stack" data-gap="8">
         <h1 style="${h1}">Settings</h1>
-        <div class="m-split" style="--m-layout-split-side: 12rem; --m-layout-split-gap: var(--m-space-8); align-items: flex-start">
+        <div class="m-split" style="--m-layout-split-side: 12rem; --m-layout-split-gap: var(--m-space-8); align-items: flex-end; flex-wrap: wrap-reverse">
           <nav aria-label="Settings" class="m-stack" data-gap="1">
 ${settingsNav.map((s, i) => `            <a href="#" class="m-button" data-variant="ghost" style="justify-content: flex-start; ${i === 0 ? 'background: var(--m-color-accent-subtle); color: var(--m-color-fg-default)' : muted}"${i === 0 ? ' aria-current="page"' : ''}>${s}</a>`).join('\n')}
           </nav>
@@ -484,7 +492,7 @@ ${settingsNav.map((s, i) => `            <a href="#" class="m-button" data-varia
             'Shown on runs, invoices and the emails Relayworks sends for you.',
             '<input class="m-input" aria-labelledby="mr-set-name" value="Kestrel Labs" style="max-inline-size: 20rem">',
             'Use 32 characters at most.',
-            '<button type="button" class="m-button" data-variant="primary" data-size="sm">Save</button>',
+            '<button type="button" class="m-button" data-variant="primary" data-size="sm">Save changes</button>',
           )}
           ${settingsSection(
             'mr-set-url',
@@ -492,7 +500,7 @@ ${settingsNav.map((s, i) => `            <a href="#" class="m-button" data-varia
             'The address of this workspace and the prefix of every job endpoint.',
             `<div class="m-cluster" data-gap="0" style="flex-wrap: nowrap; max-inline-size: 26rem"><span style="display: flex; align-items: center; block-size: var(--m-control-height-md); padding-inline: var(--m-space-3); border: var(--m-border-width-thin) solid var(--m-color-border-strong); border-inline-end: 0; border-start-start-radius: var(--m-radius-control); border-end-start-radius: var(--m-radius-control); background: var(--m-color-bg-sunken); ${muted}; ${mono}; ${small}">relayworks.dev/</span><input class="m-input" aria-label="Workspace URL" value="kestrel" style="${mono}; border-start-start-radius: 0; border-end-start-radius: 0"></div>`,
             'Old links redirect for 90 days after a change.',
-            '<button type="button" class="m-button" data-variant="primary" data-size="sm" disabled>Save</button>',
+            '<button type="button" class="m-button" data-variant="primary" data-size="sm" disabled>Save changes</button>',
           )}
           ${settingsSection(
             'mr-set-region',
@@ -500,7 +508,7 @@ ${settingsNav.map((s, i) => `            <a href="#" class="m-button" data-varia
             'New jobs run here unless they choose a region of their own. Pick the one closest to your data.',
             '<select class="m-select" aria-labelledby="mr-set-region" style="max-inline-size: 20rem"><option>Frankfurt, Germany (fra1)</option><option>Virginia, USA (iad1)</option><option>Singapore (sin1)</option></select>',
             'Learn more about <a href="#" style="color: var(--m-color-accent-text); text-decoration: none">regions and latency</a>.',
-            '<button type="button" class="m-button" data-variant="primary" data-size="sm" disabled>Save</button>',
+            '<button type="button" class="m-button" data-variant="primary" data-size="sm" disabled>Save changes</button>',
           )}
           ${settingsSection(
             'mr-set-alerts',
@@ -578,7 +586,7 @@ const plan = (
   primary: boolean,
 ) => `<div class="m-stack" data-gap="5" style="padding: var(--m-space-8); ${primary ? 'background: var(--m-color-bg-canvas)' : ''}">
               <div class="m-stack" data-gap="3">
-                <span class="m-cluster" data-gap="2" style="${small}; font-weight: var(--m-font-weight-medium)">${name}${badge ? ` <span class="m-badge" style="block-size: 1.25rem; font-size: 11px">${badge}</span>` : ''}</span>
+                <span class="m-cluster" data-gap="2" style="${small}; font-weight: var(--m-font-weight-medium)">${name}${badge ? ` <span class="m-badge" style="block-size: 1.25rem">${badge}</span>` : ''}</span>
                 <span class="m-cluster" data-gap="2" data-align="baseline"><span style="font-size: 3.5rem; font-weight: var(--m-font-weight-medium); letter-spacing: -0.06em; line-height: 1">${price}</span><span style="${small}; ${muted}">${unit}</span></span>
                 <p style="${muted}; max-inline-size: 18rem">${pitch}</p>
               </div>
@@ -667,47 +675,167 @@ const errorPage = (code: string, name: string, ic: string, title: string, body: 
     </section>`;
 
 const fieldError = (id: string, text: string) =>
-  `<p class="m-field-error m-cluster" data-gap="1" id="${id}" style="flex-wrap: nowrap">${icon(I.alert, 14)} ${text}</p>`;
+  `<p class="m-field-error m-cluster" data-gap="2" id="${id}" style="flex-wrap: nowrap">${icon(I.alert, 16)} ${text}</p>`;
 
-const errors = `<main class="m-container" data-size="md" style="padding-block: var(--m-space-12)">
-  <div class="m-stack" data-gap="10">
-    <form class="m-card" style="padding: 0; gap: 0; overflow: hidden" aria-labelledby="mr-err-form">
-      <div class="m-stack" data-gap="5" style="padding: var(--m-space-6)">
-        <h1 id="mr-err-form" style="${h2}">Add a secret</h1>
-        <div class="m-alert" data-tone="danger" role="alert">
-          <span class="m-alert-icon">${icon(I.alert, 16)}</span>
-          <div class="m-alert-content"><div class="m-alert-body"><strong style="font-weight: var(--m-font-weight-medium)">2 fields need fixing.</strong> Nothing was saved.</div></div>
+// Errors happen inside the app: a form page in the shell with the note and the field errors, a toast at
+// the bottom right of the window, and below the form the full pages for 404, 500 and no access
+const errors = shell(
+  'Secrets',
+  ['Kestrel Labs', 'Secrets', 'New secret'],
+  `    <main class="m-container" style="padding-block: var(--m-space-8) var(--m-space-12)">
+      <div class="m-stack" data-gap="8">
+        <div class="m-stack" data-gap="1">
+          <h1 style="${h1}">New secret</h1>
+          <p style="${muted}">Secrets are encrypted and handed to jobs as environment variables when they run.</p>
         </div>
-        <div class="m-field">
-          <label class="m-field-label" for="mr-err-key">Key</label>
-          <input class="m-input" id="mr-err-key" value="ledger-url" aria-invalid="true" aria-describedby="mr-err-key-e" style="${mono}">
-          ${fieldError('mr-err-key-e', 'Use capital letters, digits and underscores, like LEDGER_URL.')}
-        </div>
-        <div class="m-field">
-          <label class="m-field-label" for="mr-err-value">Value</label>
-          <textarea class="m-input" id="mr-err-value" rows="2" aria-invalid="true" aria-describedby="mr-err-value-e" style="${mono}"></textarea>
-          ${fieldError('mr-err-value-e', 'Enter a value. Secrets can’t be empty.')}
-        </div>
-        <fieldset class="m-stack" data-gap="2" style="border: 0; padding: 0; margin: 0">
-          <legend class="m-field-label" style="margin-block-end: var(--m-space-2)">Available to</legend>
-          <label class="m-field" data-layout="inline"><input class="m-checkbox" type="checkbox" checked> Production</label>
-          <label class="m-field" data-layout="inline"><input class="m-checkbox" type="checkbox" checked> Staging</label>
-          <label class="m-field" data-layout="inline"><input class="m-checkbox" type="checkbox"> Local runs</label>
-        </fieldset>
-      </div>
-      <div class="m-cluster" data-justify="end" data-gap="2" style="padding: var(--m-space-3) var(--m-space-6); border-block-start: ${hair}; background: var(--m-color-bg-sunken)">
-        <button type="button" class="m-button" data-size="sm">Cancel</button>
-        <button type="submit" class="m-button" data-variant="primary" data-size="sm" aria-busy="true">Save secret</button>
-      </div>
-    </form>
-    <section class="m-stack" data-gap="3" aria-label="A toast">
-      <div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title">invoice-sync failed twice in a row</div><div class="m-toast-body">The ledger didn’t answer within 30s. 872 rows weren’t written.</div></div><div class="m-toast-actions"><button type="button" class="m-button" data-size="sm">View run</button></div></div>
-    </section>
+        <form class="m-card" style="padding: 0; gap: 0; overflow: hidden; max-inline-size: 40rem" aria-labelledby="mr-err-form">
+          <div class="m-stack" data-gap="5" style="padding: var(--m-space-6)">
+            <h2 id="mr-err-form" style="${h2}">Add a secret</h2>
+            <div class="m-alert" data-tone="danger" role="alert">
+              <span class="m-alert-icon">${icon(I.alert, 16)}</span>
+              <div class="m-alert-content"><div class="m-alert-body"><strong style="font-weight: var(--m-font-weight-medium)">2 fields need fixing.</strong> Nothing was saved.</div></div>
+            </div>
+            <div class="m-field">
+              <label class="m-field-label" for="mr-err-key">Key</label>
+              <input class="m-input" id="mr-err-key" value="ledger-url" aria-invalid="true" aria-describedby="mr-err-key-e" style="${mono}">
+              ${fieldError('mr-err-key-e', 'Use capital letters, digits and underscores, like LEDGER_URL.')}
+            </div>
+            <div class="m-field">
+              <label class="m-field-label" for="mr-err-value">Value</label>
+              <textarea class="m-input" id="mr-err-value" rows="2" aria-invalid="true" aria-describedby="mr-err-value-e" style="${mono}"></textarea>
+              ${fieldError('mr-err-value-e', 'Enter a value. Secrets can’t be empty.')}
+            </div>
+            <fieldset class="m-stack" data-gap="2" style="border: 0; padding: 0; margin: 0">
+              <legend class="m-field-label" style="margin-block-end: var(--m-space-2)">Available to</legend>
+              <label class="m-field" data-layout="inline"><input class="m-checkbox" type="checkbox" checked> Production</label>
+              <label class="m-field" data-layout="inline"><input class="m-checkbox" type="checkbox" checked> Staging</label>
+              <label class="m-field" data-layout="inline"><input class="m-checkbox" type="checkbox"> Local runs</label>
+            </fieldset>
+          </div>
+          <div class="m-cluster" data-justify="end" data-gap="2" style="padding: var(--m-space-3) var(--m-space-6); border-block-start: ${hair}; background: var(--m-color-bg-sunken)">
+            <button type="button" class="m-button" data-size="sm">Cancel</button>
+            <button type="submit" class="m-button" data-variant="primary" data-size="sm" aria-busy="true">Save secret</button>
+          </div>
+        </form>
+        <div class="m-toast-region" aria-live="polite"><div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title">invoice-sync failed twice in a row</div><div class="m-toast-body">The ledger didn’t answer within 30s. 872 rows weren’t written.</div></div><div class="m-toast-actions"><button type="button" class="m-button" data-size="sm">View run</button></div></div></div>
+        <section class="m-stack" data-gap="6" aria-label="Full-page errors" style="padding-block-start: var(--m-space-8); border-block-start: ${hair}">
 ${errorPage('404', 'NOT_FOUND', I.compass, 'This page can’t be found', 'The job may have been renamed or deleted, or the link is missing a part.', `<a class="m-button" data-variant="primary" href="#">Go to Activity</a>`)}
 ${errorPage('500', 'INTERNAL_ERROR', I.alert, 'Something went wrong on our side', 'Nothing was changed. Try again in a minute; if it keeps failing, send us the request id below.', `<button type="button" class="m-button" data-variant="primary">${icon(I.refresh, 16)} Try again</button><a class="m-button" href="#">Check status</a>`)}
 ${errorPage('403', 'FORBIDDEN', I.lock, 'You don’t have access to this job', 'Only members of the Billing team can see invoice-sync. Ask an owner of Kestrel Labs to add you.', `<button type="button" class="m-button" data-variant="primary">Request access</button><a class="m-button" href="#">Switch workspace</a>`)}
+        </section>
+      </div>
+    </main>`,
+);
+
+// The public site's bar, shared by pricing and reading: the mark and name, 14px grey links, then
+// secondary buttons and the one primary on the right
+const siteBar = (section: string, links: string[], current: string) => `<header class="m-navbar">
+    <a class="m-navbar-brand" href="#"><span style="${tile}">${icon(I.workflow, 14)}</span> Relayworks${section ? ` <span style="color: var(--m-color-border-strong); font-weight: var(--m-font-weight-regular)">/</span> <span style="font-weight: var(--m-font-weight-medium)">${section}</span>` : ''}</a>
+    <nav class="m-navbar-nav" aria-label="Main">
+${links.map((l) => `      <a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${l}</a>`).join('\n')}
+    </nav>
+    <div class="m-navbar-actions">
+      <a class="m-button" data-size="sm" href="#">Log in</a>
+      <a class="m-button" data-variant="primary" data-size="sm" href="#">Start free</a>
+    </div>
+  </header>`;
+
+// Reading: a public guide in the docs frame: the bar, a docs sidebar with a search and 36px rows, the
+// article (a 48px title, a 20px lead, two buttons, 16px text, a terminal block, a note), and the
+// page's contents on the right
+const docNav = ['Overview', 'Triggers', 'Schedules', 'Retries and backoff', 'Concurrency', 'Secrets', 'Regions', 'Run logs', 'Limits'];
+const reading = `<div style="min-block-size: 100vh; background: var(--m-color-bg-sunken)">
+  ${siteBar('Docs', ['Guides', 'Reference', 'Examples'], 'Guides')}
+  <div class="m-split" style="--m-layout-split-side: 16rem; --m-layout-split-gap: var(--m-space-8); padding-inline: var(--m-space-3) var(--m-space-6); flex-wrap: wrap-reverse; align-items: flex-end">
+    <nav class="m-sidebar" aria-label="Guides" style="border: 0; background: transparent; padding-block: var(--m-space-3)">
+      <div style="padding-block-end: var(--m-space-2)">${search('mr-read-find', 'Search docs…', '⌘K', 'md', 'none')}</div>
+      <div class="m-sidebar-section">
+        <ul>
+${docNav.map((l) => `          <li><a class="m-sidebar-link" href="#"${l === 'Retries and backoff' ? ' aria-current="page"' : ''}>${l}</a></li>`).join('\n')}
+        </ul>
+      </div>
+    </nav>
+    <div class="m-split" style="--m-layout-split-side: 14rem; --m-layout-split-gap: var(--m-space-12); flex-direction: row-reverse; align-items: flex-start; padding-block: var(--m-space-8) var(--m-space-16)">
+      <nav aria-labelledby="mr-read-toc" class="m-stack" data-gap="2">
+        <span id="mr-read-toc" style="${muted}">On this page</span>
+        <ul class="m-stack" data-gap="0" style="padding: 0; list-style: none; border-inline-start: ${hair}">
+          <li><a href="#" style="display: block; padding: 6px 0 6px var(--m-space-3); margin-inline-start: -1px; border-inline-start: 2px solid var(--m-color-fg-default); color: var(--m-color-fg-default); text-decoration: none">How retries work</a></li>
+          <li><a href="#" style="display: block; padding: 6px 0 6px var(--m-space-3); ${muted}; text-decoration: none">Choosing a backoff</a></li>
+          <li><a href="#" style="display: block; padding: 6px 0 6px var(--m-space-3); ${muted}; text-decoration: none">Retrying by hand</a></li>
+          <li><a href="#" style="display: block; padding: 6px 0 6px var(--m-space-3); ${muted}; text-decoration: none">Limits</a></li>
+        </ul>
+      </nav>
+      <article class="m-stack" data-gap="6" aria-labelledby="mr-read-title" style="max-inline-size: 46rem">
+        <div class="m-stack" data-gap="4">
+          <h1 id="mr-read-title" style="font-size: 2.5rem; font-weight: var(--m-font-weight-semibold); letter-spacing: -0.05em; line-height: 1.1">Retry failed runs with backoff</h1>
+          <p style="font-size: var(--m-font-size-xl); line-height: 1.5; ${muted}">When a run fails, Relayworks can start it again after a pause that grows each time, so a busy service gets room to recover.</p>
+          <div class="m-cluster" data-gap="2">
+            <a class="m-button" data-variant="primary" href="#">Set up retries</a>
+            <a class="m-button" href="#">${icon(I.copy, 16)} Copy page</a>
+          </div>
+        </div>
+        <div class="m-prose" style="max-inline-size: none">
+          <h2>How retries work</h2>
+          <p>A run that exits with an error, or doesn’t answer within its timeout, is marked <strong>Failed</strong>. If the job allows retries, the same run starts again with the same input and keeps its id; each attempt gets its own log.</p>
+          <p>Retries are free: a run counts once, however many attempts it takes. Set the limit in the job’s settings or in its config file:</p>
+        </div>
+        <div class="m-card" style="padding: 0; gap: 0; overflow: hidden">
+          <div class="m-cluster" data-justify="between" style="padding: var(--m-space-2) var(--m-space-2) var(--m-space-2) var(--m-space-4); border-block-end: ${hair}; ${small}; ${muted}">
+            <span class="m-cluster" data-gap="2">${icon(I.terminal, 16)} relay.json</span>
+            <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Copy code">${icon(I.copy, 16)}</button>
+          </div>
+          <pre style="margin: 0; padding: var(--m-space-4); ${mono}; ${small}; line-height: 1.6; background: var(--m-color-bg-surface)">{ "retries": { "limit": 3, "backoff": "exponential", "first": "2s" } }</pre>
+        </div>
+        <div class="m-alert" role="note">
+          <span class="m-alert-icon">${icon(I.info, 16)}</span>
+          <div class="m-alert-content"><div class="m-alert-body">Runs that fail because a secret is missing aren’t retried: nothing would change between attempts.</div></div>
+        </div>
+        <div class="m-prose" style="max-inline-size: none">
+          <h2>Choosing a backoff</h2>
+          <p>Exponential backoff doubles the pause after each attempt (2s, 4s, 8s). Use a fixed pause when the service you call has its own rate limit with a known window.</p>
+        </div>
+        <div class="m-cluster" data-justify="between" style="padding-block-start: var(--m-space-6); border-block-start: ${hair}; ${small}; ${muted}">
+          <span>Last updated Nov 9</span>
+          <span class="m-cluster" data-gap="2">Was this helpful? <button type="button" class="m-button" data-size="sm" data-icon-only aria-label="Yes">${icon(I.thumbsUp, 16)}</button></span>
+        </div>
+      </article>
+    </div>
   </div>
-</main>`;
+</div>`;
+
+// Sign-in: a centred column on background-200: a 32px title, the email and the one primary, a
+// hairline, then the other ways in as full-width secondary buttons
+const way = (ic: keyof typeof I, label: string) =>
+  `<button type="button" class="m-button" data-size="lg" style="inline-size: 100%; ${big}">${icon(I[ic], 16)} ${label}</button>`;
+const signIn = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh; background: var(--m-color-bg-sunken)">
+  <header class="m-cluster" data-justify="between" style="padding: var(--m-space-4) var(--m-space-6)">
+    <a href="#" aria-label="Relayworks home" style="display: inline-flex"><span style="${tile}">${icon(I.workflow, 14)}</span></a>
+    <a class="m-button" data-size="sm" href="#">Sign up</a>
+  </header>
+  <main class="m-container" data-size="sm" style="flex: 1; display: grid; place-items: center; padding-block: var(--m-space-12)">
+    <div class="m-stack" data-gap="6" style="inline-size: 100%; max-inline-size: 20rem">
+      <h1 style="${h1}; text-align: center">Log in to Relayworks</h1>
+      <form class="m-stack" data-gap="3" aria-label="Log in with email">
+        <input class="m-input" data-size="lg" type="email" autocomplete="email" placeholder="Email address" aria-label="Email address">
+        <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%; ${big}">Continue with email</button>
+      </form>
+      <hr class="m-divider">
+      <div class="m-stack" data-gap="3">
+        ${way('lock', 'Continue with single sign-on')}
+        ${way('key', 'Continue with a passkey')}
+        ${way('terminal', 'Continue from the command line')}
+      </div>
+      <div class="m-stack" data-gap="4" style="align-items: center">
+        <button type="button" class="m-button" data-variant="ghost">Show other options</button>
+        <p>Don’t have an account? <a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Sign up</a></p>
+      </div>
+    </div>
+  </main>
+  <footer class="m-cluster" data-gap="4" data-justify="center" style="padding: var(--m-space-6); font-size: var(--m-font-size-xs); color: var(--m-color-fg-subtle)">
+    <a href="#" style="color: inherit; text-decoration: none">Terms</a>
+    <a href="#" style="color: inherit; text-decoration: none">Privacy</a>
+  </footer>
+</div>`;
 
 export const meridianRecipes: ArchetypeRecipe[] = [
   {
@@ -755,7 +883,21 @@ export const meridianRecipes: ArchetypeRecipe[] = [
     name: 'errors',
     title: 'Errors',
     description:
-      'Red text with an icon under the field, a red note above the form that says nothing was saved, a toast, and full pages for 404, 500 and no access with a request id in mono.',
+      'In the app: a form page with a red note that says nothing was saved and red text with an icon under each field, a toast at the bottom right, then full pages for 404, 500 and no access with a request id in mono.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A public guide in the docs frame: the site bar, a docs sidebar with a search and 36px rows, a 48px title and a 20px lead, two buttons, 16px text, a terminal block and a note, and the page’s contents on the right.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'A centred column on background-200: a 32px title, the email and the one primary, a hairline, the other ways in as full-width secondary buttons, a sign-up link and a small footer.',
+    html: signIn,
   },
 ];
