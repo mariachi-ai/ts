@@ -67,7 +67,8 @@
     "test:unit": "vitest run --passWithNoTests",
     "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
     "test": "vitest run --passWithNoTests",
-    "fingerprint": "node scripts/fingerprint.mjs"
+    "fingerprint": "node scripts/fingerprint.mjs",
+    "showcase": "node scripts/showcase.mjs"
   },
   "dependencies": {
     "@mariachi/core": "workspace:*",
