@@ -595,7 +595,7 @@ const plan = (
         <div class="m-stack" data-gap="5">
           <div class="m-stack" data-gap="2">
             ${favourite ? '<span><span class="m-badge" data-tone="info" style="text-transform: uppercase; font-size: var(--m-font-size-xs); font-weight: var(--m-font-weight-bold)">Team favourite</span></span>' : '<span style="block-size: 1.25rem"></span>'}
-            <h2 id="ht-plan-${name.toLowerCase().replace(/\W+/g, '')}" style="font-size: calc(var(--m-font-size-4xl) * 1.25); font-weight: var(--m-font-weight-bold); line-height: var(--m-font-leading-tight); letter-spacing: var(--m-font-tracking-tight)">${name}</h2>
+            <h2 id="ht-plan-${name.toLowerCase().replace(/\W+/g, '')}" style="font-size: clamp(1.75rem, 2.8vw, calc(var(--m-font-size-4xl) * 1.25)); font-weight: var(--m-font-weight-bold); line-height: var(--m-font-leading-tight); letter-spacing: var(--m-font-tracking-tight)">${name}</h2>
             <p style="font-size: var(--m-font-size-lg); min-block-size: 3em">${blurb}</p>
           </div>
           <p class="m-cluster" data-gap="2" data-align="baseline"><span style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-bold); font-variant-numeric: tabular-nums">${price}</span><span style="font-size: var(--m-font-size-sm)">${per}</span></p>
