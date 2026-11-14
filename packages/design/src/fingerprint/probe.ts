@@ -358,7 +358,12 @@ const s = kinds.includes('shadow'); if (b && s) bs.both++; else if (b) bs.border
 
   // Spec 1.1: what a page shows most, which the counts above can't see. The ground: the median lightness of what
   // sits under nine points across the window (a card, a shell or the canvas), so a dark language reads dark.
-  const groundAt = (x: number, y: number) => { for (let e: Element | null = document.elementFromPoint(x, y); e; e = e.parentElement) { const c = ownBg(e); if (c) return c; } return canvas; };
+  // The topmost element at the point that isn't a cookie or consent notice (those sit over the page, not in it)
+  const groundAt = (x: number, y: number) => {
+    const top = document.elementsFromPoint(x, y).find((e) => !consent.some((c) => c === e || c.contains(e))) ?? null;
+    for (let e: Element | null = top; e; e = e.parentElement) { const c = ownBg(e); if (c) return c; }
+    return canvas;
+  };
   const grounds: number[] = [];
   for (const fx of [0.2, 0.5, 0.8]) for (const fy of [0.25, 0.5, 0.75]) { const c = groundAt(W * fx, H * fy); grounds.push(rgbToOklch([c[0], c[1], c[2]])[0]); }
   m['colour.ground'] = round(med(grounds)!, 3);
