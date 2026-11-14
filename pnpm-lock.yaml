@@ -1386,6 +1386,9 @@ importers:
 
   packages/server:
     dependencies:
+      '@fastify/busboy':
+        specifier: ^3.2.5
+        version: 3.2.5
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
@@ -2719,6 +2722,9 @@ packages:
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
+
+  '@fastify/busboy@3.2.5':
+    resolution: {integrity: sha512-y8MTAeBlEQUNVnskmZQwpseZN3EgCksQNOULlfxWY6o6VEqh01+oExMgbM7gN6YLQ8pNDYeweNPKJRt8jQm2ZQ==}
 
   '@fastify/error@4.2.0':
     resolution: {integrity: sha512-RSo3sVDXfHskiBZKBPRgnQTtIqpi/7zhJOEmAxCiBcM7d0uwdGdxLlsCaLzGs8v8NnxIRlfG0N51p5yFaOentQ==}
@@ -9593,6 +9599,8 @@ snapshots:
       fast-uri: 3.1.0
 
   '@fastify/busboy@2.1.1': {}
+
+  '@fastify/busboy@3.2.5': {}
 
   '@fastify/error@4.2.0': {}
 

@@ -58,8 +58,121 @@ export class NotesController extends BaseController {
 - Return a value for 200 (or `status`), `undefined` for 204, or `httpResponse(status, body, headers)`
   for full control.
 - Route options: `auth` (strategy, list, or `false`), `scopes` (all required), `rateLimit` (rule or
-  `false`), `status`, `summary`, `description`, `tags`, `deprecated`, `bodyLimitBytes`.
+  `false`), `status`, `summary`, `description`, `tags`, `deprecated`, `bodyLimitBytes`, `upload`.
 - Duplicate `method + path` throws `api/duplicate-route` at registration.
+
+## Cookies, redirects, streams and uploads
+
+Controllers cover these, so a route that needs one still goes through authentication, validation and
+rate limits. `configure()` (the raw Fastify instance) is for Fastify plugins and hooks only.
+
+### Cookies and redirects
+
+```ts
+this.post('/session', { auth: false, schema: { body: signInInput } }, async (ctx, body) => {
+  const { token } = await this.call<{ token: string }>(ctx, 'auth.signIn', body);
+  ctx.setCookie('__Host-session', token, { maxAgeSeconds: 60 * 60 * 24 * 7 });
+  return httpResponse(303, undefined, { location: '/app' });
+});
+this.delete('/session', async (ctx) => {
+  ctx.clearCookie('__Host-session');
+});
+```
+
+- `ctx.request.cookies` holds the request's cookies by name. `ctx.setCookie(name, value, options)`
+  adds a `Set-Cookie`, as many as you call it, also when the handler then throws.
+- Defaults: `Path=/; HttpOnly; Secure; SameSite=Lax`. Options: `maxAgeSeconds`, `expires`, `path`,
+  `domain`, `secure`, `httpOnly`, `sameSite`, `partitioned`. The value is percent-encoded. A cookie a
+  browser would reject (`SameSite=None` without `Secure`, a `__Host-` name with a `Domain`) throws
+  `http/invalid-cookie`.
+- `ctx.clearCookie(name, { path, domain })` needs the path and domain the cookie was set with.
+
+To sign requests in by that cookie:
+
+```ts
+api.withAuthStrategy('session', cookieStrategy(sessions, { cookie: '__Host-session' })).withAuth('session');
+```
+
+A browser attaches cookies to requests that other sites cause, so `cookieStrategy` refuses a
+`POST`, `PUT`, `PATCH` or `DELETE` that doesn't come from a page of the API's own origin
+(`auth/cross-site-request`, 403). It reads `Sec-Fetch-Site` and `Origin`, which a page can't forge.
+What follows from that:
+
+- **`GET` routes must not change anything.** They aren't checked.
+- **A web app on another origin** (`app.example.com` calling `api.example.com`) goes on the list:
+  `cookieStrategy(sessions, { cookie, allowedOrigins: ['https://app.example.com'] })`, with CORS
+  `credentials: true` for the same origin. A sibling subdomain isn't trusted without it.
+- **A client that isn't a browser** (a script, another service) sends no `Origin` and is refused. It
+  uses a bearer token or an API key instead; register both strategies and list them in `withAuth`.
+- `bearerStrategy(verifier, { cookie })` applies the same check when the token came from the cookie.
+
+### Streams and server-sent events
+
+```ts
+this.post('/chat', { schema: { body: chatInput } }, async (ctx, body) => {
+  const tokens = await this.call<AsyncIterable<string>>(ctx, 'chat.reply', body);
+  return sseResponse(
+    (async function* () {
+      for await (const token of tokens) yield { event: 'token', data: { token } };
+      yield { event: 'done', data: {} };
+    })(),
+  );
+});
+
+this.get('/export.csv', async (ctx) =>
+  streamResponse(this.rows(ctx), { contentType: 'text/csv; charset=utf-8', headers: { 'content-disposition': 'attachment; filename="export.csv"' } }),
+);
+```
+
+- `sseResponse(events)` takes an async iterable; each item is `{ data, event?, id?, retry? }` or a
+  string. Data that isn't a string is sent as JSON. A comment line every 15 seconds
+  (`heartbeatMs`) keeps proxies from closing a quiet stream, and the response carries
+  `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`.
+- `streamResponse(body, { contentType, status, headers })` takes an async iterable of strings and
+  bytes, or a Node stream.
+- Authentication, validation and the rate limit run before the first byte, so they fail with a
+  normal error response. After that there's no status left to change: if an event stream's source
+  throws, the client gets a last `event: error` whose data is the usual error envelope; a byte
+  stream is cut off and the error logged.
+- When the client disconnects, the iterable is ended (its `finally` blocks run) and
+  `ctx.request.signal` aborts. Pass the signal to slow upstream calls, such as a model request, so
+  they stop too.
+- A procedure can hand back an async iterable in-process: declare its output as
+  `z.custom<AsyncIterable<T>>()`. The procedure's timeout covers starting the stream, not reading it.
+- `schema.response` isn't applied to a stream, and OpenAPI shows such a route without a response body.
+
+### Uploads
+
+```ts
+this.post(
+  '/avatars',
+  {
+    upload: { maxFiles: 1, maxFileBytes: 2 * 1024 * 1024, allowedTypes: ['image/png', 'image/jpeg'] },
+    bodyLimitBytes: 3 * 1024 * 1024,
+    schema: { body: z.object({ alt: z.string().max(200).optional() }) },
+  },
+  async (ctx, body) => {
+    const [file] = ctx.request.files;
+    if (!file) throw new ValidationError('avatars/missing-file', 'Send one image');
+    await storage.put(ctx, `avatars/${ctx.userId}`, file.bytes, { contentType: file.contentType });
+    return { size: file.size, alt: body.alt };
+  },
+);
+```
+
+- With `upload`, the route takes `multipart/form-data` only (415 otherwise). Files arrive in
+  `ctx.request.files` as `{ field, filename, contentType, bytes, size }`; text fields are the
+  handler's `body`, checked by `schema.body` (a field sent twice is an array).
+- Limits: `maxFiles` (10), `maxFileBytes`, `maxFields` (100), `maxFieldBytes` (64 KiB),
+  `allowedTypes` (exact types or `image/*`). Breaking one is `http/too-many-files`,
+  `http/file-too-large`, `http/too-many-fields`, `http/field-too-large` (all 413) or
+  `http/unsupported-file-type` (415).
+- Files are held in memory and the whole request is bounded by `bodyLimitBytes` (1 MiB unless the
+  route raises it). For large files, have the browser upload straight to storage with a
+  [signed upload URL](./storage.md#browser-uploads-and-downloads).
+- `filename` is reduced to a bare name but is still the client's word, and `contentType` is what the
+  client declared. Never use the name as a path, and check the bytes when the type matters.
+- The body is parsed after authentication and the rate limit.
 
 ## Rate limits
 
