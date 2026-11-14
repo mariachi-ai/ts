@@ -11,6 +11,7 @@ import { designReference, galleryCss, galleryPage } from './archetypes/reference
 import { componentList, contrastPairs, tokenList } from './contract';
 import type { ComponentExample } from './contract/component';
 import { componentExamples } from './components/examples';
+import { arrangementOf, showcasePatterns } from './showcase';
 import { type DesignConfig, defineDesign, type ResolvedDesign } from './design';
 import { checkTheme, type ThemeCheck } from './engine/check';
 import { expandComponentVars, unknownDefaultRefs, unknownVars } from './engine/css-vars';
@@ -325,6 +326,8 @@ export function packageAssets(root: string = packageRoot()): PackageAssets {
     files[`archetypes/${a.id}/DESIGN.md`] = read(path.join(root, 'src', 'archetypes', a.id, 'DESIGN.md')) + designReference(a, theme);
     files[`archetypes/${a.id}/gallery.html`] = galleryPage(a, theme);
     for (const r of a.recipes) files[`archetypes/${a.id}/recipes/${r.name}.html`] = recipePage(a, r);
+    // Its named patterns (a player, a job card …), drawn in it, for design_reference to read from the build
+    files[`archetypes/${a.id}/showcase.json`] = `${JSON.stringify({ language: a.id, arrangement: arrangementOf(a), patterns: showcasePatterns(a) }, null, 2)}\n`;
   }
   files['css/tailwind.css'] = emitTailwindCss();
   files['catalog.json'] = `${JSON.stringify(buildCatalog(version), null, 2)}\n`;
@@ -348,3 +351,5 @@ export { designReference } from './archetypes/reference';
 /** The design fingerprint (docs/design-fingerprint.md): the probe, and fingerprint.json and checks.json from its measurements. */
 export * from './fingerprint';
 export { arrangementsFrom } from './showcase/arrange';
+/** Every component's example markup, as the catalog carries it (`catalog.json` → components[].examples). */
+export { componentExamples } from './components/examples';
