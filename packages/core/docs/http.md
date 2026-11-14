@@ -108,17 +108,13 @@ a `tracer`, every request runs inside an `http.request` span tagged with method 
 ## Webhooks
 
 ```ts
-class StripeAuth extends SignatureAuthController {
-  readonly provider = 'stripe';
-  readonly signatureHeader = 'stripe-signature';
-  protected async verifySignature(signature: string, rawBody: Buffer) {
-    return verifyStripeSignature(signature, rawBody, secret); // constant-time compare
-  }
-}
+import { StripeWebhookAuth, WebhookController, WebhookServer } from '@mariachi/webhooks';
 
 class StripeWebhooks extends WebhookController {
   readonly prefix = 'stripe';
-  readonly auth = new StripeAuth();
+  // Checks `Stripe-Signature` over the raw body, refuses a stale timestamp, dedups on the event id.
+  // Also shipped: GitHubWebhookAuth, StandardWebhookAuth (Svix, Clerk, Resend, ...) and HmacWebhookAuth.
+  readonly auth = new StripeWebhookAuth({ secret: stripeWebhookSecret });
   init(): void {
     // queue mode: acknowledge with 202 fast, process in a job (retries, DLQ)
     this.post('/events', { mode: 'queue', jobName: 'stripe-event' }, async (_ctx, body) => body);

@@ -6,7 +6,7 @@ job with retries.
 ```
 POST /webhooks/github/events
   → WebhookServer: raw body captured, request logged (secrets redacted)
-  → SignatureAuthController: HMAC over the raw bytes, constant-time compare
+  → GitHubWebhookAuth: HMAC over the raw bytes, constant-time compare
   → dedup on the delivery id (idempotency store)
   → route handler: returns the payload
   → mode 'queue': enqueue job, respond 202    |    mode 'direct': communication.call(procedure), respond 200
@@ -15,41 +15,34 @@ POST /webhooks/github/events
 Prefer `queue` mode for anything slower than a few hundred milliseconds or anything that calls other
 APIs. Providers time out and retry quickly; the job gives you your own retries and a dead-letter queue.
 
-## 1. Verify the signature: `src/webhooks/github.auth.ts`
+## 1. Verify the signature
 
-```ts
-import { createHmac, timingSafeEqual } from 'node:crypto';
-import { SignatureAuthController } from '@mariachi/webhooks';
+`@mariachi/webhooks` ships the common schemes, so there's usually no class to write:
 
-export class GitHubWebhookAuth extends SignatureAuthController {
-  readonly provider = 'github';
-  readonly signatureHeader = 'x-hub-signature-256';
-  protected readonly eventIdHeader = 'x-github-delivery';   // enables dedup
+| Sender | Authenticator | Deduplicated on |
+| --- | --- | --- |
+| GitHub | `new GitHubWebhookAuth({ secret })` | `X-GitHub-Delivery` |
+| Stripe, and senders that copy its `t=…,v1=…` header | `new StripeWebhookAuth({ secret })` (`header`, `provider` to adapt it) | the body's `id` |
+| Standard Webhooks and Svix (Clerk, Resend, ...) | `new StandardWebhookAuth({ secret })` | `webhook-id` / `svix-id` |
+| Anything with one HMAC header | `new HmacWebhookAuth({ provider, secret, header, eventIdHeader?, algorithm?, encoding?, prefix? })` | the header you name |
 
-  constructor(private readonly secret: string) {
-    super();
-  }
-
-  protected async verifySignature(signature: string, rawBody: Buffer): Promise<boolean> {
-    const expected = `sha256=${createHmac('sha256', this.secret).update(rawBody).digest('hex')}`;
-    const a = Buffer.from(signature);
-    const b = Buffer.from(expected);
-    return a.length === b.length && timingSafeEqual(a, b);
-  }
-}
-```
+Each one checks the exact bytes received, compares in constant time, refuses a timestamp more than
+five minutes off where the scheme signs one (`toleranceSeconds`), and takes a list of secrets while
+one is being rotated. `resolveTenant: (req) => req.params.tenant` maps a delivery to a tenant. A
+rejected delivery is logged with the reason and answered 401.
 
 Always verify over `rawBody`, never over re-serialized JSON: key order and whitespace change the bytes.
-Override `resolveTenant(req)` if a delivery maps to a tenant (for example, from a path parameter). For
-generic HMAC schemes, `hmacSignatureStrategy` in api-facade does the same thing without a class.
-Provider packages ship ready-made controllers (`ClerkWebhookController`, `FusionAuthWebhookHandler`),
-and billing verifies Stripe signatures itself.
+The same checks are plain functions in `@mariachi/webhooks/verify` (`verifyGitHubWebhook`,
+`verifyStripeWebhook`, `verifyStandardWebhook`, `verifyHmacSignature`), with no HTTP server behind
+them, for use anywhere else. For a scheme none of them covers, extend `SignatureAuthController` and
+implement `verifySignature` with `crypto.timingSafeEqual`. Provider packages ship ready-made
+controllers (`ClerkWebhookController`, `FusionAuthWebhookHandler`), and billing verifies Stripe's
+billing events itself.
 
 ## 2. Route: `src/webhooks/github.controller.ts`
 
 ```ts
-import { WebhookController } from '@mariachi/webhooks';
-import { GitHubWebhookAuth } from './github.auth';
+import { type GitHubWebhookAuth, WebhookController } from '@mariachi/webhooks';
 
 export class GitHubWebhookController extends WebhookController {
   readonly prefix = 'github';
@@ -98,7 +91,7 @@ const webhooks = new WebhookServer(
     communication,                                      // direct mode
     idempotency: new RedisIdempotencyStore(redis),      // dedup by provider + delivery id
   },
-).registerController(new GitHubWebhookController(new GitHubWebhookAuth(secrets.GITHUB_WEBHOOK_SECRET)));
+).registerController(new GitHubWebhookController(new GitHubWebhookAuth({ secret: secrets.GITHUB_WEBHOOK_SECRET })));
 
 lifecycle.startup.register({ name: 'webhooks', priority: 100, fn: async () => void (await webhooks.listen(config.server.webhookPort)) });
 lifecycle.shutdown.register({ name: 'webhooks', priority: 100, fn: () => webhooks.close() });
