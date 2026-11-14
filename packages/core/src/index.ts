@@ -58,7 +58,7 @@ export type {
   TenantEntity,
 } from './types';
 
-export { PERSONAL_TENANT_PREFIX, personalTenantId, parsePersonalTenant, isPersonalTenant, isReservedTenantId, claimsReservedTenant } from './tenant';
+export { PERSONAL_TENANT_PREFIX, personalTenantId, parsePersonalTenant, isPersonalTenant, isReservedTenantId, markPersonalTenant, claimsReservedTenant } from './tenant';
 
 export {
   type Result,

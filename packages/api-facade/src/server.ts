@@ -190,7 +190,7 @@ export class FastifyAdapter {
         identity = await this.resolveIdentity(req, strategies);
         if (!identity) throw new AuthError('auth/unauthorized', 'Authentication required');
         if (!identity.tenantId) throw new TenancyError('tenancy/missing-tenant', 'Identity has no tenant');
-        // A `user:` tenant is only ever given by withPersonalTenants; one that came from a token's own claim is forged.
+        // A `user.` tenant is only ever given by withPersonalTenants; one that came from a token's own claim is forged.
         if (claimsReservedTenant(identity)) throw new TenancyError('tenancy/reserved-tenant', 'Identity names a reserved personal tenant');
         const requested = header(req, tenantHeader);
         if (requested && requested !== identity.tenantId && identity.identityType !== 'service') {

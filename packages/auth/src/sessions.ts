@@ -1,5 +1,5 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { AuthError } from '@mariachi/core';
+import { AuthError, isReservedTenantId } from '@mariachi/core';
 import type { AuthenticationAdapter, ResolvedIdentity, SessionInfo } from './types';
 
 export interface SessionRecord extends SessionInfo {
@@ -49,6 +49,9 @@ export class SessionManager implements AuthenticationAdapter {
     userAgent?: string;
     ipAddress?: string;
   }): Promise<{ token: string; session: SessionInfo }> {
+    if (isReservedTenantId(input.tenantId)) {
+      throw new AuthError('auth/reserved-tenant', 'A session never stores a personal tenant: create it with an empty tenantId and verify through withPersonalTenants');
+    }
     const token = randomBytes(32).toString('base64url');
     const now = new Date();
     const record: SessionRecord = {

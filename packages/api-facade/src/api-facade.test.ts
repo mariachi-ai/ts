@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { createHmac } from 'node:crypto';
-import { AuthError } from '@mariachi/core';
+import { AuthError, markPersonalTenant } from '@mariachi/core';
 import { MemoryRateLimiter } from '@mariachi/rate-limit';
 import {
   BaseController,
@@ -193,14 +193,14 @@ describe('tenants on a verified identity', () => {
   });
 
   it('accepts a personal tenant given by withPersonalTenants', async () => {
-    const res = await get(person({ tenantId: 'user:main:u1', personalTenant: true }));
+    const res = await get(markPersonalTenant(person({ tenantId: 'user.main.u1' })));
     expect(res.statusCode).toBe(200);
-    expect(res.json()).toEqual({ id: ID, tenantId: 'user:main:u1' });
+    expect(res.json()).toEqual({ id: ID, tenantId: 'user.main.u1' });
   });
 
-  it("refuses a user: tenant that came from the token's own claim", async () => {
-    for (const forged of ['user:main:alice', 'user:alice', 'user:']) {
-      const res = await get(person({ userId: 'mallory', tenantId: forged }));
+  it("refuses a user. tenant that came from the token's own claim, even with a property that says otherwise", async () => {
+    for (const forged of ['user.main.alice', 'user.alice', 'user.']) {
+      const res = await get({ ...person({ userId: 'mallory', tenantId: forged }), personalTenant: true } as ResolvedIdentity);
       expect(res.statusCode, forged).toBe(403);
       expect(res.json<{ error: { code: string } }>().error.code).toBe('tenancy/reserved-tenant');
     }

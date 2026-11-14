@@ -40,7 +40,7 @@ import { isPersonalTenant } from '@mariachi/core';
 const auth = withPersonalTenants(provider, { namespace: 'main' });   // any provider, JWTAdapter or SessionManager
 api.withAuthStrategy('session', bearerStrategy(auth));
 
-// A user with no organization now arrives with ctx.tenantId = 'user:main:<userId>'.
+// A user with no organization now arrives with ctx.tenantId = 'user.main.<userId>'.
 if (isPersonalTenant(ctx.tenantId)) { /* a single person's workspace: hide team features */ }
 ```
 
@@ -51,20 +51,26 @@ still theirs when the token names no organization.
 
 The rules, which are enforced and tested:
 
-- **Namespaced by issuer.** The id is `user:<namespace>:<userId>`. A user id is only unique within
-  its issuer, so each verifier gets a `namespace` (two verifiers share one only if they share a user
-  directory). Choose it once: changing it moves every user to a new, empty tenant.
+- **Namespaced by issuer.** The id is `user.<namespace>.<userId>`, the user id percent-encoded so
+  the id holds no colon or slash. A user id is only unique within its issuer, so each verifier gets
+  a `namespace` (two verifiers share one only if they share a user directory). Choose it once:
+  changing it moves every user to a new, empty tenant.
 - **Only for a person.** `identityType: 'session'` only; an API key or a service with no tenant
   keeps none.
 - **Only when the tenant is absent.** An organization's tenant passes through untouched.
-- **Never from a claim.** Every id starting with `user:` is reserved. A token that names one as its
-  tenant is refused: by the wrapper, by `JWTAdapter`, by the API facade (`tenancy/reserved-tenant`)
-  and by `createAuthMiddleware`, whether or not personal tenants are in use. Don't use ids starting
-  with `user:` for your own tenants.
+- **Never from a claim.** Every tenant id starting with `user.` is reserved (tenant ids only:
+  channel names, labels and other strings are unaffected). A token that names one as its tenant is
+  refused by the wrapper and by `JWTAdapter`, and the API facade (`tenancy/reserved-tenant`),
+  `createAuthMiddleware` and realtime's `handleConnect` refuse any identity that carries one
+  without the wrapper's mark, whether or not personal tenants are in use. The mark is a symbol on
+  the identity object, which no token payload can contain. Don't use ids starting with `user.` for
+  your own tenants.
 
-With `JWTAdapter`, also pass `requireTenant: false`, and sign such users' tokens with an empty
-`tenantId`; a token never carries a personal tenant itself. For realtime, pass `handleConnect` the
-identity from the same wrapped verifier.
+With `JWTAdapter`, also pass `requireTenant: false` and sign such users' tokens with an empty
+`tenantId`; with `SessionManager`, create their sessions with an empty `tenantId`. Neither a token
+nor a session ever stores a personal tenant: the wrapper gives it on every verification. For
+realtime, pass `handleConnect` the identity object the wrapped verifier returned (or a spread of
+it), so the mark comes with it.
 
 ## Flow: request → identity → context
 
