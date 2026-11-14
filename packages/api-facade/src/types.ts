@@ -16,6 +16,8 @@ export interface ResolvedIdentity {
   sessionId?: string;
   /** The verified token's claims, when the strategy's verifier returns them (e.g. `@mariachi/auth-gotrue`). */
   claims?: Record<string, unknown>;
+  /** Set by `withPersonalTenants` (`@mariachi/auth`) when it gave this person a personal tenant. */
+  personalTenant?: boolean;
 }
 
 /** @deprecated alias of ResolvedIdentity */

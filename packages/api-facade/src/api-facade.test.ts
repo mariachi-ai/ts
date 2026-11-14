@@ -175,3 +175,34 @@ describe('api-facade', () => {
     expect((await s.inject({ method: 'GET', url: `/api/users/${ID}`, headers: { cookie: 'sid=nope' } })).statusCode).toBe(401);
   });
 });
+
+describe('tenants on a verified identity', () => {
+  const ID = '6f1d2c3e-0000-4000-8000-000000000001';
+  const serverFor = (identity: ResolvedIdentity) =>
+    createApiServer({ name: 'tenants', logger: silent, prefix: '/api' })
+      .withAuthStrategy('session', bearerStrategy({ verify: async () => identity }))
+      .withAuth('session')
+      .registerController(new UsersController());
+  const get = (identity: ResolvedIdentity) => serverFor(identity).inject({ method: 'GET', url: `/api/users/${ID}`, headers: { authorization: 'Bearer t' } });
+  const person = (over: Partial<ResolvedIdentity>): ResolvedIdentity => ({ userId: 'u1', tenantId: '', scopes: ['users:read'], identityType: 'session', ...over });
+
+  it('refuses an identity with no tenant', async () => {
+    const res = await get(person({}));
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ error: { code: string } }>().error.code).toBe('tenancy/missing-tenant');
+  });
+
+  it('accepts a personal tenant given by withPersonalTenants', async () => {
+    const res = await get(person({ tenantId: 'user:main:u1', personalTenant: true }));
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual({ id: ID, tenantId: 'user:main:u1' });
+  });
+
+  it("refuses a user: tenant that came from the token's own claim", async () => {
+    for (const forged of ['user:main:alice', 'user:alice', 'user:']) {
+      const res = await get(person({ userId: 'mallory', tenantId: forged }));
+      expect(res.statusCode, forged).toBe(403);
+      expect(res.json<{ error: { code: string } }>().error.code).toBe('tenancy/reserved-tenant');
+    }
+  });
+});

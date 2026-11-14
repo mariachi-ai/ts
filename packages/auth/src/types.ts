@@ -29,6 +29,11 @@ export interface ResolvedIdentity {
   sessionId?: string;
   /** Raw verified claims, for provider-specific fields. */
   claims?: Record<string, unknown>;
+  /**
+   * Set by `withPersonalTenants` when it gave this person a personal tenant. A verifier never sets
+   * it from a token: a `user:` tenant without it is treated as forged.
+   */
+  personalTenant?: boolean;
 }
 
 export type IdentityPayload = Omit<ResolvedIdentity, 'identityType' | 'claims'>;

@@ -214,6 +214,7 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'webhooks/invalid-payload': 400,
   'tenancy/missing-tenant': 400,
   'tenancy/mismatch': 403,
+  'tenancy/reserved-tenant': 403,
   'tenancy/suspended': 403,
   'rate-limit/exceeded': 429,
   'rate-limit/unknown-tier': 500,

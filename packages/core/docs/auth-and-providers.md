@@ -26,6 +26,46 @@ Multi-tenant auth is consistent because every provider maps its own concepts int
 
 After verification, the rest of the stack (controllers, services, RBAC, tenancy) only sees `ctx.userId`, `ctx.tenantId`, and `ctx.scopes`. Authorization (`AuthorizationAdapter`) is tenant-aware: `grant(userId, role, tenantId)` and `can(identity, action, resource)` use `identity.tenantId` so roles are per-tenant.
 
+### Users with no organization: personal tenants
+
+Every provider above gives a user who belongs to no organization an empty `tenantId`, and the
+framework refuses an identity with no tenant (`tenancy/missing-tenant`), because tenant-scoped
+tables, billing and roles all key on it. For an app where people sign up on their own (or before
+they join a team), wrap the verifier:
+
+```ts
+import { withPersonalTenants } from '@mariachi/auth';
+import { isPersonalTenant } from '@mariachi/core';
+
+const auth = withPersonalTenants(createOidcAuth({ issuer, audience }), { namespace: 'main' });
+api.withAuthStrategy('session', bearerStrategy(auth));
+
+// A user with no organization now arrives with ctx.tenantId = 'user:main:<userId>'.
+if (isPersonalTenant(ctx.tenantId)) { /* a single person's workspace: hide team features */ }
+```
+
+Everything downstream is unchanged: a personal tenant is a tenant with one member, so repositories
+scope to it, billing gives it its own customer and credits, and roles are granted in it. A user
+who later joins an organization arrives with that organization's tenant; their personal one is
+still theirs when the token names no organization.
+
+The rules, which are enforced and tested:
+
+- **Namespaced by issuer.** The id is `user:<namespace>:<userId>`. A user id is only unique within
+  its issuer, so each verifier gets a `namespace` (two verifiers share one only if they share a user
+  directory). Choose it once: changing it moves every user to a new, empty tenant.
+- **Only for a person.** `identityType: 'session'` only; an API key or a service with no tenant
+  keeps none.
+- **Only when the tenant is absent.** An organization's tenant passes through untouched.
+- **Never from a claim.** Every id starting with `user:` is reserved. A token that names one as its
+  tenant is refused: by the wrapper, by `JWTAdapter`, by the API facade (`tenancy/reserved-tenant`)
+  and by `createAuthMiddleware`, whether or not personal tenants are in use. Don't use ids starting
+  with `user:` for your own tenants.
+
+With `JWTAdapter`, also pass `requireTenant: false`, and sign such users' tokens with an empty
+`tenantId`; a token never carries a personal tenant itself. For realtime, pass `handleConnect` the
+identity from the same wrapped verifier.
+
 ## Flow: request → identity → context
 
 1. **HTTP request** — Bearer token (or API key) is sent (e.g. `Authorization: Bearer <token>`).
