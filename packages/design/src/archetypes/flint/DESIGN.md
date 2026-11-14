@@ -13,7 +13,7 @@ task and file lists, diffs, and settings as grouped boxes. It is not an editor.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `flint` preset of `@mariachi/design` (`data-theme="flint"`,
@@ -31,7 +31,7 @@ pages (pricing, docs, sign-up); the app works in it too.
   amber in progress, blue links.
 - **The action is inverted.** The primary button is light grey on dark (`#e4e4e4` with near-black
   text) and near-black on light. There is no brand-coloured button.
-- **Compact.** UI text is 13px, meta 12px, tags 11px; buttons 28px, rows 28px. Titles stay at
+- **Compact.** UI text is 13px, meta 12px, tags 11px; buttons 28px, side-panel rows 31px. Titles stay at
   regular weight, never bold.
 - **Small radii.** 4px tags and keys, 6px buttons and inputs, 8px boxes, 10px dialogs, 12px the
   composer and settings groups. Pills only for chips and on public pages.
@@ -92,7 +92,9 @@ scales are in the reference at the end.
   - 18px for figures in a totals box;
   - 22px for page titles and plan names, regular weight, tracked −1.5%;
   - 36px and 52px display titles on public pages, regular weight, tracked −2%, line height 1.2.
-- **Weight.** 400 almost everywhere; 500 for card titles and a few labels. Never bold a title.
+- **Weight.** Two weights on every page: 400 for nearly everything, and 500, the one emphasis
+  weight, for box titles, badges, the wordmark, a 14px empty or error heading and bold words in text.
+  No 600 or 700 anywhere. Never bold a title: page titles and display titles are 400.
 - **Case.** Sentence case, including group labels. No uppercase labels.
 - **Figures.** Tabular figures for counts, diffs, times and prices.
 
@@ -167,7 +169,8 @@ All 36 of the library's components, as Flint draws them. Every one is in `galler
 **Navigation**
 - **Sidebar.** 240px on the sunken colour with a hairline on its right.
   - Top: the workspace as a ghost button with a small mark, then search and hide-panel icons.
-  - Rows are 28px, 13px at regular weight, a 16px icon, 6px corners; the current one is a grey step.
+  - Rows are 31px (6px above and below a 13px line), 13px at regular weight, a 16px icon, 6px
+    corners; the current one is a grey step.
   - Group labels are 12px muted, sentence case. Counts and key hints are muted text on the right.
   - The person's name and a settings icon sit at the bottom.
 - **Navbar** (public pages). 52px on the page colour, no line; 14px links in the text colour; "Log
@@ -184,7 +187,7 @@ All 36 of the library's components, as Flint draws them. Every one is in `galler
 **Data and content**
 - **Table.** Inside a hairline box with 8px corners:
   - 12px muted headers in sentence case, no fill;
-  - 13px rows split by hairlines, about 36px tall; hover is one grey step;
+  - 13px rows split by hairlines, about 38px tall; hover is one grey step;
   - names in the text colour, the rest muted; diff counts in green and red; status as a 6px dot and
     a word.
 - **Card.** The surface colour, a hairline, 8px corners, no shadow. Titles 13px at 500. Totals boxes
@@ -257,26 +260,76 @@ All 36 of the library's components, as Flint draws them. Every one is in `galler
 
 ## Page shapes (recipes)
 
+### The three families
+
+| | The app | Flows (onboarding, sign-in) | Public pages (pricing, reading) |
+| --- | --- | --- | --- |
+| Frame | The 240px side panel on the darkest step, then the work area; each area opens with a 40px title bar (breadcrumb left, quiet actions right) | Only a top line: the mark and wordmark at the left, the step or a way back at the right | The 52px site bar: mark and wordmark (500), 14px links, "Log in" ghost pill, main action inverted pill. Docs add a search box with "⌘K", a hairline under the bar and a sunken docs panel |
+| Column | The full work area; settings 672px | One centred column, 360–480px | Pricing up to 1344px; a docs article at most 672px with "On this page" at the right |
+| Titles | 22px regular page titles; 14px/500 empty and error headings; none on the task view | 22px regular | 52px pricing, 36px docs title, 22px section heads, all regular |
+| Running text | 13px | 13px | 14px |
+| Primary | Inverted, 6px corners | Inverted, 6px corners, full width with "↵" | Inverted pill |
+| Footer | None | None | None in the recipes |
+| On a phone | The side panel stacks above the work | The column fills the width with a 16px gutter | The site bar keeps its actions; the docs panel drops below the article |
+
+Light is meant for public pages and dark for the app, but each family works in both.
+
+### Signature moves
+
+1. **An inverted primary, one per view, with its key** ("Continue ↵", "Save schedule ⌘↵"); never an
+   orange button.
+2. **Two weights, 400 and 500, on every page;** titles at 400, however large.
+3. **31px one-line rows** in every side panel and picker, the detail or key in muted text at the right.
+4. **Neutral steps and hairlines:** the side panel a step darker than the work, boxes a step lighter,
+   1px lines at about 7%; no shadow on anything that sits on the page.
+5. **The agent's work as quiet lines:** past-tense verbs, muted objects, a box only for a command or
+   a file list; changes as green and red counts.
+6. **Keys beside actions** in muted text: ⌘N, ⌘K, esc, ↵.
+
+### How a screen is assembled
+
+- **It opens with** where you are: the title bar's breadcrumb in the app, the site bar on public
+  pages, the mark and step in a flow. Then the title (if the screen has one) with one muted line.
+- **Reading order:** the title, then what needs a decision (totals, the thread), then the list or table
+  that holds the rest. The one inverted action sits where the eye ends: the title bar's right, the end
+  of a flow, the bottom right of a dialog.
+- **How much one screen does:** one job. The task view is the exception: the thread and its change side
+  by side, each with its own action.
+- **When narrow:** panels stack (app side panel first; docs article first); tables scroll inside their
+  box; nothing is hidden behind a menu in the recipes.
+- **Too much content:** lists page with "Showing 1–6 of 14" and Prev / Next; threads keep old steps as
+  one-line rows; long settings split into more groups, never into tabs.
+- **None:** the work area shows the empty state centred under its title bar; the side panel stays.
+
+### The recipes
+
 - **Dashboard.** The app frame: a 40px title bar with a range button and an inverted Refresh; a
   22px regular title and one muted line; a totals box split by hairlines; a two-tone bar chart in a
-  box; a boxed table of open changes (diff counts, check dots, split review bars), then "Showing 1–6
-  of 14" and Prev / Next.
+  box titled at 13px/500; a boxed table of open changes (diff counts, check dots, split review bars),
+  then "Showing 1–6 of 14" and Prev / Next.
 - **List and detail.** The agent workspace: tasks grouped by repository in the side panel with state
   marks; the thread (the person's message in a box, "Thought 6s", quiet tool steps, a command box,
   a files-changed box, pill chips) with the composer at the bottom; beside it the changed file with
   tabs, a breadcrumb, Undo and an inverted Keep, and green and red diff lines.
-- **Onboarding.** One narrow step: a three-segment step bar, a 22px title, one muted line, a boxed
-  checklist of repositories, one wide inverted Continue with its key, a ghost Skip.
-- **Settings.** A settings side panel with a back link and one group label; a 42rem column with a
+- **Onboarding.** One narrow step: the mark and "Step 2 of 3", a three-segment step bar, a 22px
+  title, one muted line, a box of one-line 32px repository rows (checkbox, name, muted detail at the
+  right) under a 13px/500 header, one wide inverted Continue with its key, a ghost Skip.
+- **Settings.** A settings side panel with a back link and one group label; a 672px column with a
   22px title, then muted group labels above 12px-cornered boxes of rows (title and muted line left;
   green switch, select, input or small button right).
-- **Empty state.** Centred in the panel: a 40px thin icon, a 14px medium heading, one muted line,
+- **Empty state.** Centred in the panel: a 40px thin icon, a 14px heading at 500, one muted line,
   an inverted action and a secondary, and key hints below.
-- **Pricing.** The public site in light: a 52px bar with pill actions, a 52px regular title, a pill
-  billing toggle, four plan boxes (4px corners, 22px name, 36px price, full-width pills, the
-  recommended one inverted with an orange-tinted tag), a note on taxes, a comparison table and
-  questions.
+- **Pricing.** The public site: a 52px bar with pill actions, a 52px regular title, a pill billing
+  toggle, four plan boxes (4px corners, 22px name, 36px price, full-width pills, the recommended one
+  inverted with an orange-tinted tag), a note on taxes, a comparison table and questions.
 - **Errors.** The field, dialog, run, toast and full-page errors above, as one page.
+- **Reading.** A public docs page: the site bar with a search box and "⌘K", a sunken docs panel of 31px
+  text rows under muted group labels (the current page in the link colour, no fill), one article
+  column (a muted section name, a 36px regular title, 14px text at a relaxed line height, a code block,
+  22px section heads, Previous / Next), and "On this page" with "Copy as text" at the right.
+- **Sign-in.** The flow's top line and one 360px column: a 22px regular title, one muted line, two
+  secondary ways in, an "or" rule, an email field and a wide inverted Continue with "↵", then a muted
+  line to create an account.
 
 ## Words
 
