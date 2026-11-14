@@ -114,7 +114,6 @@ this.post('/chat', { schema: { body: chatInput } }, async (ctx, body) => {
   return sseResponse(
     (async function* () {
       for await (const token of tokens) yield { event: 'token', data: { token } };
-      yield { event: 'done', data: {} };
     })(),
   );
 });
@@ -130,10 +129,15 @@ this.get('/export.csv', async (ctx) =>
   `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`.
 - `streamResponse(body, { contentType, status, headers })` takes an async iterable of strings and
   bytes, or a Node stream.
+- **Every event stream ends with `event: done` or `event: error`**, and the client closes on
+  either. Without one, a browser's `EventSource` takes the closed stream for a dropped connection
+  and reconnects, which for a model stream is a second, paid call. `{ done: () => ({ usage }) }`
+  puts data in the `done` event, worked out once the source has ended; `{ done: false }` sends
+  none. For the same reason, leave `id` off events a reconnect couldn't resume from.
 - Authentication, validation and the rate limit run before the first byte, so they fail with a
   normal error response. After that there's no status left to change: if an event stream's source
-  throws, the client gets a last `event: error` whose data is the usual error envelope; a byte
-  stream is cut off and the error logged.
+  throws, the last event is `event: error` whose data is the usual error envelope; a byte stream
+  is cut off and the error logged.
 - When the client disconnects, the iterable is ended (its `finally` blocks run) and
   `ctx.request.signal` aborts. Pass the signal to slow upstream calls, such as a model request, so
   they stop too.

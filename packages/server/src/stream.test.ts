@@ -75,6 +75,35 @@ describe('encodeSse', () => {
     expect(bad).not.toContain('never sent');
   });
 
+  it('ends a clean stream with a done event when asked, carrying data worked out at the end', async () => {
+    let tokens = 0;
+    async function* counted() {
+      for (const token of ['a', 'b']) {
+        tokens++;
+        yield token;
+      }
+    }
+    expect(await text(encodeSse(from(['a']), 0, onError, true))).toBe('data: a\n\nevent: done\ndata: {}\n\n');
+    expect(await text(encodeSse(counted(), 0, onError, () => ({ usage: { tokens } })))).toBe('data: a\n\ndata: b\n\nevent: done\ndata: {"usage":{"tokens":2}}\n\n');
+    expect(await text(encodeSse(from(['a']), 0, onError, false))).toBe('data: a\n\n');
+  });
+
+  it('sends error, not done, when the source fails or the done data can\'t be worked out', async () => {
+    async function* failing() {
+      yield 'one';
+      throw new Error('upstream went away');
+    }
+    const failed = await text(encodeSse(failing(), 0, onError, true));
+    expect(failed).toContain('event: error');
+    expect(failed).not.toContain('event: done');
+    const badDone = await text(
+      encodeSse(from(['a']), 0, onError, () => {
+        throw new Error('no usage');
+      }),
+    );
+    expect(badDone).toBe('data: a\n\nevent: error\ndata: {"message":"no usage"}\n\n');
+  });
+
   it('ends the source when the reader stops', async () => {
     let cleaned = false;
     async function* source() {
@@ -128,7 +157,7 @@ describe('streaming responses over a socket', () => {
       if (done) break;
       rest += decoder.decode(value);
     }
-    expect(rest).toBe('event: token\ndata: two\n\n');
+    expect(rest).toBe('event: token\ndata: two\n\nevent: done\ndata: {}\n\n');
   });
 
   it('ends an event stream with an error event carrying the error envelope', async () => {
@@ -158,6 +187,7 @@ describe('streaming responses over a socket', () => {
     ]);
     const body = await (await fetch(`${base}/events`)).text();
     expect(body).toMatch(/^data: one\n\nevent: error\ndata: \{"error":\{"code":"notes\/not-found","message":"No such note","traceId":"[^"]+"\}\}\n\n$/);
+    expect(body).not.toContain('event: done');
     const crash = await (await fetch(`${base}/crash`)).text();
     expect(crash).toContain('"code":"internal","message":"Internal Server Error"');
     expect(crash).not.toContain('secret detail');

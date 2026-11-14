@@ -14,8 +14,9 @@ those needs the raw Fastify instance (whose routes skip authentication, validati
   cookie and refuses a state-changing request that another site caused (`auth/cross-site-request`,
   403), judged by `Sec-Fetch-Site` and `Origin`. `assertSameOrigin` is the check on its own.
 - **Streams.** A handler may return `sseResponse(asyncIterable)` or `streamResponse(iterable | Readable,
-  { contentType })`. Events are sent as produced, with a heartbeat; a failing source ends an event
-  stream with `event: error` carrying the error envelope. `ctx.request.signal` aborts when the client
+  { contentType })`. Events are sent as produced, with a heartbeat. An event stream always ends
+  with `event: done` (optionally carrying data such as usage) or, when its source fails, `event: error`
+  carrying the error envelope, so a client can tell a finished stream from a dropped connection. `ctx.request.signal` aborts when the client
   disconnects, and the iterable is ended.
 - **Uploads.** `upload` on a route takes `multipart/form-data`: files in `ctx.request.files`, text
   fields as the validated body, with limits on count, size and declared type. Parsed after

@@ -288,11 +288,15 @@ describe('streams from controllers', () => {
     init() {
       this.post('', { schema: { body: z.object({ prompt: z.string() }) } }, async (ctx, body) => {
         const tokens = await this.call<AsyncIterable<string>>(ctx, 'chat.reply', body);
+        let count = 0;
         return sseResponse(
           (async function* (): AsyncGenerator<ServerSentEvent> {
-            for await (const token of tokens) yield { event: 'token', data: { token } };
-            yield { event: 'done', data: {} };
+            for await (const token of tokens) {
+              count++;
+              yield { event: 'token', data: { token } };
+            }
           })(),
+          { done: () => ({ usage: { tokens: count } }) },
         );
       });
       this.get('export', async (ctx) => {
@@ -318,7 +322,7 @@ describe('streams from controllers', () => {
     const res = await app().inject({ method: 'POST', url: '/chat', headers: auth, payload: { prompt: 'hello there' } });
     expect(res.headers['content-type']).toBe('text/event-stream; charset=utf-8');
     expect(res.body).toBe(
-      [...['hello', 'there', 'for', 'u1'].map((token) => `event: token\ndata: ${JSON.stringify({ token })}\n\n`), 'event: done\ndata: {}\n\n'].join(''),
+      [...['hello', 'there', 'for', 'u1'].map((token) => `event: token\ndata: ${JSON.stringify({ token })}\n\n`), 'event: done\ndata: {"usage":{"tokens":4}}\n\n'].join(''),
     );
     expect((await app().inject({ method: 'POST', url: '/chat', payload: { prompt: 'x' } })).statusCode).toBe(401);
     expect((await app().inject({ method: 'POST', url: '/chat', headers: auth, payload: {} })).statusCode).toBe(400);

@@ -25,6 +25,13 @@ export interface ServerSentEvent {
 export interface SseOptions {
   /** A comment line this often keeps proxies from closing a quiet stream. Default 15000; 0 turns it off. */
   heartbeatMs?: number;
+  /**
+   * The last event of a stream that ended cleanly: `event: done`. A browser's `EventSource` reconnects
+   * when a stream just closes, which for a model stream is a second, paid call; the client closes on
+   * `done` (or `error`) instead. A function supplies the event's data once the source has ended
+   * (`() => ({ usage })`); `false` sends none. Default: `done` with `{}`.
+   */
+  done?: boolean | (() => unknown);
   /** Default 200. */
   status?: number;
   headers?: Record<string, string>;
@@ -55,8 +62,9 @@ export const streamResponse = (body: AsyncIterable<StreamChunk> | Readable, opti
 
 /**
  * Server-sent events from an async iterable (or generator): each item is one event, or a string for
- * its data. The stream ends when the iterable does. If it throws, the client gets a last
- * `event: error` with the usual error envelope as its data, and the stream ends.
+ * its data. The stream ends when the iterable does, with a last `event: done`. If it throws, the last
+ * event is `event: error` with the usual error envelope as its data. A client closes on either, so
+ * it can tell a finished stream from a dropped connection.
  */
 export const sseResponse = (events: AsyncIterable<ServerSentEvent | string>, options?: SseOptions) => new SseResponse(events, options);
 
@@ -84,12 +92,14 @@ const BEAT = Symbol('beat');
 
 /**
  * Events as text, with a comment line whenever `heartbeatMs` passes without one. `onError` turns a
- * failure of the source into the last event. Ending this generator ends the source too.
+ * failure of the source into the last event; `done` (see `SseOptions.done`) is the last event of a
+ * clean end. Ending this generator ends the source too.
  */
 export async function* encodeSse(
   events: AsyncIterable<ServerSentEvent | string>,
   heartbeatMs: number,
   onError: (error: unknown) => ServerSentEvent,
+  done: boolean | (() => unknown) = false,
 ): AsyncGenerator<string> {
   const iterator = events[Symbol.asyncIterator]();
   let pending: Promise<IteratorResult<ServerSentEvent | string>> | undefined;
@@ -119,7 +129,17 @@ export async function* encodeSse(
         continue;
       }
       pending = undefined;
-      if (next.done) return;
+      if (next.done) {
+        if (done === false) return;
+        let last: string;
+        try {
+          last = formatSseEvent({ event: 'done', data: typeof done === 'function' ? done() : {} });
+        } catch (error) {
+          last = formatSseEvent(onError(error));
+        }
+        yield last;
+        return;
+      }
       let text: string;
       try {
         text = formatSseEvent(next.value);

@@ -297,11 +297,16 @@ export class FastifyServerAdapter implements ServerAdapter {
                 reply.header('cache-control', 'no-cache, no-transform');
                 // nginx and its kin buffer responses unless told not to
                 reply.header('x-accel-buffering', 'no');
-                source = encodeSse(result.events, result.options.heartbeatMs ?? 15_000, (error) => {
-                  const envelope = toErrorEnvelope(error, ctx.traceId);
-                  if (envelope.status >= 500) ctx.logger.error({ err: error }, 'event stream failed');
-                  return { event: 'error', data: envelope.body };
-                });
+                source = encodeSse(
+                  result.events,
+                  result.options.heartbeatMs ?? 15_000,
+                  (error) => {
+                    const envelope = toErrorEnvelope(error, ctx.traceId);
+                    if (envelope.status >= 500) ctx.logger.error({ err: error }, 'event stream failed');
+                    return { event: 'error', data: envelope.body };
+                  },
+                  result.options.done ?? true,
+                );
               } else {
                 reply.header('content-type', result.options.contentType ?? 'application/octet-stream');
                 source = result.body;
