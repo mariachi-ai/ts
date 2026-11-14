@@ -95,9 +95,57 @@ describe('drawing', () => {
   });
   it('says which kinds have a template, and refuses the rest', () => {
     expect(isDrawn('player')).toBe(true);
-    expect(isDrawn('map')).toBe(false);
-    expect(showcaseKinds).toContain('dashboard_tile');
-    expect(() => drawShowcase('map' as never, archetypes[0])).toThrow(/No showcase template/);
+    expect(isDrawn('map')).toBe(true);
+    expect(isDrawn('other')).toBe(false);
+    expect([...drawnKinds].sort()).toEqual([...showcaseKinds].sort());
+    expect(() => drawShowcase('other' as never, archetypes[0])).toThrow(/No showcase template/);
+  });
+  it("escapes the person's content in every kind", () => {
+    const x = '<img src=x onerror=1>';
+    const html = [
+      drawShowcase('table', archetypes[0], { ...exampleContent.table, rows: [[x, x, x, x, { label: x, tone: 'info' }]] }),
+      drawShowcase('chat_thread', archetypes[0], {
+        ...exampleContent.chat_thread,
+        messages: [{ from: 'them', text: x, time: x }],
+      }),
+      drawShowcase('form', archetypes[0], {
+        ...exampleContent.form,
+        fields: [{ kind: 'choice', label: x, options: [x], value: x }],
+      }),
+      drawShowcase('map', archetypes[0], { ...exampleContent.map, query: x }),
+      drawShowcase('dashboard_tile', archetypes[0], { ...exampleContent.dashboard_tile, value: x }),
+    ].join('');
+    expect(html).not.toContain('<img src=x');
+  });
+  it('folds minor columns under the first cell, and the status under the value where room is short', () => {
+    const narrow = archetypes.find((a) => arrangementOf(a).width === 'narrow');
+    const wide = archetypes.find((a) => {
+      const r = arrangementOf(a);
+      return r.width === 'wide' && r.density !== 'airy' && r.primary !== 'inline';
+    });
+    expect(narrow && wide).toBeTruthy();
+    const heads = (html: string) => [...html.matchAll(/<th scope="col"[^>]*>([^<]*)</g)].map((m) => m[1]);
+    // Client and Due never get a column of their own
+    expect(heads(drawShowcase('table', wide!))).not.toContain('Client');
+    expect(heads(drawShowcase('table', wide!))).toContain('Status');
+    expect(heads(drawShowcase('table', narrow!))).not.toContain('Status');
+    expect(drawShowcase('table', narrow!)).toContain('Low Orchard Café');
+  });
+  it('draws a dense language’s week as a grid of slots, and the others as a strip of days', () => {
+    const dense = archetypes.find((a) => arrangementOf(a).density === 'dense');
+    const airy = archetypes.find((a) => arrangementOf(a).density === 'airy');
+    expect(drawShowcase('calendar', dense!)).not.toContain('aria-pressed');
+    expect(drawShowcase('calendar', airy!)).toContain('aria-pressed="true"');
+  });
+  it('lays a map out by where the language puts pictures', () => {
+    const by = (m: string) => archetypes.find((a) => arrangementOf(a).media === m);
+    const leads = by('leads');
+    const beside = by('beside');
+    const thumb = by('thumb');
+    // Numbered pins and rows for a list; a floating card over the map where pictures sit beside
+    expect(drawShowcase('map', thumb!)).toMatch(/<b [^>]*>1<\/b>/);
+    expect(drawShowcase('map', beside!)).toContain('position: absolute; inset-inline');
+    expect(drawShowcase('map', leads!)).toContain('more nearby');
   });
   it('gives each language its named patterns, with aliases', () => {
     const p = showcasePatterns(archetypes[0]);

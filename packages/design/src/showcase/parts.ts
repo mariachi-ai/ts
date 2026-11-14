@@ -96,3 +96,14 @@ export const avatars = (c: Ctx, people: string[]) =>
   people.length
     ? `<div class="m-avatar-group">${people.map((p) => `<span class="m-avatar"${c.arr.density === 'dense' ? ' data-size="sm"' : ''}>${esc(p)}</span>`).join('')}</div>`
     : '';
+
+/**
+ * A map's ground: abstract streets, a park and water, drawn in the language's own surface tokens so it follows its
+ * paint and its mode. No real place, no tiles. Fills its box (`slice`), so any aspect works.
+ */
+export function mapGround(): string {
+  const f = (token: string) => `style="fill: var(--m-color-${token})"`;
+  const road = (d: string, w: number) =>
+    `<path d="${d}" style="fill: none; stroke: var(--m-color-border-default); stroke-width: ${w + 2}"/><path d="${d}" style="fill: none; stroke: var(--m-color-bg-surface); stroke-width: ${w}"/>`;
+  return `<svg viewBox="0 0 400 300" preserveAspectRatio="xMidYMid slice" aria-hidden="true" style="position: absolute; inset: 0; inline-size: 100%; block-size: 100%; display: block"><rect width="400" height="300" ${f('bg-sunken')}/><path d="M250 0 C300 30 360 20 400 40 V0Z M0 230 C60 210 110 250 170 300 H0Z" ${f('info-bg')}/><path d="M40 40 C80 20 130 30 140 70 C150 110 100 130 60 120 C20 110 10 60 40 40Z" ${f('success-bg')}/><path d="M290 170 h70 v60 h-70z M200 40 h40 v50 h-40z M210 200 h50 v40 h-50z" ${f('bg-surface')} opacity="0.6"/>${road('M0 160 C120 150 260 175 400 140', 12)}${road('M180 0 C170 100 200 200 190 300', 12)}${road('M0 90 L400 70', 6)}${road('M280 0 L320 300', 6)}${road('M60 300 L120 150', 5)}</svg>`;
+}

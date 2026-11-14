@@ -52,4 +52,4 @@ export { lucidePaths, lucideSvg } from './archetypes/lucide';
 export { resolveDeep, toPx } from './archetypes/reference';
 // Showcases: someone's key component drawn in any language (New project's look step, design_reference)
 export { arrangementOf, arrangements, drawnKinds, drawShowcase, exampleContent, isDrawn, showcaseKinds, showcasePatterns } from './showcase';
-export type { Arrangement, CardContent, DrawnKind, ListRowContent, PlayerContent, ShowcaseContent, ShowcaseKind, ShowcasePattern } from './showcase';
+export type { Arrangement, CalendarContent, CardContent, ChatThreadContent, DashboardTileContent, DrawnKind, FeedItemContent, FormContent, FormField, ListRowContent, MapContent, PlayerContent, ShowcaseContent, ShowcaseKind, ShowcasePattern, TableCell, TableContent } from './showcase';
