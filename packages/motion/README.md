@@ -93,8 +93,8 @@ component of their own. `defineTheme` gives every theme all of them, so every ki
 The keyframes `m-spin`, `m-pulse` and `m-shimmer` are in both this file and `@mariachi/design`'s `css/motion.css`,
 identical (a test holds them so), so the library's components keep working with or without this file.
 
-## For Ensemble's agent and new projects
+## For coding agents and new projects
 
-- **The agent (Loom):** writes the markup above by default. Every list and card region has a loading state shaped like it, actions that wait use `data-busy`, new content enters, and charts come from `chart()`. `design_reference` reads `dist/catalog.json`.
-- **New projects (Juno):** the copy-in brings `dist/motion.css`, `dist/motion.js` and `dist/charts.js` (with their `.d.ts`) into `src/design/motion/`, adds their shas and the package version to `kit.json`, and the starter imports the CSS and calls `enhance()` once. `@mariachi/design`'s kit build already does this: every `dist/kits/<id>/` has a `motion/` folder, and its `kit.json` has `motion: { package, version, files }` with each file's sha in `files`.
+- **A coding agent** writes the markup above by default. Every list and card region has a loading state shaped like it, actions that wait use `data-busy`, new content enters, and charts come from `chart()`. `design_reference` reads `dist/catalog.json`.
+- **A new project's copy-in** brings `dist/motion.css`, `dist/motion.js` and `dist/charts.js` (with their `.d.ts`) into `src/design/motion/`, adds their shas and the package version to `kit.json`, and the starter imports the CSS and calls `enhance()` once. `@mariachi/design`'s kit build already does this: every `dist/kits/<id>/` has a `motion/` folder, and its `kit.json` has `motion: { package, version, files }` with each file's sha in `files`.
 - **The checks:** the fingerprint probe gains `loading.skeleton`, `motion.enter` and `charts.animated`, and the rebuild gate fails a one-shot build without them.
