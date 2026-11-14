@@ -10,6 +10,6 @@ What Cirrus refuses to do. Each refusal carries how it is known: `observed` cite
 6. **Never red for an ordinary expense.** Red is over budget, an error or a red account dot. Money out is navy. `observed`: the activity and budgets screenshots.
 7. **Never a ruled grid for activity.** Rows are grouped by day with space; the only rules are under the header bands and between settings rows. `observed`: the activity screenshot.
 8. **Never a fourth weight in the app**, except the sign-in card's bold "create an account" link. 450, 550 and 620. `observed`: the sign-in card uses 450/550/620/700, with 700 only on that link; the site uses 430/500/550/600.
-9. **Never a page without one big line.** Every app page's first window carries a 28px figure or title; public pages a 48px title. `observed`: the source's largest text is 1.75–3 times the body on every measured kind (`type.headingRatio` [1.75, 3]).
+9. **Never a page without one big line.** Every app page's first window carries a 28px figure or title; public pages a 48px title (about 30px on a phone). `observed`: the source's largest text is 1.75–3 times the body on every measured kind (`type.headingRatio` [1.75, 3]).
 10. **Never a spinner over a page or a panel.** Skeleton bars at the size of what is coming; spinners only inside buttons. `inferred`: no page-level spinner on any studied screen.
 11. **Never a footer in the app, never a sidebar on a public page.** `observed`: the sign-in card and the app's 404 have neither; every site page ends with the footer.

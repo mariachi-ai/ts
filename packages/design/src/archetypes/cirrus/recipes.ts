@@ -348,6 +348,9 @@ ${detailRow('Labels', chip(`${dot('danger-solid', '0.375rem')} Birthday gifts`))
   'padding: 0; flex: 1; display: flex; flex-direction: column',
 );
 
+// A centred card's title (sign-in, a first-run step): 28px, about 24px on a phone (the sign-in card's title drops to 24px there)
+const cardTitle = 'font-size: clamp(var(--m-font-size-xl), 6.15vw, var(--m-font-size-2xl)); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
+
 // ── Onboarding ───────────────────────────────────────────────────────────────────────────────────
 const option = (id: string, title: string, desc: string, checked = false) =>
   `        <label for="${id}" class="m-cluster" data-gap="3" style="flex-wrap: nowrap; align-items: start; padding: var(--m-space-4); border: var(--m-border-width-thin) solid ${checked ? 'var(--m-color-accent-default)' : 'var(--m-color-border-default)'}; border-radius: var(--m-radius-lg); background: ${checked ? 'var(--m-color-accent-subtle)' : 'var(--m-color-bg-surface)'}; cursor: pointer">
@@ -364,8 +367,8 @@ const onboarding = `<main style="min-block-size: 100vh; display: grid; place-ite
           <span id="ci-onb-step" style="${muted}; font-size: var(--m-font-size-md)">Step 2 of 3</span>
           <progress class="m-progress" data-size="sm" value="2" max="3" aria-labelledby="ci-onb-step">2 of 3</progress>
         </div>
-        <h1 id="ci-onb-title" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Set up your first budget</h1>
-        <p style="${muted}; font-size: var(--m-font-size-lg); max-inline-size: 26rem">We looked at the last three months you connected. Change anything that doesn't look right.</p>
+        <h1 id="ci-onb-title" style="${cardTitle}">Set up your first budget</h1>
+        <p style="${muted}; font-size: var(--m-font-size-md); max-inline-size: 26rem">We looked at the last three months you connected. Change anything that doesn't look right.</p>
       </div>
       <div class="m-field">
         <label class="m-field-label" for="ci-onb-income">Monthly take-home pay</label>
@@ -491,6 +494,8 @@ const emptyState = shell(
 // ── The public site: header and footer ─────────────────────────────────────────────────────────
 // The header: transparent, the mark, muted 16px links, a white pill and a blue pill (both 550, as on the site)
 const siteButton = 'border-radius: var(--m-radius-full); font-weight: var(--m-font-weight-medium)';
+// The site's display title: 48px from a tablet up, about 30px on a phone (the site's titles drop to 30px there)
+const siteTitle = 'font-size: clamp(var(--m-font-size-2xl), 7.7vw, var(--m-font-size-4xl)); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
 const siteHeader = (current: string) => `  <header class="m-navbar" style="background: transparent">
     <a class="m-navbar-brand m-cluster" data-gap="2" href="#"><span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 2rem; block-size: 2rem; border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">${icon(I.wallet, 18)}</span>Kestrel</a>
     <nav class="m-navbar-nav" aria-label="Site">
@@ -532,7 +537,7 @@ ${siteHeader('Pricing')}
   <main class="m-container" style="padding-block: var(--m-space-16)">
     <div class="m-stack" data-gap="10" data-align="center">
       <div class="m-stack" data-gap="4" data-align="center" style="text-align: center">
-        <h1 style="font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Every feature, one price.</h1>
+        <h1 style="${siteTitle}">Every feature, one price.</h1>
         <p style="${muted}; font-size: var(--m-font-size-xl); max-inline-size: 36rem">Pay for the app, not for features. It works the same on every screen you use.</p>
       </div>
       <div class="m-tabs" data-variant="pill"><div class="m-tab-list" role="tablist" aria-label="Billing" style="padding: var(--m-space-1)">
@@ -647,9 +652,9 @@ ${siteHeader('Changelog')}
   <main class="m-container" style="padding-block: var(--m-space-12) var(--m-space-16)">
     <article class="m-stack" data-gap="10" aria-labelledby="ci-post">
       <div class="m-stack" data-gap="6" data-align="center" style="text-align: center">
-        <a class="m-button" data-size="sm" href="#" style="${siteButton}">${icon(I.left, 14)} Back</a>
+        <a class="m-button" data-size="sm" href="#" style="${siteButton}">${icon(I.left)} Back</a>
         <div class="m-cluster" data-gap="3" data-justify="center"><span class="m-badge" data-tone="success" style="border-radius: var(--m-radius-sm); font-family: var(--m-font-family-mono)">Web</span><time datetime="2026-04-09" style="${monoCaps}; ${muted}">Apr 09 2026</time></div>
-        <h1 id="ci-post" style="font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Split a payment</h1>
+        <h1 id="ci-post" style="${siteTitle}">Split a payment</h1>
       </div>
       ${leadPicture}
       <div class="m-stack" data-gap="5" style="max-inline-size: 40rem; margin-inline: auto; line-height: 1.6">
@@ -678,7 +683,7 @@ const signIn = `<main style="min-block-size: 100vh; display: grid; place-items: 
   <section class="m-card" style="inline-size: min(100%, 36rem); min-block-size: min(36rem, 100%); justify-content: center; padding: clamp(var(--m-space-6), 6vw, var(--m-space-16)) clamp(var(--m-space-5), 7vw, var(--m-space-16)); box-shadow: none" aria-labelledby="ci-in-title">
     <div class="m-stack" data-gap="6" data-align="center" style="text-align: center">
       <span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 3rem; block-size: 3rem; border-radius: var(--m-radius-lg); background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-lg); color: var(--m-color-accent-default)">${icon(I.wallet, 24)}</span>
-      <h1 id="ci-in-title" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Sign in to Kestrel</h1>
+      <h1 id="ci-in-title" style="${cardTitle}">Sign in to Kestrel</h1>
       <div class="m-stack" data-gap="3" style="inline-size: min(100%, 25rem)">
         <a class="m-button" data-variant="primary" data-size="lg" href="#" style="inline-size: 100%; border-radius: var(--m-radius-lg)">Continue with email</a>
         <a class="m-button" data-size="lg" href="#" style="inline-size: 100%; border-radius: var(--m-radius-lg); --m-button-secondary-bg: var(--m-color-bg-inverse); --m-button-secondary-fg: var(--m-color-fg-inverse); --m-button-secondary-border: var(--m-color-bg-inverse); --m-button-secondary-hover-bg: var(--m-color-bg-inverse); --m-button-secondary-active-bg: var(--m-color-bg-inverse)">${icon(I.lock)} Continue with a passkey</a>

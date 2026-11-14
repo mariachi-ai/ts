@@ -9,7 +9,7 @@
    - the date and the status ("• To review") in muted text, then the payee and the amount as 28px figures on one line, then the account with its coloured dot;
    - label-and-value rows (Category, Repeats, Labels) with muted labels in a 7rem column; values are the pill, a small add button, a tag chip;
    - a note field at the foot.
-2. **On a public page, a post** (`reading`): a white Back pill, a tinted mono tag with the mono date, a centred 48px title, the lead picture in a 20px frame, the text in a 40rem column, then newer and older posts.
+2. **On a public page, a post** (`reading`): a white Back pill, a tinted mono tag with the mono date, a centred 48px title (about 30px on a phone), the lead picture in a 20px frame, the text in a 40rem column, then newer and older posts.
 
 ## Where it appears
 

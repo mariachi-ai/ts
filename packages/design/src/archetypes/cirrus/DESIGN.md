@@ -88,10 +88,13 @@ are in the reference at the end.
   - secondary text 13px; column labels 12px capitals; category pills 11px capitals;
   - panel and header titles 16px at 550;
   - big figures 28px at 550; section titles 20px;
-  - marketing headings 36px and 48px at 620, tracked −1%; public pages' running text is 16px.
+  - marketing headings 36px and 48px at 620, tracked −1%; public pages' running text is 16px;
+  - on a phone the titles step down: a public page's 48px title to about 30px, a centred card's 28px
+    title to about 24px (`observed`: the site's titles are 30px on a phone, the sign-in card's 24px).
 - **One big line per window.** Every app page's first window carries a 28px title or figure (the
   month's total, the payee and amount, a form card's title, an empty state's title), so the largest
-  text is about 1.9 times the body; public pages put a 48px title over 16px text (3 times).
+  text is about 1.9 times the body; public pages put a 48px title over 16px text (3 times), and
+  about 30px over 16px on a phone (about 1.9 times), as the source's site does.
 - **Case.** Sentence case everywhere, except category pills, table column labels and marketing
   receipt labels, which are capitals tracked 4–5%.
 - **Figures.** `font-variant-numeric: tabular-nums`, with the currency sign at about 62% size and
@@ -282,7 +285,9 @@ All 36 of the library's components, as Cirrus draws them. Every one is in `galle
   links in 22px rows, the small print in subtle 13px.
 - **What changes on a phone.** App pages put the page first and drop the sidebar under it, with a
   24px gutter; panels go to one column. Public pages keep the header's two pills; the nav links
-  scroll sideways; titles stay centred.
+  scroll sideways; titles stay centred and step down from 48px to about 30px. The centred cards'
+  28px titles step down to about 24px. `observed`: the site's titles are 30px on a phone (1.76–1.88
+  times the body on every studied site page and post), the sign-in card's 24px (1.6 times 15px).
 
 ## Page shapes (recipes)
 
@@ -297,15 +302,16 @@ All 36 of the library's components, as Cirrus draws them. Every one is in `galle
   - The detail in a white panel on the right: date and status, payee and amount large, the account,
     then label-and-value rows for category, repeats and labels, and a note.
 - **Onboarding** (app). One white card centred on the canvas: an icon tile, a thin progress bar, a
-  28px heading, one question at a time (choices as bordered cards, the chosen one pale blue), a
-  full-width 44px blue button and Back as a ghost.
+  28px heading (24px on a phone) over a muted 15px line, one question at a time (choices as bordered
+  cards, the chosen one pale blue), a full-width 44px blue button and Back as a ghost. The card's text
+  is the app's 15px throughout, as on the sign-in card.
 - **Settings** (app). A plain list of sections beside white panels: the month as two 28px figures
   around a ring of category colours, budgets as a table with coloured bars, and switches in hairline
   rows.
 - **Empty state** (app). Inside a panel: a pale-blue icon tile, a 28px heading, one sentence, a blue
   button and a secondary one.
 - **Pricing** (public).
-  - The site header over a soft blue wash, a 48px headline, a large Yearly/Monthly segmented
+  - The site header over a soft blue wash, a 48px headline (about 30px on a phone), a large Yearly/Monthly segmented
     control.
   - One square, receipt-like card: mono capital labels, a big price with the small raised sign,
     dotted leader rows, and a full-width pill button.
@@ -314,13 +320,13 @@ All 36 of the library's components, as Cirrus draws them. Every one is in `galle
   errors above, as one page.
 - **Reading** (public: a changelog post or an article).
   - The site header; a white "‹ Back" pill; a tinted mono capital tag beside the mono date; the
-    title centred at 48px.
+    title centred at 48px (about 30px on a phone).
   - The lead picture: a frame with 20px corners, a hairline and the soft lift, filled with a pale
     green-to-blue wash, with the product shown inside it.
   - The post in a 40rem column at 16px with a 1.6 line height: 20px subheads, short lists.
   - Newer and older posts under a hairline (mono capital labels, 20px titles), then the footer.
 - **Sign-in** (app's door). One white card, 36rem wide and about as tall, 20px corners, a hairline
-  and no shadow, centred on the canvas: a lifted 48px icon tile, the 28px title, a full-width blue
+  and no shadow, centred on the canvas: a lifted 48px icon tile, the 28px title (24px on a phone), a full-width blue
   Continue and an ink alternative (both 44px, 12px corners, 620), and a muted line with a bold link
   to create an account.
 
@@ -345,7 +351,7 @@ All 36 of the library's components, as Cirrus draws them. Every one is in `galle
 
 - **It opens with** the white header: in the app, the page's name at 16px with icon buttons and a
   search at the right, then the page's 28px figure or title in the first panel; on public pages, a
-  centred 48px title (and on a post, the Back pill and tag above it). There is no hero band in the
+  centred 48px title, about 30px on a phone (and on a post, the Back pill and tag above it). There is no hero band in the
   app.
 - **Reading order:** the figure, the line under it (planned, budgeted, the account), then the
   details in rows; panels left to right, then down.
