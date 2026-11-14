@@ -51,9 +51,9 @@ which one. Decide first. Entries are `observed` (the source's public pages, meas
 | Header | None above; a 44px bar inside the panel | 72px navbar (64px on a phone) | 64px bar with a hairline under it | None: the 48px mark above the title |
 | Sidebar | 232px on the frame colour, no edge line | None | 280px on the page colour, a hairline on its right | None |
 | Main action | Solid indigo 6px rectangle, 28px | Inverted pill (light on dark): 32px in the navbar, 40px on the page; others translucent grey pills | The inverted 32px pill in the bar | Solid indigo 44px pill, full column width; the rest grey pills |
-| Titles | 24px/590 page titles; 17px dialogs; 32px only on onboarding | 48px/510 index and page titles; post titles 48px/590, centred; item titles in lists 20px/510 | 32px/590 article title; h2 24px/590; h3 20px/590 | 17px/510 |
+| Titles | 24px/590 page titles; 17px dialogs; the onboarding step 17px/510, as the sign-up page | 48px/510 index and page titles; post titles 48px/590, centred; item titles in lists 20px/510 | 32px/590 article title; h2 24px/590; h3 20px/590 | 17px/510 |
 | Body text | 13px/510 UI, 12px meta, 15px reading | 15px excerpts and leads; 17px post and changelog bodies; 13px meta | 15px in the secondary grey | 13px |
-| Rows | 36px list rows, 28px sidebar rows, 32px menu rows | 56px archive rows split by a hairline on top | 32px sidebar rows; 28px contents rows | 44px pills, 16px apart |
+| Rows | 36px list rows, 28px sidebar rows, 32px menu rows | 56px archive rows split by a hairline on top; footer links in 28px rows | 32px sidebar rows; 28px contents rows | 44px pills, 16px apart |
 | Width | Lists full-bleed in the panel; settings 40rem | 80rem of content (1280px), centred | 40rem article column, contents 13rem to its right | 18rem column |
 | Breadcrumb | "›" | "/" (above post titles) | "/" | None |
 | Footer | None | The site footer (below) | None: the sidebar's bottom block lists the other sections | None |
@@ -104,7 +104,8 @@ navbar, pills or 48px titles in the app.
 - On the page colour with a hairline on top, inside the 80rem column, 48px of padding (56px in the
   source).
 - The product mark alone in the first column, then five groups: a 13px/510 heading in default text
-  over 13px muted links about 28px apart. Social links are words, not icons.
+  over 13px muted links in 28px rows (`observed`: 28px on 5 of 5 groups on the source's plans page).
+  Social links are words, not icons.
 - A bottom row of legal links in 13px muted, 64px below the groups. No copyright line, newsletter
   form, language picker or badges.
 - Phone: two groups to a row; the source moves the legal links into a sixth group.
@@ -191,10 +192,11 @@ scales are in the reference at the end.
   - 12px for meta: IDs, dates, counts, section headings, hints;
   - 13px for UI: sidebar, rows, buttons, menus, labels;
   - 15px for reading: descriptions, comments, docs, excerpts;
-  - 17px for post and changelog bodies, dialog titles and the sign-in title;
+  - 17px for post and changelog bodies, dialog titles, and the sign-in and onboarding titles (at
+    510: the source's sign-up and log-in pages use two sizes and two weights, 18px/500 over 13px);
   - 20px for item titles in public lists (510) and docs h3 (590);
   - 24px for page and issue titles and docs h2, at 590, tracked −1.2%;
-  - 32px for docs and changelog titles and the onboarding step, at 590, tracked −2.2%;
+  - 32px for docs and changelog titles, at 590, tracked −2.2%;
   - 48px for public index and page titles at 510, and post titles at 590, tracked −2.2%, line
     height 1.1.
 - **Case.** Sentence case everywhere, including section headings. No uppercase labels.
@@ -202,9 +204,11 @@ scales are in the reference at the end.
 
 ## Icons
 
-- Lucide, outlined, **1.5px stroke**, 16px in the sidebar and beside text, 14px in buttons, 32–48px
-  in empty states and error pages. Icons are grey (the text colour); only status glyphs are
-  coloured.
+- Lucide, outlined, **1.5px stroke**. In the app, **14px**: sidebar rows, icon buttons, the header
+  bar and status glyphs (`observed` in the source's HTML app frame: sidebar rows 14px on 11 of 13,
+  header buttons 14px on 8 of 8, status 14px on 11 of 11). 16px for priority bars in rows, menu
+  rows, property rows and on the public pages (docs, the plans page's ticks); 32–48px in empty
+  states and error pages. Icons are grey (the text colour); only status glyphs are coloured.
 - **Marks.** The product's own mark is monochrome in the default text colour everywhere: the navbar,
   the footer, the docs bar, the workspace switcher and sign-in (48px). `observed` (every public page
   and both sign-in themes). Squad and workspace marks are lettered squares in an identity hue
@@ -212,7 +216,7 @@ scales are in the reference at the end.
 - **Status glyphs** (drawn in the language's style, 14px): backlog a dashed circle, todo an empty
   circle, in progress a circle half filled in yellow, in review three-quarters in green, done a
   filled indigo circle with a check, canceled a filled grey circle with a cross.
-- **Priority glyphs:** three rising bars with one, two or three lit (low, medium, high), a filled
+- **Priority glyphs** (16px, `observed`: 16px on 7 of 7 rows in the source's app frame): three rising bars with one, two or three lit (low, medium, high), a filled
   red rounded square with "!" for urgent, and three dashes for none.
 - **The same icon for the same action, every time:**
   - add `plus`, edit `square-pen`, delete `trash-2`;
@@ -293,15 +297,17 @@ All 36 of the library's components, as Obsidian draws them. Every one is in `gal
 **Navigation**
 - **Sidebar.** 232px on the frame colour, no edge line (the panel's hairline separates them).
   - Top: the workspace switcher as a ghost button, then search and a "new" icon button.
-  - Rows are 28px, 13px at 510 in the secondary text colour, a 16px icon, 8px radius; the current
+  - Rows are 28px, 13px at 510 in the secondary text colour, a 14px icon, 8px radius; the current
     one is a grey step in the default text colour.
   - Group headings are 12px at 510 in muted grey, sentence case, and collapse.
   - Counts are muted numbers on the right, no pill.
 - **Docs sidebar** (public). 280px on the page colour with a hairline on its right; its top is part
   of the 64px bar (the mark, a hairline, "Docs" at 17px/510, a round search button). Group headings
-  12px at 510 muted; 32px rows, 13px at 510 in muted grey with a 16px icon; the current row in
-  default text with no fill; a page's sub-pages indented under a thin guide line; the other
-  sections (API, guides, support) at the bottom over a hairline.
+  12px at 510 muted; 32px rows, 13px at 510 in muted grey, **no icon** on topic rows; the current
+  row in default text with no fill; a page's sub-pages indented under a thin guide line; the other
+  sections (API, guides, support) at the bottom over a hairline, the only rows with a 16px icon
+  (`observed`: the source's docs articles show 16px icons only on those four links and the round
+  buttons).
 - **Navbar** (the site). 72px, the page colour at 80% with a 20px blur and a hairline below, its
   content aligned to the 80rem column; the mark and name on the left; 13px muted links on the right
   that turn white on hover; "Log in" as a ghost and the main action as an inverted 32px pill. On a
@@ -353,7 +359,8 @@ All 36 of the library's components, as Obsidian draws them. Every one is in `gal
   ("PLT › New issue"), the title 17px at 590, actions on the right of the footer with the primary
   last. A "Create more" switch sits on the left of the footer when it applies.
 - **Popover and menu.** Raised, a hairline, 8px radius, 4px padding; 32px rows at 13px with a 16px
-  icon and 6px radius; the shortcut keys on the right; grey group labels; hairline separators; a
+  icon and 6px radius; the shortcut keys on the right; grey group labels at 12px/510 like the sidebar's headings (the
+  shared menu component draws them at 590, so a recipe sets the weight); hairline separators; a
   destructive item in red at the bottom.
 - **Command menu.** A dialog of its own, 12px radius, near the top of the screen: a context chip
   for what it acts on, a borderless 17px input, then grouped commands as menu rows with their keys.
@@ -404,9 +411,11 @@ All 36 of the library's components, as Obsidian draws them. Every one is in `gal
 - **List and detail.** Header bar and a Filter/Display bar; issues under grey status group bars in
   36px rows; the selected row marked with an indigo edge and open in a side panel with the title at
   24px, a muted description, property rows, activity and a comment composer.
-- **Onboarding.** One centred step on the panel colour: a step count and thin progress bar, a 32px
-  display heading, one muted line, then the thing being taught (the command menu), a 20rem indigo
-  Continue in the app's 6px shape (see `questions.md`, 1) and a ghost Back, in a 35rem column.
+- **Onboarding.** One centred step on the panel colour in the type of the source's first-use pages
+  (sign-up and log-in: two sizes, two weights): a step count and thin progress bar, a 17px/510
+  title, one 13px muted line, then the thing being taught (the command menu, its group labels at
+  510), a 20rem indigo Continue in the app's 6px shape (see `questions.md`, 1) and a ghost Back, in
+  a 35rem column. No 590 anywhere on the step.
 - **Settings.** A settings sidebar (back link, plain group headings) beside a 40rem column: the
   page title at 24px, then sections of hairline panels with label-and-help on the left and the
   control (select, switch, chips, keys) on the right.
@@ -414,8 +423,8 @@ All 36 of the library's components, as Obsidian draws them. Every one is in `gal
   lines, the primary action with its key and a secondary.
 - **Pricing.** The public site on the page colour: a blurred bar, a 48px/510 title alone (no glow,
   no lead line), plan columns split by hairlines in the 80rem column (name 24px, price 17px, a
-  billing line between hairlines, ticked features, a 40px pill at the bottom, inverted on the one to
-  pick), a comparison list, questions and the site footer.
+  billing line between hairlines, features with 16px ticks, a 40px pill at the bottom, inverted on
+  the one to pick), a comparison list, questions and the site footer with 28px link rows.
 - **Errors.** The field, dialog, toast and full-page errors above, as one page.
 - **Reading.** A docs article: the docs sidebar and the 64px bar, a 32px title, a lead, a figure
   placeholder, 15px prose with a neutral callout, contents on the right and related articles at the
@@ -431,8 +440,8 @@ All 36 of the library's components, as Obsidian draws them. Every one is in `gal
    shadow.
 2. **Rows, not boxes.** Lists, settings and plans separate by hairlines and grey group bars; boxes are
    kept for comments, settings sections and overlays.
-3. **A glyph for every state.** Status circles and priority bars at 14px lead each row; colour is the
-   second signal, never the first.
+3. **A glyph for every state.** Priority bars (16px) and status circles (14px) lead each row; colour
+   is the second signal, never the first.
 4. **Indigo once per view.** One primary button, checked controls, focus and "done"; everything else
    is grey on grey.
 5. **The key is always shown.** Menus, tooltips, empty states and the command menu print the

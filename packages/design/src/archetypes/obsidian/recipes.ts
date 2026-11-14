@@ -127,12 +127,14 @@ const bars = (n: number, label: string) =>
       .join(''),
     'var(--m-color-fg-muted)',
     label,
+    16,
   );
 const priority = {
   urgent: glyph(
     `<rect x="2" y="2" width="20" height="20" rx="5" fill="currentColor" stroke="none"/><path d="M12 7v6" ${canvasStroke} stroke-width="2.6"/><path d="M12 17h.01" ${canvasStroke} stroke-width="3"/>`,
     'var(--m-color-danger-fg)',
     'Urgent',
+    16,
   ),
   high: bars(3, 'High priority'),
   medium: bars(2, 'Medium priority'),
@@ -141,6 +143,7 @@ const priority = {
     '<path d="M4 12h3"/><path d="M10.5 12h3"/><path d="M17 12h3"/>',
     'var(--m-color-fg-subtle)',
     'No priority',
+    16,
   ),
 };
 
@@ -160,7 +163,7 @@ const kbd = (...keys: string[]) => keys.map((k) => `<kbd class="m-kbd">${k}</kbd
 const avatar = (initials: string, name: string, size = 'sm') =>
   `<span class="m-avatar" data-size="${size}" role="img" aria-label="${name}" style="font-size: 0.625rem">${initials}</span>`;
 const iconBtn = (paths: string, name: string, size = 'sm') =>
-  `<button type="button" class="m-button" data-variant="ghost" data-size="${size}" data-icon-only aria-label="${name}">${icon(paths, 16)}</button>`;
+  `<button type="button" class="m-button" data-variant="ghost" data-size="${size}" data-icon-only aria-label="${name}">${icon(paths, 14)}</button>`;
 // A squad's mark: a small rounded square in an identity hue (never indigo, which is kept for the primary)
 const mark = (tone: string, letter: string) =>
   `<span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 1rem; block-size: 1rem; border-radius: var(--m-radius-sm); background: var(--m-color-${tone}); color: var(--m-color-bg-canvas); font-size: 0.625rem; font-weight: var(--m-font-weight-semibold); flex: none">${letter}</span>`;
@@ -175,7 +178,7 @@ const navList = (items: NavItem[], current: string, nested = false) =>
 ${items
   .map(
     ([ic, l, count]) =>
-      `          <li><a class="m-sidebar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${ic.startsWith('<') ? ic : icon(I[ic as keyof typeof I], 16)} ${l}${count ? ` <span class="m-sidebar-count">${count}</span>` : ''}</a></li>`,
+      `          <li><a class="m-sidebar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${ic.startsWith('<') ? ic : icon(I[ic as keyof typeof I], 14)} ${l}${count ? ` <span class="m-sidebar-count">${count}</span>` : ''}</a></li>`,
   )
   .join('\n')}
         </ul>`;
@@ -183,7 +186,7 @@ ${items
 const sidebar = (current: string) => `<nav class="m-sidebar" aria-label="Main" style="min-block-size: 100%">
     <div class="m-cluster" data-justify="between" style="padding: var(--m-space-1) var(--m-space-1) var(--m-space-2)">
       <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="font-weight: var(--m-font-weight-semibold)">${logo()} Lantern ${icon(I.down, 12)}</button>
-      <span class="m-cluster" data-gap="1">${iconBtn(I.search, 'Search')}<button type="button" class="m-button" data-size="sm" data-icon-only aria-label="New issue">${icon(I.compose, 16)}</button></span>
+      <span class="m-cluster" data-gap="1">${iconBtn(I.search, 'Search')}<button type="button" class="m-button" data-size="sm" data-icon-only aria-label="New issue">${icon(I.compose, 14)}</button></span>
     </div>
     <div class="m-sidebar-section">
       ${navList(
@@ -561,7 +564,7 @@ const cmdItem = (paths: string, text: string, keys: string[], active = false) =>
 
 const onboarding = `<div class="m-stack" data-align="center" style="min-block-size: 100vh; background: var(--m-color-bg-canvas); padding: var(--m-space-8) var(--m-space-4) var(--m-space-16)">
   <div class="m-cluster" data-justify="between" style="inline-size: 100%; max-inline-size: var(--m-layout-container-max-lg)">
-    <span class="m-cluster" data-gap="2" style="${small}; font-weight: var(--m-font-weight-semibold)">${logo()} Lantern</span>
+    <span class="m-cluster" data-gap="2" style="${small}; font-weight: var(--m-font-weight-medium)">${logo()} Lantern</span>
     <button type="button" class="m-button" data-variant="ghost" data-size="sm">Skip setup</button>
   </div>
   <div class="m-container" data-size="sm" style="--m-layout-container-max-sm: 35rem; margin-block-start: clamp(var(--m-space-8), 10vh, var(--m-space-16))">
@@ -569,8 +572,8 @@ const onboarding = `<div class="m-stack" data-align="center" style="min-block-si
       <div class="m-stack" data-gap="3" style="text-align: center">
         <span style="${meta}; font-variant-numeric: tabular-nums">Step 3 of 5</span>
         <progress class="m-progress" data-size="sm" value="60" max="100" aria-label="Setup: step 3 of 5" style="inline-size: 8rem; margin-inline: auto">60%</progress>
-        <h1 style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Every action is a keystroke away</h1>
-        <p class="m-muted" style="font-size: var(--m-font-size-md)">Open the command menu with ${kbd('⌘', 'K')} from anywhere. Try it on the issue below.</p>
+        <h1 style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-medium)">Every action is a keystroke away</h1>
+        <p class="m-muted" style="${small}">Open the command menu with ${kbd('⌘', 'K')} from anywhere. Try it on the issue below.</p>
       </div>
       <div class="m-popover" data-static role="dialog" aria-label="Command menu" style="max-inline-size: none; inline-size: 100%; padding: 0; border-radius: var(--m-radius-lg); box-shadow: var(--m-shadow-overlay)">
         <div class="m-stack" data-gap="3" style="padding: var(--m-space-4) var(--m-space-4) var(--m-space-3); border-block-end: ${hair}">
@@ -578,13 +581,13 @@ const onboarding = `<div class="m-stack" data-align="center" style="min-block-si
           <input class="m-input" type="text" value="" placeholder="Type a command or search…" aria-label="Command" style="border: 0; padding: 0; background: transparent; font-size: var(--m-font-size-lg); block-size: auto; box-shadow: none">
         </div>
         <div class="m-menu" role="listbox" aria-label="Commands" style="padding: var(--m-space-2)">
-          <div class="m-menu-label">Issue</div>
+          <div class="m-menu-label" style="font-weight: var(--m-font-weight-medium)">Issue</div>
           ${cmdItem(I.checkCircle, 'Change status…', ['S'], true)}
           ${cmdItem(I.user, 'Assign to…', ['A'])}
           ${cmdItem(I.flag, 'Set priority…', ['P'])}
           ${cmdItem(I.link, 'Copy issue link', ['⌘', '⇧', ','])}
           <div class="m-menu-separator" role="separator"></div>
-          <div class="m-menu-label">Navigate</div>
+          <div class="m-menu-label" style="font-weight: var(--m-font-weight-medium)">Navigate</div>
           ${cmdItem(I.queue, 'Go to Queue', ['G', 'Q'])}
           ${cmdItem(I.map, 'Go to Roadmap', ['G', 'R'])}
         </div>
@@ -741,7 +744,7 @@ const tick = glyph(
   `<circle cx="12" cy="12" r="11" fill="currentColor" stroke="none"/><path d="m7.5 12.5 3 3 6-6.5" ${canvasStroke}/>`,
   'var(--m-color-fg-muted)',
   'Included',
-  15,
+  16,
 );
 const no = `<span class="m-subtle" style="display: inline-flex">${icon(I.x, 14, 'Not included')}</span>`;
 const plan = (
@@ -783,9 +786,9 @@ const siteFooter = `<footer style="border-block-start: ${hair}; background: var(
         <a href="#" aria-label="Lantern home" style="display: inline-flex; flex: 1 1 8rem">${logo()}</a>
         ${footerGroups
           .map(
-            ([h, links]) => `<nav class="m-stack" data-gap="4" aria-label="${h}" style="flex: 1 1 8rem">
+            ([h, links]) => `<nav class="m-stack" data-gap="2" aria-label="${h}" style="flex: 1 1 8rem">
           <h2 style="${small}; font-weight: var(--m-font-weight-medium)">${h}</h2>
-          <ul class="m-stack" data-gap="2" style="padding: 0; list-style: none">${links.map((l) => `<li><a href="#" class="m-muted" style="text-decoration: none">${l}</a></li>`).join('')}</ul>
+          <ul class="m-stack" data-gap="0" style="padding: 0; list-style: none">${links.map((l) => `<li style="display: flex; align-items: center; min-block-size: 1.75rem"><a href="#" class="m-muted" style="text-decoration: none">${l}</a></li>`).join('')}</ul>
         </nav>`,
           )
           .join('\n        ')}
@@ -940,8 +943,8 @@ const errors = shell(
 
 // A public docs article: the site's darkest step everywhere, a docs sidebar split off by a hairline (no
 // inset panel), a 64px bar, a 40rem article, contents on the right, related articles at the end
-const docRow = (ic: keyof typeof I, text: string, current = false) =>
-  `<li><a class="m-sidebar-link" href="#"${current ? ' aria-current="page"' : ''}>${icon(I[ic], 16)} ${text}</a></li>`;
+const docRow = (ic: keyof typeof I | null, text: string, current = false) =>
+  `<li><a class="m-sidebar-link" href="#"${current ? ' aria-current="page"' : ''}>${ic ? `${icon(I[ic], 16)} ` : ''}${text}</a></li>`;
 const docSection = (heading: string, rows: string) => `<div class="m-sidebar-section">
         <h2 class="m-sidebar-heading">${heading}</h2>
         <ul>
@@ -1029,23 +1032,23 @@ const reading = `<div class="m-cluster" data-gap="0" data-align="stretch" style=
       ${roundBtn(I.search, 'Search the docs')}
     </div>
     <div class="m-stack" data-gap="5" style="flex: 1; padding: var(--m-space-5) var(--m-space-3)">
-      ${docSection('Getting started', [docRow('compass', 'Start here'), docRow('layers', 'How Lantern fits together')].join('\n          '))}
+      ${docSection('Getting started', [docRow(null, 'Start here'), docRow(null, 'How Lantern fits together')].join('\n          '))}
       ${docSection(
         'Working in squads',
         [
-          docRow('queue', 'The queue'),
-          `<li><a class="m-sidebar-link" href="#" aria-current="page">${icon(I.sprint, 16)} Sprints</a>
+          docRow(null, 'The queue'),
+          `<li><a class="m-sidebar-link" href="#" aria-current="page">Sprints</a>
             <ul>
               <li><a class="m-sidebar-link" href="#">Planning a sprint</a></li>
               <li><a class="m-sidebar-link" href="#">Carry-over rules</a></li>
               <li><a class="m-sidebar-link" href="#">Reading a report</a></li>
             </ul>
           </li>`,
-          docRow('flag', 'Milestones'),
+          docRow(null, 'Milestones'),
         ].join('\n          '),
       )}
-      ${docSection('Planning', [docRow('map', 'Roadmaps'), docRow('pkg', 'Releases')].join('\n          '))}
-      ${docSection('Connect', [docRow('plug', 'Integrations'), docRow('keyboard', 'Keyboard shortcuts')].join('\n          '))}
+      ${docSection('Planning', [docRow(null, 'Roadmaps'), docRow(null, 'Releases')].join('\n          '))}
+      ${docSection('Connect', [docRow(null, 'Integrations'), docRow(null, 'Keyboard shortcuts')].join('\n          '))}
     </div>
     <ul style="padding: var(--m-space-4) var(--m-space-3); border-block-start: ${hair}">
       ${docRow('book', 'Docs', true)}
@@ -1091,14 +1094,14 @@ export const obsidianRecipes: ArchetypeRecipe[] = [
     name: 'list-detail',
     title: 'List and detail',
     description:
-      'Issues grouped under grey status bars in dense 36px rows (priority, ID, status, title, label pills, date, assignee), with the selected issue open in a side panel.',
+      'Issues grouped under grey status bars in dense 36px rows (16px priority bars, ID, 14px status glyph, title, label pills, date, assignee), with the selected issue open in a side panel.',
     html: listDetail,
   },
   {
     name: 'onboarding',
     title: 'Onboarding',
     description:
-      'One centred step with a thin progress bar and a display heading, teaching the command menu by showing it: a context chip, a large borderless input, grouped commands with keys.',
+      'One centred step in the first-use type (a 17px/510 title over one 13px line, two weights) with a thin progress bar, teaching the command menu by showing it: a context chip, a large borderless input, grouped commands with keys.',
     html: onboarding,
   },
   {

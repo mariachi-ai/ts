@@ -4,7 +4,7 @@
 
 ## What Obsidian does (parts in order)
 
-1. **The docs frame:** everything on the page colour (the darkest step); a 280px docs sidebar split off by a hairline on its right; a 64px bar with a hairline under it: the sidebar's top (the mark, "Docs", a round search button), then a "/" breadcrumb, a round theme button and the inverted 32px pill.
+1. **The docs frame:** everything on the page colour (the darkest step); a 280px docs sidebar split off by a hairline on its right (topic rows with no icon; only the four links at its foot carry a 16px icon); a 64px bar with a hairline under it: the sidebar's top (the mark, "Docs", a round search button), then a "/" breadcrumb, a round theme button and the inverted 32px pill.
 2. **The title** at 32px and 590, tracked −2.2%, then a one-line lead in 15px.
 3. **A figure** filling the 40rem column: 12px corners, no border, shadow or caption. In a kit it's a placeholder (surface colour, 16:10, a centred subtle `image` icon, an `aria-label`).
 4. **The body** in `m-prose`: 15px at a 1.6 line height in the secondary grey; h2 24px and h3 20px at 590 with 48px above; links and bold in default text, links underlined; numbered steps with keys as `m-kbd`; inline code in mono.

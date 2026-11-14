@@ -6,14 +6,15 @@
 
 1. The 72px translucent navbar.
 2. A 48px display title alone, then straight into the plans.
-3. **Plan columns split by hairlines**, no cards: name 24px at 510, price 17px with a muted unit, a billing line between two hairlines (a switch for yearly), ticked features, then a 40px pill button at the bottom; the one to pick is inverted (light on dark).
+3. **Plan columns split by hairlines**, no cards: name 24px at 510, price 17px with a muted unit, a billing line between two hairlines (a switch for yearly), features with 16px ticks, then a 40px pill button at the bottom; the one to pick is inverted (light on dark).
 4. A comparison table: 12px muted header, 15px muted feature names, ticks and crosses.
 5. Questions as hairline accordion rows.
+6. The site footer: five groups of 13px muted links in 28px rows.
 
 ## Where it appears
 
 - `pricing`.
-- Source study: the public pricing page (four columns split by hairlines; separation divider 1.0, border 0, shadow 0 at all three widths).
+- Source study: the public pricing page (four columns split by hairlines; separation divider 1.0, border 0, shadow 0 at all three widths; feature ticks 16px on 28 of 28; footer link rows 28px in 5 of 5 groups, feature rows 19.5px in 4 of 4 plans, comparison rows 44px).
 
 ## Variations and triggers
 
