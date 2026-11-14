@@ -1,4 +1,4 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { AuthError, ConfigError } from '@mariachi/core';
 
 export type WebhookHeaders = Record<string, string | string[] | undefined>;
@@ -15,7 +15,11 @@ export interface TimestampOptions {
 
 /** What a verifier returns once the signature holds. */
 export interface VerifiedWebhook {
-  /** The sender's id for this delivery, to deduplicate on. Absent when the sender gives none. */
+  /**
+   * What to deduplicate on. It always comes from signed material: an id the signature covers, or a
+   * digest of the signature itself. An id from an unsigned header is never used, since whoever
+   * replays a captured delivery can change it.
+   */
   eventId?: string;
   /** The signed timestamp, for schemes that have one. */
   timestampSeconds?: number;
@@ -46,6 +50,14 @@ export function hmac(algorithm: string, key: string | Buffer, parts: Array<strin
   const mac = createHmac(algorithm, key);
   for (const part of parts) mac.update(part);
   return mac.digest();
+}
+
+/**
+ * A dedup key for schemes that sign only the body: the same body under the same secret has the
+ * same signature, so a replay gets the same key whatever its unsigned headers say.
+ */
+export function signatureDigest(signature: string): string {
+  return `sig:${createHash('sha256').update(signature.trim()).digest('hex')}`;
 }
 
 /** Constant-time comparison; a length difference is a mismatch. */

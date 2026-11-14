@@ -7,7 +7,7 @@ export type { WebhookIdentity } from './auth/auth-controller';
 export { OAuthAuthController } from './auth/oauth';
 export { ApiKeyAuthController } from './auth/api-key';
 export { SignatureAuthController } from './auth/signature';
-export { StandardWebhookAuth, GitHubWebhookAuth, StripeWebhookAuth, HmacWebhookAuth, type VerifiedWebhookAuthOptions } from './auth/verified';
+export { StandardWebhookAuth, GitHubWebhookAuth, StripeWebhookAuth, HmacWebhookAuth, type VerifiedWebhookAuthOptions, type TenantSecretResolver } from './auth/verified';
 export * from './verify/index';
 export type { WebhookLogEntry, WebhookLogStore, WebhookLogStatus, WebhookLogIdentity } from './logging/types';
 export { RepositoryWebhookLogStore } from './logging/repository-log-store';

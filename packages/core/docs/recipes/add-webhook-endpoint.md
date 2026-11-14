@@ -21,21 +21,44 @@ APIs. Providers time out and retry quickly; the job gives you your own retries a
 
 | Sender | Authenticator | Deduplicated on |
 | --- | --- | --- |
-| GitHub | `new GitHubWebhookAuth({ secret })` | `X-GitHub-Delivery` |
-| Stripe, and senders that copy its `t=…,v1=…` header | `new StripeWebhookAuth({ secret })` (`header`, `provider` to adapt it) | the body's `id` |
-| Standard Webhooks and Svix (Clerk, Resend, ...) | `new StandardWebhookAuth({ secret })` | `webhook-id` / `svix-id` |
-| Anything with one HMAC header | `new HmacWebhookAuth({ provider, secret, header, eventIdHeader?, algorithm?, encoding?, prefix? })` | the header you name |
+| GitHub | `new GitHubWebhookAuth({ secret })` | a digest of the signature |
+| Stripe, and senders that copy its `t=…,v1=…` header | `new StripeWebhookAuth({ secret })` (`header`, `provider` to adapt it) | the signed body's `id` |
+| Standard Webhooks and Svix (Clerk, Resend, ...) | `new StandardWebhookAuth({ secret })` | the signed `webhook-id` / `svix-id` |
+| Anything with one HMAC header | `new HmacWebhookAuth({ provider, secret, header, deliveryIdHeader?, algorithm?, encoding?, prefix? })` | a digest of the signature |
 
 Each one checks the exact bytes received, compares in constant time, refuses a timestamp more than
 five minutes off where the scheme signs one (`toleranceSeconds`), and takes a list of secrets while
-one is being rotated. `resolveTenant: (req) => req.params.tenant` maps a delivery to a tenant. A
-rejected delivery is logged with the reason and answered 401.
+one is being rotated. A rejected delivery is logged with the reason and answered 401.
+
+**Dedup only uses signed material.** GitHub's `X-GitHub-Delivery` (like most senders' delivery-id
+headers) isn't covered by the signature, so someone replaying a captured delivery can change it.
+Those authenticators key dedup on a digest of the signature instead, which is the same for the same
+body; the sender's id is in `identity.metadata.deliveryId` for logs. GitHub signs no timestamp
+either, so for GitHub the idempotency store is the replay protection: don't run without one.
+
+**A tenant has to be authenticated too.** Nothing signs a URL, so with one secret for everyone, a
+valid delivery posted to another tenant's path would be attributed to that tenant. Two safe ways:
+
+```ts
+// One shared secret: take the tenant from the signed body.
+new StripeWebhookAuth({ secret, tenantFromPayload: (event) => (event as { account?: string })?.account });
+
+// A secret per tenant: the path names the tenant, and the delivery must verify under that tenant's secret.
+new GitHubWebhookAuth({
+  tenantFromRequest: (req) => req.params.tenant,
+  secret: (tenantId) => secrets.get('GITHUB_WEBHOOK_SECRET', tenantId),   // nothing returned → 401
+});
+```
+
+`tenantFromRequest` with a single shared secret is refused at construction
+(`webhooks/unauthenticated-tenant`).
 
 Always verify over `rawBody`, never over re-serialized JSON: key order and whitespace change the bytes.
 The same checks are plain functions in `@mariachi/webhooks/verify` (`verifyGitHubWebhook`,
 `verifyStripeWebhook`, `verifyStandardWebhook`, `verifyHmacSignature`), with no HTTP server behind
 them, for use anywhere else. For a scheme none of them covers, extend `SignatureAuthController` and
-implement `verifySignature` with `crypto.timingSafeEqual`. Provider packages ship ready-made
+implement `verifySignature` with `crypto.timingSafeEqual`; the two rules above then become yours to
+keep. Provider packages ship ready-made
 controllers (`ClerkWebhookController`, `FusionAuthWebhookHandler`), and billing verifies Stripe's
 billing events itself.
 

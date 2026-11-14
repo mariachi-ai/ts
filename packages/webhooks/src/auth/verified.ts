@@ -1,4 +1,4 @@
-import { MariachiError } from '@mariachi/core';
+import { ConfigError, MariachiError } from '@mariachi/core';
 import type { IncomingRequest, RequestContext } from '@mariachi/server';
 import { headerValue, type VerifiedWebhook, type WebhookHeaders } from '../verify/common';
 import { verifyGitHubWebhook } from '../verify/github';
@@ -7,31 +7,97 @@ import { parseStandardWebhookSecrets, verifyStandardWebhook } from '../verify/st
 import { type StripeStyleOptions, verifyStripeWebhook } from '../verify/stripe';
 import { AuthController, type WebhookIdentity } from './auth-controller';
 
+type Secrets = string | string[];
+
+/** The secret for one tenant. Return nothing for a tenant that has none, and the delivery is refused. */
+export type TenantSecretResolver = (tenantId: string, req: IncomingRequest) => Secrets | undefined | Promise<Secrets | undefined>;
+
 export interface VerifiedWebhookAuthOptions {
-  /** The signing secret, or several while one is being rotated. */
-  secret: string | string[];
+  /**
+   * The signing secret (or several while one is being rotated), shared by every delivery; or a
+   * function giving each tenant's own secret, used with `tenantFromRequest`.
+   */
+  secret: Secrets | TenantSecretResolver;
   /** The name deliveries are logged and deduplicated under. Each class has a default. */
   provider?: string;
-  /** The tenant a delivery belongs to, e.g. from a path parameter. */
-  resolveTenant?: (req: IncomingRequest) => string | undefined;
+  /**
+   * The tenant the request names (a path parameter, usually). Nothing signs a path, so this is only
+   * accepted together with a per-tenant `secret` function: the delivery must then verify under that
+   * tenant's secret, which is what proves it's theirs.
+   */
+  tenantFromRequest?: (req: IncomingRequest) => string | undefined;
+  /**
+   * The tenant named inside the verified body (parsed JSON; `undefined` when it isn't JSON). Use
+   * this with one shared secret: the signature covers the body, so the sender vouches for it.
+   */
+  tenantFromPayload?: (payload: unknown) => string | undefined;
 }
+
+type Verified = VerifiedWebhook & { metadata?: Record<string, unknown> };
 
 /** A webhook authenticator built on one of the `@mariachi/webhooks/verify` checks. */
 abstract class VerifiedWebhookAuth extends AuthController {
-  protected abstract readonly provider: string;
-  protected abstract readonly resolveTenant?: (req: IncomingRequest) => string | undefined;
+  protected readonly provider: string;
 
-  /** Throws `webhooks/invalid-signature`, or returns the delivery's id and anything else worth keeping. */
-  protected abstract verify(rawBody: Buffer, headers: WebhookHeaders): VerifiedWebhook & { metadata?: Record<string, unknown> };
+  protected constructor(
+    private readonly base: VerifiedWebhookAuthOptions,
+    defaultProvider: string,
+  ) {
+    super();
+    this.provider = base.provider ?? defaultProvider;
+    const perTenant = typeof base.secret === 'function';
+    if (base.tenantFromRequest && !perTenant) {
+      throw new ConfigError(
+        'webhooks/unauthenticated-tenant',
+        `${this.provider} webhook: tenantFromRequest needs a per-tenant secret function. With one shared secret, a valid delivery could be posted to any tenant's path; take the tenant from the signed body with tenantFromPayload`,
+      );
+    }
+    if (perTenant && !base.tenantFromRequest) {
+      throw new ConfigError('webhooks/invalid-secret', `${this.provider} webhook: a per-tenant secret function needs tenantFromRequest to say which tenant`);
+    }
+    if (!perTenant && !hasSecret(base.secret as Secrets)) {
+      throw new ConfigError('webhooks/invalid-secret', `${this.provider} webhook: no secret configured`);
+    }
+  }
+
+  /** Throws `webhooks/invalid-signature`, or returns the delivery's dedup key and anything else worth keeping. */
+  protected abstract verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified;
 
   async auth(req: IncomingRequest, ctx: RequestContext): Promise<WebhookIdentity | null> {
     if (!req.rawBody || req.rawBody.length === 0) {
       ctx.logger.warn({ provider: this.provider }, 'webhook has no raw body; rejecting');
       return null;
     }
+    let tenantId: string | undefined;
+    let secret: Secrets | undefined;
+    if (typeof this.base.secret === 'function') {
+      tenantId = this.base.tenantFromRequest?.(req);
+      secret = tenantId ? await this.base.secret(tenantId, req) : undefined;
+      if (!tenantId || !secret || !hasSecret(secret)) {
+        ctx.logger.warn({ provider: this.provider }, 'webhook names no tenant, or one with no secret; rejecting');
+        return null;
+      }
+    } else {
+      secret = this.base.secret;
+    }
     try {
-      const { eventId, metadata } = this.verify(req.rawBody, req.headers);
-      return { provider: this.provider, verified: true, tenantId: this.resolveTenant?.(req), eventId, metadata: metadata ?? {} };
+      const { eventId, metadata } = this.verify(req.rawBody, req.headers, secret);
+      if (this.base.tenantFromPayload) {
+        const fromPayload = this.base.tenantFromPayload(parseJson(req.rawBody));
+        if (tenantId && fromPayload && fromPayload !== tenantId) {
+          ctx.logger.warn({ provider: this.provider }, 'webhook body names a different tenant from the request; rejecting');
+          return null;
+        }
+        tenantId ??= fromPayload;
+      }
+      return {
+        provider: this.provider,
+        verified: true,
+        tenantId,
+        // One tenant's delivery never deduplicates another's.
+        eventId: eventId && tenantId ? `${tenantId}:${eventId}` : eventId,
+        metadata: metadata ?? {},
+      };
     } catch (error) {
       if (error instanceof MariachiError && error.code === 'webhooks/invalid-signature') {
         ctx.logger.warn({ provider: this.provider, reason: error.message }, 'webhook signature rejected');
@@ -42,97 +108,83 @@ abstract class VerifiedWebhookAuth extends AuthController {
   }
 }
 
-/** Standard Webhooks and Svix (`webhook-*` or `svix-*` headers): Clerk, Resend and many others. */
+function hasSecret(secret: Secrets): boolean {
+  return (Array.isArray(secret) ? secret : [secret]).some((entry) => typeof entry === 'string' && entry.trim() !== '');
+}
+
+function parseJson(rawBody: Buffer): unknown {
+  try {
+    return JSON.parse(rawBody.toString('utf8'));
+  } catch {
+    return undefined;
+  }
+}
+
+/** Standard Webhooks and Svix (`webhook-*` or `svix-*` headers): Clerk, Resend and many others. Deduplicated on the signed `webhook-id`. */
 export class StandardWebhookAuth extends VerifiedWebhookAuth {
-  protected readonly provider: string;
-  protected readonly resolveTenant?: (req: IncomingRequest) => string | undefined;
-  private readonly keys: Buffer[];
-
   constructor(private readonly options: VerifiedWebhookAuthOptions & { toleranceSeconds?: number }) {
-    super();
-    this.provider = options.provider ?? 'standard-webhooks';
-    this.resolveTenant = options.resolveTenant;
-    this.keys = parseStandardWebhookSecrets(options.secret);
+    super(options, 'standard-webhooks');
+    // A shared secret that isn't a key should stop the app at startup, not the first delivery.
+    if (typeof options.secret !== 'function') parseStandardWebhookSecrets(options.secret);
   }
 
-  protected verify(rawBody: Buffer, headers: WebhookHeaders) {
-    return verifyStandardWebhook(rawBody, headers, this.keys, { toleranceSeconds: this.options.toleranceSeconds });
+  protected verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified {
+    return verifyStandardWebhook(rawBody, headers, secret, { toleranceSeconds: this.options.toleranceSeconds });
   }
 }
 
-/** GitHub: `X-Hub-Signature-256`, deduplicated on `X-GitHub-Delivery`. The event name is in `identity.metadata.event`. */
+/**
+ * GitHub: `X-Hub-Signature-256`. Deduplicated on a digest of the signature, because GitHub doesn't
+ * sign `X-GitHub-Delivery`; that id and the event name are in `identity.metadata`.
+ */
 export class GitHubWebhookAuth extends VerifiedWebhookAuth {
-  protected readonly provider: string;
-  protected readonly resolveTenant?: (req: IncomingRequest) => string | undefined;
-
-  constructor(private readonly options: VerifiedWebhookAuthOptions) {
-    super();
-    this.provider = options.provider ?? 'github';
-    this.resolveTenant = options.resolveTenant;
-    verifyConfigured(options.secret, this.provider);
+  constructor(options: VerifiedWebhookAuthOptions) {
+    super(options, 'github');
   }
 
-  protected verify(rawBody: Buffer, headers: WebhookHeaders) {
-    const { eventId, event } = verifyGitHubWebhook(rawBody, headers, this.options.secret);
-    return { eventId, metadata: { event } };
+  protected verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified {
+    const { eventId, deliveryId, event } = verifyGitHubWebhook(rawBody, headers, secret);
+    return { eventId, metadata: { deliveryId, event } };
   }
 }
 
-/** Stripe's `t=…,v1=…` scheme, deduplicated on the body's `id`. `header` and `provider` adapt it to senders that copy the scheme. */
+/** Stripe's `t=…,v1=…` scheme, deduplicated on the signed body's `id`. `header` and `provider` adapt it to senders that copy the scheme. */
 export class StripeWebhookAuth extends VerifiedWebhookAuth {
-  protected readonly provider: string;
-  protected readonly resolveTenant?: (req: IncomingRequest) => string | undefined;
-
   constructor(private readonly options: VerifiedWebhookAuthOptions & Pick<StripeStyleOptions, 'header' | 'toleranceSeconds'>) {
-    super();
-    this.provider = options.provider ?? 'stripe';
-    this.resolveTenant = options.resolveTenant;
-    verifyConfigured(options.secret, this.provider);
+    super(options, 'stripe');
   }
 
-  protected verify(rawBody: Buffer, headers: WebhookHeaders) {
-    return verifyStripeWebhook(rawBody, headers, this.options.secret, {
-      header: this.options.header,
-      toleranceSeconds: this.options.toleranceSeconds,
-      provider: this.provider,
-    });
+  protected verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified {
+    return verifyStripeWebhook(rawBody, headers, secret, { header: this.options.header, toleranceSeconds: this.options.toleranceSeconds, provider: this.provider });
   }
 }
 
-/** A plain HMAC of the raw body in one header, for senders with no scheme of their own. */
+/**
+ * A plain HMAC of the raw body in one header, for senders with no scheme of their own.
+ * Deduplicated on a digest of the signature; the sender's own delivery id, if it sends one, is an
+ * unsigned header and only goes to `identity.metadata.deliveryId`.
+ */
 export class HmacWebhookAuth extends VerifiedWebhookAuth {
-  protected readonly provider: string;
-  protected readonly resolveTenant?: (req: IncomingRequest) => string | undefined;
-
   constructor(
     private readonly options: VerifiedWebhookAuthOptions &
       Omit<HmacOptions, 'provider'> & {
         provider: string;
         /** The header holding the signature. */
         header: string;
-        /** The header holding the sender's delivery id, if it sends one. */
-        eventIdHeader?: string;
+        /** The header holding the sender's delivery id, kept in `identity.metadata.deliveryId`. */
+        deliveryIdHeader?: string;
       },
   ) {
-    super();
-    this.provider = options.provider;
-    this.resolveTenant = options.resolveTenant;
-    verifyConfigured(options.secret, this.provider);
+    super(options, options.provider);
   }
 
-  protected verify(rawBody: Buffer, headers: WebhookHeaders) {
-    verifyHmacSignature(rawBody, headerValue(headers, this.options.header), this.options.secret, {
+  protected verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified {
+    const { eventId } = verifyHmacSignature(rawBody, headerValue(headers, this.options.header), secret, {
       algorithm: this.options.algorithm,
       encoding: this.options.encoding,
       prefix: this.options.prefix,
       provider: this.provider,
     });
-    return { eventId: this.options.eventIdHeader ? headerValue(headers, this.options.eventIdHeader) : undefined };
+    return { eventId, metadata: { deliveryId: this.options.deliveryIdHeader ? headerValue(headers, this.options.deliveryIdHeader) : undefined } };
   }
-}
-
-/** Fail at construction, not on the first delivery, when no secret was configured. */
-function verifyConfigured(secret: string | string[], provider: string): void {
-  const list = (Array.isArray(secret) ? secret : [secret]).filter((s) => s?.trim());
-  if (list.length === 0) throw new MariachiError('webhooks/invalid-secret', `${provider} webhook: no secret configured`);
 }

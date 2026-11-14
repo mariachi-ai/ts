@@ -37,7 +37,14 @@ describe('verifyHmacSignature', () => {
 describe('verifyGitHubWebhook', () => {
   it('checks X-Hub-Signature-256 and returns the delivery id and event', () => {
     const headers = { 'X-Hub-Signature-256': `sha256=${hex('gh', body)}`, 'X-GitHub-Delivery': 'd-1', 'X-GitHub-Event': 'push' };
-    expect(verifyGitHubWebhook(body, headers, 'gh')).toEqual({ eventId: 'd-1', event: 'push' });
+    const verified = verifyGitHubWebhook(body, headers, 'gh');
+    expect(verified).toMatchObject({ deliveryId: 'd-1', event: 'push' });
+    // The dedup key comes from the signature, not from the delivery id, which GitHub doesn't sign.
+    expect(verified.eventId).toMatch(/^sig:[0-9a-f]{64}$/);
+    expect(verifyGitHubWebhook(body, { ...headers, 'X-GitHub-Delivery': 'd-2' }, 'gh').eventId).toBe(verified.eventId);
+    expect(verifyGitHubWebhook(body, { ...headers, 'X-Hub-Signature-256': headers['X-Hub-Signature-256'].toUpperCase().replace('SHA256=', 'sha256=') }, 'gh').eventId).toBe(verified.eventId);
+    const otherBody = body.replace('1200', '1300');
+    expect(verifyGitHubWebhook(otherBody, { ...headers, 'X-Hub-Signature-256': `sha256=${hex('gh', otherBody)}` }, 'gh').eventId).not.toBe(verified.eventId);
     expect(() => verifyGitHubWebhook(`${body} `, headers, 'gh')).toThrow(invalid);
     expect(() => verifyGitHubWebhook(body, { 'x-github-delivery': 'd-1' }, 'gh')).toThrow(invalid);
   });
@@ -134,17 +141,61 @@ describe('webhook authenticators on WebhookServer', () => {
       server.inject({ method: 'POST', url: `/${prefix}/t42/events`, headers: { 'content-type': 'application/json', ...headers }, payload });
     return { calls, post };
   }
-  const tenant = (req: { params: Record<string, string> }) => req.params.tenant;
+  const tenantFromPath = (req: { params: Record<string, string> }) => req.params.tenant;
 
-  it('GitHub: verifies, carries the tenant, and skips a repeated delivery', async () => {
-    const { calls, post } = serverFor('github', new GitHubWebhookAuth({ secret: 'gh', resolveTenant: tenant }));
+  it('GitHub: verifies, and a replay under a new delivery id is still a duplicate', async () => {
+    const { calls, post } = serverFor('github', new GitHubWebhookAuth({ secret: 'gh' }));
     const headers = { 'x-hub-signature-256': `sha256=${hex('gh', body)}`, 'x-github-delivery': 'd-1', 'x-github-event': 'push' };
     expect((await post(headers)).statusCode).toBeLessThan(300);
     expect((await post(headers)).json()).toMatchObject({ duplicate: true });
+    // The delivery id isn't signed, so whoever replays a captured delivery can change it.
+    expect((await post({ ...headers, 'x-github-delivery': 'd-2' })).json()).toMatchObject({ duplicate: true });
     expect(calls).toHaveLength(1);
-    expect(calls[0].ctx.tenantId).toBe('t42');
+    expect(calls[0].ctx.tenantId).toBeNull();
     expect((await post({ ...headers, 'x-hub-signature-256': `sha256=${hex('wrong', body)}` })).statusCode).toBe(401);
     expect((await post(headers, `${body} `)).statusCode).toBe(401);
+  });
+
+  it('refuses a tenant from the request unless each tenant has its own secret', () => {
+    expect(() => new GitHubWebhookAuth({ secret: 'shared', tenantFromRequest: tenantFromPath })).toThrow(expect.objectContaining({ code: 'webhooks/unauthenticated-tenant' }));
+    expect(() => new StripeWebhookAuth({ secret: async () => 'x' })).toThrow(expect.objectContaining({ code: 'webhooks/invalid-secret' }));
+  });
+
+  it("per-tenant secrets: a delivery only counts for the tenant whose secret signed it", async () => {
+    const secrets: Record<string, string> = { t42: 'secret-42', t99: 'secret-99' };
+    const auth = new GitHubWebhookAuth({ secret: async (tenantId) => secrets[tenantId], tenantFromRequest: tenantFromPath });
+    const calls: Array<{ ctx: Context }> = [];
+    class Controller extends WebhookController {
+      readonly prefix = 'gh';
+      readonly auth = auth;
+      init() {
+        this.post(':tenant/events', { mode: 'direct', procedure: 'gh.event' }, async (_ctx, input) => input);
+      }
+    }
+    const communication = { call: async (ctx: Context) => { calls.push({ ctx }); return { ok: true }; } } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication, idempotency: new InMemoryIdempotencyStore() }).registerController(new Controller());
+    const post = (tenant: string, secret: string) =>
+      server.inject({ method: 'POST', url: `/gh/${tenant}/events`, headers: { 'content-type': 'application/json', 'x-hub-signature-256': `sha256=${hex(secret, body)}` }, payload: body });
+
+    expect((await post('t42', 'secret-42')).statusCode).toBeLessThan(300);
+    expect(calls.map((call) => call.ctx.tenantId)).toEqual(['t42']);
+    // Tenant 42's valid delivery, posted to tenant 99's path: not theirs.
+    expect((await post('t99', 'secret-42')).statusCode).toBe(401);
+    // A tenant with no secret is refused.
+    expect((await post('t7', 'secret-42')).statusCode).toBe(401);
+    // The same body for another tenant is that tenant's own delivery, not a duplicate of the first.
+    expect((await post('t99', 'secret-99')).json()).not.toMatchObject({ duplicate: true });
+    expect(calls.map((call) => call.ctx.tenantId)).toEqual(['t42', 't99']);
+  });
+
+  it('shared secret: the tenant comes from the signed body, whatever path it was posted to', async () => {
+    const auth = new StripeWebhookAuth({ secret: 'whsec_live', tenantFromPayload: (payload) => (payload as { account?: string } | undefined)?.account });
+    const { calls, post } = serverFor('stripe-connect', auth);
+    const signed = '{"id":"evt_7","account":"acct_real"}';
+    const headers = { 'stripe-signature': signStripeWebhook('whsec_live', Math.floor(Date.now() / 1000), signed) };
+    // The route's path says t42; the body, which the signature covers, says acct_real.
+    expect((await post(headers, signed)).statusCode).toBeLessThan(300);
+    expect(calls[0].ctx.tenantId).toBe('acct_real');
   });
 
   it('Stripe: deduplicates on the id inside the signed body', async () => {
@@ -170,13 +221,14 @@ describe('webhook authenticators on WebhookServer', () => {
   });
 
   it('HMAC: a sender with its own header', async () => {
-    const auth = new HmacWebhookAuth({ provider: 'acme', secret: ['new', 'old'], header: 'x-acme-signature', eventIdHeader: 'x-acme-delivery', encoding: 'base64' });
+    const auth = new HmacWebhookAuth({ provider: 'acme', secret: ['new', 'old'], header: 'x-acme-signature', deliveryIdHeader: 'x-acme-delivery', encoding: 'base64' });
     const { calls, post } = serverFor('acme', auth);
     const headers = { 'x-acme-signature': createHmac('sha256', 'old').update(body).digest('base64'), 'x-acme-delivery': 'a-1' };
     expect((await post(headers)).statusCode).toBeLessThan(300);
     expect((await post(headers)).json()).toMatchObject({ duplicate: true });
+    expect((await post({ ...headers, 'x-acme-delivery': 'a-2' })).json()).toMatchObject({ duplicate: true });
     expect(calls).toHaveLength(1);
-    expect((await post({ 'x-acme-delivery': 'a-2' })).statusCode).toBe(401);
+    expect((await post({ 'x-acme-delivery': 'a-3' })).statusCode).toBe(401);
   });
 
   it('refuses to be built without a secret', () => {

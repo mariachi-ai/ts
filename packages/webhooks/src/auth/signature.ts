@@ -9,12 +9,22 @@ import type { WebhookIdentity } from './auth-controller';
 export abstract class SignatureAuthController extends AuthController {
   abstract readonly provider: string;
   abstract readonly signatureHeader: string;
-  /** Header carrying the provider's delivery id, used for dedup. */
+  /**
+   * Header carrying the provider's delivery id, used for dedup. Only safe when the signature
+   * covers that header: if it doesn't, a captured delivery resent under a new id is processed
+   * again. The ready-made authenticators (`GitHubWebhookAuth`, `HmacWebhookAuth`, ...) deduplicate
+   * on signed material instead.
+   */
   protected readonly eventIdHeader?: string;
 
   protected abstract verifySignature(signature: string, rawBody: Buffer, ctx: RequestContext, req: IncomingRequest): Promise<boolean>;
 
-  /** Override to map a delivery to a tenant (e.g. from a path param or payload field). */
+  /**
+   * Override to map a delivery to a tenant. A tenant read from the path is only as trustworthy as
+   * the secret: with one secret for every tenant, a valid delivery posted to another tenant's path
+   * would be attributed to that tenant, so verify with that tenant's own secret, or read the tenant
+   * from the signed body.
+   */
   protected resolveTenant(_req: IncomingRequest): string | undefined {
     return undefined;
   }
