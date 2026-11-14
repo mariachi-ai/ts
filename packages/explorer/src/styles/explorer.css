@@ -873,8 +873,9 @@
     color: var(--m-color-fg-muted);
   }
 
-  /* The breadcrumb's links are 24px targets: the category link sits just under them (WCAG 2.2 target size) */
-  nav.m-breadcrumb a {
+  /* A page's own breadcrumb (not the library's component shown on its page): 24px link targets, since the
+     category link sits just under it (WCAG 2.2 target size) */
+  .x-crumbs a {
     display: inline-flex;
     align-items: center;
     min-block-size: 1.5rem;

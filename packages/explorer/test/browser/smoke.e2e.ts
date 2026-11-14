@@ -23,7 +23,7 @@ for (const route of all) {
     const hrefs = await page.locator('a[href^="/"]').evaluateAll((as) => as.map((a) => a.getAttribute('href')!.split('#')[0].split('?')[0]));
     // A route is a page (a folder's index.html) or a file the build writes (a language's gallery.html, its recipes, its DESIGN.md)
     const isFile = (h: string) => fs.existsSync(path.join(SITE, decodeURIComponent(h))) && fs.statSync(path.join(SITE, decodeURIComponent(h))).isFile();
-    const broken = [...new Set(hrefs)].filter((h) => h !== '' && !h.endsWith('.json') && !h.endsWith('.svg') && !all.includes(h) && !isFile(h));
+    const broken = [...new Set(hrefs)].filter((h) => h !== '' && !all.includes(h) && !isFile(h));
     expect(broken, 'broken internal links').toEqual([]);
     expect(errors).toEqual([]);
   });
