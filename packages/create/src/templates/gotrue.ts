@@ -779,14 +779,30 @@ const { data } = await supabase.auth.getSession();
 await fetch('/api/me', { headers: { authorization: \`Bearer \${data.session?.access_token}\` } });
 \`\`\`
 
+This page is an example to start from, not a finished sign-in. Before you ship one, know what it does:
+
+- **It keeps the session in \`sessionStorage\`**, so any script running on this origin can read the
+  refresh token. Keep GoTrue's refresh-token rotation on (its default), and in production keep the
+  refresh token on the server (a session cookie the API sets) with only short-lived access tokens
+  in the browser.
+- **It uses the implicit flow**: after a magic or confirmation link, GoTrue returns the session in
+  the URL's hash. Prefer PKCE, which returns a one-time code instead (\`flowType: 'pkce'\` in supabase-js).
+- **GoTrue only redirects to addresses on its allow list** (\`GOTRUE_URI_ALLOW_LIST\`; "Redirect URLs"
+  in Supabase). Add this app's \`/api/sign-in\` there, for each host you run it on, or the links in
+  its emails are refused.
+- **Sign-out ends every session of the user**, GoTrue's default scope. Call \`/logout?scope=local\`
+  to end only this one.
+- If a proxy serves GoTrue under this app's origin, route the whole prefix (\`${AUTH_PATH}/...\`) to it.
+
 ## Tenants and roles
 
 - \`ctx.tenantId\` is the organization the token names, read from the \`AUTH_ORG_CLAIM\` claim (\`org_id\`
   by default). GoTrue doesn't add one by itself: put it there with a custom access-token hook that
   only your server controls, together with the user's role in it (\`AUTH_ORG_ROLE_CLAIM\`, \`org_role\`).
 - A user whose token names no organization gets a personal tenant, \`user.app.<userId>\`, so the app
-  works for individuals without any hook. \`GET /api/me\` reports \`personal: true\` for them. Set
-  \`AUTH_PERSONAL_TENANTS=false\` to refuse such users instead (\`tenancy/missing-tenant\`).
+  works for individuals without any hook. \`GET /api/me\` reports \`personal: true\` for them. In an
+  app where everyone must belong to an organization (most B2B apps), set
+  \`AUTH_PERSONAL_TENANTS=false\`: such users are then refused (\`tenancy/missing-tenant\`).
 - A request naming another tenant than the token's gets \`tenancy/mismatch\`.
 - \`ctx.identity.roles\` is \`authenticated\` plus the role in the organization. \`GET /api/me/admin\`
   admits owners and admins, and a user in their own personal tenant (route \`scopes\` need every
