@@ -4,7 +4,7 @@ Bright and friendly money: navy ink on a cool off-white, white panels with 20px 
 
 ## Signature moves
 
-1. **Money set like money:** tabular figures, the sign small and raised, and one 28px figure or title as the page's big line. `observed`.
+1. **Money set like money:** tabular figures, the sign small and raised, and one 28px figure or title as the page's big line. `observed` on the public pages and the sign-in card; `inferred` for the signed-in app, which couldn't be measured.
 2. **Categories you can see:** a tinted capital pill led by an emoji, the same colour everywhere. `observed`.
 3. **Budgets in traffic colours:** green on track, amber near the limit, red over; a pace line that warms from red to green over a dashed plan. `observed`.
 4. **White on off-white with a hairline:** panels, sidebar and header are white on `#f9fafb`, edged by a hairline and a 2% shadow. `observed`.
@@ -21,7 +21,7 @@ The **app** (sidebar, 56px header, 15px body, buttons 620, no footer) and **publ
 
 ## The five habits that matter most
 
-1. **One big line per window.** The largest text is 1.75–1.87 times the body on every app page (a 28px figure or title over 15px) and 3 times on public pages (48 over 16). `observed`: the source's ratio is 1.75–3 on every measured kind; the language's is 1.87 [1.75, 3].
+1. **One big line per window.** The largest text is 1.75–1.87 times the body on every app page (a 28px figure or title over 15px) and 3 times on public pages (48 over 16). `inferred` for app pages: the source's ratio is 1.75–3 on every kind measured (public pages and the sign-in card, `observed`), and no signed-in app screen could be measured; the language's is 1.87 [1.75, 3].
 2. **Three weights.** 450 body, 550 titles and figures, 620 buttons and pills; the sign-in card adds a 700 link. `observed`: the sign-in card's 450/550/620/700; the language has 3 [3, 3.4].
 3. **Calm space.** About two thirds of a window is empty: 0.68 [0.50, 0.85] in the language, 0.57 [0.23, 0.83] on the source.
 4. **Flat panels.** Panels nest two deep at most: depth 2 [1, 2] (the source 2 [1, 3.1]); white on the canvas, never a panel in a panel in a panel.
