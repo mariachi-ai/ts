@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Cirrus's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
+ * Cirrus's nine layout recipes: framework-free HTML using only @mariachi/design classes and tokens
  * (no colour literals), with invented data from a household money app ("Kestrel"). They follow the
  * language's real screen patterns: a white 256px sidebar with grey icons and a pale-blue current
  * row, account groups with coloured dots, a white header bar over an off-white canvas, white 20px
@@ -98,7 +98,9 @@ ${rows}
         </ul>
       </div>`;
 
-const shell = (current: string, header: string, main: string, mainStyle = 'padding: var(--m-space-8)') => `<div class="m-split" style="--m-layout-split-side: 16rem; --m-layout-split-gap: 0; min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+// On a phone the page comes first and the sidebar drops below it (wrap-reverse): the phone app opens on
+// the page itself, with the areas as tabs, never on a list of areas
+const shell = (current: string, header: string, main: string, mainStyle = 'padding: clamp(var(--m-space-6), 3vw, var(--m-space-8))') => `<div class="m-split" style="--m-layout-split-side: 16rem; --m-layout-split-gap: 0; flex-wrap: wrap-reverse; min-block-size: 100vh; background: var(--m-color-bg-canvas)">
   <nav class="m-sidebar" aria-label="Main">
     <div class="m-cluster" data-justify="between">
       ${iconButton(I.panel, 'Collapse the sidebar', 'secondary')}
@@ -296,8 +298,8 @@ const listDetail = shell(
             <span class="m-cluster" data-gap="5"><span><span style="${muted}">Out</span> ${usd('1,318.62')}</span><span><span style="${muted}">In</span> ${usd('3,400.00')}</span><span><span style="${muted}">Net</span> <span style="color: var(--m-color-success-fg)">${usd('2,081.38')}</span></span></span>
           </div>
           <div class="m-cluster" data-justify="between" style="padding: var(--m-space-8) var(--m-space-8) var(--m-space-1)">
-            <h2 id="ci-month" style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium)">April 2026</h2>
-            <span style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium); ${num}">${usd('1,318.62')}</span>
+            <h2 id="ci-month" style="${figure}">April 2026</h2>
+            <span style="${figure}">${usd('1,318.62')}</span>
           </div>
           <ul class="m-stack" data-gap="0" style="padding: 0; list-style: none">
 ${txDate('Today')}
@@ -433,9 +435,9 @@ ${setNav(['Profile', 'Linked accounts', 'Categories & budgets', 'Rules', 'Notifi
           </div>
           <section class="m-card" aria-label="This month">
             <div class="m-cluster" data-justify="center" data-gap="10" style="text-align: center; ${num}">
-              <div class="m-stack" data-gap="1"><span style="${figure}; font-size: var(--m-font-size-xl)">${usd('3,108')}</span><span style="${muted}">spent so far</span></div>
+              <div class="m-stack" data-gap="1"><span style="${figure}">${usd('3,108')}</span><span style="${muted}">spent so far</span></div>
               ${ring}
-              <div class="m-stack" data-gap="1"><span style="${figure}; font-size: var(--m-font-size-xl)">${usd('4,400')}</span><span style="${muted}">budgeted</span></div>
+              <div class="m-stack" data-gap="1"><span style="${figure}">${usd('4,400')}</span><span style="${muted}">budgeted</span></div>
             </div>
           </section>
           <section class="m-card" aria-labelledby="ci-cat-title" style="padding-block-end: var(--m-space-3)">
@@ -476,7 +478,7 @@ const emptyState = shell(
   `      <section class="m-card" style="max-inline-size: 44rem; margin-inline: auto; padding-block: var(--m-space-16)" aria-labelledby="ci-empty">
         <div class="m-stack" data-gap="4" data-align="center" style="text-align: center">
           <span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 3.5rem; block-size: 3.5rem; border-radius: var(--m-radius-lg); background: var(--m-color-accent-subtle); color: var(--m-color-accent-text)">${icon(I.bills, 28)}</span>
-          <h1 id="ci-empty" style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium)">No bills yet</h1>
+          <h1 id="ci-empty" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight)">No bills yet</h1>
           <p style="${muted}; font-size: var(--m-font-size-lg); max-inline-size: 26rem">When a charge repeats, it shows up here with its next date, so nothing catches you by surprise.</p>
           <div class="m-cluster" data-gap="2" data-justify="center">
             <button type="button" class="m-button" data-variant="primary">${icon(I.sparkles)} Find my bills</button>
@@ -486,6 +488,38 @@ const emptyState = shell(
       </section>`,
 );
 
+// ── The public site: header and footer ─────────────────────────────────────────────────────────
+// The header: transparent, the mark, muted 16px links, a white pill and a blue pill (both 550, as on the site)
+const siteButton = 'border-radius: var(--m-radius-full); font-weight: var(--m-font-weight-medium)';
+const siteHeader = (current: string) => `  <header class="m-navbar" style="background: transparent">
+    <a class="m-navbar-brand m-cluster" data-gap="2" href="#"><span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 2rem; block-size: 2rem; border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">${icon(I.wallet, 18)}</span>Kestrel</a>
+    <nav class="m-navbar-nav" aria-label="Site">
+${['Features', 'Stories', 'Pricing', 'Changelog'].map((l) => `      <a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${l}${l === 'Features' ? ` ${icon(I.down, 14)}` : ''}</a>`).join('\n')}
+    </nav>
+    <div class="m-navbar-actions">
+      <a class="m-button" href="#" style="${siteButton}">Sign in</a>
+      <a class="m-button" data-variant="primary" href="#" style="${siteButton}">Try it free</a>
+    </div>
+  </header>`;
+// The footer: a white band, 64px above and 80px below, columns under 16/550 headings, muted 16px links in
+// 22px rows, and the small print in subtle 13px
+const footCol = (title: string, links: string[]) => `      <div class="m-stack" data-gap="4" style="flex: 1 1 9rem">
+        <h2 style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-medium)">${title}</h2>
+        <ul class="m-stack" data-gap="2" style="padding: 0; margin: 0; list-style: none">
+${links.map((l) => `          <li style="line-height: 1.4"><a href="#" style="${muted}; text-decoration: none">${l}</a></li>`).join('\n')}
+        </ul>
+      </div>`;
+const siteFooter = `  <footer style="background: var(--m-color-bg-surface); padding-block: var(--m-space-16) calc(var(--m-space-10) * 2)">
+    <div class="m-container m-stack" data-gap="12">
+      <div class="m-cluster" data-gap="8" style="align-items: start">
+${footCol('Product', ['Budgets', 'Activity', 'Net worth', 'Bills', 'Shared households'])}
+${footCol('Company', ['About', 'Careers', 'Press'])}
+${footCol('Help', ['Help center', 'Changelog', 'Privacy and security', 'Status'])}
+      </div>
+      <p style="color: var(--m-color-fg-subtle); font-size: var(--m-font-size-sm)">© 2026 Kestrel. Kestrel is not a bank; accounts are held by their own institutions.</p>
+    </div>
+  </footer>`;
+
 // ── Pricing ──────────────────────────────────────────────────────────────────────────────────────
 const mono = 'font-family: var(--m-font-family-mono); font-size: var(--m-font-size-xs); letter-spacing: var(--m-font-tracking-wide); text-transform: uppercase';
 const leader = (label: string, value: string, soon = false) =>
@@ -493,20 +527,8 @@ const leader = (label: string, value: string, soon = false) =>
 const faq = (q: string, a: string, open = false) =>
   `      <details class="m-accordion-item" name="ci-faq"${open ? ' open' : ''}${open ? ' style="box-shadow: var(--m-shadow-lg)"' : ''}><summary>${q}</summary><div class="m-accordion-content">${a}</div></details>`;
 
-const pricing = `<div style="min-block-size: 100vh; background: radial-gradient(60rem 40rem at 20% 0%, var(--m-color-accent-subtle), transparent 70%), var(--m-color-bg-canvas)">
-  <header class="m-navbar" style="background: transparent">
-    <a class="m-navbar-brand m-cluster" data-gap="2" href="#"><span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 2rem; block-size: 2rem; border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">${icon(I.wallet, 18)}</span>Kestrel</a>
-    <nav class="m-navbar-nav" aria-label="Site">
-      <a class="m-navbar-link" href="#">Features ${icon(I.down, 14)}</a>
-      <a class="m-navbar-link" href="#">Stories</a>
-      <a class="m-navbar-link" href="#" aria-current="page">Pricing</a>
-      <a class="m-navbar-link" href="#">Changelog</a>
-    </nav>
-    <div class="m-navbar-actions">
-      <a class="m-button" href="#" style="border-radius: var(--m-radius-full)">Sign in</a>
-      <a class="m-button" data-variant="primary" href="#" style="border-radius: var(--m-radius-full)">Try it free</a>
-    </div>
-  </header>
+const pricing = `<div style="min-block-size: 100vh; font-size: var(--m-font-size-lg); background: radial-gradient(60rem 40rem at 20% 0%, var(--m-color-accent-subtle), transparent 70%), var(--m-color-bg-canvas)">
+${siteHeader('Pricing')}
   <main class="m-container" style="padding-block: var(--m-space-16)">
     <div class="m-stack" data-gap="10" data-align="center">
       <div class="m-stack" data-gap="4" data-align="center" style="text-align: center">
@@ -531,7 +553,7 @@ ${leader('Every device you use', 'Yes')}
 ${leader('Email support, seven days', 'Yes')}
 ${leader('Read-only advisor access', 'Later', true)}
         </ul>
-        <button type="button" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%; border-radius: var(--m-radius-full)">Start a free month</button>
+        <button type="button" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%; ${siteButton}">Start a free month</button>
       </section>
     </div>
     <section class="m-stack" data-gap="6" aria-labelledby="ci-faq" style="max-inline-size: 54rem; margin: var(--m-space-16) auto 0">
@@ -544,6 +566,7 @@ ${faq('What happens if I cancel?', 'You keep access until the end of the period 
       </div>
     </section>
   </main>
+${siteFooter}
 </div>`;
 
 // ── Errors ───────────────────────────────────────────────────────────────────────────────────────
@@ -565,7 +588,7 @@ const errors = shell(
       ${iconButton(I.x, 'Close')}`,
   `      <div class="m-stack" data-gap="8" style="max-inline-size: 44rem; margin-inline: auto">
         <form class="m-card" aria-labelledby="ci-err-form" novalidate>
-          <h2 id="ci-err-form" class="m-card-title">New transaction</h2>
+          <h2 id="ci-err-form" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight)">New transaction</h2>
           <div class="m-alert" data-tone="danger" role="alert">
             <span class="m-alert-icon">${icon(I.alert)}</span>
             <div class="m-alert-content"><div class="m-alert-title">2 things to fix</div><div class="m-alert-body">Nothing was saved yet. Add the amount and who you paid.</div></div>
@@ -606,6 +629,64 @@ ${errorPage('500', I.alert, 'Something went wrong on our end', 'Your data is saf
 ${errorPage('403', I.lock, 'This belongs to someone else', 'Only the person who linked this account can see it. Ask them to share it with you.', `<button type="button" class="m-button" data-variant="primary">Ask for access</button><a class="m-button" data-variant="ghost" href="#">Go back</a>`)}
       </div>`,
 );
+
+// ── Reading ──────────────────────────────────────────────────────────────────────────────────────
+// A changelog post on the public site: the header, a white Back pill, a tinted mono tag and the date, a
+// centred 48px title, the lead picture in a soft gradient frame, the post in a narrow column, older and
+// newer posts, the footer
+const monoCaps = 'font-family: var(--m-font-family-mono); font-size: var(--m-font-size-sm); letter-spacing: var(--m-font-tracking-wide); text-transform: uppercase';
+const leadPicture = `<div role="img" aria-label="The new split view: a payment divided between two categories" style="inline-size: min(100%, 54rem); aspect-ratio: 16 / 9; margin-inline: auto; border-radius: var(--m-radius-container); border: var(--m-border-width-thin) solid var(--m-color-border-default); box-shadow: var(--m-shadow-lg); background-image: linear-gradient(135deg, var(--m-color-success-bg), var(--m-color-accent-subtle) 60%, var(--m-color-bg-surface)); overflow: hidden; display: flex; align-items: flex-end; justify-content: flex-end">
+        <div aria-hidden="true" style="inline-size: 82%; block-size: 78%; background: var(--m-color-bg-surface); border: var(--m-border-width-thin) solid var(--m-color-border-default); border-end-end-radius: 0; border-start-start-radius: var(--m-radius-container); display: grid; place-items: center">
+          <svg viewBox="0 0 400 160" width="70%" style="overflow: visible"><path d="M0,150 L400,40" fill="none" style="stroke: var(--m-color-border-strong)" stroke-width="1" stroke-dasharray="4 5"/><path d="M0,140 L60,120 L120,128 L180,96 L240,90 L300,70 L360,52" fill="none" style="stroke: var(--m-color-success-solid)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><circle cx="360" cy="52" r="6" style="fill: var(--m-color-bg-surface); stroke: var(--m-color-success-solid)" stroke-width="3"/></svg>
+        </div>
+      </div>`;
+const postLink = (dir: string, title: string, align: string) =>
+  `<a href="#" class="m-stack" data-gap="1" style="flex: 1 1 14rem; text-align: ${align}; text-decoration: none; color: var(--m-color-fg-default)"><span style="${monoCaps}; color: var(--m-color-fg-subtle)">${dir}</span><span style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium)">${title}</span></a>`;
+const reading = `<div style="min-block-size: 100vh; font-size: var(--m-font-size-lg); background: radial-gradient(60rem 30rem at 50% 0%, var(--m-color-accent-subtle), transparent 70%), var(--m-color-bg-canvas)">
+${siteHeader('Changelog')}
+  <main class="m-container" style="padding-block: var(--m-space-12) var(--m-space-16)">
+    <article class="m-stack" data-gap="10" aria-labelledby="ci-post">
+      <div class="m-stack" data-gap="6" data-align="center" style="text-align: center">
+        <a class="m-button" data-size="sm" href="#" style="${siteButton}">${icon(I.left, 14)} Back</a>
+        <div class="m-cluster" data-gap="3" data-justify="center"><span class="m-badge" data-tone="success" style="border-radius: var(--m-radius-sm); font-family: var(--m-font-family-mono)">Web</span><time datetime="2026-04-09" style="${monoCaps}; ${muted}">Apr 09 2026</time></div>
+        <h1 id="ci-post" style="font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Split a payment</h1>
+      </div>
+      ${leadPicture}
+      <div class="m-stack" data-gap="5" style="max-inline-size: 40rem; margin-inline: auto; line-height: 1.6">
+        <p>One payment can now count toward more than one category. Open it, choose Split, and divide the amount by hand or by percentage; budgets and reports pick up each part on its own.</p>
+        <p>Splits are kept with the payment, so if your bank updates it later, the parts stay as you set them. You can undo a split from the same menu at any time.</p>
+        <h2 style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium); margin-block-start: var(--m-space-4)">Also in this release</h2>
+        <ul class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-5); margin: 0">
+          <li>Search now finds notes as well as payee names.</li>
+          <li>Recurring bills show the date they last changed amount.</li>
+          <li>Exports include the category emoji, if you want it.</li>
+        </ul>
+      </div>
+      <nav class="m-cluster" data-justify="between" data-gap="6" aria-label="More posts" style="max-inline-size: 40rem; inline-size: 100%; margin-inline: auto; padding-block-start: var(--m-space-8); ${hair}">
+        ${postLink('Newer', 'Shared households', 'start')}
+        ${postLink('Older', 'Faster search', 'end')}
+      </nav>
+    </article>
+  </main>
+${siteFooter}
+</div>`;
+
+// ── Sign-in ──────────────────────────────────────────────────────────────────────────────────────
+// The app's door: one white card centred on the canvas, a lifted icon tile, a 28px title, a full-width
+// blue Continue and an ink alternative (both 44px, 12px corners, 620), and a muted line to sign up
+const signIn = `<main style="min-block-size: 100vh; display: grid; place-items: center; padding: var(--m-space-10) var(--m-space-4); background: var(--m-color-bg-canvas)">
+  <section class="m-card" style="inline-size: min(100%, 36rem); min-block-size: min(36rem, 100%); justify-content: center; padding: clamp(var(--m-space-6), 6vw, var(--m-space-16)) clamp(var(--m-space-5), 7vw, var(--m-space-16)); box-shadow: none" aria-labelledby="ci-in-title">
+    <div class="m-stack" data-gap="6" data-align="center" style="text-align: center">
+      <span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 3rem; block-size: 3rem; border-radius: var(--m-radius-lg); background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-lg); color: var(--m-color-accent-default)">${icon(I.wallet, 24)}</span>
+      <h1 id="ci-in-title" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Sign in to Kestrel</h1>
+      <div class="m-stack" data-gap="3" style="inline-size: min(100%, 25rem)">
+        <a class="m-button" data-variant="primary" data-size="lg" href="#" style="inline-size: 100%; border-radius: var(--m-radius-lg)">Continue with email</a>
+        <a class="m-button" data-size="lg" href="#" style="inline-size: 100%; border-radius: var(--m-radius-lg); --m-button-secondary-bg: var(--m-color-bg-inverse); --m-button-secondary-fg: var(--m-color-fg-inverse); --m-button-secondary-border: var(--m-color-bg-inverse); --m-button-secondary-hover-bg: var(--m-color-bg-inverse); --m-button-secondary-active-bg: var(--m-color-bg-inverse)">${icon(I.lock)} Continue with a passkey</a>
+      </div>
+      <p style="${muted}; font-size: var(--m-font-size-md)">New to Kestrel? <a href="#" style="${muted}; font-weight: var(--m-font-weight-bold); text-decoration: none">Create an account</a></p>
+    </div>
+  </section>
+</main>`;
 
 export const cirrusRecipes: ArchetypeRecipe[] = [
   {
@@ -655,5 +736,19 @@ export const cirrusRecipes: ArchetypeRecipe[] = [
     description:
       'Field errors under the field, a summary above the form that says nothing was saved, a reconnect callout, a toast for failures elsewhere, and whole pages for 404, 500 and no access.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A changelog post on the public site: a Back pill, a tinted mono tag and date, a centred 48px title, the lead picture in a soft gradient frame, a narrow column of text and the footer.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'One white card centred on the canvas: a lifted icon tile, a 28px title, a full-width blue Continue, an ink alternative and a quiet line to create an account.',
+    html: signIn,
   },
 ];

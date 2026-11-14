@@ -9,7 +9,9 @@ net worth.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes;
+- **`brief.md`** (read first), **`patterns/`** (what the language does, job by job), **`never.md`**
+  (what it refuses) and **`precedents/index.md`** (the recipes as precedents);
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `cirrus` preset of `@mariachi/design` (`data-theme="cirrus"`,
@@ -18,8 +20,8 @@ The tokens are in the `cirrus` preset of `@mariachi/design` (`data-theme="cirrus
 ## Principles
 
 - **Friendly, not loud.** Navy ink instead of black, a soft off-white page, rounded white panels.
-  Weight does the emphasis (450 body, 550 titles and figures); nothing is heavy except marketing
-  headlines.
+  Weight does the emphasis (450 body, 550 titles and figures, 620 buttons and pills); nothing is
+  heavy except marketing headlines.
 - **One blue for doing things.** The blue fills the primary button, marks the current nav row and
   the highlighted menu row, and links. Status colour (green, amber, red) is for money and budgets.
 - **Money at a glance.** Figures use tabular numbers with the currency sign small and raised:
@@ -60,7 +62,7 @@ The tokens are in the `cirrus` preset of `@mariachi/design` (`data-theme="cirrus
   - 8px inside a control group;
   - 12px between rows in a panel;
   - 24px between panels and inside them;
-  - 32px around the page content.
+  - 32px around the page content (24px on a phone).
 - **Layout.**
   - A 256px white sidebar with a hairline edge, beside a 56px white header bar.
   - Content on the off-white canvas, 32px from the edges, in a two-column grid of panels 24px apart.
@@ -75,17 +77,21 @@ are in the reference at the end.
 ## Type
 
 - **Family.** Figtree (variable) for everything: a friendly geometric grotesque with a double-storey
-  a. Weights are in-between steps: 450 for body, 550 for titles, figures and buttons, 620 for small
+  a. Weights are in-between steps: 450 for body, 550 for titles and figures, 620 for buttons, small
   capital pills and marketing headlines. Load the variable font (`@fontsource-variable/figtree`) so
-  450, 550 and 620 render as set.
+  450, 550 and 620 render as set. A page uses three of them; the sign-in card adds 700 for its one
+  "Create an account" link.
 - **Mono.** JetBrains Mono (`@fontsource-variable/jetbrains-mono`), only for receipt-like labels
-  on marketing pages ("SAVE 25%") and codes. Never for amounts.
+  on public pages ("SAVE 25%", a post's tag and date: "APR 09 2026") and codes. Never for amounts.
 - **Sizes:**
   - body and list rows 15px with a 1.5 line height; nav rows 16px;
   - secondary text 13px; column labels 12px capitals; category pills 11px capitals;
   - panel and header titles 16px at 550;
   - big figures 28px at 550; section titles 20px;
-  - marketing headings 36px and 48px at 620, tracked −1%.
+  - marketing headings 36px and 48px at 620, tracked −1%; public pages' running text is 16px.
+- **One big line per window.** Every app page's first window carries a 28px title or figure (the
+  month's total, the payee and amount, a form card's title, an empty state's title), so the largest
+  text is about 1.9 times the body; public pages put a 48px title over 16px text (3 times).
 - **Case.** Sentence case everywhere, except category pills, table column labels and marketing
   receipt labels, which are capitals tracked 4–5%.
 - **Figures.** `font-variant-numeric: tabular-nums`, with the currency sign at about 62% size and
@@ -149,14 +155,15 @@ All 36 of the library's components, as Cirrus draws them. Every one is in `galle
 - `m-stack` and `m-cluster`, for everything inside.
 
 **Actions and forms**
-- **Button.** 8px radius, weight 550, 32px (`sm`) in headers, panels and bars, 36px by default,
+- **Button.** 8px radius, weight 620, 32px (`sm`) in headers, panels and bars, 36px by default,
   44px (`lg`) for the main action of a card or form, where the radius grows to 12px.
   - **Primary:** solid blue, white text, one per view.
   - **Secondary** (the default): white with a hairline and the small shadow; navy text.
   - **Ghost:** text only, for header icons and quiet actions ("More filters").
   - **Danger:** solid red, only to confirm something destructive.
   - **Icon-only:** a square 32px button with an `aria-label`; secondary in panels, ghost in bars.
-  - On marketing pages buttons are full pills, 44px.
+  - On public pages buttons are full pills at 550 (the site's weight): 44px in the header and
+    hero, 32px for a Back pill.
 - **Input, textarea.** 36px, 8px radius, white, a control-strength border that darkens on hover and
   turns blue on focus. Search fields in the header are 32px with a hairline border.
 - **Select.** The same box as an input with a small chevron.
@@ -261,31 +268,99 @@ All 36 of the library's components, as Cirrus draws them. Every one is in `galle
 - **Words.** Say what happened, whether anything changed, and what to do next. Warm and plain; no
   codes in sentences, no blame, no exclamation marks.
 
+## The two families
+
+- **The app** (`dashboard`, `list-detail`, `settings`, `empty-state`, `errors`, and the centred
+  cards: `onboarding`, `sign-in`). The 256px white sidebar and the 56px white header over the
+  off-white canvas; body 15px at 450; titles and figures 550; buttons 620 with 8px corners (12px for
+  a card's full-width 44px action). One blue button per view, or none on a page that only shows
+  (the dashboard and settings have none). No footer.
+- **Public pages** (`pricing`, `reading`). No sidebar: a transparent 72px header with the mark,
+  muted 16px links, a white pill and a blue pill at the right, over a soft blue wash; running text
+  16px; titles 48px at 620, centred; buttons are full pills at 550. Every public page ends with the
+  footer: a white band, 64px above and 80px below, columns under 16px headings at 550, muted 16px
+  links in 22px rows, the small print in subtle 13px.
+- **What changes on a phone.** App pages put the page first and drop the sidebar under it, with a
+  24px gutter; panels go to one column. Public pages keep the header's two pills; the nav links
+  scroll sideways; titles stay centred.
+
 ## Page shapes (recipes)
 
-- **Dashboard.**
+- **Dashboard** (app).
   - The shell: white sidebar, white header with "Overview" and icon buttons, the off-white canvas.
   - Two columns of panels: spending against the planned pace and net worth with range pills; then
     the transactions that need a look, top categories with budget bars, and what's coming up.
-- **List and detail.**
+- **List and detail** (app).
   - Filter chips and the totals strip in white bands under the header.
-  - The month's heading and total, then rows grouped by day; selected rows in pale blue with a
-    floating action bar ("3 selected · Review · Category · Tag").
+  - The month and its total as 28px figures, then rows grouped by day; selected rows in pale blue
+    with a floating action bar ("3 selected · Review · Category · Tag").
   - The detail in a white panel on the right: date and status, payee and amount large, the account,
     then label-and-value rows for category, repeats and labels, and a note.
-- **Onboarding.** One white card centred on the canvas: an icon tile, a thin progress bar, a 28px
-  heading, one question at a time (choices as bordered cards, the chosen one pale blue), a full-width
-  44px blue button and Back as a ghost.
-- **Settings.** A plain list of sections beside white panels: the month as a ring of category
-  colours, budgets as a table with coloured bars, and switches in hairline rows.
-- **Empty state.** Inside a panel: a pale-blue icon tile, a 20px heading, one sentence, a blue
+- **Onboarding** (app). One white card centred on the canvas: an icon tile, a thin progress bar, a
+  28px heading, one question at a time (choices as bordered cards, the chosen one pale blue), a
+  full-width 44px blue button and Back as a ghost.
+- **Settings** (app). A plain list of sections beside white panels: the month as two 28px figures
+  around a ring of category colours, budgets as a table with coloured bars, and switches in hairline
+  rows.
+- **Empty state** (app). Inside a panel: a pale-blue icon tile, a 28px heading, one sentence, a blue
   button and a secondary one.
-- **Pricing.**
-  - A soft blue wash over the canvas, a 48px headline, a large Yearly/Monthly segmented control.
+- **Pricing** (public).
+  - The site header over a soft blue wash, a 48px headline, a large Yearly/Monthly segmented
+    control.
   - One square, receipt-like card: mono capital labels, a big price with the small raised sign,
     dotted leader rows, and a full-width pill button.
-  - Separated question cards below.
-- **Errors.** The field, form, connection, toast and whole-page errors above, as one page.
+  - Separated question cards below, then the footer.
+- **Errors** (app). The field, form (its card titled at 28px), connection, toast and whole-page
+  errors above, as one page.
+- **Reading** (public: a changelog post or an article).
+  - The site header; a white "‹ Back" pill; a tinted mono capital tag beside the mono date; the
+    title centred at 48px.
+  - The lead picture: a frame with 20px corners, a hairline and the soft lift, filled with a pale
+    green-to-blue wash, with the product shown inside it.
+  - The post in a 40rem column at 16px with a 1.6 line height: 20px subheads, short lists.
+  - Newer and older posts under a hairline (mono capital labels, 20px titles), then the footer.
+- **Sign-in** (app's door). One white card, 36rem wide and about as tall, 20px corners, a hairline
+  and no shadow, centred on the canvas: a lifted 48px icon tile, the 28px title, a full-width blue
+  Continue and an ink alternative (both 44px, 12px corners, 620), and a muted line with a bold link
+  to create an account.
+
+### Signature moves
+
+1. **Money set like money.** Figures in tabular numbers with the currency sign small and raised;
+   the page's one big line is a 28px figure or title (`observed` on the app screenshots and the
+   sign-in card's 28/550 title; the language's largest text is 1.75–1.87 times the body on every
+   app page).
+2. **Categories you can see:** a tinted capital pill led by an emoji, the same colour wherever the
+   category appears (`observed` on the app screenshots).
+3. **Budgets in traffic colours:** green bars and lines while on track, amber near the limit, red
+   when over; the pace line warms from red to green over a dashed plan (`observed`).
+4. **White on off-white with a hairline:** panels, the sidebar and the header are white on
+   `#f9fafb`, separated by a hairline and almost no shadow (`observed`).
+5. **One blue, and only for doing:** the primary button, the current nav row, links. On public pages
+   it is the header's pill (`observed`: one primary in the first window of every measured page).
+6. **Mono capitals as labels on public pages:** a post's tag and date, the pricing card's labels,
+   the site 404's card (`observed` on the changelog posts, the pricing section and the site 404).
+
+### How a screen is assembled
+
+- **It opens with** the white header: in the app, the page's name at 16px with icon buttons and a
+  search at the right, then the page's 28px figure or title in the first panel; on public pages, a
+  centred 48px title (and on a post, the Back pill and tag above it). There is no hero band in the
+  app.
+- **Reading order:** the figure, the line under it (planned, budgeted, the account), then the
+  details in rows; panels left to right, then down.
+- **How much one screen does:** one area per page; a second job opens in the right-hand detail
+  panel or a dialog, not a new page section.
+- **When narrow:** panels go to one column; the detail panel drops under the list; on a phone the
+  page comes before the sidebar.
+- **Too much content:** lists page with "1 – 3 of 3" and chevrons, and panels end with "See all ›";
+  long activity groups by day.
+- **No content:** the page title and shell stay; a panel with the pale-blue icon tile takes the
+  list's place (see [patterns/say-nothing-is-here.md](./patterns/say-nothing-is-here.md)).
+- **Three weights, four to seven sizes:** 450, 550 and 620 on every page (sign-in adds a 700 link).
+
+The patterns, by job, are in [`patterns/`](./patterns/); the refusals in [never.md](./never.md); the
+recipes as precedents in [precedents/index.md](./precedents/index.md).
 
 ## Words
 
