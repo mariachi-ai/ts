@@ -195,6 +195,45 @@ describe('OidcAuthProvider', () => {
     expect((await provider().verify(await typed('JWT'))).userId).toBe('user-1');
   });
 
+  it("tokenType 'access' refuses an id token, however the provider marks the difference", async () => {
+    const withTyp = (typ: string, claims: Record<string, unknown> = {}) =>
+      new SignJWT(claims).setProtectedHeader({ alg: key.alg, kid: key.kid, typ }).setIssuer(issuer).setAudience('my-api').setSubject('user-1').setIssuedAt().setExpirationTime('10m').sign(key.privateKey);
+    const access = provider({ tokenType: 'access' });
+    // RFC 9068, Cognito, Keycloak:
+    expect((await access.verify(await withTyp('at+jwt'))).userId).toBe('user-1');
+    expect((await access.verify(await withTyp('JWT', { token_use: 'access' }))).userId).toBe('user-1');
+    expect((await access.verify(await withTyp('JWT', { typ: 'Bearer' }))).userId).toBe('user-1');
+    // An id token, and a token that says nothing either way:
+    for (const claims of [{ token_use: 'id' }, { typ: 'ID' }, {}]) {
+      await expect(access.verify(await withTyp('JWT', claims))).rejects.toMatchObject({ code: 'auth/invalid-token', message: expect.stringContaining('not an access token') });
+    }
+  });
+
+  it('checks who the token was issued to, when told who may', async () => {
+    const strict = provider({ authorizedParty: ['web-app', 'mobile-app'] });
+    expect((await strict.verify(await sign({ azp: 'web-app' }))).userId).toBe('user-1');
+    expect((await strict.verify(await sign({ client_id: 'mobile-app' }))).userId).toBe('user-1');
+    await expect(strict.verify(await sign({ azp: 'another-app' }))).rejects.toMatchObject({ code: 'auth/invalid-token', message: expect.stringContaining('not allowed') });
+    await expect(strict.verify(await sign({ azp: 'another-app', client_id: 'web-app' }))).rejects.toMatchObject(invalid);
+    await expect(strict.verify(await sign({}))).rejects.toMatchObject(invalid);
+  });
+
+  it('runs validate only on a token that already verified, and takes the user id from another claim', async () => {
+    let seen = 0;
+    const counted = provider({ validate: () => { seen += 1; } });
+    await expect(counted.verify(await sign({}, { aud: 'another-api' }))).rejects.toMatchObject(invalid);
+    await expect(counted.verify(await sign({}, { key: await makeKey('k1') }))).rejects.toMatchObject(invalid);
+    expect(seen).toBe(0);
+    await counted.verify(await sign({}));
+    expect(seen).toBe(1);
+
+    // Entra ID: `sub` is per application, `oid` is the person.
+    expect((await provider({ userIdClaim: 'oid' }).verify(await sign({ oid: 'person-1' }))).userId).toBe('person-1');
+    await expect(provider({ userIdClaim: 'oid' }).verify(await sign({}))).rejects.toMatchObject(invalid);
+    // A single role as a string, as some providers send it.
+    expect((await provider({ rolesClaim: ['roles', 'role'] }).verify(await sign({ role: 'member' }))).roles).toEqual(['member']);
+  });
+
   it('keeps the keys it has when the discovery document cannot be re-read', async () => {
     const auth = provider({ jwksCacheMaxAgeMs: 20 });
     const token = await sign({});

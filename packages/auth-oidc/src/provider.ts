@@ -35,6 +35,15 @@ function requireSecureUrl(value: string, what: string, code: 'auth/invalid-confi
   return value;
 }
 
+/**
+ * Whether a verified token says it's an access token: RFC 9068's `typ: at+jwt` header, Amazon
+ * Cognito's `token_use: access`, or Keycloak's `typ: Bearer` claim.
+ */
+function looksLikeAccessToken(header: { typ?: string }, claims: OidcClaims): boolean {
+  const typ = header.typ?.toLowerCase().replace(/^application\//, '');
+  return typ === 'at+jwt' || claims.token_use === 'access' || claims.typ === 'Bearer';
+}
+
 function sources<T>(value: ClaimSource<T> | Array<ClaimSource<T>> | undefined, fallback: string[]): Array<ClaimSource<T>> {
   if (value === undefined) return fallback;
   return Array.isArray(value) ? value : [value];
@@ -85,6 +94,7 @@ export class OidcAuthProvider implements AuthProvider {
   async verify(token: string): Promise<ResolvedIdentity> {
     const keys = this.jwks ?? (await this.keySet());
     let claims: OidcClaims;
+    let header: { typ?: string };
     try {
       const result = await jwtVerify(token, keys, {
         algorithms: this.algorithms,
@@ -95,8 +105,20 @@ export class OidcAuthProvider implements AuthProvider {
         typ: this.config.requireTokenType,
       });
       claims = result.payload as OidcClaims;
+      header = result.protectedHeader;
     } catch (error) {
       throw new AuthError('auth/invalid-token', `OIDC token verification failed: ${(error as Error).message}`);
+    }
+    // Everything below runs on a token whose signature, issuer, audience and times already hold.
+    if (this.config.tokenType === 'access' && !looksLikeAccessToken(header, claims)) {
+      throw new AuthError('auth/invalid-token', 'OIDC token refused: not an access token');
+    }
+    if (this.config.authorizedParty !== undefined) {
+      const allowed = Array.isArray(this.config.authorizedParty) ? this.config.authorizedParty : [this.config.authorizedParty];
+      const party = typeof claims.azp === 'string' ? claims.azp : claims.client_id;
+      if (typeof party !== 'string' || !allowed.includes(party)) {
+        throw new AuthError('auth/invalid-token', 'OIDC token refused: issued to a client that is not allowed');
+      }
     }
     if (this.config.validate) {
       try {
@@ -162,13 +184,14 @@ export class OidcAuthProvider implements AuthProvider {
 
   /** The mapping `verify` applies to a verified payload. */
   toIdentity(claims: OidcClaims): ResolvedIdentity {
-    if (typeof claims.sub !== 'string' || !claims.sub) throw new AuthError('auth/invalid-token', 'OIDC token has no subject');
+    const userId = read(claims, this.config.userIdClaim ?? 'sub');
+    if (typeof userId !== 'string' || !userId) throw new AuthError('auth/invalid-token', 'OIDC token has no subject');
     const roles = [...new Set(sources(this.config.rolesClaim, ['roles']).flatMap((source) => strings(read(claims, source))))];
     const granted = sources(this.config.scopesClaim, ['scope', 'scp', 'permissions']).flatMap((source) => strings(read(claims, source), true));
     const tenant = read(claims, this.config.tenantClaim ?? 'org_id');
     const session = read(claims, this.config.sessionClaim ?? 'sid');
     return {
-      userId: claims.sub,
+      userId,
       tenantId: typeof tenant === 'string' ? tenant : '',
       scopes: [...new Set([...(this.config.rolesAsScopes ? roles : []), ...granted])],
       roles,

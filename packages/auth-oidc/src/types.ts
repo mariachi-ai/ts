@@ -29,6 +29,25 @@ export interface OidcConfig {
    * access token from an `id_token`.
    */
   requireTokenType?: string;
+  /**
+   * `'access'`: accept only a token that shows it's an access token, so an `id_token` from the
+   * same issuer can't be used on your API. It recognises RFC 9068's `typ: at+jwt` header, Amazon
+   * Cognito's `token_use: access` and Keycloak's `typ: Bearer` claim, and refuses a token with
+   * none of them. Leave it off for a provider that marks its access tokens in no such way, and
+   * rely on `audience`.
+   */
+  tokenType?: 'access';
+  /**
+   * The client or clients allowed to have obtained the token: checked against `azp`, or
+   * `client_id` when there's no `azp`. Set it when tokens carry several audiences, where `aud`
+   * alone doesn't say which application asked for the token.
+   */
+  authorizedParty?: string | string[];
+  /**
+   * The claim holding the user's id. Default `sub`. Microsoft Entra ID's `sub` differs per
+   * application for the same person; its `oid` is the stable one.
+   */
+  userIdClaim?: ClaimSource<string>;
   /** Where to read the JWKS, skipping discovery. */
   jwksUrl?: string;
   /** The discovery document, when it isn't at `<issuer>/.well-known/openid-configuration` (an internal address, say). */

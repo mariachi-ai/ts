@@ -37,7 +37,7 @@ machine only (`localhost`, `127.x`, `::1`).
 
 | `ResolvedIdentity` | From | Option |
 | --- | --- | --- |
-| `userId` | `sub` | |
+| `userId` | `sub` | `userIdClaim` |
 | `tenantId` | `org_id`; empty when the token has none | `tenantClaim` |
 | `roles` | `roles` | `rolesClaim` |
 | `scopes` | `scope`, `scp`, `permissions` | `scopesClaim`; `rolesAsScopes: true` adds the roles |
@@ -62,8 +62,9 @@ createOidcAuth({ issuer: 'https://acme.auth0.com/', audience: 'https://api.acme.
 createOidcAuth({ issuer: 'https://id.acme.com/realms/app', audience: 'app-api',
   rolesClaim: (claims) => (claims.realm_access as { roles?: string[] } | undefined)?.roles });
 
-// Microsoft Entra ID: the tenant is `tid`; `scp` and `roles` are read by default.
-createOidcAuth({ issuer: `https://login.microsoftonline.com/${tenantId}/v2.0`, audience: clientId, tenantClaim: 'tid' });
+// Microsoft Entra ID: the tenant is `tid`; `scp` and `roles` are read by default. Its `sub` differs
+// per application for the same person, so `oid` is the stable user id.
+createOidcAuth({ issuer: `https://login.microsoftonline.com/${tenantId}/v2.0`, audience: clientId, tenantClaim: 'tid', userIdClaim: 'oid' });
 
 // Amazon Cognito access tokens have no `aud`: say so, and check what they have instead.
 createOidcAuth({
@@ -82,7 +83,10 @@ createOidcAuth({
 | --- | --- | --- |
 | `issuer` | required | Exactly the token's `iss` |
 | `audience` | required | A string or list. `null` only when the provider's tokens have no `aud`; `validate` is then required |
-| `requireTokenType` | none | Require this `typ` header, e.g. `at+jwt` (RFC 9068 access tokens) |
+| `tokenType` | none | `'access'`: refuse anything that doesn't show it's an access token (`typ: at+jwt` header, Cognito's `token_use: access`, or Keycloak's `typ: Bearer` claim) |
+| `requireTokenType` | none | Require exactly this `typ` header, e.g. `at+jwt` |
+| `authorizedParty` | none | Clients allowed to have obtained the token, checked against `azp` (or `client_id`). Set it when tokens carry several audiences |
+| `userIdClaim` | `sub` | |
 | `rolesAsScopes` | `false` | Also list the roles among the scopes |
 | `jwksUrl` | from discovery | Skips discovery |
 | `discoveryUrl` | `<issuer>/.well-known/openid-configuration` | For a document served elsewhere, such as an internal address |
@@ -100,5 +104,9 @@ Errors are `AuthError`: `auth/invalid-token` (anything wrong with a token, or wi
 An `id_token` and an access token are both JWTs from the same issuer. Send your API the access
 token, and set `audience` to the API's identifier so an `id_token` (whose `aud` is the client id) is
 refused. If your API's audience **is** the client id (some providers issue access tokens that way),
-`aud` can't tell the two apart: set `requireTokenType: 'at+jwt'` when the provider marks its access
-tokens so, or check a claim only access tokens carry in `validate`.
+`aud` can't tell the two apart: set `tokenType: 'access'`, which refuses a token that doesn't mark
+itself as an access token in one of the ways above. For a provider that marks them in no such way,
+check a claim only access tokens carry in `validate`.
+
+`validate` runs last, only on a token whose signature, issuer, audience and times already hold;
+throw an `Error` with the reason to refuse it.
