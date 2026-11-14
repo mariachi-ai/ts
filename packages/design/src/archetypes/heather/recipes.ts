@@ -1,13 +1,15 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Heather's seven layout recipes: framework-free HTML using only @mariachi/design classes and
- * tokens (no colour literals), with sample data from a small studio's video-message workspace. They
- * follow the language's real screen patterns: a white sidebar whose current row is pale blue, a wide
- * rounded search field, a grid of video cards with a hairline and 16px corners, a viewer page with
- * a side panel of tabs and a highlighted transcript row, 12px buttons, pale-blue time chips, and
- * settings as titled sections with a hairline between them. Thumbnails, the video and avatars are
- * content: they are drawn as token shapes, never images.
+ * Heather's nine layout recipes (the seven every language has, then reading and sign-in):
+ * framework-free HTML using only @mariachi/design classes and tokens (no colour literals), with sample
+ * data from a small studio's video-message workspace. They follow the language's real screen
+ * patterns: a white sidebar whose current row is pale blue, a wide rounded search field, a grid of
+ * video cards with a hairline and 16px corners, a viewer page with a side panel of tabs and a
+ * highlighted transcript row, 12px buttons, pale-blue time chips, and settings as titled sections with
+ * a hairline between them. Three weights only: 400 text, 500 controls and labels, 653 headings.
+ * Thumbnails and the video are content: each is one picture painted from token colours as background
+ * layers, never an image file.
  */
 
 // Lucide icons, outlined, 2px stroke (the reference's 1.5px icons, drawn on a 16px grid)
@@ -77,6 +79,9 @@ const I = {
 // Styles that recur, as tokens
 const pageTitle =
   'font-size: var(--m-font-size-4xl); font-weight: var(--m-font-weight-bold); line-height: var(--m-font-leading-tight)';
+// The title of one thing (a video, a flow step, the sign-in card): 24px
+const flowTitle =
+  'font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-bold); line-height: var(--m-font-leading-tight)';
 const h2 = 'font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold); line-height: var(--m-font-leading-tight)';
 const h3 = 'font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-bold)';
 const small = 'font-size: var(--m-font-size-sm); color: var(--m-color-fg-subtle)';
@@ -100,8 +105,8 @@ const nav = (items: [keyof typeof I, string, string?][], current: string) =>
 
 // The app shell: a white sidebar (mark, workspace switcher, nav, channels, the record tab) and a
 // top bar with the wide rounded search field
-const shell = (current: string, main: string) => `<div class="m-split" style="--m-layout-split-side: 15rem; --m-layout-split-gap: 0; min-block-size: 100vh">
-  <nav class="m-sidebar" aria-label="Main" style="font-weight: var(--m-font-weight-semibold)">
+const shell = (current: string, main: string) => `<div class="m-split" style="--m-layout-split-side: 15rem; --m-layout-split-gap: 0; min-block-size: 100vh; flex-wrap: wrap-reverse">
+  <nav class="m-sidebar" aria-label="Main" style="font-weight: var(--m-font-weight-medium)">
     <div class="m-cluster" data-justify="between" style="padding-inline: var(--m-space-2)">
       <span class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium)">${mark(2)} Murmur</span>
       <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Collapse the sidebar">${icon(I.panel, 18)}</button>
@@ -172,19 +177,24 @@ const tints = [
   'var(--m-color-danger-bg)',
   'var(--m-color-accent-subtle)',
 ];
+// A video frame drawn with tokens: a screen (a page with a title bar, lines and a button) painted as
+// background layers on a tint, so the frame is a picture with nothing inside it, as a recording is.
+// The camera bubble and the duration chip sit over it. Content, never an image file
+const screen = (n: number, tint: string) =>
+  [
+    `linear-gradient(var(--m-color-border-default), var(--m-color-border-default)) 20% 30% / ${40 + ((n * 13) % 24)}% 6% no-repeat`,
+    'linear-gradient(var(--m-color-border-muted), var(--m-color-border-muted)) 20% 45% / 62% 4% no-repeat',
+    'linear-gradient(var(--m-color-border-muted), var(--m-color-border-muted)) 20% 55% / 50% 4% no-repeat',
+    'linear-gradient(var(--m-color-accent-subtle), var(--m-color-accent-subtle)) 20% 75% / 30% 12% no-repeat',
+    'linear-gradient(var(--m-color-border-muted), var(--m-color-border-muted)) 50% 20% / 80% 1px no-repeat',
+    'linear-gradient(var(--m-color-bg-surface), var(--m-color-bg-surface)) 50% 100% / 80% 88% no-repeat',
+    tint,
+  ].join(', ');
 const thumb = (n: number, duration: string, initials: string, radius = 'var(--m-radius-lg) var(--m-radius-lg) 0 0') =>
-  `<div style="position: relative; aspect-ratio: 16 / 10; overflow: hidden; border-radius: ${radius}; background: ${tints[n % tints.length]}" role="img" aria-label="Video preview">
-            <div style="position: absolute; inset: 12% 10% 0 10%; border-radius: var(--m-radius-md) var(--m-radius-md) 0 0; background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-sm)">
-              <div style="block-size: 12%; border-block-end: var(--m-border-width-thin) solid var(--m-color-border-muted)"></div>
-              <div class="m-stack" data-gap="2" style="padding: 8%">
-                <span style="display: block; block-size: 0.5rem; inline-size: ${45 + ((n * 13) % 30)}%; border-radius: var(--m-radius-sm); background: var(--m-color-border-default)"></span>
-                <span style="display: block; block-size: 0.375rem; inline-size: 80%; border-radius: var(--m-radius-sm); background: var(--m-color-border-muted)"></span>
-                <span style="display: block; block-size: 0.375rem; inline-size: 64%; border-radius: var(--m-radius-sm); background: var(--m-color-border-muted)"></span>
-                <span style="display: block; block-size: 1.75rem; inline-size: 50%; border-radius: var(--m-radius-sm); background: var(--m-color-accent-subtle)"></span>
-              </div>
-            </div>
+  `<div style="position: relative; overflow: hidden; border-radius: ${radius}">
+            <div style="aspect-ratio: 16 / 10; background: ${screen(n, tints[n % tints.length])}" role="img" aria-label="Video preview"></div>
             <span class="m-avatar" style="position: absolute; inset-inline-start: 6%; inset-block-end: 8%; inline-size: 22%; block-size: auto; aspect-ratio: 1; background: var(--m-color-brand-subtle); box-shadow: 0 0 0 3px var(--m-color-bg-surface)" aria-hidden="true">${initials}</span>
-            <span style="position: absolute; inset-inline-end: var(--m-space-2); inset-block-end: var(--m-space-2); padding: 0.125rem var(--m-space-2); border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse); font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-semibold); font-variant-numeric: tabular-nums">${duration}</span>
+            <span style="position: absolute; inset-inline-end: var(--m-space-2); inset-block-end: var(--m-space-2); padding: 0.125rem var(--m-space-2); border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse); font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-bold); font-variant-numeric: tabular-nums">${duration}</span>
           </div>`;
 
 const stat = (ic: keyof typeof I, n: string, label: string) =>
@@ -286,6 +296,21 @@ const comment = (initials: string, who: string, t: string, when: string, text: s
 const upNext = (n: number, title: string, who: string, initials: string, duration: string, views: string) =>
   `          <li><a href="#" class="m-cluster" data-gap="3" style="flex-wrap: nowrap; padding: var(--m-space-2); border-radius: var(--m-radius-md); color: inherit; text-decoration: none"><span style="inline-size: 8rem; flex: none">${thumb(n, duration, initials, 'var(--m-radius-md)')}</span><span class="m-stack" data-gap="1"><span style="font-weight: var(--m-font-weight-medium)">${title}</span><span style="${meta}">${who} · ${views} views</span></span></a></li>`;
 
+// The recording on the video page: a product screen (a side list and three tiles) painted as
+// background layers, so the frame is one picture
+const player = [
+  'linear-gradient(var(--m-color-border-default), var(--m-color-border-default)) 9.5% 18% / 10% 2.5% no-repeat',
+  'linear-gradient(var(--m-color-accent-subtle), var(--m-color-accent-subtle)) 9.5% 26% / 10% 2.5% no-repeat',
+  'linear-gradient(var(--m-color-border-muted), var(--m-color-border-muted)) 9.5% 34% / 10% 2.5% no-repeat',
+  'linear-gradient(var(--m-color-border-default), var(--m-color-border-default)) 36% 18% / 26% 4% no-repeat',
+  'linear-gradient(var(--m-color-success-bg), var(--m-color-success-bg)) 31% 45% / 19% 30% no-repeat',
+  'linear-gradient(var(--m-color-warning-bg), var(--m-color-warning-bg)) 60% 45% / 19% 30% no-repeat',
+  'linear-gradient(var(--m-color-accent-subtle), var(--m-color-accent-subtle)) 89% 45% / 19% 30% no-repeat',
+  'linear-gradient(var(--m-color-border-muted), var(--m-color-border-muted)) 23.5% 100% / 1px 92% no-repeat',
+  'linear-gradient(var(--m-color-bg-surface), var(--m-color-bg-surface)) 50% 100% / 84% 92% no-repeat',
+  'var(--m-color-info-bg)',
+].join(', ');
+
 const listDetail = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh; background: var(--m-color-bg-sunken)">
   <header class="m-cluster" data-justify="between" style="padding: var(--m-space-2) var(--m-space-4); background: var(--m-color-bg-surface); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
     <span class="m-cluster" data-gap="3">
@@ -293,17 +318,14 @@ const listDetail = `<div class="m-stack" data-gap="0" style="min-block-size: 100
       <span class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium)">${mark(2)} Murmur</span>
     </span>
     <span class="m-cluster" data-gap="2">
-      <span class="m-cluster" data-gap="0" style="flex-wrap: nowrap">
-        <button type="button" class="m-button" data-variant="primary" style="border-start-end-radius: 0; border-end-end-radius: 0">${icon(I.userPlus, 16)} Share</button>
-        <button type="button" class="m-button" data-variant="primary" data-icon-only aria-label="Copy link" style="border-start-start-radius: 0; border-end-start-radius: 0; box-shadow: inset 1px 0 0 var(--m-color-accent-hover)">${icon(I.link, 16)}</button>
-      </span>
+      <button type="button" class="m-button" data-variant="primary">${icon(I.userPlus, 16)} Share</button>
       <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="More">${icon(I.more, 20)}</button>
       <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="Search">${icon(I.search, 20)}</button>
       <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="Notifications">${icon(I.bell, 20)}</button>
       <span class="m-avatar" aria-label="Theo Marsh">TM</span>
     </span>
   </header>
-  <div class="m-split" style="--m-layout-split-side: 26rem; --m-layout-split-gap: 0; flex-direction: row-reverse; flex-wrap: wrap-reverse; flex: 1">
+  <div class="m-split" style="--m-layout-split-side: 27.1875rem; --m-layout-split-gap: 0; flex-direction: row-reverse; flex-wrap: wrap-reverse; flex: 1">
     <aside class="m-stack" data-gap="0" aria-label="Video panel" style="background: var(--m-color-bg-surface); border-inline-start: var(--m-border-width-thin) solid var(--m-color-border-default)">
       <div class="m-tabs" style="padding: var(--m-space-2) var(--m-space-6) 0">
         <div class="m-cluster" data-justify="between" style="border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
@@ -347,24 +369,9 @@ ${line('2:30', 'I left comments on each frame. Reply in the thread and I will co
         </div>
       </div>
       <div class="m-stack" data-gap="6" style="padding: var(--m-space-6)">
-        <div style="position: relative; overflow: hidden; border-radius: var(--m-radius-lg); border: var(--m-border-width-thin) solid var(--m-color-border-default); background: var(--m-color-info-bg)" role="img" aria-label="Video, paused at 0:48 of 6:12">
-          <div style="aspect-ratio: 16 / 9; position: relative">
-            <div style="position: absolute; inset: 8% 8% 0; border-radius: var(--m-radius-md) var(--m-radius-md) 0 0; background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-sm); display: grid; grid-template-columns: 18% 1fr">
-              <div class="m-stack" data-gap="2" style="padding: 4%; border-inline-end: var(--m-border-width-thin) solid var(--m-color-border-muted)">
-                <span style="display: block; block-size: 0.5rem; border-radius: var(--m-radius-sm); background: var(--m-color-border-default)"></span>
-                <span style="display: block; block-size: 0.5rem; border-radius: var(--m-radius-sm); background: var(--m-color-accent-subtle)"></span>
-                <span style="display: block; block-size: 0.5rem; border-radius: var(--m-radius-sm); background: var(--m-color-border-muted)"></span>
-                <span style="display: block; block-size: 0.5rem; border-radius: var(--m-radius-sm); background: var(--m-color-border-muted)"></span>
-              </div>
-              <div class="m-stack" data-gap="3" style="padding: 4%">
-                <span style="display: block; block-size: 0.875rem; inline-size: 40%; border-radius: var(--m-radius-sm); background: var(--m-color-border-default)"></span>
-                <div class="m-grid" style="--m-layout-grid-min: 6rem; --m-layout-grid-gap: var(--m-space-3)">
-                  <span style="display: block; aspect-ratio: 4 / 3; border-radius: var(--m-radius-md); background: var(--m-color-success-bg)"></span>
-                  <span style="display: block; aspect-ratio: 4 / 3; border-radius: var(--m-radius-md); background: var(--m-color-warning-bg)"></span>
-                  <span style="display: block; aspect-ratio: 4 / 3; border-radius: var(--m-radius-md); background: var(--m-color-accent-subtle)"></span>
-                </div>
-              </div>
-            </div>
+        <div style="position: relative; overflow: hidden; border-radius: var(--m-radius-lg); border: var(--m-border-width-thin) solid var(--m-color-border-default)">
+          <div style="position: relative">
+            <div style="aspect-ratio: 16 / 9; background: ${player}" role="img" aria-label="Video, paused at 0:48 of 6:12"></div>
             <span class="m-avatar" style="position: absolute; inset-inline-start: 3%; inset-block-end: 6%; inline-size: 13%; block-size: auto; aspect-ratio: 1; font-size: var(--m-font-size-xl); background: var(--m-color-brand-subtle); box-shadow: 0 0 0 4px var(--m-color-bg-surface)" aria-hidden="true">IC</span>
             <span style="position: absolute; inset: 50% auto auto 50%; translate: -50% -50%; display: grid; place-items: center; inline-size: 5rem; block-size: 5rem; border-radius: var(--m-radius-full); background: var(--m-color-accent-default); color: var(--m-color-accent-fg); box-shadow: 0 0 0 8px var(--m-color-accent-subtle)"><svg width="32" height="32" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${I.play}</svg></span>
           </div>
@@ -430,8 +437,8 @@ const onboarding = `<main class="m-container" data-size="sm" style="padding-bloc
     </div>
     <progress class="m-progress" data-size="sm" value="100" max="100" aria-label="Step 3 of 3">100%</progress>
     <div class="m-stack" data-gap="2">
-      <h1 style="${pageTitle}">Record your first video</h1>
-      <p class="m-muted" style="font-size: var(--m-font-size-lg)">Pick what to show. You can change all of this before every recording.</p>
+      <h1 style="${flowTitle}">Record your first video</h1>
+      <p class="m-muted">Pick what to show. You can change all of this before every recording.</p>
     </div>
     <fieldset class="m-stack" data-gap="3" style="border: 0; padding: 0; margin: 0">
       <legend style="font-weight: var(--m-font-weight-medium); margin-block-end: var(--m-space-3)">What will you record first?</legend>
@@ -602,30 +609,48 @@ ${features.map(([f, isNew]) => `              <li class="m-cluster" data-gap="2"
         </div>
       </section>`;
 
-const pricing = `<header class="m-navbar">
+// The public site: a white 60px bar (the wordmark, four links, Log in and the one primary) and a
+// footer of link columns
+const siteBar = (current: string) => `<header class="m-navbar">
   <a class="m-navbar-brand" href="#">${mark(2)} Murmur</a>
   <nav class="m-navbar-nav" aria-label="Site">
-    <a class="m-navbar-link" href="#">Product</a>
-    <a class="m-navbar-link" href="#">For teams</a>
-    <a class="m-navbar-link" href="#">Customers</a>
-    <a class="m-navbar-link" href="#" aria-current="page">Pricing</a>
+${['Product', 'For teams', 'Help', 'Pricing'].map((l) => `    <a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${l}</a>`).join('\n')}
   </nav>
   <div class="m-navbar-actions">
     <a class="m-button" href="#">Log in</a>
     <a class="m-button" data-variant="primary" href="#">Try it free</a>
   </div>
-</header>
-<main class="m-container" style="padding-block: var(--m-space-16)">
+</header>`;
+const footCol = (h: string, links: string[]) => `    <div class="m-stack" data-gap="3">
+      <h2 style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-bold)">${h}</h2>
+      <ul class="m-stack" data-gap="2" style="padding: 0; list-style: none">
+${links.map((l) => `        <li><a href="#" style="color: var(--m-color-fg-muted); text-decoration: none">${l}</a></li>`).join('\n')}
+      </ul>
+    </div>`;
+const siteFooter = `<footer class="m-container" style="padding-block: var(--m-space-12); font-size: var(--m-font-size-md); ${hair}">
+  <div class="m-grid" style="--m-layout-grid-min: 10rem; --m-layout-grid-gap: var(--m-space-8)">
+${footCol('Product', ['Screen recorder', 'Desktop app', 'Browser extension', 'Summaries', 'Pricing'])}
+${footCol('For teams', ['Design', 'Engineering', 'Sales', 'Support'])}
+${footCol('Help', ['Guides', 'Help centre', 'Status', 'Contact us'])}
+${footCol('Company', ['About', 'Careers', 'Privacy', 'Terms'])}
+  </div>
+  <p style="${small}; padding-block-start: var(--m-space-8)">Murmur is an invented product for this design language.</p>
+</footer>`;
+
+const pricing = `${siteBar('Pricing')}
+<main class="m-container" style="padding-block: var(--m-space-16); font-size: var(--m-font-size-lg)">
   <div class="m-stack" data-gap="10">
     <div class="m-stack" data-gap="4" data-align="center" style="text-align: center">
-      <h1 style="font-size: calc(var(--m-font-size-4xl) * 1.75); font-weight: var(--m-font-weight-bold); line-height: 1.05; letter-spacing: var(--m-font-tracking-tight)">Plans for every size of team</h1>
+      <h1 style="font-size: clamp(2.25rem, 3.75vw, 3.375rem); font-weight: var(--m-font-weight-bold); line-height: 1.05; letter-spacing: var(--m-font-tracking-tight)">Plans for every size of team</h1>
       <p style="font-size: var(--m-font-size-lg); color: var(--m-color-fg-muted); max-inline-size: 34rem">Record, share and reply on video. Start free, and pay per person when your team needs more.</p>
       <div class="m-cluster" data-gap="6" data-justify="center" style="padding-block-start: var(--m-space-2)">
         <label class="m-cluster" data-gap="2"><span style="font-weight: var(--m-font-weight-bold)">Team size</span><input class="m-input" data-size="sm" value="25" inputmode="numeric" style="inline-size: 6rem; border-radius: 12px"> people</label>
-        <div class="m-cluster" data-gap="3" role="radiogroup" aria-label="Billing">
+        <div class="m-cluster" data-gap="3">
           <span style="font-weight: var(--m-font-weight-bold)">Billing</span>
-          <label class="m-cluster" data-gap="2"><input class="m-radio" type="radio" name="ht-bill"> Monthly</label>
-          <label class="m-cluster" data-gap="2"><input class="m-radio" type="radio" name="ht-bill" checked> Yearly</label>
+          <div class="m-tabs" data-variant="pill"><div class="m-tab-list" role="tablist" aria-label="Billing">
+            <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Monthly</button>
+            <button type="button" class="m-tab" role="tab" aria-selected="true">Yearly</button>
+          </div></div>
           <span class="m-badge" data-tone="info" style="text-transform: uppercase; font-size: var(--m-font-size-xs); font-weight: var(--m-font-weight-bold)">Save 15%</span>
         </div>
       </div>
@@ -645,7 +670,8 @@ ${plan('Company', 'For organisations that need control and support', 'Custom', '
       </div>
     </section>
   </div>
-</main>`;
+</main>
+${siteFooter}`;
 
 // Errors: the field (a red border and a message with its icon), a summary above the form, a flag
 // for what failed elsewhere, and whole pages for not found, failure and no access
@@ -658,8 +684,9 @@ const errorPage = (code: string, ic: keyof typeof I, title: string, body: string
     <div class="m-cluster" data-gap="2" data-justify="center">${actions}</div>
   </section>`;
 
-const errors = `<main class="m-container" data-size="md" style="padding-block: var(--m-space-12)">
-  <div class="m-stack" data-gap="10">
+const errors = shell(
+  'My videos',
+  `  <div class="m-stack" data-gap="10" style="max-inline-size: 50rem">
     <section class="m-stack" data-gap="5" aria-labelledby="ht-err-form" style="max-inline-size: 30rem">
       <h1 id="ht-err-form" style="${pageTitle}">Share this video</h1>
       <div class="m-alert" data-tone="danger" role="alert">
@@ -693,9 +720,85 @@ const errors = `<main class="m-container" data-size="md" style="padding-block: v
         </div>
       </div>
     </section>
-${errorPage('404', 'search', 'We can’t find that video', 'It may have been moved or deleted, or the link is missing a few characters.', `<a class="m-button" data-variant="primary" href="#">${icon(I.home, 16)} Go to your library</a>`)}
+${errorPage('404', 'search', 'We can’t find that video', 'It may have been moved or deleted, or the link is missing a few characters.', `<a class="m-button" data-variant="primary" href="#">${icon(I.home, 16)} Back to the library</a>`)}
 ${errorPage('500', 'alert', 'Something went wrong on our side', 'Your videos are safe and nothing was changed. Try again in a moment.', `<button type="button" class="m-button" data-variant="primary">${icon(I.refresh, 16)} Try again</button><a class="m-button" href="#">Check the status page</a>`)}
 ${errorPage('403', 'lock', 'This video is private', 'Ines Calder shared it with Pinecrest Studio only. Ask for access and we’ll let her know.', `<button type="button" class="m-button" data-variant="primary">Request access</button><a class="m-button" data-variant="ghost" href="#">Switch account</a>`)}
+  </div>`,
+);
+
+// Reading: a public help guide. The site bar, a breadcrumb, the 32px title, the byline with two icon
+// buttons and a lede, the video on the grey well, its chapters as transcript rows, then one 40rem
+// column of 16px text and the footer
+const reading = `${siteBar('Help')}
+<main class="m-container" data-size="md" style="padding-block: var(--m-space-8) var(--m-space-16); font-size: var(--m-font-size-lg)">
+  <article class="m-stack" data-gap="6">
+    <nav class="m-breadcrumb" aria-label="Breadcrumb"><ol><li><a href="#">Help</a></li><li><a href="#">Recording</a></li><li><span aria-current="page">A walkthrough in five minutes</span></li></ol></nav>
+    <div class="m-stack" data-gap="3">
+      <h1 style="${pageTitle}">Record a walkthrough in five minutes</h1>
+      <div class="m-cluster" data-justify="between">
+        <span class="m-cluster" data-gap="2" style="${meta}"><span class="m-avatar" data-size="sm">JA</span> June Albright · 4 min read · Updated Nov 3, 2026</span>
+        <span class="m-cluster" data-gap="1">
+          <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Copy link">${icon(I.link, 16)}</button>
+          <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Bookmark">${icon(I.bookmark, 16)}</button>
+        </span>
+      </div>
+      <p style="max-inline-size: 40rem">Show a flow to someone who wasn’t there: open the recorder, pick the window, and talk through it the way you would at a desk beside them. Here is the whole thing in under five minutes.</p>
+    </div>
+    <div style="padding: var(--m-space-6); border-radius: var(--m-radius-lg); background: var(--m-color-bg-sunken)">
+    <div style="position: relative; overflow: hidden; border-radius: var(--m-radius-lg); border: var(--m-border-width-thin) solid var(--m-color-border-default)">
+      <div style="aspect-ratio: 16 / 9; background: ${screen(4, 'var(--m-color-accent-subtle)')}" role="img" aria-label="Video, 4:36"></div>
+      <span style="position: absolute; inset: 50% auto auto 50%; translate: -50% -50%; display: grid; place-items: center; inline-size: 4rem; block-size: 4rem; border-radius: var(--m-radius-full); background: var(--m-color-accent-default); color: var(--m-color-accent-fg); box-shadow: 0 0 0 6px var(--m-color-accent-subtle)"><svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${I.play}</svg></span>
+      <span style="position: absolute; inset-inline-end: var(--m-space-3); inset-block-end: var(--m-space-3); padding: 0.125rem var(--m-space-2); border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse); font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-bold); font-variant-numeric: tabular-nums">4:36</span>
+    </div>
+    </div>
+    <section class="m-stack" data-gap="3" aria-labelledby="ht-chapters">
+      <h2 id="ht-chapters" style="${h2}">In this video</h2>
+      <ol class="m-stack" data-gap="1" style="padding: 0; list-style: none">
+${line('0:00', 'Pick what to show: a window, a tab or the whole screen')}
+${line('0:42', 'Turn on the camera bubble so people see who is talking')}
+${line('1:30', 'Pause, then pick up where you left off')}
+${line('3:05', 'Trim the start and share the link')}
+      </ol>
+    </section>
+    <div class="m-stack" data-gap="4" style="max-inline-size: 40rem">
+      <h2 style="${h2}">Before you start</h2>
+      <p>Close the tabs you don’t need and turn off notifications for the length of the recording. Five minutes is plenty: if it runs longer, record two videos and put them in one folder.</p>
+      <h2 style="${h2}">When you finish</h2>
+      <p>The link is copied the moment you stop. Trim the first seconds, add a title people will recognise in a list, and send it. Viewers can reply at the exact second they have a question.</p>
+    </div>
+    <div class="m-cluster" data-gap="3" style="${hair}; padding-block-start: var(--m-space-6)">
+      <span style="font-weight: var(--m-font-weight-medium)">Did this help?</span>
+      <button type="button" class="m-button" data-size="sm">Yes</button>
+      <button type="button" class="m-button" data-size="sm">Not really</button>
+    </div>
+  </article>
+</main>
+${siteFooter}`;
+
+// Sign-in: the flow. The wordmark over one white card with a hairline: a 24px title, the email field,
+// Continue, then two other ways in under a hairline; one line to sign up below the card
+const signIn = `<main class="m-container" data-size="sm" style="padding-block: var(--m-space-12) var(--m-space-16)">
+  <div class="m-stack" data-gap="6" style="max-inline-size: 26rem; margin-inline: auto">
+    <span class="m-cluster" data-gap="2" data-justify="center" style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium)">${mark(2)} Murmur</span>
+    <section class="m-card" aria-labelledby="ht-signin" style="padding: var(--m-space-8) var(--m-space-6)">
+      <form class="m-stack" data-gap="5">
+        <div class="m-stack" data-gap="1">
+          <h1 id="ht-signin" style="${flowTitle}">Log in to Murmur</h1>
+          <p class="m-muted">Use the email you record and watch with.</p>
+        </div>
+        <div class="m-field">
+          <label class="m-field-label" for="ht-si-email">Email</label>
+          <input class="m-input" id="ht-si-email" type="email" autocomplete="email" placeholder="you@company.example">
+        </div>
+        <button type="submit" class="m-button" data-variant="primary" style="inline-size: 100%">Continue</button>
+        <div class="m-stack" data-gap="3" style="${hair}; padding-block-start: var(--m-space-5)">
+          <button type="button" class="m-button" style="inline-size: 100%">${icon(I.building, 16)} Continue with your work account</button>
+          <button type="button" class="m-button" style="inline-size: 100%">${icon(I.link, 16)} Email me a sign-in link</button>
+        </div>
+      </form>
+    </section>
+    <p style="${meta}; text-align: center">New to Murmur? <a href="#" style="color: var(--m-color-accent-text)">Create an account</a></p>
+    <p style="${small}; text-align: center">By continuing you agree to the Terms and the Privacy notice.</p>
   </div>
 </main>`;
 
@@ -718,7 +821,7 @@ export const heatherRecipes: ArchetypeRecipe[] = [
     name: 'onboarding',
     title: 'Onboarding',
     description:
-      'One column with a step bar: choice tiles (the chosen one pale blue with a blue edge), then the recorder: mode segments, camera and microphone, the bubble switch and Start recording.',
+      'One column with a step bar and a 24px title: choice tiles (the chosen one pale blue with a blue edge), then the recorder: mode segments, camera and microphone, the bubble switch and Start recording.',
     html: onboarding,
   },
   {
@@ -739,14 +842,28 @@ export const heatherRecipes: ArchetypeRecipe[] = [
     name: 'pricing',
     title: 'Pricing',
     description:
-      'The public page: a huge bold heading, team size and billing, four roomy cards with large corners, the favourite tinted pale blue, pill buttons and questions below.',
+      'The public page: the site bar, a large bold heading, team size and a billing segment, four roomy cards with large corners, the favourite tinted pale blue, pill buttons, questions and the footer.',
     html: pricing,
   },
   {
     name: 'errors',
     title: 'Errors',
     description:
-      'A red-bordered field with its message and icon, a summary that says nobody was invited, a flag with Retry for a failed upload, and full pages for 404, 500 and no access.',
+      'In the app frame: a red-bordered field with its message and icon, a summary that says nobody was invited, a flag with Retry for a failed upload, and full pages for 404, 500 and no access.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A public help guide: the site bar, a breadcrumb, a 32px title, the byline with two icon buttons and a lede, the video on the grey well, its chapters as transcript rows, 16px text and the footer.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The wordmark over one white hairline card: a 24px bold title, the email field, Continue, then two other ways in under a hairline, and one line to sign up.',
+    html: signIn,
   },
 ];
