@@ -16,6 +16,25 @@ function strings(value: unknown, split = false): string[] {
   return [];
 }
 
+/** The local machine, where plain HTTP is allowed (development, tests, a sidecar). */
+function isLocalHost(hostname: string): boolean {
+  return hostname === 'localhost' || hostname === '::1' || hostname === '[::1]' || /^127(\.\d{1,3}){3}$/.test(hostname);
+}
+
+/** Keys and the issuer's identity travel over these URLs, so they're HTTPS unless they stay on this machine. */
+function requireSecureUrl(value: string, what: string, code: 'auth/invalid-config' | 'auth/invalid-token'): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new AuthError(code, `OIDC: ${what} is not a URL`);
+  }
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && isLocalHost(url.hostname))) {
+    throw new AuthError(code, `OIDC: ${what} must be https:// (http:// is accepted for localhost only)`);
+  }
+  return value;
+}
+
 function sources<T>(value: ClaimSource<T> | Array<ClaimSource<T>> | undefined, fallback: string[]): Array<ClaimSource<T>> {
   if (value === undefined) return fallback;
   return Array.isArray(value) ? value : [value];
@@ -27,7 +46,7 @@ function sources<T>(value: ClaimSource<T> | Array<ClaimSource<T>> | undefined, f
  *
  * - `sub` → `userId`; the session claim (`sid`) → `sessionId`;
  * - the tenant claim (`org_id` by default) → `tenantId`, empty when the token has none;
- * - the role claims → `roles`; the scope claims plus the roles → `scopes`;
+ * - the role claims → `roles`; the scope claims → `scopes` (plus the roles, with `rolesAsScopes`);
  * - the whole verified payload → `claims`, which the auth middleware passes on to tenancy.
  *
  * The signature, `iss`, `aud`, `exp` and `nbf` are checked on every call; only asymmetric
@@ -38,7 +57,7 @@ export class OidcAuthProvider implements AuthProvider {
 
   private readonly algorithms: AsymmetricAlgorithm[];
   private readonly maxAgeMs: number;
-  private keys?: { get: JWTVerifyGetKey; expiresAt: number };
+  private keys?: { get: JWTVerifyGetKey; url: string; expiresAt: number };
   private loading?: Promise<JWTVerifyGetKey>;
 
   constructor(
@@ -47,8 +66,14 @@ export class OidcAuthProvider implements AuthProvider {
     private readonly jwks?: JWTVerifyGetKey,
   ) {
     if (!config.issuer) throw new AuthError('auth/invalid-config', 'OIDC: `issuer` is required');
+    requireSecureUrl(config.issuer, '`issuer`', 'auth/invalid-config');
+    if (config.discoveryUrl) requireSecureUrl(config.discoveryUrl, '`discoveryUrl`', 'auth/invalid-config');
+    if (config.jwksUrl) requireSecureUrl(config.jwksUrl, '`jwksUrl`', 'auth/invalid-config');
     if (config.audience === undefined || (Array.isArray(config.audience) ? config.audience.length === 0 : config.audience === '')) {
-      throw new AuthError('auth/invalid-config', 'OIDC: `audience` is required (pass null only for a provider whose tokens have no aud, and check them in `validate`)');
+      throw new AuthError('auth/invalid-config', 'OIDC: `audience` is required (pass null only for a provider whose tokens have no aud, with a `validate` that checks them)');
+    }
+    if (config.audience === null && !config.validate) {
+      throw new AuthError('auth/invalid-config', 'OIDC: `audience: null` needs a `validate` function, or any token from this issuer would be accepted');
     }
     this.algorithms = config.algorithms?.length ? config.algorithms : ['RS256', 'ES256'];
     if (this.algorithms.some((algorithm) => HMAC.test(algorithm))) {
@@ -67,6 +92,7 @@ export class OidcAuthProvider implements AuthProvider {
         audience: this.config.audience ?? undefined,
         clockTolerance: this.config.clockToleranceSeconds ?? 5,
         requiredClaims: ['sub', 'exp'],
+        typ: this.config.requireTokenType,
       });
       claims = result.payload as OidcClaims;
     } catch (error) {
@@ -83,14 +109,28 @@ export class OidcAuthProvider implements AuthProvider {
     return this.toIdentity(claims);
   }
 
-  /** The provider's keys: from `jwksUrl`, or the `jwks_uri` its discovery document names. One discovery at a time. */
+  /**
+   * The provider's keys: from `jwksUrl`, or the `jwks_uri` its discovery document names. One
+   * discovery at a time. When the document can't be re-read, the keys already in hand keep being
+   * used (they were the issuer's own) and discovery is tried again on the next call, so a blip at
+   * the provider doesn't sign everyone out.
+   */
   private async keySet(): Promise<JWTVerifyGetKey> {
     if (this.keys && (this.config.jwksUrl || this.keys.expiresAt > Date.now())) return this.keys.get;
+    const known = this.keys;
     this.loading ??= this.locateKeys()
       .then((url) => {
+        if (known?.url === url) {
+          known.expiresAt = Date.now() + this.maxAgeMs;
+          return known.get;
+        }
         const get = createRemoteJWKSet(new URL(url), { cacheMaxAge: this.maxAgeMs, cooldownDuration: this.config.jwksCooldownMs ?? 5_000 });
-        this.keys = { get, expiresAt: Date.now() + this.maxAgeMs };
+        this.keys = { get, url, expiresAt: Date.now() + this.maxAgeMs };
         return get;
+      })
+      .catch((error: unknown) => {
+        if (known) return known.get;
+        throw error;
       })
       .finally(() => {
         this.loading = undefined;
@@ -117,7 +157,7 @@ export class OidcAuthProvider implements AuthProvider {
     if (typeof document.jwks_uri !== 'string' || !document.jwks_uri) {
       throw new AuthError('auth/invalid-token', `OIDC discovery: the document at ${url} has no jwks_uri`);
     }
-    return document.jwks_uri;
+    return requireSecureUrl(document.jwks_uri, "the discovery document's jwks_uri", 'auth/invalid-token');
   }
 
   /** The mapping `verify` applies to a verified payload. */
@@ -130,7 +170,7 @@ export class OidcAuthProvider implements AuthProvider {
     return {
       userId: claims.sub,
       tenantId: typeof tenant === 'string' ? tenant : '',
-      scopes: [...new Set([...roles, ...granted])],
+      scopes: [...new Set([...(this.config.rolesAsScopes ? roles : []), ...granted])],
       roles,
       identityType: 'session',
       sessionId: typeof session === 'string' && session ? session : undefined,

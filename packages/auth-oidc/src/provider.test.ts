@@ -68,7 +68,7 @@ describe('OidcAuthProvider', () => {
       userId: 'user-1',
       tenantId: 'org-1',
       roles: ['admin'],
-      scopes: ['admin', 'read:orders', 'write:orders'],
+      scopes: ['read:orders', 'write:orders'],
       identityType: 'session',
       sessionId: 'sess-1',
       claims: { email: 'ada@example.com', iss: issuer, aud: 'my-api' },
@@ -135,15 +135,17 @@ describe('OidcAuthProvider', () => {
     expect(await auth0.verify(await sign({ 'https://example.com/org': 'org_9', 'https://example.com/roles': ['editor'], permissions: ['read:posts'] }))).toMatchObject({
       tenantId: 'org_9',
       roles: ['editor'],
-      scopes: ['editor', 'read:posts'],
+      scopes: ['read:posts'],
     });
     // Keycloak: roles nested under realm_access, read with a function.
     const keycloak = provider({ rolesClaim: [(c) => (c.realm_access as { roles?: string[] } | undefined)?.roles, 'groups'], tenantClaim: (c) => (c.organization as string[] | undefined)?.[0] });
     expect(await keycloak.verify(await sign({ realm_access: { roles: ['realm-admin'] }, groups: ['staff'], organization: ['acme'], scope: 'openid profile' }))).toMatchObject({
       tenantId: 'acme',
       roles: ['realm-admin', 'staff'],
-      scopes: ['realm-admin', 'staff', 'openid', 'profile'],
+      scopes: ['openid', 'profile'],
     });
+    // Roles join the scopes only when asked.
+    expect((await provider({ rolesAsScopes: true }).verify(await sign({ roles: ['admin'], scope: 'read' }))).scopes).toEqual(['admin', 'read']);
     // Entra ID: `scp` is space-separated, the tenant is `tid`.
     expect(await provider({ tenantClaim: 'tid' }).verify(await sign({ tid: 't-1', scp: 'Orders.Read Orders.Write' }))).toMatchObject({ tenantId: 't-1', scopes: ['Orders.Read', 'Orders.Write'] });
     // No tenant claim in the token: no tenant.
@@ -151,6 +153,7 @@ describe('OidcAuthProvider', () => {
   });
 
   it('needs an audience, or an explicit null with a check of its own', async () => {
+    expect(() => createOidcAuth({ issuer, audience: null })).toThrow(expect.objectContaining({ code: 'auth/invalid-config', message: expect.stringContaining('validate') }));
     expect(() => createOidcAuth({ issuer } as OidcConfig)).toThrow(/audience/);
     expect(() => createOidcAuth({ issuer, audience: '' })).toThrow(/audience/);
     expect(() => createOidcAuth({ issuer: '', audience: 'x' })).toThrow(/issuer/);
@@ -165,6 +168,49 @@ describe('OidcAuthProvider', () => {
     expect((await cognito.verify(await sign({ token_use: 'access', client_id: 'app-client' }, { aud: null }))).userId).toBe('user-1');
     await expect(cognito.verify(await sign({ token_use: 'id', client_id: 'app-client' }, { aud: null }))).rejects.toMatchObject({ code: 'auth/invalid-token', message: expect.stringContaining('not an access token') });
     await expect(cognito.verify(await sign({ token_use: 'access', client_id: 'other-client' }, { aud: null }))).rejects.toMatchObject(invalid);
+  });
+
+  it('requires https everywhere except on this machine', async () => {
+    const config = { message: expect.stringContaining('https://'), code: 'auth/invalid-config' };
+    expect(() => createOidcAuth({ issuer: 'http://login.example.com', audience: 'x' })).toThrow(expect.objectContaining(config));
+    expect(() => createOidcAuth({ issuer: 'https://login.example.com', audience: 'x', jwksUrl: 'http://keys.example.com/jwks' })).toThrow(expect.objectContaining(config));
+    expect(() => createOidcAuth({ issuer: 'https://login.example.com', audience: 'x', discoveryUrl: 'http://10.0.0.5/discovery' })).toThrow(expect.objectContaining(config));
+    expect(() => createOidcAuth({ issuer: 'ftp://login.example.com', audience: 'x' })).toThrow(expect.objectContaining(config));
+    expect(() => createOidcAuth({ issuer: 'not a url', audience: 'x' })).toThrow(expect.objectContaining({ code: 'auth/invalid-config' }));
+    for (const local of ['http://localhost:8080', 'http://127.0.0.1:9000/realms/app', 'http://[::1]:8080', 'https://login.example.com/']) {
+      expect(() => createOidcAuth({ issuer: local, audience: 'x' }), local).not.toThrow();
+    }
+    // The document is the issuer's own, but it points the keys at plain HTTP on another host.
+    discovery = { issuer, jwks_uri: 'http://keys.example.com/jwks' };
+    await expect(provider().verify(await sign({}))).rejects.toMatchObject({ code: 'auth/invalid-token', message: expect.stringContaining('jwks_uri must be https://') });
+  });
+
+  it('can require a token type, to tell an access token from an id token', async () => {
+    const typed = (typ: string) => new SignJWT({}).setProtectedHeader({ alg: key.alg, kid: key.kid, typ }).setIssuer(issuer).setAudience('my-api').setSubject('user-1').setIssuedAt().setExpirationTime('10m').sign(key.privateKey);
+    const strict = provider({ requireTokenType: 'at+jwt' });
+    expect((await strict.verify(await typed('at+jwt'))).userId).toBe('user-1');
+    expect((await strict.verify(await typed('application/at+jwt'))).userId).toBe('user-1');
+    await expect(strict.verify(await typed('JWT'))).rejects.toMatchObject(invalid);
+    // Off by default.
+    expect((await provider().verify(await typed('JWT'))).userId).toBe('user-1');
+  });
+
+  it('keeps the keys it has when the discovery document cannot be re-read', async () => {
+    const auth = provider({ jwksCacheMaxAgeMs: 20 });
+    const token = await sign({});
+    await auth.verify(token);
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    discovery = null;
+    expect((await auth.verify(token)).userId).toBe('user-1');
+    // And it looks again next time: once the document is back, a moved key set is followed.
+    discovery = { issuer, jwks_uri: `${issuer}/keys` };
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    const before = hits.discovery;
+    await auth.verify(token);
+    expect(hits.discovery).toBeGreaterThan(before);
+    // With no keys in hand at all, a failed discovery is still a refusal.
+    discovery = null;
+    await expect(provider().verify(token)).rejects.toMatchObject(invalid);
   });
 
   it('has no webhooks', () => {
