@@ -7,6 +7,7 @@ import { folioArchetype } from './folio';
 import { halcyonArchetype } from './halcyon';
 import { meridianArchetype } from './meridian';
 import { flintArchetype } from './flint';
+import { garnetArchetype } from './garnet';
 import { cometArchetype } from './comet';
 import { reelArchetype } from './reel';
 import { refrainArchetype } from './refrain';
@@ -55,7 +56,7 @@ import type { Archetype } from './types';
  * (in `presets`, same name) plus its discovery card, type, icons, charts, six layout recipes and a
  * `DESIGN.md`. Halcyon is the first; the rest follow a category at a time.
  */
-export const archetypes: Archetype[] = [halcyonArchetype, fennelArchetype, basaltArchetype, emberArchetype, cirrusArchetype, zephyrArchetype, onyxArchetype, terracottaArchetype, marigoldArchetype, linenArchetype, quillArchetype, folioArchetype, broadsheetArchetype, obsidianArchetype, anthraciteArchetype, cadenceArchetype, mosaicArchetype, bazaarArchetype, transitArchetype, hearthArchetype, harborArchetype, nacreArchetype, confettiArchetype, voltArchetype, sprintArchetype, summitArchetype, solaceArchetype, heatherArchetype, saffronArchetype, nocturneArchetype, vellumArchetype, chalkArchetype, ochreArchetype, marginArchetype, quireArchetype, meridianArchetype, flintArchetype, cometArchetype, marqueeArchetype, reelArchetype, refrainArchetype, keelArchetype, relayArchetype, lagoonArchetype, candidArchetype, trellisArchetype, kiteArchetype, doodleArchetype, tinkerArchetype];
+export const archetypes: Archetype[] = [halcyonArchetype, fennelArchetype, basaltArchetype, emberArchetype, cirrusArchetype, zephyrArchetype, onyxArchetype, terracottaArchetype, marigoldArchetype, linenArchetype, quillArchetype, folioArchetype, broadsheetArchetype, obsidianArchetype, anthraciteArchetype, cadenceArchetype, mosaicArchetype, bazaarArchetype, transitArchetype, hearthArchetype, harborArchetype, nacreArchetype, confettiArchetype, voltArchetype, sprintArchetype, summitArchetype, solaceArchetype, heatherArchetype, saffronArchetype, nocturneArchetype, vellumArchetype, chalkArchetype, ochreArchetype, marginArchetype, quireArchetype, meridianArchetype, flintArchetype, cometArchetype, marqueeArchetype, reelArchetype, refrainArchetype, keelArchetype, relayArchetype, lagoonArchetype, candidArchetype, trellisArchetype, kiteArchetype, doodleArchetype, tinkerArchetype, garnetArchetype];
 
 export { categories, extraRecipeNames, iconActions, recipeNames } from './types';
 export type { Archetype, ArchetypeRecipe, CategoryId, IconAction, RecipeName } from './types';
