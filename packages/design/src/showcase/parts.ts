@@ -91,7 +91,8 @@ export const picture = (src: string, size: number | 'full', radius: 'container' 
 export const muted = (s: string, size = 'sm') =>
   `<span style="color: var(--m-color-fg-muted); font-size: var(--m-font-size-${size})">${s}</span>`;
 
-export const avatars = (people: string[]) =>
+/** People as avatars: small only in a dense language, since two initials don't fit the small size otherwise. */
+export const avatars = (c: Ctx, people: string[]) =>
   people.length
-    ? `<div class="m-avatar-group">${people.map((p) => `<span class="m-avatar" data-size="sm">${esc(p)}</span>`).join('')}</div>`
+    ? `<div class="m-avatar-group">${people.map((p) => `<span class="m-avatar"${c.arr.density === 'dense' ? ' data-size="sm"' : ''}>${esc(p)}</span>`).join('')}</div>`
     : '';

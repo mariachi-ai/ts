@@ -118,7 +118,7 @@ export function card(c: Ctx, p: CardContent): string {
     )
     .join('')}</div>`;
   const bar = `<div class="m-stack" data-gap="1"><progress class="m-progress" data-size="sm" value="${Math.round((100 * done) / Math.max(1, p.items.length))}" max="100" aria-label="Done">${done} of ${p.items.length}</progress>${muted(`${done} of ${p.items.length} done`, 'xs')}</div>`;
-  const people = avatars(p.people ?? []);
+  const people = avatars(c, p.people ?? []);
   const foot = (() => {
     switch (c.arr.primary) {
       case 'footer':
