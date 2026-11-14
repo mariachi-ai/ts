@@ -1,12 +1,13 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Fennel's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
- * (no colour literals), with sample data from a small ceramics studio's money app. They follow the
- * language's real screen patterns: a white side column with pill-shaped nav items, one bright lime
- * pill per screen, list rows led by 48px icon circles, amounts with the currency code after them,
- * neutral-fill cards with no border or shadow, inline prompts on tinted surfaces, and heavy
- * condensed capitals only for the big moments.
+ * Fennel's nine layout recipes (the seven every language has, then reading and sign-in):
+ * framework-free HTML using only @mariachi/design classes and tokens (no colour literals), with sample
+ * data from a small ceramics studio's money app. They follow the language's real screen patterns: a
+ * white side column of plain nav items, one bright lime pill per screen, list rows led by 48px icon
+ * circles, amounts with the currency code after them, neutral-fill cards with no border or shadow,
+ * inline prompts on tinted surfaces, two text weights in the product, and heavy condensed capitals
+ * only on marketing pages.
  */
 
 // Lucide icons, outlined, 1.5px stroke
@@ -64,7 +65,12 @@ const screenTitle =
 const sectionTitle = 'font-size: var(--m-font-size-xl); letter-spacing: -0.018em; line-height: 1.25';
 const display =
   'font-family: var(--m-font-family-display); font-weight: 900; line-height: 0.85; text-transform: uppercase; letter-spacing: -0.02em';
-const figure = 'font-family: var(--m-font-family-display); font-weight: 800; line-height: 1; letter-spacing: -0.02em';
+// In the app, money figures are the text face at 600, large; the display face stays on public pages
+// The product's name stands in for a logo: the display face in capitals at 600, so a screen keeps the
+// product's two text weights (400 and 600); the source's logo is a drawing, not text
+const wordmark =
+  'font-family: var(--m-font-family-display); font-weight: var(--m-font-weight-semibold); font-size: var(--m-font-size-2xl); line-height: 1; text-transform: uppercase; letter-spacing: -0.01em; text-decoration: none';
+const figure = 'font-weight: var(--m-font-weight-semibold); line-height: 1.1; letter-spacing: -0.025em';
 const small = 'font-size: var(--m-font-size-sm); color: var(--m-color-fg-muted)';
 const strong = 'font-weight: var(--m-font-weight-semibold)';
 const link =
@@ -100,7 +106,9 @@ const row = (
           </li>`;
 const chevron = `<span style="color: var(--m-color-fg-default); display: inline-flex">${icon(I.right, 24)}</span>`;
 
-// The app shell: a white side column with pill nav items, a quiet top bar, the content column
+// The app shell: a white side column of nav items (the current one in forest green at 600), a quiet top
+// bar, the content column. On a phone the page comes first and the side column drops below it
+// (wrap-reverse): the phone app opens on the page, not on its navigation
 const nav = (items: [keyof typeof I, string][], current: string) =>
   items
     .map(
@@ -113,9 +121,9 @@ const shell = (
   current: string,
   main: string,
   size = '',
-) => `<div class="m-split" style="--m-layout-split-side: 16.5rem; --m-layout-split-gap: 0; min-block-size: 100vh">
+) => `<div class="m-split" style="--m-layout-split-side: 16.5rem; --m-layout-split-gap: 0; flex-wrap: wrap-reverse; min-block-size: 100vh">
   <nav class="m-sidebar" aria-label="Main">
-    <div style="padding: var(--m-space-3) var(--m-space-3) var(--m-space-6)"><span style="${display}; font-size: var(--m-font-size-2xl); color: var(--m-color-accent-text)">Tidepay</span></div>
+    <div style="padding: var(--m-space-3) var(--m-space-3) var(--m-space-6)"><span style="${wordmark}; color: var(--m-color-accent-text)">Tidepay</span></div>
     <div class="m-sidebar-section">
       <ul>
 ${nav(
@@ -143,13 +151,6 @@ ${nav(
 )}
       </ul>
     </div>
-    <div class="m-card" data-size="sm" style="margin-block-start: var(--m-space-6)">
-      <div class="m-card-body m-stack" data-gap="2">
-        <span style="${strong}">Earn 4.1% on GBP</span>
-        <span style="${small}">Variable rate. Capital at risk.</span>
-        <a href="#" style="${link}; font-size: var(--m-font-size-sm)">Learn more</a>
-      </div>
-    </div>
   </nav>
   <div class="m-stack" data-gap="0">
     <header class="m-cluster" data-justify="end" data-gap="2" style="padding: var(--m-space-4) var(--m-space-6)">
@@ -163,7 +164,7 @@ ${main}
 </div>`;
 
 // ---------------------------------------------------------------------------------------------
-// Dashboard: the total, the money actions, balances as neutral cards, the latest activity
+// Dashboard: the total (a 40px figure at 600), the money actions, balances as neutral cards, the latest activity
 
 const balance = (
   sym: string,
@@ -182,7 +183,7 @@ const dashboard = shell(
         <section class="m-stack" data-gap="5" aria-labelledby="fn-total">
           <div class="m-stack" data-gap="2">
             <h1 id="fn-total" style="${small}; ${strong}">Total balance</h1>
-            <span style="${figure}; font-size: clamp(2.5rem, 9vw, var(--m-font-size-4xl))">48,215.60 GBP</span>
+            <span style="${figure}; font-size: var(--m-font-size-3xl)">48,215.60 GBP</span>
           </div>
           <div class="m-cluster" data-gap="2">
             <button type="button" class="m-button" data-variant="primary">${icon(I.up, 16)} Send</button>
@@ -338,7 +339,7 @@ const option = (
 
 const onboarding = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
   <header class="m-cluster" data-justify="between" style="padding: var(--m-space-5) clamp(1rem, 4vw, 2.5rem); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
-    <span style="${display}; font-size: var(--m-font-size-2xl); color: var(--m-color-accent-text)">Tidepay</span>
+    <span style="${wordmark}; color: var(--m-color-accent-text)">Tidepay</span>
     <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="Close">${icon(I.close, 24)}</button>
   </header>
   <main class="m-container" data-size="sm" style="padding-block: var(--m-space-8) var(--m-space-16)">
@@ -460,7 +461,6 @@ ${group(
           <div><button type="button" class="m-button" data-variant="danger">Close account</button></div>
         </section>
       </div>`,
-  'md',
 );
 
 // ---------------------------------------------------------------------------------------------
@@ -480,11 +480,37 @@ const emptyState = shell(
           </div>
         </div>
       </div>`,
-  'md',
 );
 
 // ---------------------------------------------------------------------------------------------
-// Pricing: a bright lime band with heavy capitals, a white panel of what you can do, then the fees
+// Pricing: a bright lime band with heavy capitals, a white panel of what you can do, then the fees and
+// the site footer
+
+// The public pages' header (help centre, reading): the name, a language link, Log in, and a small lime
+// Register pill, over a hairline
+const siteHeader = `  <header class="m-cluster" data-justify="between" data-gap="4" style="flex-wrap: nowrap; padding: var(--m-space-4) clamp(1rem, 12vw, 10.625rem); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
+    <a href="#" style="${wordmark}; color: var(--m-color-accent-text)">Tidepay</a>
+    <nav class="m-cluster" data-gap="6" aria-label="Account" style="flex-wrap: nowrap; font-size: var(--m-font-size-sm); ${strong}">
+      <a href="#" class="m-cluster" data-gap="1" style="color: var(--m-color-fg-default); text-decoration: none; flex-wrap: nowrap">${icon(I.globe, 16)} EN</a>
+      <a href="#" style="color: var(--m-color-fg-default); text-decoration: none">Log in</a>
+      <a class="m-button" data-variant="primary" data-size="sm" href="#">Register</a>
+    </nav>
+  </header>`;
+
+// The public pages' footer: the neutral fill, link columns under 18px/600 headings, links in forest
+// green, the fine print last
+const footCol = (title: string, links: string[]) =>
+  `      <div class="m-stack" data-gap="3"><h2 style="font-size: var(--m-font-size-lg)">${title}</h2><ul class="m-stack" data-gap="2" style="padding: 0; list-style: none; font-size: var(--m-font-size-lg)">${links.map((l) => `<li><a href="#" style="color: var(--m-color-accent-text); text-decoration: none">${l}</a></li>`).join('')}</ul></div>`;
+const siteFooter = `  <footer style="background: var(--m-color-bg-sunken); padding: var(--m-space-16) clamp(1rem, 12vw, 10.625rem)">
+    <div class="m-stack" data-gap="10">
+      <div class="m-grid" style="--m-layout-grid-min: 12rem; --m-layout-grid-gap: var(--m-space-8)">
+${footCol('Products', ['Personal account', 'Business account', 'The card', 'Large amounts'])}
+${footCol('Resources', ['Currency converter', 'Rate alerts', 'Pricing', 'Help Centre'])}
+${footCol('Company', ['About us', 'Careers', 'Press', 'Security'])}
+      </div>
+      <p style="color: var(--m-color-fg-default)">Tidepay is a made-up money service used to show this design language. No real accounts or payments exist.</p>
+    </div>
+  </footer>`;
 
 const doRow = (
   title: string,
@@ -519,7 +545,7 @@ ${fees.join('\n')}
 const pricing = `<div class="m-stack" data-gap="0">
   <div style="background: var(--m-button-primary-bg); color: var(--m-button-primary-fg)">
     <header class="m-navbar" style="--m-navbar-bg: transparent; --m-navbar-link-fg: var(--m-button-primary-fg); --m-navbar-link-hover-fg: var(--m-button-primary-fg); --m-navbar-link-hover-bg: transparent; --m-navbar-link-active-fg: var(--m-button-primary-fg); --m-navbar-link-active-bg: transparent; flex-wrap: wrap; block-size: auto; min-block-size: var(--m-navbar-height); row-gap: 0">
-      <a class="m-navbar-brand" href="#" style="${display}; font-size: var(--m-font-size-2xl); color: inherit">Tidepay</a>
+      <a class="m-navbar-brand" href="#" style="${wordmark}; color: inherit">Tidepay</a>
       <nav class="m-navbar-nav" aria-label="Main" style="min-inline-size: max-content">
         <a class="m-navbar-link" href="#">Personal</a>
         <a class="m-navbar-link" href="#" aria-current="page" style="text-decoration: underline; text-underline-offset: 6px">Business</a>
@@ -562,6 +588,7 @@ ${feeGroup('wallet', 'Holding money', [fee('Holding money in 40 currencies', '',
       </section>
     </div>
   </main>
+${siteFooter}
 </div>`;
 
 // ---------------------------------------------------------------------------------------------
@@ -610,18 +637,90 @@ const errors = `<main class="m-container" data-size="md" style="padding-block: v
     <section class="m-stack" data-gap="3" aria-label="A snackbar">
       <div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title">Your transfer to Fenwick Glazes was returned</div><div class="m-toast-body">310.00 GBP is back in your balance.</div></div><button type="button" class="m-button" data-variant="ghost" data-size="sm" style="color: inherit; text-decoration: underline; text-underline-offset: 3px">View</button></div>
     </section>
-${errorPage('404', I.search, 'Sorry, looks like we lost this page.', 'The link may be old, or the page has moved. Try Home or the Help Centre.', `<a class="m-button" data-variant="primary" href="#">Go to Home</a><a href="#" style="${link}">Help Centre</a>`)}
+${errorPage('404', I.search, "We can't find that page.", 'The link may be old, or the page has moved. Try Home or the Help Centre.', `<a class="m-button" data-variant="primary" href="#">Go to Home</a><a href="#" style="${link}">Help Centre</a>`)}
 ${errorPage('500', I.alert, 'Something went wrong on our side.', 'Nothing was sent or changed. Try again in a minute; if it keeps happening, contact us.', `<button type="button" class="m-button" data-variant="primary">Try again</button><button type="button" class="m-button">Contact us</button>`)}
 ${errorPage('403', I.lock, "You don't have access to this.", 'Only owners of Larkspur Ceramics can manage the team. Ask Maya Okafor to give you access.', `<button type="button" class="m-button" data-variant="primary">Ask for access</button><a class="m-button" href="#">Go back</a>`)}
   </div>
 </main>`;
+
+// ---------------------------------------------------------------------------------------------
+// Reading: a help article. The site header over a hairline, underlined breadcrumbs, a 30px title, the
+// text in one narrow column at 16px, 18px subheads, a helpful-or-not question, related articles as
+// rows, then the footer. Two weights only (400 and 600)
+
+const crumb = (label: string) =>
+  `<a href="#" style="${link}">${label}</a><span style="display: inline-flex; color: var(--m-color-fg-default)">${icon(I.right, 16)}</span>`;
+const related = (title: string) =>
+  `          <li><a href="#" class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding-block: var(--m-space-4); color: inherit; text-decoration: none; ${strong}">${title}<span style="display: inline-flex">${icon(I.right, 24)}</span></a></li>`;
+
+const reading = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
+${siteHeader}
+  <main style="inline-size: min(100% - 2rem, 33rem); margin-inline: auto; padding-block: var(--m-space-5) var(--m-space-16)">
+    <article class="m-stack" data-gap="8" aria-labelledby="fn-read-title">
+      <nav class="m-cluster" data-gap="2" aria-label="Breadcrumb" style="font-size: var(--m-font-size-sm)">${crumb('Help home')}${crumb('Paying')}<span style="${strong}">Fees for paying abroad</span></nav>
+      <h1 id="fn-read-title" style="${screenTitle}">Fees for paying abroad</h1>
+      <div class="m-stack" data-gap="4" style="color: var(--m-color-fg-muted)">
+        <p>To see what a payment will cost before you make it, use the <a href="#" style="${link}">price calculator</a>. Or read on for how the fee is worked out.</p>
+        <p>What you pay depends on three things: how much you send, how you pay for it, and the currencies involved.</p>
+        <h2 style="font-size: var(--m-font-size-lg); color: var(--m-color-fg-default); margin-block-start: var(--m-space-4)">How much you send</h2>
+        <p>The fee is a small percentage of the amount, and it differs by currency. Below a set amount there is a low minimum fee instead, so small payments stay cheap.</p>
+        <h2 style="font-size: var(--m-font-size-lg); color: var(--m-color-fg-default); margin-block-start: var(--m-space-4)">How you pay</h2>
+        <p>Paying from your balance or by bank transfer costs least. Paying by card adds a fee that depends on the card, and it's shown before you confirm.</p>
+      </div>
+      <section class="m-stack" data-gap="3" aria-labelledby="fn-read-helpful" style="padding-block: var(--m-space-6); ${hair}">
+        <h2 id="fn-read-helpful" style="font-size: var(--m-font-size-md)">Did this answer your question?</h2>
+        <div class="m-cluster" data-gap="2"><button type="button" class="m-button" data-size="sm">Yes</button><button type="button" class="m-button" data-size="sm">No</button></div>
+      </section>
+      <section class="m-stack" data-gap="2" aria-labelledby="fn-read-related">
+        <h2 id="fn-read-related" style="font-size: var(--m-font-size-lg)">Related articles</h2>
+        <ul class="m-stack" data-gap="0" style="padding: 0; list-style: none">
+${related('How long will my payment take?')}
+${related('Can I pay with a card?')}
+${related('What is a guaranteed rate?')}
+        </ul>
+      </section>
+    </article>
+  </main>
+${siteFooter}
+</div>`;
+
+// ---------------------------------------------------------------------------------------------
+// Sign-in: the flow bar (as onboarding's), then one centred 30rem column: a 26px title, a line with the way to join, 48px
+// fields with 14px/600 labels, an underlined password link, the full-width lime Log in, and a pale-lime
+// alternative
+
+const signIn = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh">
+  <header class="m-cluster" data-justify="between" style="padding: var(--m-space-5) clamp(1rem, 4vw, 2.5rem); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
+    <span style="${wordmark}; color: var(--m-color-accent-text)">Tidepay</span>
+    <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="Close">${icon(I.close, 24)}</button>
+  </header>
+  <main class="m-container" data-size="sm" style="padding-block: var(--m-space-12) var(--m-space-16)">
+    <form class="m-stack" data-gap="6" aria-labelledby="fn-in-title">
+      <div class="m-stack" data-gap="2" style="text-align: center">
+        <h1 id="fn-in-title" style="font-size: 1.625rem; font-weight: var(--m-font-weight-semibold); letter-spacing: -0.02em; line-height: 1.2">Welcome back</h1>
+        <p class="m-muted">New to Tidepay? <a href="#" style="${link}">Create an account</a></p>
+      </div>
+      <div class="m-field">
+        <label class="m-field-label" for="fn-in-email">Your email address</label>
+        <input class="m-input" id="fn-in-email" type="email" autocomplete="email" value="maya@larkspur.example">
+      </div>
+      <div class="m-field">
+        <label class="m-field-label" for="fn-in-password">Your password</label>
+        <input class="m-input" id="fn-in-password" type="password" autocomplete="current-password" value="••••••••••">
+      </div>
+      <a href="#" style="${link}; align-self: start">Forgot your password?</a>
+      <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Log in</button>
+      <button type="button" class="m-button" data-size="lg" style="inline-size: 100%">Log in with a passkey</button>
+    </form>
+  </main>
+</div>`;
 
 export const fennelRecipes: ArchetypeRecipe[] = [
   {
     name: 'dashboard',
     title: 'Dashboard',
     description:
-      'The total in heavy figures, one lime Send pill beside pale-lime actions, balances as neutral cards, and the latest activity as circle-led rows.',
+      'The total as a 40px figure at 600, one lime Send pill beside pale-lime actions, balances as neutral cards, and the latest activity as circle-led rows.',
     html: dashboard,
   },
   {
@@ -655,7 +754,7 @@ export const fennelRecipes: ArchetypeRecipe[] = [
     name: 'pricing',
     title: 'Pricing',
     description:
-      'A bright lime band with heavy condensed capitals and a white panel of arrow rows, then the fees as grouped rows with the price on the right.',
+      'A bright lime band with heavy condensed capitals and a white panel of arrow rows, then the fees as grouped rows with the price on the right, and the site footer.',
     html: pricing,
   },
   {
@@ -664,5 +763,19 @@ export const fennelRecipes: ArchetypeRecipe[] = [
     description:
       'A danger prompt above the form that says nothing was sent, tinted inline prompts under the fields, a dark snackbar, and left-aligned full pages for 404, 500 and no access.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A help article: the site header over a hairline, underlined breadcrumbs, a 30px title, one narrow column of 16px text with 18px subheads, a helpful-or-not question, related articles as rows, and the footer.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The flow bar, then one centred column: a 26px title, a line with the way to join, 48px fields, an underlined password link, the full-width lime Log in and a pale-lime passkey alternative.',
+    html: signIn,
   },
 ];
