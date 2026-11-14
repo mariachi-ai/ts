@@ -99,7 +99,7 @@ describe('AnthropicAdapter', () => {
   it('calls the global fetch with its receiver when none is passed', async () => {
     const original = globalThis.fetch;
     const seen: Array<{ receiver: unknown; beta: string | null }> = [];
-    globalThis.fetch = function (this: unknown, _input: RequestInfo | URL, init?: RequestInit) {
+    globalThis.fetch = function (this: unknown, _input: Parameters<typeof globalThis.fetch>[0], init?: RequestInit) {
       seen.push({ receiver: this, beta: new Headers(init?.headers).get('anthropic-beta') });
       return Promise.resolve(new Response(JSON.stringify(anthropicReply), { status: 200, headers: { 'content-type': 'application/json' } }));
     } as typeof globalThis.fetch;
