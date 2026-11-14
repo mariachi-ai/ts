@@ -362,13 +362,13 @@ export const volt = extendTheme(minimal, {
       currentFg: 'var(--m-color-fg-default)',
       currentWeight: 'var(--m-font-weight-medium)',
     },
-    // The offer badge: a small capitals pill
+    // The offer badge: a small capitals pill, at 500 (the source's faces come in 400, 500 and 700 only)
     badge: {
       height: '1.5rem',
       paddingX: '0.625rem',
       radius: '9999px',
       fontSize: 'var(--m-font-size-xs)',
-      fontWeight: 'var(--m-font-weight-semibold)',
+      fontWeight: 'var(--m-font-weight-medium)',
       textTransform: 'uppercase',
       tracking: '0.04em',
       neutral: { bg: pill, fg: 'var(--m-color-fg-default)', border: 'transparent' },
