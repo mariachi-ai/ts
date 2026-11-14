@@ -1,0 +1,63 @@
+{
+  "name": "@mariachi/motion",
+  "version": "0.0.5",
+  "description": "Loading, motion and animated charts for every Mariachi design language: skeletons, busy and optimistic states, entrances and exits, open and close, page transitions, and SVG charts that draw themselves. Tokens only, no dependencies.",
+  "mariachi": {
+    "category": "design",
+    "status": "alpha",
+    "useWhen": "Loading states, entrances and exits, dialog and page transitions, busy buttons, optimistic edits, or charts in an app styled with @mariachi/design",
+    "entry": [
+      "enhance",
+      "busy",
+      "optimistic",
+      "leave",
+      "countUp",
+      "navigate",
+      "chart",
+      "updateChart"
+    ]
+  },
+  "type": "module",
+  "exports": {
+    "./motion.css": "./dist/motion.css",
+    "./motion.js": {
+      "types": "./dist/motion.d.ts",
+      "import": "./dist/motion.js"
+    },
+    "./charts.js": {
+      "types": "./dist/charts.d.ts",
+      "import": "./dist/charts.js"
+    },
+    "./catalog.json": "./dist/catalog.json",
+    "./package.json": "./package.json"
+  },
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "dist",
+    "!dist/gallery.html",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "rm -rf dist .build && tsup && node scripts/build-assets.mjs",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist .build .turbo",
+    "lint": "biome lint src && stylelint \"src/**/*.css\"",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "devDependencies": {
+    "lightningcss": "^1.33.0",
+    "stylelint": "^17.16.0",
+    "stylelint-config-standard": "^40.0.0",
+    "tsup": "^8",
+    "typescript": "^5.7",
+    "vitest": "^3"
+  }
+}

@@ -162,16 +162,29 @@ export const semantic = {
     style: t.keyword('Focus ring outline-style', 'solid'),
     color: t.color('Focus ring colour', ref('color.border.focus')),
   },
+  // The motion overlay: what @mariachi/motion reads (entrances, exits, stagger, page transitions).
   motion: {
     duration: {
       fast: t.duration('Hover and press feedback', '120ms'),
       normal: t.duration('Opening and closing', '200ms'),
       slow: t.duration('Large movements', '320ms'),
+      enter: t.duration('Entrances: content, dialogs, sheets, toasts appearing', '240ms'),
+      exit: t.duration('Exits: anything leaving or closing', '160ms'),
     },
     easing: {
       standard: t.easing('Default easing', 'cubic-bezier(0.2, 0, 0, 1)'),
       emphasized: t.easing('Entrances', 'cubic-bezier(0.3, 0, 0, 1.1)'),
+      enter: t.easing('Entrances decelerate', 'cubic-bezier(0.05, 0.7, 0.1, 1)'),
+      exit: t.easing('Exits accelerate', 'cubic-bezier(0.3, 0, 0.8, 0.15)'),
     },
+    enterTransform: t.keyword(
+      'The motion style: translateY(0.5rem) slides, scale(0.98) scales, none fades',
+      'translateY(0.375rem)',
+    ),
+    stagger: t.duration('Delay between items of a list entering', '40ms'),
+    staggerMax: t.duration('The longest any item of a list waits to enter', '320ms'),
+    route: t.keyword('Page transition: fade or slide (read by navigate())', 'fade'),
+    routeDuration: t.duration('Page transition length', '200ms'),
   },
   z: {
     dropdown: t.zIndex('Dropdowns and popovers', '1000'),

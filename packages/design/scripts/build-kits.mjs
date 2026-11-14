@@ -8,10 +8,13 @@
 //   <id>/base.css     the reset and base layers (no components)
 //   <id>/tokens.css   the language's tokens, light and dark, scoped to [data-theme="<id>"]
 //   <id>/DESIGN.md    the language in words, with the generated reference
-//   <id>/kit.json     id, label, kind, the Mariachi version and commit, fonts, and a sha256 per file
+//   <id>/motion/      @mariachi/motion's motion.css, motion.js and charts.js (with their .d.ts): loading,
+//                     motion and charts, driven by the overlay tokens in tokens.css
+//   <id>/kit.json     id, label, kind, the Mariachi version and commit, fonts, the motion version and files,
+//                     and a sha256 per file
 //
 // Kits are build output for tools that copy them (Ensemble's template and its copy-in tool); the npm
-// package leaves them out. Run after build-assets.
+// package leaves them out. Run after build-assets, with @mariachi/motion built (turbo builds it first).
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -44,6 +47,17 @@ const LATIN = 'U+0000-00FF,U+0131,U+0152-0153,U+02BB-02BC,U+02C6,U+02DA,U+02DC,U
 const LATIN_EXT = 'U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF';
 const slug = (family) => family.toLowerCase().replace(/\s+/g, '-');
 const pkgDir = (name) => path.join(root, 'node_modules', ...name.split('/'));
+
+// @mariachi/motion's files, copied into every kit's motion/ folder (projects own a copy, as of the kit)
+const MOTION_FILES = ['motion.css', 'motion.js', 'charts.js', 'motion.d.ts', 'charts.d.ts'];
+const motionRoot = fs.realpathSync(pkgDir('@mariachi/motion'));
+const motionPkg = JSON.parse(fs.readFileSync(path.join(motionRoot, 'package.json'), 'utf8'));
+const motionMissing = MOTION_FILES.filter((f) => !fs.existsSync(path.join(motionRoot, 'dist', f)));
+if (motionMissing.length) {
+  console.error(`@mariachi/motion isn't built (missing dist/${motionMissing.join(', dist/')}); build it first`);
+  process.exit(1);
+}
+const motionFiles = MOTION_FILES.map((f) => [f, fs.readFileSync(path.join(motionRoot, 'dist', f))]);
 
 /** The woff2 files and @font-face rules for one family, or null when there's no open package for it. */
 function fontFace(family) {
@@ -123,7 +137,7 @@ const header = (kit, what) =>
   ].join('\n');
 
 const mdHeader = (kit) =>
-  `<!-- ${kit.label} (${kit.id}), copied from Mariachi's @mariachi/design ${pkg.version}, commit ${COMMIT} (${kit.source} in ${REPO}). This copy is the project's own; components come from the design_reference tool; moving to a newer version is a deliberate Change. -->\n\n`;
+  `<!-- ${kit.label} (${kit.id}), copied from Mariachi's @mariachi/design ${pkg.version}, commit ${COMMIT} (${kit.source} in ${REPO}). This copy is the project's own; components come from the design_reference tool; loading, motion and charts are in motion/ (@mariachi/motion ${motionPkg.version}: import motion/motion.css after index.css, call enhance() from motion/motion.js once); moving to a newer version is a deliberate Change. -->\n\n`;
 
 const read = (...p) => fs.readFileSync(path.join(dist, ...p), 'utf8');
 const stripBanner = (css) => css.replace(/^\/\* @mariachi\/design [^*]*\*\/\n/, '');
@@ -142,6 +156,7 @@ for (const theme of Object.values(presets)) {
   };
   const dir = path.join(out, kit.id);
   fs.mkdirSync(path.join(dir, 'fonts'), { recursive: true });
+  fs.mkdirSync(path.join(dir, 'motion'), { recursive: true });
   const files = {};
   const write = (rel, content) => {
     fs.writeFileSync(path.join(dir, rel), content);
@@ -170,6 +185,7 @@ for (const theme of Object.values(presets)) {
   write('base.css', header(kit, 'reset and base styles') + base);
   write('tokens.css', header(kit, 'tokens, light and dark') + stripBanner(read('css', 'themes', `${kit.id}.css`)));
   write('index.css', `${header(kit, 'the design base, in order')}@import './fonts.css';\n@import './base.css';\n@import './tokens.css';\n`);
+  for (const [name, content] of motionFiles) write(`motion/${name}`, content);
   const doc = a ? read('archetypes', kit.id, 'DESIGN.md') : plainDesignMd(theme);
   write(
     'DESIGN.md',
@@ -184,6 +200,8 @@ for (const theme of Object.values(presets)) {
     category: a?.category ?? null,
     mode: a?.tags.mode ?? 'both',
     mariachi: { package: '@mariachi/design', version: pkg.version, commit: COMMIT },
+    // Import motion/motion.css after index.css, and call enhance() from motion/motion.js once at start
+    motion: { package: '@mariachi/motion', version: motionPkg.version, files: MOTION_FILES.map((f) => `motion/${f}`) },
     source: `${REPO}/${kit.source}`,
     dataTheme: kit.id,
     entry: 'index.css',
@@ -211,5 +229,6 @@ for (const id of fs.readdirSync(out)) {
   }
   const a = byId.get(id);
   if (a && !m.fonts.find((f) => f.family === a.type.body)?.files.length) throw new Error(`dist/kits/${id}: no font files for its body family ${a.type.body}`);
+  if (!m.motion?.files.every((f) => m.files[f])) throw new Error(`dist/kits/${id}: kit.json doesn't record every motion file`);
 }
 console.log(`@mariachi/design: wrote ${count} kits to dist/kits`);

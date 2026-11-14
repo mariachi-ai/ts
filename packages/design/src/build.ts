@@ -7,10 +7,12 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { type Archetype, archetypes, categories } from './archetypes';
+import { withMotionOverlay } from './archetypes/overlay';
 import { designReference, galleryCss, galleryPage } from './archetypes/reference';
 import { componentList, contrastPairs, tokenList } from './contract';
 import type { ComponentExample } from './contract/component';
 import { componentExamples } from './components/examples';
+import { arrangementOf, showcasePatterns } from './showcase';
 import { type DesignConfig, defineDesign, type ResolvedDesign } from './design';
 import { checkTheme, type ThemeCheck } from './engine/check';
 import { expandComponentVars, unknownDefaultRefs, unknownVars } from './engine/css-vars';
@@ -125,10 +127,10 @@ export async function buildDesign(config: DesignConfig | ResolvedDesign, options
     }
   }
   if (design.config.name) {
-    parts.push(emitThemeCss(design.theme));
+    parts.push(emitThemeCss(withMotionOverlay(design.theme)));
   } else {
-    parts.push(emitThemeCss(design.base));
-    const overrides = emitOverridesCss(design.base, design.theme);
+    parts.push(emitThemeCss(withMotionOverlay(design.base)));
+    const overrides = emitOverridesCss(withMotionOverlay(design.base), withMotionOverlay(design.theme));
     if (overrides) parts.push(overrides);
   }
   let css = parts.join('\n');
@@ -315,7 +317,9 @@ export function packageAssets(root: string = packageRoot()): PackageAssets {
   }
   files['css/components.css'] = header + components.join('\n');
   files['css/mariachi.css'] = `${header}${base}\n${components.join('\n')}`;
-  for (const theme of Object.values(presets as Record<string, Theme>)) {
+  for (const preset of Object.values(presets as Record<string, Theme>)) {
+    // With the motion overlay's chart colours from the language, so every kit's tokens.css has them
+    const theme = withMotionOverlay(preset);
     files[`css/themes/${theme.name}.css`] = emitThemeCss(theme);
     files[`tokens/${theme.name}.json`] = `${JSON.stringify(emitDtcg(theme), null, 2)}\n`;
   }
@@ -325,6 +329,8 @@ export function packageAssets(root: string = packageRoot()): PackageAssets {
     files[`archetypes/${a.id}/DESIGN.md`] = read(path.join(root, 'src', 'archetypes', a.id, 'DESIGN.md')) + designReference(a, theme);
     files[`archetypes/${a.id}/gallery.html`] = galleryPage(a, theme);
     for (const r of a.recipes) files[`archetypes/${a.id}/recipes/${r.name}.html`] = recipePage(a, r);
+    // Its named patterns (a player, a job card …), drawn in it, for design_reference to read from the build
+    files[`archetypes/${a.id}/showcase.json`] = `${JSON.stringify({ language: a.id, arrangement: arrangementOf(a), patterns: showcasePatterns(a) }, null, 2)}\n`;
   }
   files['css/tailwind.css'] = emitTailwindCss();
   files['catalog.json'] = `${JSON.stringify(buildCatalog(version), null, 2)}\n`;
@@ -347,3 +353,6 @@ export { designReference } from './archetypes/reference';
 
 /** The design fingerprint (docs/design-fingerprint.md): the probe, and fingerprint.json and checks.json from its measurements. */
 export * from './fingerprint';
+export { arrangementsFrom } from './showcase/arrange';
+/** Every component's example markup, as the catalog carries it (`catalog.json` → components[].examples). */
+export { componentExamples } from './components/examples';

@@ -3,7 +3,7 @@
  * and extend themes and validate design configs. CSS ships separately (`@mariachi/design/mariachi.css`,
  * `@mariachi/design/themes/<preset>.css`); the Node build API is `@mariachi/design/build`.
  */
-export { contract, componentList, contrastPairs, semantic, semanticContrastPairs, tokenByPath, tokenByVar, tokenList } from './contract';
+export { contract, componentList, contrastPairs, motionTokens, overlayComponentPaths, semantic, semanticContrastPairs, tokenByPath, tokenByVar, tokenList } from './contract';
 export type { ComponentContract, Contract, ContrastPair } from './contract';
 export { defineComponent, defineExamples } from './contract/component';
 export type { ComponentCategory, ComponentExample, ComponentExamples, ComponentMeta } from './contract/component';
@@ -50,3 +50,8 @@ export { DesignError } from './errors';
 // the galleries and DESIGN.md references use.
 export { lucidePaths, lucideSvg } from './archetypes/lucide';
 export { resolveDeep, toPx } from './archetypes/reference';
+// The motion overlay's chart colours from a language's charts.categorical (as the build applies them)
+export { withMotionOverlay } from './archetypes/overlay';
+// Showcases: someone's key component drawn in any language (New project's look step, design_reference)
+export { arrangementOf, arrangements, drawnKinds, drawShowcase, exampleContent, isDrawn, showcaseKinds, showcasePatterns } from './showcase';
+export type { Arrangement, CalendarContent, CardContent, ChatThreadContent, DashboardTileContent, DrawnKind, FeedItemContent, FormContent, FormField, ListRowContent, MapContent, PlayerContent, ShowcaseContent, ShowcaseKind, ShowcasePattern, TableCell, TableContent } from './showcase';

@@ -816,6 +816,9 @@ importers:
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
+      '@mariachi/motion':
+        specifier: workspace:*
+        version: link:../motion
       zod:
         specifier: ^3.25.76
         version: 3.25.76
@@ -1182,6 +1185,27 @@ importers:
         specifier: workspace:*
         version: link:../observability
     devDependencies:
+      tsup:
+        specifier: ^8
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
+      typescript:
+        specifier: ^5.7
+        version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.11)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
+
+  packages/motion:
+    devDependencies:
+      lightningcss:
+        specifier: ^1.33.0
+        version: 1.33.0
+      stylelint:
+        specifier: ^17.16.0
+        version: 17.16.0(typescript@5.9.3)
+      stylelint-config-standard:
+        specifier: ^40.0.0
+        version: 40.0.0(stylelint@17.16.0(typescript@5.9.3))
       tsup:
         specifier: ^8
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
