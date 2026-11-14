@@ -6,7 +6,7 @@ in the environment win.
 ## init
 
 ```bash
-npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --mariachi-version <range>, --auth jwt|gotrue
+npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue
 ```
 
 Creates the [project layout](./architecture.md#project-layout): `src/app.ts` (`createApp()`: config, lifecycle,
@@ -15,6 +15,9 @@ that starts it, registry files, `docker-compose.yml` (Postgres + Redis), `.env.e
 `vitest.config.ts`, end-to-end test support (`pnpm test:e2e`, see [testing.md](./testing.md#end-to-end-tests)),
 `AGENTS.md`, and an example `note` entity wired end to end. Dependencies are pinned to the framework version that generated the
 project. The directory must be empty or not exist.
+
+`--no-e2e` leaves out the end-to-end test support (`pnpm test:e2e`, `src/testing/`, the
+`@mariachi/testing` and `testcontainers` devDependencies), for environments with no Docker.
 
 `--auth gotrue` signs users in with GoTrue (Supabase Auth, hosted or your own) instead of HS256
 JWTs. `@mariachi/auth-gotrue` verifies its tokens (configured from `AUTH_URL`, `AUTH_ORIGIN` or

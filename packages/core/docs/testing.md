@@ -61,15 +61,30 @@ The pieces, all in the generated project so you can change them:
 
 | File | What it does |
 | --- | --- |
-| `src/app.ts` | `createApp(options)` builds the app and returns it with `start()` (resolves to the address) and `stop()`. `main.ts` starts it; so do the tests. Options: `bootstrap` (config and environment) and `verifier` (who checks tokens) |
+| `src/app.ts` | `createApp(options)` builds the app and returns it with `start()` (resolves to the address) and `stop()`. `main.ts` starts it; so do the tests. Options: `bootstrap` (config and environment), `verifier` (who checks tokens), `migrateOnStart`, and `configureApi` (add auth strategies, middleware or rate limits without editing the file) |
 | `src/testing/global-setup.ts` | Starts the containers once per run with `startPostgres()` and `startRedis()` from `@mariachi/testing` |
-| `src/testing/e2e.ts` | `startApp(env?)`: creates a database, calls `createApp()` with a test environment and `createTestAuth()`, creates the tables in `src/schema` with `applySchema`, and listens on a free port. Returns `request(path, { as, json, method, headers })`, `auth`, `app` and `stop()` |
+| `src/testing/e2e.ts` | `startApp({ env?, migrateOnStart?, configureApi? })`: creates a database, calls `createApp()` with a test environment and `createTestAuth()`, creates the tables in `src/schema` with `applySchema`, and listens on a free port. Returns `request(path, { as, json, method, headers })`, `auth`, `app` and `stop()` |
 | `vitest.e2e.config.ts` | Runs `src/**/*.e2e.test.ts`; `pnpm test` leaves them out |
 
 `createTestAuth()` stands in for the identity provider: `auth.tokenFor({ userId, tenantId, scopes, roles, claims })`
 gives a token its `verifier` accepts, `auth.headersFor(identity)` the `Authorization` header, and
 `auth.revoke(token)` makes one stop working. Everything after the verifier (tenancy, scopes, rate
 limits, validation, the database) is the real thing.
+
+With an identity provider, test the mapping from its token to an identity as well. Give
+`createTestAuth` the provider's own mapping and write each user as the claims their token carries:
+
+```ts
+const auth = createTestAuth<GoTrueJwtPayload>({ fromClaims: (claims) => provider.toIdentity(claims) });
+auth.headersForClaims({ sub: userId, role: 'authenticated', org_id: orgId, org_role: 'owner' });
+```
+
+The `--auth gotrue` project's harness does this: `request('/api/me', { claims: { ... } })`, and
+`{ as: { userId, tenantId } }` writes the claims for you. A wrong claim name or a role that isn't
+where the app looks then fails a test instead of a sign-in.
+
+A project made with `mariachi init --no-e2e` has none of this (no Docker needed); add it later by
+copying these files from a project generated with it.
 
 For a quick test of routes with no socket, `app.api.inject({ method, url, headers, payload })`
 runs a request in memory and returns `{ statusCode, headers, body, json() }`.

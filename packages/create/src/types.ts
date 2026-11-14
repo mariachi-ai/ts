@@ -8,6 +8,12 @@ export interface ProjectConfig {
   /** Override the `@mariachi/*` version range written to package.json. Default `^<framework version>`. */
   mariachiVersion?: string;
   /**
+   * End-to-end test support: `pnpm test:e2e`, `src/testing/`, a first test, and one per generated
+   * entity, with `@mariachi/testing` and `testcontainers` as devDependencies. The tests need Docker.
+   * Default true; `false` leaves all of it out (and `generate entity` then writes no end-to-end test).
+   */
+  e2e?: boolean;
+  /**
    * How users sign in. `jwt` (default): HS256 tokens from `JWT_SECRET` (`JWTAdapter`). `gotrue`:
    * GoTrue (Supabase Auth, hosted or your own), verified with `@mariachi/auth-gotrue`; the tenant is
    * the token's organization claim (`@mariachi/tenancy`) or the user's personal tenant, with an

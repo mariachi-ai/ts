@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { ConfigError } from '@mariachi/core';
 import { LAYOUT, MARKERS } from './layout';
 import { names } from './names';
+import { E2E_HARNESS_FILE } from './templates/e2e';
 import { entityFiles } from './templates/entity';
 import { controllerFile, integrationFiles, jobFile, serviceFiles } from './templates/parts';
 import { projectFiles } from './templates/project';
@@ -39,7 +40,7 @@ export async function createProject(config: ProjectConfig): Promise<GenerateResu
   }
   await mkdir(config.outputDir, { recursive: true });
   const range = config.mariachiVersion ?? `^${MARIACHI_VERSION}`;
-  const project = await writeFiles(config.outputDir, projectFiles(config.name, range, auth));
+  const project = await writeFiles(config.outputDir, projectFiles(config.name, range, auth, { e2e: config.e2e }));
   if (config.example === false) return project;
   const example = await generateEntity({ name: 'note', projectRoot: config.outputDir });
   return { ...mergeResults(project, example), updated: [] };
@@ -68,7 +69,10 @@ export async function generateEntity(config: GenerateEntityConfig): Promise<Gene
     },
     ...controllerInsertions(n.pluralPascal, n.pluralKebab),
   ];
-  const result = await writeFiles(config.projectRoot, entityFiles(n), insertions, config);
+  const files = entityFiles(n);
+  // A project made without end-to-end support has no harness for the test to use
+  if (!existsSync(join(config.projectRoot, E2E_HARNESS_FILE))) delete files[`${LAYOUT.controllersDir}/${n.pluralKebab}.e2e.test.ts`];
+  const result = await writeFiles(config.projectRoot, files, insertions, config);
   result.notes.push('Run `mariachi db generate` to create the migration for the new table.');
   return result;
 }

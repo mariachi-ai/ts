@@ -2,6 +2,7 @@ import { LAYOUT, MARKERS } from '../layout';
 import type { ProjectAuth } from '../types';
 import { THIRD_PARTY_VERSIONS as V } from '../version';
 import { databaseName } from '../names';
+import { E2E_GLOBAL_SETUP, E2E_HARNESS_FILE, VITEST_E2E_CONFIG, e2eHarness } from './e2e';
 import { gotrueFiles } from './gotrue';
 
 const MARIACHI_DEPS = [
@@ -22,7 +23,13 @@ const AUTH_DEPS: Record<ProjectAuth, readonly string[]> = {
   gotrue: ['auth-gotrue', 'tenancy'],
 };
 
-export function projectFiles(name: string, mariachiRange: string, auth: ProjectAuth = 'jwt'): Record<string, string> {
+export interface ProjectFileOptions {
+  /** End-to-end test support (`pnpm test:e2e`, needs Docker). Default true. */
+  e2e?: boolean;
+}
+
+export function projectFiles(name: string, mariachiRange: string, auth: ProjectAuth = 'jwt', options: ProjectFileOptions = {}): Record<string, string> {
+  const e2e = options.e2e ?? true;
   const dependencies: Record<string, string> = {};
   for (const pkg of [...MARIACHI_DEPS, ...AUTH_DEPS[auth]].sort()) dependencies[`@mariachi/${pkg}`] = mariachiRange;
   dependencies.zod = V.zod;
@@ -41,7 +48,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
       typecheck: 'tsc --noEmit',
       test: 'vitest run',
       'test:watch': 'vitest',
-      'test:e2e': 'vitest run --config vitest.e2e.config.ts',
+      ...(e2e ? { 'test:e2e': 'vitest run --config vitest.e2e.config.ts' } : {}),
       validate: 'mariachi validate',
       'db:generate': 'mariachi db generate',
       'db:check': 'mariachi db check',
@@ -51,10 +58,10 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     dependencies,
     devDependencies: {
       '@mariachi/cli': mariachiRange,
-      '@mariachi/testing': mariachiRange,
+      ...(e2e ? { '@mariachi/testing': mariachiRange } : {}),
       '@types/node': V['@types/node'],
       'drizzle-kit': V['drizzle-kit'],
-      testcontainers: V.testcontainers,
+      ...(e2e ? { testcontainers: V.testcontainers } : {}),
       tsup: V.tsup,
       tsx: V.tsx,
       typescript: V.typescript,
@@ -88,22 +95,26 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     '.env.example': ENV_EXAMPLE(name),
     'docker-compose.yml': DOCKER_COMPOSE(databaseName(name)),
     'vitest.config.ts': VITEST_CONFIG,
-    'vitest.e2e.config.ts': VITEST_E2E_CONFIG,
-    'AGENTS.md': AGENTS_MD,
+    'AGENTS.md': AGENTS_MD(e2e),
     'CLAUDE.md': 'See [AGENTS.md](./AGENTS.md).\n',
-    'README.md': README(name),
+    'README.md': README(name, e2e),
     [LAYOUT.main]: MAIN_TS,
     [LAYOUT.app]: APP_TS,
-    'src/app.e2e.test.ts': APP_E2E_TEST,
-    'src/testing/e2e.ts': E2E_HARNESS,
-    'src/testing/global-setup.ts': E2E_GLOBAL_SETUP,
+    ...(e2e
+      ? {
+          'vitest.e2e.config.ts': VITEST_E2E_CONFIG,
+          'src/app.e2e.test.ts': APP_E2E_TEST,
+          [E2E_HARNESS_FILE]: e2eHarness('jwt'),
+          'src/testing/global-setup.ts': E2E_GLOBAL_SETUP,
+        }
+      : {}),
     [LAYOUT.schemaIndex]: `/** Every table exported here is picked up by \`mariachi db generate\`. */\n// ${MARKERS.schema}\nexport {};\n`,
     [LAYOUT.seedsIndex]: SEEDS_INDEX,
     [LAYOUT.servicesIndex]: SERVICES_INDEX,
     [LAYOUT.controllersIndex]: CONTROLLERS_INDEX,
     [LAYOUT.jobsIndex]: JOBS_INDEX,
   };
-  return auth === 'gotrue' ? { ...files, ...gotrueFiles(name) } : files;
+  return auth === 'gotrue' ? { ...files, ...gotrueFiles(name, e2e) } : files;
 }
 
 const ENV_EXAMPLE = (name: string) => `SERVICE_NAME=${name}
@@ -140,127 +151,6 @@ export default defineConfig({
 });
 `;
 
-const VITEST_E2E_CONFIG = `import { defineConfig } from 'vitest/config';
-
-// End-to-end tests: the whole app over HTTP against a throwaway Postgres and Redis (needs Docker).
-export default defineConfig({
-  test: {
-    include: ['src/**/*.e2e.test.ts'],
-    globalSetup: ['./src/testing/global-setup.ts'],
-    testTimeout: 30_000,
-    hookTimeout: 180_000,
-  },
-});
-`;
-
-export const E2E_GLOBAL_SETUP = `import type { TestProject } from 'vitest/node';
-import { startPostgres, startRedis, stopContainers } from '@mariachi/testing';
-
-/**
- * Runs once before the end-to-end tests: one throwaway Postgres and one Redis, in Docker, for all
- * of them. Each test file then makes its own database in that Postgres (see ./e2e).
- */
-export default async function setup(project: TestProject): Promise<() => Promise<void>> {
-  const [postgresUrl, redisUrl] = await Promise.all([startPostgres(), startRedis()]);
-  project.provide('postgresUrl', postgresUrl);
-  project.provide('redisUrl', redisUrl);
-  return stopContainers;
-}
-`;
-
-export const E2E_HARNESS = `import { randomUUID } from 'node:crypto';
-import { sql } from 'drizzle-orm';
-import { inject } from 'vitest';
-import { applySchema, createPostgresDatabase } from '@mariachi/database-postgres';
-import { createTestAuth, type TestAuth, type TestIdentity } from '@mariachi/testing';
-import { createApp, type App } from '../app';
-import * as schema from '../schema/index';
-
-declare module 'vitest' {
-  export interface ProvidedContext {
-    postgresUrl: string;
-    redisUrl: string;
-  }
-}
-
-export interface RequestOptions {
-  method?: string;
-  /** Who is asking. Left out, the request carries no token. */
-  as?: TestIdentity;
-  /** Sent as the JSON body (and makes the request a POST unless \`method\` says otherwise). */
-  json?: unknown;
-  headers?: Record<string, string>;
-}
-
-export interface RunningApp {
-  app: App;
-  /** Where it listens: http://127.0.0.1:<port> */
-  url: string;
-  auth: TestAuth;
-  /** A real HTTP request to the app. \`path\` starts with /api. */
-  request(path: string, options?: RequestOptions): Promise<Response>;
-  stop(): Promise<void>;
-}
-
-/**
- * Starts the whole app for a test file: the same createApp() that main.ts starts, on a free port,
- * with its own empty database (the tables in src/schema, created directly) and its own job queue.
- * Sign-in is createTestAuth(): \`request(path, { as: { userId, tenantId } })\` is a signed-in request.
- * Pass \`env\` to set anything else the app reads from its environment.
- */
-export async function startApp(env: Record<string, string> = {}): Promise<RunningApp> {
-  const name = \`e2e_\${randomUUID().replaceAll('-', '')}\`;
-  const server = createPostgresDatabase({ url: inject('postgresUrl') });
-  await server.connect();
-  await server.db.execute(sql.raw(\`create database \${name}\`));
-  await server.disconnect();
-  const databaseUrl = new URL(inject('postgresUrl'));
-  databaseUrl.pathname = \`/\${name}\`;
-
-  const auth = createTestAuth();
-  const app = await createApp({
-    verifier: auth.verifier,
-    bootstrap: {
-      installSignalHandlers: false,
-      captureProcessErrors: false,
-      configOptions: {
-        dotenv: false,
-        env: {
-          NODE_ENV: 'test',
-          // Also the job queue's prefix, so files sharing the Redis don't see each other's jobs
-          SERVICE_NAME: name,
-          PORT: '0',
-          HOST: '127.0.0.1',
-          LOG_LEVEL: 'error',
-          DATABASE_URL: databaseUrl.href,
-          REDIS_URL: inject('redisUrl'),
-          ...env,
-        },
-      },
-    },
-  });
-  await applySchema(app.database.db, schema);
-  const url = await app.start();
-
-  return {
-    app,
-    url,
-    auth,
-    request: (path, options = {}) =>
-      fetch(url + path, {
-        method: options.method ?? (options.json === undefined ? 'GET' : 'POST'),
-        headers: {
-          ...(options.json === undefined ? {} : { 'content-type': 'application/json' }),
-          ...(options.as ? auth.headersFor(options.as) : {}),
-          ...options.headers,
-        },
-        body: options.json === undefined ? undefined : JSON.stringify(options.json),
-      }),
-    stop: () => app.stop(),
-  };
-}
-`;
-
 const APP_E2E_TEST = `import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startApp, type RunningApp } from './testing/e2e';
 
@@ -288,41 +178,26 @@ describe('the app, started as main.ts starts it', () => {
     expect(res.status).toBe(404);
     expect(await res.json()).toMatchObject({ error: { code: 'http/not-found' } });
   });
+
+  it('takes additions to the API through the configureApi option, with no edit to app.ts', async () => {
+    const custom = await startApp({
+      configureApi: (api) =>
+        api.withMiddleware(async (ctx, next) => {
+          ctx.responseHeaders['x-served-by'] = 'e2e';
+          await next();
+        }),
+    });
+    try {
+      expect((await custom.request('/api/health/live')).headers.get('x-served-by')).toBe('e2e');
+      expect((await running.request('/api/health/live')).headers.get('x-served-by')).toBeNull();
+    } finally {
+      await custom.stop();
+    }
+  });
 });
 `;
 
-const AGENTS_MD = `# Agent guide
-
-This is a Mariachi backend. Before writing code, read the framework docs shipped with
-\`@mariachi/core\`:
-
-- \`node_modules/@mariachi/core/docs/README.md\` (start here: layers, conventions, package catalog)
-- \`node_modules/@mariachi/core/docs/recipes/\` (step-by-step: entity, job, webhook, integration)
-
-## Layout
-
-| Path | Layer |
-| --- | --- |
-| \`src/app.ts\` | Composition root: \`createApp()\` builds config, lifecycle, database, jobs, communication and the HTTP server |
-| \`src/main.ts\` | The entry point: starts what \`createApp()\` built |
-| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and the containers they share |
-| \`src/contracts/\` | Zod schemas + procedure types shared by controllers and handlers |
-| \`src/api/controllers/\` | HTTP controllers (\`BaseController\`); call procedures, never services |
-| \`src/services/<name>/\` | Service, repository and communication handlers for one domain |
-| \`src/schema/\` | \`defineTable\` tables; \`mariachi db generate\` turns them into migrations |
-| \`src/jobs/\` | \`defineJob\` background jobs |
-
-## Generators
-
-\`\`\`bash
-pnpm mariachi generate entity <name>      # schema + repository + service + handler + controller + unit and end-to-end tests
-pnpm mariachi generate service <name>
-pnpm mariachi generate controller <name>
-pnpm mariachi generate job <name>
-pnpm mariachi generate integration <name>
-pnpm validate                            # architecture rules; run before committing
-\`\`\`
-
+export const AGENTS_TESTS = `
 ## Tests
 
 \`\`\`bash
@@ -340,7 +215,51 @@ pnpm test:e2e      # the whole app over HTTP (src/**/*.e2e.test.ts): starts a th
   tenancy or the database.
 `;
 
-const README = (name: string) => `# ${name}
+const AGENTS_MD = (e2e: boolean) => `# Agent guide
+
+This is a Mariachi backend. Before writing code, read the framework docs shipped with
+\`@mariachi/core\`:
+
+- \`node_modules/@mariachi/core/docs/README.md\` (start here: layers, conventions, package catalog)
+- \`node_modules/@mariachi/core/docs/recipes/\` (step-by-step: entity, job, webhook, integration)
+
+## Layout
+
+| Path | Layer |
+| --- | --- |
+| \`src/app.ts\` | Composition root: \`createApp()\` builds config, lifecycle, database, jobs, communication and the HTTP server |
+| \`src/main.ts\` | The entry point: starts what \`createApp()\` built |
+${e2e ? '| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and the containers they share |\n' : ''}| \`src/contracts/\` | Zod schemas + procedure types shared by controllers and handlers |
+| \`src/api/controllers/\` | HTTP controllers (\`BaseController\`); call procedures, never services |
+| \`src/services/<name>/\` | Service, repository and communication handlers for one domain |
+| \`src/schema/\` | \`defineTable\` tables; \`mariachi db generate\` turns them into migrations |
+| \`src/jobs/\` | \`defineJob\` background jobs |
+
+## Generators
+
+\`\`\`bash
+pnpm mariachi generate entity <name>      # schema + repository + service + handler + controller + unit and end-to-end tests
+pnpm mariachi generate service <name>
+pnpm mariachi generate controller <name>
+pnpm mariachi generate job <name>
+pnpm mariachi generate integration <name>
+pnpm validate                            # architecture rules; run before committing
+\`\`\`
+${e2e ? AGENTS_TESTS : ''}`;
+
+const README_TESTS = `
+## Tests
+
+\`\`\`bash
+pnpm test          # unit tests, no services needed
+pnpm test:e2e      # the whole app over HTTP, against a throwaway Postgres and Redis (needs Docker)
+\`\`\`
+
+The end-to-end tests start the app the way \`src/main.ts\` does (\`createApp()\` in \`src/app.ts\`) and
+call it with \`fetch\`. They don't touch the database in \`.env\`. See \`AGENTS.md\` for how to write one.
+`;
+
+const README = (name: string, e2e: boolean) => `# ${name}
 
 \`\`\`bash
 cp .env.example .env
@@ -352,17 +271,7 @@ pnpm dev
 
 The API listens on \`PORT\` (default 3000) under \`/api\`. Health checks: \`/api/health/live\`,
 \`/api/health/ready\`, \`/api/health/startup\`. OpenAPI: \`/api/openapi.json\`.
-
-## Tests
-
-\`\`\`bash
-pnpm test          # unit tests, no services needed
-pnpm test:e2e      # the whole app over HTTP, against a throwaway Postgres and Redis (needs Docker)
-\`\`\`
-
-The end-to-end tests start the app the way \`src/main.ts\` does (\`createApp()\` in \`src/app.ts\`) and
-call it with \`fetch\`. They don't touch the database in \`.env\`. See \`AGENTS.md\` for how to write one.
-`;
+${e2e ? README_TESTS : ''}`;
 
 const MAIN_TS = `import { createApp } from './app';
 
@@ -375,10 +284,11 @@ createApp()
   });
 `;
 
-const APP_TS = `import { ConfigError, KEYS } from '@mariachi/core';
+const APP_TS = `import { existsSync } from 'node:fs';
+import { ConfigError, KEYS } from '@mariachi/core';
 import { bootstrap, type BootstrapOptions } from '@mariachi/lifecycle';
 import { createCommunication, type CommunicationLayer } from '@mariachi/communication';
-import { createPostgresDatabase, type PostgresDatabase } from '@mariachi/database-postgres';
+import { createPostgresDatabase, runMigrations, type PostgresDatabase } from '@mariachi/database-postgres';
 import { createJobQueue, DefaultJobs } from '@mariachi/jobs';
 import { JWTAdapter } from '@mariachi/auth';
 import { bearerStrategy, createApiServer, type FastifyAdapter, type TokenVerifier } from '@mariachi/api-facade';
@@ -389,8 +299,22 @@ import { jobs as jobDefinitions } from './jobs/index';
 export interface AppOptions {
   /** Passed to bootstrap(). Tests give their own environment and leave the signal handlers off. */
   bootstrap?: BootstrapOptions;
-  /** Checks tokens in place of the JWT adapter. Tests pass createTestAuth().verifier. */
+  /**
+   * Checks tokens in place of the JWT adapter, and JWT_SECRET is then not needed. Tests pass
+   * createTestAuth().verifier; an app with an identity provider passes the provider.
+   */
   verifier?: TokenVerifier;
+  /**
+   * Apply the committed migrations at start, before anything else uses the database. \`true\` reads
+   * them from drizzle/. Handy where no deploy step runs \`mariachi db migrate\`.
+   */
+  migrateOnStart?: boolean | { folder: string };
+  /**
+   * Called with the API server after the defaults below and before the controllers are registered:
+   * add auth strategies (\`api.withAuthStrategy('api-key', ...).withAuth(['session', 'api-key'])\`),
+   * middleware or rate limits without editing this file.
+   */
+  configureApi?: (api: FastifyAdapter) => void;
 }
 
 export interface App {
@@ -424,6 +348,20 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
     { priority: 10 },
   );
   container.register(KEYS.Database, database);
+  const migrations = options.migrateOnStart === true ? { folder: 'drizzle' } : options.migrateOnStart || undefined;
+  if (migrations) {
+    lifecycle.startup.register({
+      name: 'migrations',
+      priority: 15,
+      fn: async () => {
+        if (!existsSync(\`\${migrations.folder}/meta/_journal.json\`)) {
+          logger.warn({ folder: migrations.folder }, 'migrateOnStart: no migrations yet (pnpm db:generate, then commit them)');
+          return;
+        }
+        await runMigrations(database.adapter, { migrationsFolder: migrations.folder, logger });
+      },
+    });
+  }
 
   const jobs = new DefaultJobs(
     { queue: createJobQueue({ adapter: 'bullmq', redisUrl: config.redis.url, prefix: config.serviceName }, logger) },
@@ -454,6 +392,7 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
     .withAuth('session')
     .withHealth(lifecycle.health)
     .withOpenApi({ info: { title: config.serviceName, version: '0.1.0' } });
+  options.configureApi?.(api);
   for (const controller of createControllers(communication)) api.registerController(controller);
 
   let address = '';

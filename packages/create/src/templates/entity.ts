@@ -238,9 +238,9 @@ export class ${n.pluralPascal}Controller extends BaseController {
 const e2eTest = (n: Names) => `import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startApp, type RunningApp } from '../../testing/e2e';
 
-// Two people in two tenants. The claim is where a provider's token would name the organization.
-const ada = { userId: 'user-ada', tenantId: 'tenant-a', claims: { org_id: 'tenant-a' } };
-const lin = { userId: 'user-lin', tenantId: 'tenant-b', claims: { org_id: 'tenant-b' } };
+// Two people in two tenants
+const ada = { userId: 'user-ada', tenantId: 'tenant-a' };
+const lin = { userId: 'user-lin', tenantId: 'tenant-b' };
 const path = '/api/${n.pluralKebab}';
 
 let running: RunningApp;

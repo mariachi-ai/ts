@@ -1,4 +1,9 @@
+import { existsSync } from 'node:fs';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { createProject, generateEntity } from '../generators';
 import { names } from '../names';
 import { entityFiles } from './entity';
 import { projectFiles } from './project';
@@ -50,12 +55,54 @@ describe('the generated project can be started from a test', () => {
   it('gives each test file its own database and job queue, and never the developer\'s', () => {
     const harness = files['src/testing/e2e.ts'] as string;
     expect(harness).toContain('create database');
+    // The GoTrue project reads a request's claims through the provider's own mapping
+    expect(harness).not.toContain('toIdentity');
+    expect(gotrue['src/testing/e2e.ts']).toContain('return provider.toIdentity(claims);');
+    expect(gotrue['src/testing/e2e.ts']).toContain('[settings().orgClaim]: identity.tenantId');
     expect(harness).toContain('dotenv: false');
     expect(harness).toContain('SERVICE_NAME: name');
     expect(harness).toContain("PORT: '0'");
     expect(harness).toContain('installSignalHandlers: false');
     expect(harness).not.toMatch(/process\.env/);
     expect(files['src/testing/global-setup.ts']).not.toMatch(/process\.env/);
+  });
+
+  it('takes migrations at start and additions to the API as options, so a wrapper needn\'t edit app.ts', () => {
+    for (const app of [files['src/app.ts'], gotrue['src/app.ts']] as string[]) {
+      expect(app).toContain('configureApi?: (api: FastifyAdapter) => void;');
+      // After the defaults, before the controllers
+      expect(app).toMatch(/\.withOpenApi\(\{[^\n]+\);\n\s+options\.configureApi\?\.\(api\);\n\s+for \(const controller of createControllers/);
+      expect(app).toContain("name: 'migrations',");
+      expect(app).toContain('priority: 15,');
+    }
+    expect(files['src/app.ts']).toContain("options.migrateOnStart === true ? { folder: 'drizzle' } : options.migrateOnStart || undefined");
+    expect(gotrue['src/app.ts']).toContain('if (options.migrateOnStart ?? app.migrateOnStart) {');
+  });
+
+  it('leaves all of it out with e2e: false', async () => {
+    for (const auth of ['jwt', 'gotrue'] as const) {
+      const plain = projectFiles('acme-app', '^0.1.0', auth, { e2e: false });
+      expect(Object.keys(plain).filter((f) => /e2e|src\/testing\//.test(f)), auth).toEqual([]);
+      const plainPkg = JSON.parse(plain['package.json'] as string);
+      expect(plainPkg.scripts['test:e2e']).toBeUndefined();
+      expect(plainPkg.devDependencies['@mariachi/testing']).toBeUndefined();
+      expect(plainPkg.devDependencies.testcontainers).toBeUndefined();
+      expect(`${plain['AGENTS.md']}${plain['README.md']}`).not.toMatch(/test:e2e|src\/testing|startApp/);
+      // Everything else is the same project
+      const full = projectFiles('acme-app', '^0.1.0', auth);
+      for (const file of ['src/app.ts', 'src/main.ts', 'vitest.config.ts', '.env.example', 'docker-compose.yml']) expect(plain[file], file).toBe(full[file]);
+    }
+    const dir = await mkdtemp(join(tmpdir(), 'mariachi-no-e2e-'));
+    try {
+      await createProject({ name: 'plain', outputDir: join(dir, 'plain'), e2e: false });
+      const added = await generateEntity({ name: 'invoice-item', projectRoot: join(dir, 'plain') });
+      expect(added.created.filter((f) => f.includes('e2e'))).toEqual([]);
+      expect(existsSync(join(dir, 'plain', 'src/api/controllers/notes.e2e.test.ts'))).toBe(false);
+      await createProject({ name: 'full', outputDir: join(dir, 'full') });
+      expect(existsSync(join(dir, 'full', 'src/api/controllers/notes.e2e.test.ts'))).toBe(true);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
   });
 
   it('writes an end-to-end test with every generated entity', () => {
