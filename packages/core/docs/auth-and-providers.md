@@ -112,6 +112,44 @@ After `defineRole`, call `rbac.refreshPermissions()` to apply it in this process
 processes reload after `permissionTtlMs`. Granting a role that doesn't exist throws
 `auth/unknown-role`.
 
+## Sessions
+
+`SessionManager` issues opaque server-side sessions: a random 256-bit token the client holds, and a
+row in `sessions` (via `DrizzleSessionStore`) that holds only the token's sha256. Unlike a JWT, a
+session can be revoked at once, listed ("your devices") and signed out everywhere.
+
+```ts
+import { SessionManager } from '@mariachi/auth';
+import { DrizzleSessionStore } from '@mariachi/auth/postgres';
+import { bearerStrategy } from '@mariachi/api-facade';
+
+const sessions = new SessionManager(new DrizzleSessionStore(database.db), { ttlSeconds: 30 * 24 * 3600 });
+
+// After you've checked who the user is (an IdentityClient sign-in, an OAuth callback, ...):
+const { token, session } = await sessions.create({ userId, tenantId, scopes, userAgent, ipAddress });
+
+// Verify it on requests: `Authorization: Bearer <token>`, or the named cookie.
+api.withAuthStrategy('session', bearerStrategy(sessions, { cookie: 'session' }));
+
+await sessions.revoke(session.id);                 // sign out this device
+await sessions.revokeAllForUser(userId);           // sign out everywhere (pass a tenantId to limit it)
+const devices = await sessions.list(userId);       // live sessions, newest activity first
+```
+
+`verify` fails with `auth/invalid-session` (unknown or revoked) or `auth/session-expired`. Expiry
+slides: each use at least `touchIntervalSeconds` (default 60) after the last pushes it `ttlSeconds`
+ahead; pass `sliding: false` for a fixed lifetime. Add `sessionsTable` from `@mariachi/auth/schema`
+to your schema, and delete old rows on a schedule:
+
+```ts
+defineJob({ name: 'purge-sessions', schema: z.object({}), handler: async () => void (await sessions.purgeExpired()) });
+jobs.schedule({ name: 'purge-sessions', cron: '0 4 * * *', jobName: 'purge-sessions', data: {} });
+```
+
+`InMemorySessionStore` is for tests and a single process. A cookie session in a browser also needs
+CSRF protection for state-changing requests, which the framework doesn't provide yet: set the
+cookie `HttpOnly`, `Secure` and `SameSite=Lax` or `Strict`, and don't change state on `GET`.
+
 ## API keys
 
 `ApiKeyService` issues tenant API keys, stores only their hash (`api_keys` table via

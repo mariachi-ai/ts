@@ -14,6 +14,8 @@ export interface SessionStore {
   revoke(id: string): Promise<void>;
   revokeAllForUser(userId: string, tenantId?: string): Promise<number>;
   listForUser(userId: string, tenantId?: string): Promise<SessionRecord[]>;
+  /** Deletes sessions that expired, or were revoked, before `olderThan`. Returns how many. Optional for a custom store. */
+  deleteExpired?(olderThan: Date): Promise<number>;
 }
 
 export interface SessionManagerOptions {
@@ -99,9 +101,20 @@ export class SessionManager implements AuthenticationAdapter {
     return this.store.revokeAllForUser(userId, tenantId);
   }
 
+  /** A user's live sessions: not revoked and not expired. */
   async list(userId: string, tenantId?: string): Promise<SessionInfo[]> {
     const records = await this.store.listForUser(userId, tenantId);
-    return records.filter((r) => !r.revokedAt).map(({ tokenHash: _omit, ...rest }) => rest);
+    const now = Date.now();
+    return records.filter((r) => !r.revokedAt && r.expiresAt.getTime() > now).map(({ tokenHash: _omit, ...rest }) => rest);
+  }
+
+  /**
+   * Deletes sessions that expired or were revoked more than `graceSeconds` ago (default one day,
+   * so a recent sign-out can still be audited). Run it from a scheduled job. Returns how many rows
+   * went; 0 when the store has no `deleteExpired`.
+   */
+  async purgeExpired(graceSeconds = 24 * 3600): Promise<number> {
+    return (await this.store.deleteExpired?.(new Date(Date.now() - graceSeconds * 1000))) ?? 0;
   }
 }
 
@@ -117,11 +130,11 @@ export class InMemorySessionStore implements SessionStore {
   }
   async touch(id: string, lastActiveAt: Date, expiresAt: Date): Promise<void> {
     const r = this.byId.get(id);
-    if (r) Object.assign(r, { lastActiveAt, expiresAt });
+    if (r && !r.revokedAt) Object.assign(r, { lastActiveAt, expiresAt });
   }
   async revoke(id: string): Promise<void> {
     const r = this.byId.get(id);
-    if (r) r.revokedAt = new Date();
+    if (r && !r.revokedAt) r.revokedAt = new Date();
   }
   async revokeAllForUser(userId: string, tenantId?: string): Promise<number> {
     let n = 0;
@@ -134,6 +147,19 @@ export class InMemorySessionStore implements SessionStore {
     return n;
   }
   async listForUser(userId: string, tenantId?: string): Promise<SessionRecord[]> {
-    return [...this.byId.values()].filter((r) => r.userId === userId && (!tenantId || r.tenantId === tenantId));
+    return [...this.byId.values()]
+      .filter((r) => r.userId === userId && (!tenantId || r.tenantId === tenantId))
+      .sort((a, b) => b.lastActiveAt.getTime() - a.lastActiveAt.getTime())
+      .map((r) => ({ ...r }));
+  }
+  async deleteExpired(olderThan: Date): Promise<number> {
+    let n = 0;
+    for (const r of this.byId.values()) {
+      if (r.expiresAt < olderThan || (r.revokedAt && r.revokedAt < olderThan)) {
+        this.byId.delete(r.id);
+        n++;
+      }
+    }
+    return n;
   }
 }
