@@ -71,7 +71,8 @@ pages (pricing, docs, sign-up); the app works in it too.
     title bar (breadcrumb on the left, quiet icon buttons on the right).
   - The agent view splits into the thread (composer at the bottom) and a file or diff pane.
   - Tables sit inside a hairline box with 8px corners.
-  - Settings read in a 42rem column; public pages in a 72–84rem one.
+  - Settings read in a 672px column, flows in 360–480px, docs articles in 672px; overviews in
+    1152px and pricing in 1344px.
 - **Density.** 1 by default, already compact. For dense tables set `--m-density: 0.875`.
 
 Use tokens, never colour literals: `var(--m-color-accent-default)`, `var(--m-space-3)`. The exact
@@ -147,7 +148,7 @@ All 36 of the library's components, as Flint draws them. Every one is in `galler
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, the 240px side panel beside the work area (no gap);
-- `m-container`, 72rem for overviews, 42rem for settings and documents, 28rem for forms;
+- `m-container`, 1152px for overviews, 672px for settings and documents, 448px for forms;
 - `m-grid`, for boxes and plans: 12px gaps, 14rem columns;
 - `m-stack` and `m-cluster`, for everything inside: 12px and 8px by default.
 
