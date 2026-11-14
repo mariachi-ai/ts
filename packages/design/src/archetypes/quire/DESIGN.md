@@ -9,7 +9,7 @@ graphite panels. For documents, notes, wikis and writing tools.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `quire` preset of `@mariachi/design` (`data-theme="quire"`,
@@ -76,8 +76,10 @@ are in the reference at the end.
   - heading 17px semibold;
   - body 16px on a 24px line;
   - caption 14px.
-- **Public pages.** Newsreader at 54px for headlines and prices, 36px for section headings, never bold;
-  tiny capital kickers at 14px, weight 800, tracked 10%.
+- **Public pages.** Newsreader at 54px for headlines and prices (narrowing to 38px on a phone), 36px for
+  section headings, never bold; text at 16px; tiny capital kickers at 13px, weight 800, tracked 10%.
+- **Title over text.** The largest text is about one and a half times the body: 19 over 13 in the app's
+  views, 24 over 16 on a page, 24 over 13 on a form. Only the public pages go higher (2.4–3.4 times).
 - **Case.** Sentence case everywhere; capitals only for the public pages' kickers.
 
 ## Icons
@@ -168,7 +170,7 @@ All 36 of the library's components, as Quire draws them. Every one is in `galler
 **Data and content**
 - **Table.** A collection table: a hairline grid inside a 6px frame on white; column names in muted
   12px weight 500, sentence case, no fill; a row number in subtle grey; rows tint `#f5f6f7` on hover.
-  Tags are chips; people are a small avatar and a name.
+  Tags are chips; people are mentions (`@Name` on the mention highlight).
 - **Card.** White, 14px corners, no border, the page shadow; 16–24px padding. A page card has a soft
   colour cover band (a gradient of two tints, never an image), the title at 17px semibold, two lines
   of the opening in muted 13px, then chips. Page blocks inside a document are 7px cards with the
@@ -176,14 +178,15 @@ All 36 of the library's components, as Quire draws them. Every one is in `galler
 - **Badge.** The chip: 20px tall, 6px corners, 12px weight 500, no border. Neutral grey for weekdays
   and plain tags; blue for dates ("Nov 14."); red with a flag for overdue; green, orange and red
   tints for desk tags and status. The solid ink badge for "Most chosen".
-- **Avatar.** Round, on the blue tint with blue initials; 20px in rows, 28px in bars, 40px in headers.
+- **Avatar.** Round, on the blue tint with blue initials; 28px in bars, 40px in headers. In a page or a
+  table a person is a mention, not an avatar.
   A space is a rounded square.
 - **Divider.** A faint hairline (`#f1f1f2`). Between sections of a document, a 2px dotted rule.
 - **Accordion.** The toggle block: separate grey wells (`#f5f6f7`) with 6px corners, 10px by 14px
   padding, the question in 16px semibold.
 - **Code, kbd.** Code blocks are grey wells with 6px corners in Roboto Mono; inline code is mono
   with a hairline box and 4px corners. Keys are small white keycaps with a hairline and a 1px base.
-- **Prose.** The document: 16px on 24px, a 664px column, headings 24/19/17px, links in blue,
+- **Prose.** The document: 16px on 24px, a 664px column, headings 24px bold, 19px and 17px semibold, links in blue,
   quotes as a 3px grey focus bar with muted text, tables with `#e3e3e3` cells and a faint blue
   header column.
 - **Progress.** A 6px rounded bar in blue on a grey track.
@@ -232,26 +235,81 @@ All 36 of the library's components, as Quire draws them. Every one is in `galler
 
 ## Page shapes (recipes)
 
+### The families
+
+| | The app (dashboard, list and detail, settings, empty state, errors) | First use (onboarding, sign-in) | Published pages (reading) | Public pages (pricing) |
+| --- | --- | --- | --- | --- |
+| Frame | The 280px grey sidebar beside the window grey; no top bar: a toolbar row on the window (round add, the view's title, capsule groups and round buttons at the right). Errors drop the sidebar and centre sheets on the window | No sidebar: one white sheet centred over a soft colour cover | The page's contents in the grey sidebar (its name, a search field, its headings and linked pages); the sheets on a soft colour cover | Warm paper; a floating white capsule bar with the ring: the wordmark, ink links, "Sign in" and an ink capsule |
+| Column | Boards to 72rem; a page 48.5rem; settings 46rem | 26–30rem | 48.5rem of sheets, one per part, 32px apart | To 72rem, plans in a 17rem grid inside a 24px-corner cover panel |
+| Titles | The view's title 19px semibold; a page's 24px bold; empty and error titles 19px semibold | 24px bold, the page title | 24px bold, parts at 19px semibold | Newsreader 54px, 38px on a phone; section headings 36px; never bold |
+| Text | 13px interface; 16/24 on a page | 13px labels and fields; one 16px line under the title | 16/24 | 16px |
+| Buttons | Capsules; one blue capsule in a view at most; icon buttons are circles | One blue capsule (full width on sign-in), a white one or a ghost Back | None but links and page cards | Ink capsules for the chosen plan and the bar; white capsules with the ring for the rest |
+| On a phone | The sidebar stacks above the window; cards go to one column; tables scroll inside their frame | The sheet fills the width less 16px | The sheet comes first, nearly full width; the contents follow | The bar keeps its wordmark and ink capsule; plans stack |
+
+### Signature moves
+
+1. **White sheets that float.** Pages, cards and first-use forms are white with 14–16px corners and a soft,
+   long shadow, never a border, on a pale grey window or a soft colour cover.
+2. **Title about one and a half times the text.** 19 over 13 in the app, 24 over 16 on a page; one short
+   scale (12, 13, 16, 17, 19, 24) and three or four weights.
+3. **The grey sidebar with a white current tile.** 280px, 13px rows with 10px corners, ink group names,
+   counts without pills.
+4. **Capsules and circles.** Every button a capsule, every icon button a circle; one blue capsule per view,
+   ink capsules on public pages.
+5. **Tinted blocks, toggle wells and soft covers.** Colour comes from the writing (green, orange, red and
+   blue blocks; cover gradients on cards), not from the chrome.
+6. **People as mentions,** dates as chips: the blue mention highlight for a person, blue chips for dates,
+   red with a flag for overdue.
+
+### How a screen is assembled
+
+- **It opens with** the frame: the grey sidebar and the toolbar row in the app; the cover and one sheet on
+  a first-use page; the contents and the first sheet on a published page; the capsule bar and a serif
+  headline on a public page.
+- **Reading order:** the title (19px in a view, 24px on a page), then the main thing (cards, a table, the
+  page's blocks), then what's beside it (the month and tasks at the right of the dashboard).
+- **How much one screen does:** one view of pages, one page, one settings section, or one step. A page
+  never shows two documents side by side.
+- **When narrow:** the sidebar stacks; the dashboard's side column drops under the cards; a published page
+  shows the sheet first.
+- **Too much content:** cards wrap in the grid and the window scrolls; a long page becomes more sheets; a
+  table scrolls inside its frame.
+- **None:** the frame stays; a 44px outline icon, a 19px title, one sentence and at most two capsules.
+- **Two families, one type system:** the public pages change only the paper, the serif headline, the 16px
+  text and the ink capsule; the app's capsules, chips and blocks stay.
+
+### The recipes
+
 - **Dashboard.** The app shell; the toolbar (round add, title, segmented view switch, round sort and
   more, a search capsule); a grid of page cards with soft covers and chips; a section of recently
   edited pages; at the right a mini month (today dark, the chosen day blue, dots under dated days)
   and a task list with date and flag chips.
-- **List and detail.** A collection table of pages under review; a row opens as a white page with a
-  breadcrumb, a 24px title over a faint rule, a toggle block, body text with a focus-bar heading,
-  green and orange block decorations, a dotted rule, page blocks as cards and a page link.
-- **Onboarding.** One white page over a soft colour cover: progress dots, a serif heading, a name
+- **List and detail.** A collection table of pages under review (people as mentions); a row opens as a
+  white page with a breadcrumb, a 24px title over a faint rule, a toggle block, body text with a 17px
+  focus-bar heading, green and orange block decorations, a dotted rule, page blocks as cards and a page
+  link.
+- **Onboarding.** One white page over a soft colour cover: progress dots, a 24px bold title, a name
   field, a page-style picker (sans, serif, mono) and accent swatches; Back as ghost, Continue as a
   large capsule.
 - **Settings.** A settings column with the space's tile on top and grouped rows; round close and back
   buttons beside the title; sections with a semibold title and a muted line over grey grouped rows
-  (12px corners, hairlines between): theme tiles, swatches, switches, a select and blue text actions.
+  (12px corners, hairlines between, a 12px hint under a row where it needs one): theme tiles, swatches,
+  switches, a select and blue text actions.
 - **Empty state.** In the shell: a 44px thin icon, a 19px semibold heading, one sentence, a blue
   capsule and a white one.
-- **Pricing.** The public pages: warm paper, a floating capsule navbar, a serif headline, a segmented
-  Yearly/Monthly capsule, plan panels with 24px corners (one on the blue tint), capital kickers,
-  serif prices, an ink capsule for the chosen plan and square-check lists; a comparison panel with
-  dashed rows and grey section bands; questions as toggle blocks.
+- **Pricing.** The public pages: warm paper, a floating capsule navbar, a serif headline (54px, 38px on a
+  phone), a segmented Yearly/Monthly capsule, plan panels with 24px corners (one on the blue tint),
+  capital kickers, serif prices, 16px text, an ink capsule for the chosen plan and square-check lists;
+  a comparison panel with dashed rows and grey section bands; questions as toggle blocks.
 - **Errors.** The field, form, toast and whole-page errors above, on one page.
+- **Reading.** A published page: the contents in the grey sidebar (the page's name, a search field, "On
+  this page", its headings and linked pages); on a soft green cover, two white sheets: the 24px title over
+  a faint rule, a toggle block, a key-value table, a focus block; then a part with a 19px heading, body
+  text, a green block of tasks, an orange note, a dotted rule and page cards. On a phone the sheets come
+  first.
+- **Sign-in.** One white page over the soft blue cover: the space's tile, a 24px bold title and one muted
+  line, the email and password fields with their help, a full-width blue capsule, a full-width white one,
+  and a small line to start writing.
 
 ## Words
 
