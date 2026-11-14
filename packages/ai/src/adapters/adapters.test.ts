@@ -96,6 +96,21 @@ describe('AnthropicAdapter', () => {
     expect(on.seen[1].body.metadata).toBeUndefined();
   });
 
+  it('calls the global fetch with its receiver when none is passed', async () => {
+    const original = globalThis.fetch;
+    const seen: Array<{ receiver: unknown; beta: string | null }> = [];
+    globalThis.fetch = function (this: unknown, _input: RequestInfo | URL, init?: RequestInit) {
+      seen.push({ receiver: this, beta: new Headers(init?.headers).get('anthropic-beta') });
+      return Promise.resolve(new Response(JSON.stringify(anthropicReply), { status: 200, headers: { 'content-type': 'application/json' } }));
+    } as typeof globalThis.fetch;
+    try {
+      await new AnthropicAdapter({ apiKey: 'k' }).generate(hi, { tools: [lookup] });
+    } finally {
+      globalThis.fetch = original;
+    }
+    expect(seen).toEqual([{ receiver: globalThis, beta: null }]);
+  });
+
   it('turns a provider failure into ai/request-failed', async () => {
     const fetch: typeof globalThis.fetch = async () =>
       new Response(JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'invalid x-api-key' } }), { status: 401, headers: { 'content-type': 'application/json' } });

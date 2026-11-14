@@ -9,6 +9,7 @@ export const DEFAULT_COST_TABLE: CostTable = {
   'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
   // Anthropic's first-party API rates as of 2026-11. Cache reads and writes aren't priced separately here.
   'claude-fable-5-2': { input: 0.008, output: 0.04 },
+  'claude-fable-5-1': { input: 0.01, output: 0.05 },
   'claude-opus-5-5': { input: 0.004, output: 0.02 },
   'claude-opus-5': { input: 0.005, output: 0.025 },
   'claude-opus-4-8': { input: 0.005, output: 0.025 },

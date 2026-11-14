@@ -52,7 +52,8 @@ export class AnthropicAdapter extends AISdkAdapter {
   constructor(config: AnthropicAdapterConfig = {}) {
     const provider = lazyPeer('@ai-sdk/anthropic', 'AnthropicAdapter', async () => {
       const { createAnthropic } = await import('@ai-sdk/anthropic');
-      const fetch = config.fetch ?? globalThis.fetch;
+      // Call the global through `globalThis`: a bare reference to `fetch` throws "Illegal invocation" in browsers and some edge runtimes.
+      const fetch: typeof globalThis.fetch = config.fetch ?? ((input, init) => globalThis.fetch(input, init));
       return createAnthropic({
         apiKey: config.apiKey,
         baseURL: anthropicBaseUrl(config.baseURL),
