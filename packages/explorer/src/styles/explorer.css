@@ -873,6 +873,13 @@
     color: var(--m-color-fg-muted);
   }
 
+  /* The breadcrumb's links are 24px targets: the category link sits just under them (WCAG 2.2 target size) */
+  nav.m-breadcrumb a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.5rem;
+  }
+
   /* A link in the eyebrow is a 24px target, clear of the breadcrumb above it (WCAG 2.2 target size) */
   .x-eyebrow-link {
     display: inline-flex;
