@@ -1,6 +1,6 @@
 import { AuthError, MariachiError } from '@mariachi/core';
 import { createCommunication, defineProcedure } from '@mariachi/communication';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import {
   BaseController,
@@ -109,7 +109,7 @@ describe('cookieStrategy and the same-origin check', () => {
       this.delete(':id', async (ctx) => ({ user: ctx.userId }));
     }
   }
-  const app = (options: { allowedOrigins?: string[] } = {}) =>
+  const app = (options: { allowedOrigins?: string[]; publicOrigin?: string } = {}) =>
     createApiServer({ name: 'test', logger: silent })
       .withAuthStrategy('session', cookieStrategy(verifier, { cookie: '__Host-session', ...options }))
       .withAuth('session')
@@ -170,6 +170,30 @@ describe('cookieStrategy and the same-origin check', () => {
     expect((await post(s, { ...cookie, origin: 'https://web.example.test', 'sec-fetch-site': 'cross-site' })).statusCode).toBe(200);
     expect((await post(s, { ...cookie, origin: 'https://web.example.test.evil.example' })).statusCode).toBe(403);
     expect((await post(s, { ...cookie, origin: 'http://web.example.test' })).statusCode).toBe(403);
+  });
+
+  it('compares the whole origin, scheme included, when told the public origin', async () => {
+    const s = app({ publicOrigin: `https://${HOST}` });
+    expect((await post(s, { ...cookie, origin: `https://${HOST}` })).statusCode).toBe(200);
+    // Same host over http: a page on the network path, not the app
+    expect((await post(s, { ...cookie, origin: `http://${HOST}` })).statusCode).toBe(403);
+    expect((await post(s, { ...cookie, origin: `https://${HOST}:8443` })).statusCode).toBe(403);
+    // Host is no longer what's compared, so a rewriting proxy is fine
+    expect((await post(s, { cookie: '__Host-session=good', host: 'internal:3000', origin: `https://${HOST}` })).statusCode).toBe(200);
+    expect((await post(s, { ...cookie, 'sec-fetch-site': 'same-origin' })).statusCode).toBe(200);
+  });
+
+  it('warns once when the session cookie has no __Host- prefix', () => {
+    const warn = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined);
+    try {
+      cookieStrategy(verifier, { cookie: 'sid' });
+      cookieStrategy(verifier, { cookie: 'sid' });
+      cookieStrategy(verifier, { cookie: '__Host-sid' });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(String(warn.mock.calls[0]?.[0])).toMatch(/"sid" has no __Host- prefix/);
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it('holds bearerStrategy\'s cookie to the same check, and leaves its header alone', async () => {

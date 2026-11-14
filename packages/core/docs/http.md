@@ -105,6 +105,15 @@ What follows from that:
 - **A client that isn't a browser** (a script, another service) sends no `Origin` and is refused. It
   uses a bearer token or an API key instead; register both strategies and list them in `withAuth`.
 - `bearerStrategy(verifier, { cookie })` applies the same check when the token came from the cookie.
+- **Name the cookie `__Host-…`.** Without the prefix, another host under the same domain can set a
+  cookie of that name, and the planted one may be the one read. `cookieStrategy` warns at start
+  when the name lacks it.
+- **Set `publicOrigin`** (`https://api.example.com`) when you know it. A browser too old to send
+  `Sec-Fetch-Site` must then send exactly that `Origin`; without it only the host is compared with
+  the `Host` header, which can't tell http from https.
+- **The check guards writes, not reads.** What another site can read from your API is CORS's job:
+  never combine `credentials: true` with an origin you echo back from the request or with a
+  wildcard. List the origins. (`origins: '*'` with `credentials` is refused at start.)
 
 ### Streams and server-sent events
 

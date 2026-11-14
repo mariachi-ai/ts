@@ -41,6 +41,12 @@ export interface SameOriginOptions {
    * `['https://app.example.com']` for an API on `api.example.com`. The API's own origin always may.
    */
   allowedOrigins?: string[];
+  /**
+   * The API's own origin as browsers see it, e.g. `https://api.example.com`. When set, a browser that
+   * sends no `Sec-Fetch-Site` must send exactly this `Origin`, scheme included. Without it the
+   * `Origin`'s host is compared with the `Host` header, which can't tell http from https.
+   */
+  publicOrigin?: string;
 }
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
@@ -65,6 +71,10 @@ export function assertSameOrigin(req: IncomingRequest, options: SameOriginOption
   if (site === 'cross-site' || site === 'same-site') throw refuse('it comes from another origin');
   // A browser that doesn't send Sec-Fetch-Site: compare Origin with the Host it was sent to (also not the page's to set)
   if (origin === undefined) throw refuse("it doesn't say where it comes from");
+  if (options.publicOrigin !== undefined) {
+    if (origin === options.publicOrigin) return;
+    throw refuse('it comes from another origin');
+  }
   let host: string | undefined;
   try {
     host = new URL(origin).host;
@@ -98,6 +108,8 @@ export function bearerStrategy(verifier: TokenVerifier, options: BearerOptions =
   };
 }
 
+const warnedCookies = new Set<string>();
+
 export interface CookieStrategyOptions extends SameOriginOptions {
   /** The cookie holding the session token. Name it `__Host-…` so no other host can set it. */
   cookie: string;
@@ -109,6 +121,14 @@ export interface CookieStrategyOptions extends SameOriginOptions {
  * defaults are `HttpOnly; Secure; SameSite=Lax`) and remove it with `ctx.clearCookie`.
  */
 export function cookieStrategy(verifier: TokenVerifier, options: CookieStrategyOptions): AuthStrategyHandler {
+  if (!options.cookie.startsWith('__Host-') && !warnedCookies.has(options.cookie)) {
+    warnedCookies.add(options.cookie);
+    // Without the prefix a sibling subdomain can plant a cookie of this name, and the planted one may be read first
+    process.emitWarning(
+      `cookieStrategy: the session cookie "${options.cookie}" has no __Host- prefix, so another host under the same domain can set it. Name it __Host-${options.cookie}.`,
+      { code: 'MARIACHI_COOKIE_PREFIX' },
+    );
+  }
   return async (req) => {
     const token = parseCookies(req.headers.cookie)[options.cookie];
     if (!token) return null;
