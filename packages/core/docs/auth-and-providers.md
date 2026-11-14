@@ -123,7 +123,10 @@ import { SessionManager } from '@mariachi/auth';
 import { DrizzleSessionStore } from '@mariachi/auth/postgres';
 import { bearerStrategy } from '@mariachi/api-facade';
 
-const sessions = new SessionManager(new DrizzleSessionStore(database.db), { ttlSeconds: 30 * 24 * 3600 });
+const sessions = new SessionManager(new DrizzleSessionStore(database.db), {
+  ttlSeconds: 30 * 24 * 3600,            // ends after 30 days without use
+  maxLifetimeSeconds: 90 * 24 * 3600,    // and 90 days after sign-in, however often it's used
+});
 
 // After you've checked who the user is (an IdentityClient sign-in, an OAuth callback, ...):
 const { token, session } = await sessions.create({ userId, tenantId, scopes, userAgent, ipAddress });
@@ -131,14 +134,20 @@ const { token, session } = await sessions.create({ userId, tenantId, scopes, use
 // Verify it on requests: `Authorization: Bearer <token>`, or the named cookie.
 api.withAuthStrategy('session', bearerStrategy(sessions, { cookie: 'session' }));
 
-await sessions.revoke(session.id);                 // sign out this device
-await sessions.revokeAllForUser(userId);           // sign out everywhere (pass a tenantId to limit it)
-const devices = await sessions.list(userId);       // live sessions, newest activity first
+await sessions.revoke(session.id);                              // sign out this session (the id from ctx.sessionId)
+await sessions.revoke(idFromRequest, { userId: ctx.userId! });  // "sign out that device": not-found unless it's this user's
+await sessions.revokeAllForUser(userId, tenantId);              // sign out everywhere in this tenant
+const devices = await sessions.list(userId, tenantId);          // live sessions, newest activity first
 ```
+
+`revokeAllForUser` and `list` without a `tenantId` cover the user's sessions in **every** tenant.
+When a session id arrives in a request, always revoke with the owner, so one user can't end
+another's session.
 
 `verify` fails with `auth/invalid-session` (unknown or revoked) or `auth/session-expired`. Expiry
 slides: each use at least `touchIntervalSeconds` (default 60) after the last pushes it `ttlSeconds`
-ahead; pass `sliding: false` for a fixed lifetime. Add `sessionsTable` from `@mariachi/auth/schema`
+ahead, but never past `maxLifetimeSeconds` from sign-in (default 90 days; `null` for no limit).
+Pass `sliding: false` to make `ttlSeconds` the whole lifetime. Add `sessionsTable` from `@mariachi/auth/schema`
 to your schema, and delete old rows on a schedule:
 
 ```ts

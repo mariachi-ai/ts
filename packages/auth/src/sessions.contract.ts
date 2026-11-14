@@ -48,6 +48,40 @@ export function sessionStoreContract(name: string, makeStore: () => SessionStore
       expect(await store.findByTokenHash(hashSessionToken(token))).toEqual(before);
     });
 
+    it('ends a session at its absolute lifetime, however often it is used', async () => {
+      const store = await makeStore();
+      // The slide wants an hour more on every use; the absolute lifetime allows ten seconds in all.
+      const capped = new SessionManager(store, { ttlSeconds: 3600, maxLifetimeSeconds: 10, touchIntervalSeconds: -1 });
+      const { token, session } = await capped.create({ userId: user('g'), tenantId: 't1' });
+      const end = session.createdAt.getTime() + 10_000;
+      expect(session.expiresAt.getTime()).toBe(end);
+      await new Promise((resolve) => setTimeout(resolve, 5));
+      await capped.verify(token);
+      await capped.verify(token);
+      expect((await store.findByTokenHash(hashSessionToken(token)))?.expiresAt.getTime()).toBe(end);
+
+      // A session issued without a limit is still refused once the limit in force has passed.
+      const unlimited = await new SessionManager(store, { maxLifetimeSeconds: null }).create({ userId: user('g'), tenantId: 't1' });
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      await expect(new SessionManager(store, { maxLifetimeSeconds: 0.01 }).verify(unlimited.token)).rejects.toMatchObject({ code: 'auth/session-expired' });
+      expect((await new SessionManager(store, { maxLifetimeSeconds: null }).verify(unlimited.token)).sessionId).toBe(unlimited.session.id);
+    });
+
+    it('revokes a session for its owner only', async () => {
+      const store = await makeStore();
+      const sessions = new SessionManager(store);
+      const mine = await sessions.create({ userId: user('h'), tenantId: 't1' });
+      const theirs = await sessions.create({ userId: user('i'), tenantId: 't1' });
+
+      await expect(sessions.revoke(theirs.session.id, { userId: user('h') })).rejects.toMatchObject({ code: 'not-found' });
+      await expect(sessions.revoke(mine.session.id, { userId: user('h'), tenantId: 't2' })).rejects.toMatchObject({ code: 'not-found' });
+      await expect(sessions.revoke(crypto.randomUUID(), { userId: user('h') })).rejects.toMatchObject({ code: 'not-found' });
+      expect((await sessions.verify(theirs.token)).userId).toBe(user('i'));
+
+      await sessions.revoke(mine.session.id, { userId: user('h'), tenantId: 't1' });
+      await expect(sessions.verify(mine.token)).rejects.toMatchObject({ code: 'auth/invalid-session' });
+    });
+
     it("lists and revokes one user's sessions, by tenant when asked", async () => {
       const store = await makeStore();
       const sessions = new SessionManager(store);
