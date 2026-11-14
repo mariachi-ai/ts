@@ -2,7 +2,7 @@
  * @mariachi/motion's browser file: what CSS can't do on its own. ESM, browser only, no dependencies.
  *
  * ```ts
- * import { enhance } from './design/motion/motion.js';
+ * import { enhance } from './design/motion/motion.js'; // mariachi-lint-ignore (a project's copy)
  * enhance(); // once at start
  * ```
  *

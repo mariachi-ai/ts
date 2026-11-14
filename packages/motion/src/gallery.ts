@@ -119,8 +119,8 @@ const STYLE = `
 `;
 
 const SCRIPT = `
-import { enhance, busy, optimistic, leave, countUp, navigate } from './motion.js';
-import { chart, updateChart } from './charts.js';
+import { enhance, busy, optimistic, leave, countUp, navigate } from './motion.js'; // mariachi-lint-ignore (the built file beside the page)
+import { chart, updateChart } from './charts.js'; // mariachi-lint-ignore (the built file beside the page)
 enhance();
 const $ = (s, r = document) => r.querySelector(s);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -162,7 +162,7 @@ let attempts = 0;
 for (const input of document.querySelectorAll('[data-demo-optimistic]')) {
   input.addEventListener('change', () => {
     const on = input.checked; const fails = input.dataset.demoOptimistic === 'fails' && attempts++ % 2 === 0;
-    optimistic(input.closest('label'), () => {}, () => sleep(1100).then(() => { if (fails) throw new Error('offline'); }), {
+    optimistic(input.closest('label'), () => {}, () => sleep(1100).then(() => { if (fails) return Promise.reject(new Error('offline')); }), {
       undo: () => { input.checked = !on; }, error: "Couldn't update " + input.dataset.name,
     });
   });

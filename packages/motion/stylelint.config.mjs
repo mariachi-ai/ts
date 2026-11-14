@@ -1,6 +1,6 @@
 /**
  * Motion CSS rules: tokens only. No colour literals anywhere (fallbacks are other tokens,
- * currentcolor or transparent), no raw lengths for radius. Custom properties are contract tokens
+ * currentcolor or transparent), no raw lengths for radius except as a var() fallback. Custom properties are contract tokens
  * (`--m-*`), private to a rule (`--_*`), or one of the few the markup sets (`--i`, `--lines`).
  */
 const colorFunctions = ['rgb', 'rgba', 'hsl', 'hsla', 'hwb', 'lab', 'lch', 'oklab', 'oklch', 'color'];
@@ -21,8 +21,9 @@ export default {
     'property-no-vendor-prefix': null,
     'declaration-block-no-redundant-longhand-properties': null,
     'declaration-property-value-disallowed-list': [
-      { '/^border(-.*)?-radius$/': ['/\\d(px|rem|em)/'] },
-      { message: 'Use a token for radius' },
+      // A raw length is fine as a var() fallback, never on its own
+      { '/^border(-.*)?-radius$/': ['/^(?![\\s\\S]*var\\()[\\s\\S]*\\d(px|rem|em)/'] },
+      { message: 'Use a token for radius (a plain length only as its var() fallback)' },
     ],
   },
 };

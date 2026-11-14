@@ -34,6 +34,10 @@ export interface MotionCatalog {
   patterns: Pattern[];
 }
 
+// What a project imports: its own copies, beside the kit (src/design/motion/)
+const MOTION_JS = './design/motion/motion.js';
+const CHARTS_JS = './design/motion/charts.js';
+
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 const row = '<div class="m-skeleton" data-shape="row" aria-hidden="true"></div>';
@@ -194,7 +198,7 @@ ${people.map(([name, role]) => `    <li class="m-cluster" data-gap="3"><span cla
   <button type="button" class="m-button" data-variant="primary" data-busy aria-busy="true"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Save changes</button>
   <button type="button" class="m-button" data-busy aria-busy="true">Export</button>
 </div>`,
-        code: `import { busy } from './design/motion/motion.js';\nsave.addEventListener('click', () => busy(save, api.save(form)));`,
+        code: `import { busy } from '${MOTION_JS}';\nsave.addEventListener('click', () => busy(save, api.save(form)));`,
       },
     ],
   },
@@ -218,7 +222,7 @@ ${people.map(([name, role]) => `    <li class="m-cluster" data-gap="3"><span cla
       {
         name: 'A setting',
         html: `<label class="m-field" data-layout="inline"><input class="m-switch" type="checkbox" role="switch" id="digest"> Weekly digest</label>`,
-        code: `import { optimistic } from './design/motion/motion.js';\ndigest.addEventListener('change', () => {\n  const on = digest.checked;\n  optimistic(digest.closest('label'), () => {}, () => api.settings({ digest: on }), {\n    undo: () => { digest.checked = !on; },\n  });\n});`,
+        code: `import { optimistic } from '${MOTION_JS}';\ndigest.addEventListener('change', () => {\n  const on = digest.checked;\n  optimistic(digest.closest('label'), () => {}, () => api.settings({ digest: on }), {\n    undo: () => { digest.checked = !on; },\n  });\n});`,
       },
     ],
   },
@@ -274,7 +278,7 @@ ${people.map(([name, role]) => `    <li class="m-cluster" data-gap="3"><span cla
       {
         name: 'Archive a row',
         html: `<li class="m-cluster" data-justify="between" id="row-42">Invoice #42 <button type="button" class="m-button" data-size="sm" data-variant="ghost">Archive</button></li>`,
-        code: `import { leave } from './design/motion/motion.js';\nawait api.archive(42);\nawait leave(document.getElementById('row-42'));`,
+        code: `import { leave } from '${MOTION_JS}';\nawait api.archive(42);\nawait leave(document.getElementById('row-42'));`,
       },
     ],
   },
@@ -320,7 +324,7 @@ ${people.map(([name, role]) => `    <li class="m-cluster" data-gap="3"><span cla
       {
         name: 'A router link',
         html: `<nav style="view-transition-name: sidebar"><a href="/projects" data-route>Projects</a></nav>`,
-        code: `import { navigate } from './design/motion/motion.js';\nfor (const a of document.querySelectorAll('a[data-route]')) {\n  a.addEventListener('click', (e) => { e.preventDefault(); navigate(() => router.push(a.getAttribute('href'))); });\n}`,
+        code: `import { navigate } from '${MOTION_JS}';\nfor (const a of document.querySelectorAll('a[data-route]')) {\n  a.addEventListener('click', (e) => { e.preventDefault(); navigate(() => router.push(a.getAttribute('href'))); });\n}`,
       },
     ],
   },
@@ -345,7 +349,7 @@ ${people.map(([name, role]) => `    <li class="m-cluster" data-gap="3"><span cla
             { name: '2025', values: [210, 240, 260, 250, 300, 340, 330, 390, 410, 450, 470, 520] },
           ],
         }),
-        code: `import { chart } from './design/motion/charts.js';\nel.innerHTML = chart({ kind: 'line', title: 'Signups by month', labels, series: [{ name: '2026', values }] });`,
+        code: `import { chart } from '${CHARTS_JS}';\nel.innerHTML = chart({ kind: 'line', title: 'Signups by month', labels, series: [{ name: '2026', values }] });`,
       },
     ],
   },
@@ -455,7 +459,7 @@ export function buildCatalog(version: string): MotionCatalog {
     version,
     usage: {
       css: "import './design/index.css'; import './design/motion/motion.css';",
-      js: "import { enhance } from './design/motion/motion.js'; enhance();",
+      js: `import { enhance } from '${MOTION_JS}'; enhance();`,
     },
     patterns,
   };

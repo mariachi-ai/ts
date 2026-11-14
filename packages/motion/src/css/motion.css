@@ -129,6 +129,7 @@
     --_bg: var(--m-skeleton-bg, color-mix(in oklab, currentcolor 10%, transparent));
     --_hl: var(--m-skeleton-highlight, color-mix(in oklab, currentcolor 4%, transparent));
     --_h: var(--m-skeleton-text-height, 0.875em);
+
     /* A line's end radius: the skeleton radius, at most half the line */
     --_r: min(var(--m-skeleton-radius, var(--m-radius-sm, 0.25rem)), calc(var(--_h) / 2));
 
@@ -139,6 +140,7 @@
     background-color: var(--_bg);
     background-image: linear-gradient(90deg, var(--_bg) 30%, var(--_hl) 50%, var(--_bg) 70%);
     background-size: 200% 100%;
+
     /* Where the sweep is out of sight, so a still or pulsing skeleton shows no highlight */
     background-position: -50% 0;
     animation: var(--m-skeleton-animation, m-shimmer) var(--m-skeleton-duration, 1.6s) linear infinite;
@@ -202,6 +204,7 @@
     --_y2: calc(var(--_y1) + var(--_h) + var(--_lg));
 
     block-size: calc(var(--_y2) + var(--_h));
+
     /* Only the picture's corners: the lines under it have their own ends */
     border-radius: var(--_radius) var(--_radius) 0 0;
     mask:
@@ -220,6 +223,7 @@
     --_p: calc(var(--_h) + var(--_lg));
 
     block-size: calc(var(--lines, 3) * var(--_p) - var(--_lg));
+
     /* The repeating layers paint in the content box: every line but the last */
     padding-block-end: var(--_p);
     border-radius: 0;
@@ -294,6 +298,7 @@
 
   :root[data-m-motion] .m-media[data-placeholder]:not([data-loaded]) {
     opacity: 1;
+
     /* Keeps the blur inside the picture's box */
     clip-path: inset(0 round var(--m-skeleton-block-radius, 0));
     filter: blur(1rem);

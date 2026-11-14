@@ -3,7 +3,7 @@
  * number that counts up, with its change). No dependencies; `chart()` runs in Node and the browser.
  *
  * ```ts
- * import { chart } from './design/motion/charts.js';
+ * import { chart } from './design/motion/charts.js'; // mariachi-lint-ignore (a project's copy)
  * el.innerHTML = chart({ kind: 'line', title: 'Revenue', labels: months, series: [{ name: '2026', values }] });
  * ```
  *
