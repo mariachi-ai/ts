@@ -24,7 +24,7 @@ const NPM_NAME = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
 
 /**
  * Scaffolds a runnable project and, unless `example: false`, a `note` entity wired end to end.
- * `auth: 'ensemble'` signs users in with Ensemble's per-app auth (see `ProjectConfig.auth`).
+ * `auth: 'gotrue'` signs users in with GoTrue (see `ProjectConfig.auth`).
  */
 export async function createProject(config: ProjectConfig): Promise<GenerateResult> {
   if (!NPM_NAME.test(config.name)) {

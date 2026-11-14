@@ -1,5 +1,10 @@
 import { ValidationError } from '@mariachi/core';
 
+/** The Postgres database a project uses, from its package name: `@acme/my-app` → `_acme_my_app`. */
+export function databaseName(name: string): string {
+  return name.replace(/[^a-z0-9_]/gi, '_');
+}
+
 export interface Names {
   /** `invoice-item` */
   kebab: string;

@@ -5,7 +5,7 @@
   "mariachi": {
     "category": "security",
     "status": "alpha",
-    "useWhen": "Using GoTrue (Supabase Auth, or Ensemble's per-app auth) as the identity provider",
+    "useWhen": "Using GoTrue (Supabase Auth, hosted or your own) as the identity provider",
     "entry": [
       "createGoTrueAuth",
       "GoTrueWebhookHandler"

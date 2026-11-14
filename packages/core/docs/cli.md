@@ -6,7 +6,7 @@ in the environment win.
 ## init
 
 ```bash
-npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --mariachi-version <range>, --auth jwt|ensemble
+npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --mariachi-version <range>, --auth jwt|gotrue
 ```
 
 Creates the [project layout](./architecture.md#project-layout): `src/main.ts` (config, lifecycle,
@@ -15,13 +15,14 @@ Postgres, BullMQ jobs, communication, API server with JWT auth, health and OpenA
 `note` entity wired end to end. Dependencies are pinned to the framework version that generated the
 project. The directory must be empty or not exist.
 
-`--auth ensemble` signs users in with Ensemble's per-app auth instead of HS256 JWTs: GoTrue at
-`/auth/v1` on the app's host, verified with `@mariachi/auth-gotrue` (configured from `AUTH_URL`,
-`AUTH_ORIGIN` or `APP_ORIGIN`, else GoTrue on the preview's loopback with its discovered issuer), and
-`@mariachi/tenancy` taking the tenant from the `org_id` claim (roles include `org_role`). It adds
-`ensemble.environment.json` (the environment's settings: Compose with Postgres and Redis, the `/`
-route, `auth`), `seed/users.yaml` (the project's organization with an admin and a member persona), `.env.ensemble` (what a preview runs
-with), `GET /api/me` and an example sign-in page at `/api/sign-in` (password, sign-up, magic link).
+`--auth gotrue` signs users in with GoTrue (Supabase Auth, hosted or your own) instead of HS256
+JWTs. `@mariachi/auth-gotrue` verifies its tokens (configured from `AUTH_URL`, `AUTH_ORIGIN` or
+`APP_ORIGIN`, else a GoTrue on a private address with its discovered issuer), and
+`@mariachi/tenancy` takes the tenant from the organization claim (`AUTH_ORG_CLAIM`, `org_id` by
+default). A user whose token names no organization gets a personal tenant, so the project works
+with a plain Supabase project; `AUTH_PERSONAL_TENANTS=false` requires an organization instead. It
+adds `GET /api/me`, `MIGRATE_ON_START`, and an example sign-in page at `/api/sign-in` (password,
+sign-up, magic link).
 
 ## generate
 

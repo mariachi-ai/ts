@@ -1,7 +1,8 @@
 import { LAYOUT, MARKERS } from '../layout';
 import type { ProjectAuth } from '../types';
 import { THIRD_PARTY_VERSIONS as V } from '../version';
-import { databaseName, ENSEMBLE_DEV_SCRIPT, ENSEMBLE_NODE_ENGINES, ensembleFiles } from './ensemble';
+import { databaseName } from '../names';
+import { gotrueFiles } from './gotrue';
 
 const MARIACHI_DEPS = [
   'api-facade',
@@ -18,11 +19,10 @@ const MARIACHI_DEPS = [
 /** Framework packages a sign-in choice adds. */
 const AUTH_DEPS: Record<ProjectAuth, readonly string[]> = {
   jwt: [],
-  ensemble: ['auth-gotrue', 'tenancy'],
+  gotrue: ['auth-gotrue', 'tenancy'],
 };
 
 export function projectFiles(name: string, mariachiRange: string, auth: ProjectAuth = 'jwt'): Record<string, string> {
-  const ensemble = auth === 'ensemble';
   const dependencies: Record<string, string> = {};
   for (const pkg of [...MARIACHI_DEPS, ...AUTH_DEPS[auth]].sort()) dependencies[`@mariachi/${pkg}`] = mariachiRange;
   dependencies.zod = V.zod;
@@ -35,7 +35,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     private: true,
     type: 'module',
     scripts: {
-      dev: ensemble ? ENSEMBLE_DEV_SCRIPT : 'tsx watch --env-file=.env src/main.ts',
+      dev: 'tsx watch --env-file=.env src/main.ts',
       build: 'tsup src/main.ts --format esm --target node20 --clean',
       start: 'node dist/main.js',
       typecheck: 'tsc --noEmit',
@@ -57,7 +57,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
       typescript: V.typescript,
       vitest: V.vitest,
     },
-    engines: { node: ensemble ? ENSEMBLE_NODE_ENGINES : '>=20.12' },
+    engines: { node: '>=20.12' },
   };
 
   const tsconfig = {
@@ -83,7 +83,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     'tsconfig.json': `${JSON.stringify(tsconfig, null, 2)}\n`,
     '.gitignore': 'node_modules/\ndist/\n.env\ncoverage/\n',
     '.env.example': ENV_EXAMPLE(name),
-    'docker-compose.yml': DOCKER_COMPOSE,
+    'docker-compose.yml': DOCKER_COMPOSE(databaseName(name)),
     'vitest.config.ts': VITEST_CONFIG,
     'AGENTS.md': AGENTS_MD,
     'CLAUDE.md': 'See [AGENTS.md](./AGENTS.md).\n',
@@ -95,7 +95,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     [LAYOUT.controllersIndex]: CONTROLLERS_INDEX,
     [LAYOUT.jobsIndex]: JOBS_INDEX,
   };
-  return ensemble ? { ...files, ...ensembleFiles(name) } : files;
+  return auth === 'gotrue' ? { ...files, ...gotrueFiles(name) } : files;
 }
 
 const ENV_EXAMPLE = (name: string) => `SERVICE_NAME=${name}
@@ -107,12 +107,14 @@ REDIS_URL=redis://localhost:6379
 JWT_SECRET=change-me-change-me-change-me-change-me
 `;
 
-const DOCKER_COMPOSE = `services:
+// POSTGRES_DB creates the database that DATABASE_URL in .env.example names; without it the first migrate fails.
+const DOCKER_COMPOSE = (db: string) => `services:
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: ${db}
     ports: ["5432:5432"]
   redis:
     image: redis:7-alpine
@@ -130,8 +132,8 @@ export default defineConfig({
 
 const AGENTS_MD = `# Agent guide
 
-This is a [Mariachi](https://github.com/) backend. Before writing code, read the framework docs shipped
-with \`@mariachi/core\`:
+This is a Mariachi backend. Before writing code, read the framework docs shipped with
+\`@mariachi/core\`:
 
 - \`node_modules/@mariachi/core/docs/README.md\` (start here: layers, conventions, package catalog)
 - \`node_modules/@mariachi/core/docs/recipes/\` (step-by-step: entity, job, webhook, integration)

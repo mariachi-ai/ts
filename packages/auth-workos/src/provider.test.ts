@@ -115,7 +115,7 @@ describe('WorkOSAuthProvider.verify', () => {
 });
 
 describe('OAuth-server tokens (MCP)', () => {
-  const AUTHKIT = 'https://ensemble-staging.authkit.app';
+  const AUTHKIT = 'https://acme-staging.authkit.app';
   const RESOURCE = 'https://app.example.com/mcp';
   let mcp: WorkOSAuthProvider;
 
