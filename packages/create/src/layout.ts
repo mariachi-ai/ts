@@ -1,6 +1,9 @@
 /** Canonical layout of a generated project. Generators and `validate` both rely on it. */
 export const LAYOUT = {
+  /** The entry point: starts the app that `app` builds. */
   main: 'src/main.ts',
+  /** The composition root: `createApp()` builds the object graph, for `main.ts` and for tests. */
+  app: 'src/app.ts',
   schemaIndex: 'src/schema/index.ts',
   seedsIndex: 'src/seeds/index.ts',
   contractsDir: 'src/contracts',

@@ -129,6 +129,6 @@ export async function generateIntegration(config: GenerateIntegrationConfig): Pr
   assertProject(config.projectRoot);
   const n = names(config.name);
   const result = await writeFiles(config.projectRoot, integrationFiles(n), [], config);
-  result.notes.push(`Construct ${n.pascal}Client in src/main.ts with credentials from config or secrets and pass it to the services that need it.`);
+  result.notes.push(`Construct ${n.pascal}Client in src/app.ts with credentials from config or secrets and pass it to the services that need it.`);
   return result;
 }

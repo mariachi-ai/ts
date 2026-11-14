@@ -29,7 +29,7 @@ export const sendOrderConfirmationJob = defineJob({
 
 The handler is `(ctx, data)`, the same shape as everywhere else. `ctx` carries the enqueuer's
 `traceId`, `tenantId` and `userId`, plus `jobId`, `attemptNumber`, `maxAttempts`, `signal` and
-`updateProgress()`. The generator adds the definition to `src/jobs/index.ts`, and `main.ts` registers
+`updateProgress()`. The generator adds the definition to `src/jobs/index.ts`, and `createApp()` registers
 everything in that list.
 
 Handlers that need services get them from a factory closed over the dependencies:

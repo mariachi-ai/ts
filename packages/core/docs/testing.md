@@ -1,7 +1,8 @@
 # Testing
 
-Unit tests use `@mariachi/testing`: in-memory doubles, factories and a harness. Integration tests
-run against real Postgres, Redis, Typesense and S3 (MinIO) through Testcontainers. The doubles are
+Unit tests use `@mariachi/testing`: in-memory doubles, factories and a harness. End-to-end tests
+start a generated app and call it over HTTP. The framework's own integration tests run against real
+Postgres, Redis, Typesense and S3 (MinIO) through Testcontainers. The doubles are
 only useful if they behave like the real adapters, so shared contract suites check both.
 
 ## Unit tests
@@ -31,6 +32,52 @@ expect(email.getSentEmails()[0]?.subject).toBe('Invoice 42 is ready');
 
 Types come from the real packages, so a double that drifts from its interface fails to compile.
 
+## End-to-end tests
+
+A generated project tests itself over HTTP. `pnpm test:e2e` starts one throwaway Postgres and one
+Redis in Docker, and each test file starts the whole app against its own empty database:
+
+```ts
+import { afterAll, beforeAll, expect, it } from 'vitest';
+import { startApp, type RunningApp } from '../../testing/e2e';
+
+const ada = { userId: 'user-ada', tenantId: 'tenant-a' };
+const lin = { userId: 'user-lin', tenantId: 'tenant-b' };
+
+let running: RunningApp;
+beforeAll(async () => {
+  running = await startApp();
+});
+afterAll(() => running?.stop());
+
+it("keeps one tenant's notes from another", async () => {
+  const created = await running.request('/api/notes', { as: ada, json: { name: 'Private' } });
+  const { id } = (await created.json()) as { id: string };
+  expect((await running.request(`/api/notes/${id}`, { as: lin })).status).toBe(404);
+});
+```
+
+The pieces, all in the generated project so you can change them:
+
+| File | What it does |
+| --- | --- |
+| `src/app.ts` | `createApp(options)` builds the app and returns it with `start()` (resolves to the address) and `stop()`. `main.ts` starts it; so do the tests. Options: `bootstrap` (config and environment) and `verifier` (who checks tokens) |
+| `src/testing/global-setup.ts` | Starts the containers once per run with `startPostgres()` and `startRedis()` from `@mariachi/testing` |
+| `src/testing/e2e.ts` | `startApp(env?)`: creates a database, calls `createApp()` with a test environment and `createTestAuth()`, creates the tables in `src/schema` with `applySchema`, and listens on a free port. Returns `request(path, { as, json, method, headers })`, `auth`, `app` and `stop()` |
+| `vitest.e2e.config.ts` | Runs `src/**/*.e2e.test.ts`; `pnpm test` leaves them out |
+
+`createTestAuth()` stands in for the identity provider: `auth.tokenFor({ userId, tenantId, scopes, roles, claims })`
+gives a token its `verifier` accepts, `auth.headersFor(identity)` the `Authorization` header, and
+`auth.revoke(token)` makes one stop working. Everything after the verifier (tenancy, scopes, rate
+limits, validation, the database) is the real thing.
+
+For a quick test of routes with no socket, `app.api.inject({ method, url, headers, payload })`
+runs a request in memory and returns `{ statusCode, headers, body, json() }`.
+
+`applySchema` creates tables straight from `defineTable`, so a test doesn't need generated
+migrations. To test the migrations themselves, run them against the test database with
+`runMigrations` in place of `applySchema`.
+
 ## Contract suites
 
 Each adapter interface has one suite in `packages/testing/src/contracts/`, run against every
@@ -49,10 +96,16 @@ then fails. When you add an adapter, add a line that runs the suite against it.
 
 ## Integration tests
 
+This section is about the framework's own repository. An app tests against real services with the
+[end-to-end tests](#end-to-end-tests) above; `startPostgres()`, `startRedis()` and
+`stopContainers()` from `@mariachi/testing` are the same idea as a package (`testcontainers` is an
+optional peer: `pnpm add -D testcontainers`).
+
 Files named `*.integration.test.ts` run with `pnpm test:integration` (one package at a time).
-`test/setup.ts` starts what a test needs:
+In this repository `test/setup.ts` starts what a test needs:
 
 ```ts
+// inside mariachi-ai/ts only: this file isn't published
 import { startPostgres, startRedis, startTypesense, startMinio, stopAll } from '../../../test/setup';
 
 beforeAll(async () => {

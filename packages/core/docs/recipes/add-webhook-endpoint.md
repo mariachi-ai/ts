@@ -85,11 +85,11 @@ Register it in `src/jobs/index.ts` (`mariachi generate job github-push` does thi
 derived from the provider's delivery id, so a redelivery that slips past the idempotency store still
 doesn't enqueue twice.
 
-## 4. Server: in `src/main.ts`
+## 4. Server: in `src/app.ts`
 
 ```ts
 const jobBackend = createJobQueue({ adapter: 'bullmq', redisUrl: config.redis.url, prefix: config.serviceName }, logger);
-const jobs = new DefaultJobs({ queue: jobBackend }, instrumentation);   // the generated main.ts already has this
+const jobs = new DefaultJobs({ queue: jobBackend }, instrumentation);   // the generated app.ts already has this
 
 const webhooks = new WebhookServer(
   { name: 'webhooks', prefix: '/webhooks', logger },

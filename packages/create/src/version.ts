@@ -14,4 +14,5 @@ export const THIRD_PARTY_VERSIONS = {
   tsup: '^8.3.0',
   vitest: '^3.0.0',
   '@types/node': '^22.0.0',
+  testcontainers: '^10.0.0',
 } as const;

@@ -9,10 +9,11 @@ in the environment win.
 npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --mariachi-version <range>, --auth jwt|gotrue
 ```
 
-Creates the [project layout](./architecture.md#project-layout): `src/main.ts` (config, lifecycle,
-Postgres, BullMQ jobs, communication, API server with JWT auth, health and OpenAPI), registry files,
-`docker-compose.yml` (Postgres + Redis), `.env.example`, `vitest.config.ts`, `AGENTS.md`, and an example
-`note` entity wired end to end. Dependencies are pinned to the framework version that generated the
+Creates the [project layout](./architecture.md#project-layout): `src/app.ts` (`createApp()`: config, lifecycle,
+Postgres, BullMQ jobs, communication, API server with JWT auth, health and OpenAPI), a `src/main.ts`
+that starts it, registry files, `docker-compose.yml` (Postgres + Redis), `.env.example`,
+`vitest.config.ts`, end-to-end test support (`pnpm test:e2e`, see [testing.md](./testing.md#end-to-end-tests)),
+`AGENTS.md`, and an example `note` entity wired end to end. Dependencies are pinned to the framework version that generated the
 project. The directory must be empty or not exist.
 
 `--auth gotrue` signs users in with GoTrue (Supabase Auth, hosted or your own) instead of HS256
@@ -37,11 +38,11 @@ mariachi generate integration acme
 
 | Type | Creates | Registers in |
 | --- | --- | --- |
-| `entity` | `schema/<plural>.ts`, `contracts/<plural>.ts`, `services/<plural>/{repository,service,handler,service.test}.ts`, `api/controllers/<plural>.controller.ts` with CRUD + cursor pagination | `schema/index.ts`, `services/index.ts`, `api/controllers/index.ts` |
+| `entity` | `schema/<plural>.ts`, `contracts/<plural>.ts`, `services/<plural>/{repository,service,handler,service.test}.ts`, `api/controllers/<plural>.controller.ts` with CRUD + cursor pagination, and `api/controllers/<plural>.e2e.test.ts` | `schema/index.ts`, `services/index.ts`, `api/controllers/index.ts` |
 | `service` | `contracts/<name>.ts` with an `<name>.execute` procedure, service, handler, test | `services/index.ts` |
 | `controller` | `api/controllers/<name>.controller.ts`; reuses `contracts/<name>.ts` if it exists | `api/controllers/index.ts` |
 | `job` | `jobs/<name>.job.ts` (`defineJob` with schema, retry, timeout) | `jobs/index.ts` |
-| `integration` | `integrations/<name>/client.ts` (timeouts, retries on transient status codes, `IntegrationError`) and a test | none; construct it in `main.ts` |
+| `integration` | `integrations/<name>/client.ts` (timeouts, retries on transient status codes, `IntegrationError`) and a test | none; construct it in `app.ts` |
 
 Names can be kebab, camel or Pascal case (`invoice-item`, `invoiceItem`, `InvoiceItem`). Generators
 never overwrite files without `--force`: if any target exists, nothing is written. Registry files are
