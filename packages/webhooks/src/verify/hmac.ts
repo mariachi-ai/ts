@@ -32,5 +32,5 @@ export function verifyHmacSignature(rawBody: string | Buffer, signature: string 
   const offered = Buffer.from(text, encoding);
   const matches = secrets.some((key) => safeEqual(offered, hmac(options.algorithm ?? 'sha256', key, [rawBody])));
   if (!matches) return invalidSignature(provider, 'signature mismatch');
-  return { eventId: signatureDigest(encoding === 'hex' ? text.toLowerCase() : text) };
+  return { eventId: signatureDigest(offered) };
 }

@@ -54,10 +54,12 @@ export function hmac(algorithm: string, key: string | Buffer, parts: Array<strin
 
 /**
  * A dedup key for schemes that sign only the body: the same body under the same secret has the
- * same signature, so a replay gets the same key whatever its unsigned headers say.
+ * same signature, so a replay gets the same key whatever its unsigned headers say. Pass the
+ * signature's decoded bytes, not its text: one MAC has several spellings (hex in either case,
+ * base64 with or without padding or with stray trailing bits), and each would get its own key.
  */
-export function signatureDigest(signature: string): string {
-  return `sig:${createHash('sha256').update(signature.trim()).digest('hex')}`;
+export function signatureDigest(mac: Buffer): string {
+  return `sig:${createHash('sha256').update(mac).digest('hex')}`;
 }
 
 /** Constant-time comparison; a length difference is a mismatch. */

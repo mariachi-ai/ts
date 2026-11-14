@@ -24,6 +24,23 @@ describe('verifyHmacSignature', () => {
     expect(() => verifyHmacSignature(body, 'sha256=not-hex', 's3cret', { prefix: 'sha256=' })).toThrow(invalid);
   });
 
+  it('gives one dedup key to every spelling of the same signature', () => {
+    const mac = createHmac('sha256', 'shop').update(body).digest();
+    const padded = mac.toString('base64');
+    expect(padded.endsWith('=')).toBe(true);
+    const unpadded = padded.replace(/=+$/, '');
+    // The last character of a padded base64 string carries bits the decoder ignores: bump it and the bytes are the same.
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    const stray = `${unpadded.slice(0, -1)}${alphabet[alphabet.indexOf(unpadded.slice(-1)) + 1]}=`;
+    expect(Buffer.from(stray, 'base64').equals(mac)).toBe(true);
+    const keys = [padded, unpadded, stray].map((signature) => verifyHmacSignature(body, signature, 'shop', { encoding: 'base64' }).eventId);
+    expect(new Set(keys).size).toBe(1);
+
+    const lower = mac.toString('hex');
+    expect(verifyHmacSignature(body, lower.toUpperCase(), 'shop').eventId).toBe(verifyHmacSignature(body, lower, 'shop').eventId);
+    expect(verifyHmacSignature(body, lower, 'shop').eventId).toBe(keys[0]);
+  });
+
   it('accepts either secret during a rotation, and base64 or sha1 signatures', () => {
     expect(() => verifyHmacSignature(body, hex('old', body), ['new', 'old'])).not.toThrow();
     expect(() => verifyHmacSignature(body, hex('gone', body), ['new', 'old'])).toThrow(invalid);
