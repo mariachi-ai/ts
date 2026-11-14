@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Vellum's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
+ * Vellum's nine layout recipes (the seven page shapes, a public help article and sign-in): framework-free HTML using only @mariachi/design classes and tokens
  * (no colour literals), with sample data from a personal journal ("Keepsake"). They follow the
  * language's real screen patterns, translated from a native desktop and phone app to the web: a
  * cool grey journal column with square colour swatches and counts, a timeline with the weekday and
@@ -39,6 +39,7 @@ const I = {
   gear: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   mic: '<path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
+  send: '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
   lock: '<rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
   alert: '<circle cx="12" cy="12" r="10"/><path d="M12 8v4"/><path d="M12 16h.01"/>',
   book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
@@ -131,7 +132,7 @@ ${main}
 const dateTile = (dow: string, day: string) =>
   `<span class="m-stack" data-gap="0" data-align="center" style="flex: none; inline-size: 3.25rem; padding-block: var(--m-space-2); border: var(--m-border-width-thin) solid var(--m-color-border-default); border-radius: var(--m-radius-md); background: var(--m-color-bg-surface); color: var(--m-color-fg-default); line-height: 1"><span style="font-size: var(--m-font-size-xs); font-weight: var(--m-font-weight-semibold); letter-spacing: var(--m-font-tracking-wide); ${muted}">${dow}</span><span style="font-size: var(--m-font-size-2xl); font-variant-numeric: tabular-nums; margin-block-start: var(--m-space-1)">${day}</span></span>`;
 const meta = (journal: string, color: string, rest: string) =>
-  `<span style="font-size: var(--m-font-size-xs); ${muted}">${swatch(color, '0.5rem').replace('flex: none;', 'display: inline-block; vertical-align: 0.05em; margin-inline-end: 0.3em;')}<span style="color: var(--m-color-accent-text); font-weight: var(--m-font-weight-medium)">${journal}</span> · ${rest}</span>`;
+  `<span style="font-size: var(--m-font-size-xs); ${muted}">${swatch(color, '0.5rem').replace('flex: none;', 'display: inline-block; vertical-align: 0.05em; margin-inline-end: 0.3em;')}<span style="color: var(--m-color-accent-text)">${journal}</span> · ${rest}</span>`;
 const clamp2 = 'display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden';
 
 // One entry row in the timeline. The open one fills with its journal's colour.
@@ -160,12 +161,14 @@ const entry = (o: {
           </li>`;
 };
 const month = (label: string) =>
-  `          <li style="padding: var(--m-space-4) var(--m-space-4) var(--m-space-2); ${hair}"><h3 style="${sectionTitle}">${label}</h3></li>`;
+  `          <li style="padding: var(--m-space-2) var(--m-space-4); background: var(--m-color-bg-sunken)"><h3 style="${sectionTitle}">${label}</h3></li>`;
 
 // A grouped panel row: icon, label, count and chevron; rows are split by an inset hairline
 const groupRow = (ic: string, label: string, value: string) =>
   `<a href="#" class="m-cluster" data-gap="3" style="flex-wrap: nowrap; padding: var(--m-space-3) var(--m-space-4); color: inherit; text-decoration: none"><span style="display: inline-flex">${icon(ic, 18)}</span><span style="flex: 1">${label}</span><span style="${subtle}">${value}</span><span style="display: inline-flex; ${subtle}">${icon(I.right, 14)}</span></a>`;
 const inset = '<hr class="m-divider" style="margin: 0 0 0 calc(var(--m-space-4) * 2 + 18px)">';
+// The same hairline for rows without an icon: inset to the text
+const rowRule = '<hr class="m-divider" style="margin: 0 0 0 var(--m-space-4)">';
 
 // ---------- Dashboard: Write, the day at a glance ----------
 
@@ -211,8 +214,8 @@ const dashboard = shell(
             </div>
           </header>
           <div class="m-grid" style="--m-layout-grid-min: 11rem; --m-layout-grid-gap: var(--m-space-3)">
-            <a href="#" class="m-button" data-size="lg" style="justify-content: space-between; font-weight: var(--m-font-weight-medium)">2 entries today <span style="display: inline-flex; flex: none; color: var(--m-color-accent-text)">${icon(I.plus, 16)}</span></a>
-            <a href="#" class="m-button" data-size="lg" style="justify-content: space-between; font-weight: var(--m-font-weight-medium)">5 drafts <span style="display: inline-flex; flex: none; ${subtle}">${icon(I.right, 16)}</span></a>
+            <a href="#" class="m-button" data-size="lg" style="justify-content: space-between">2 entries today <span style="display: inline-flex; flex: none; color: var(--m-color-accent-text)">${icon(I.plus, 16)}</span></a>
+            <a href="#" class="m-button" data-size="lg" style="justify-content: space-between">5 drafts <span style="display: inline-flex; flex: none; ${subtle}">${icon(I.right, 16)}</span></a>
           </div>
           <section class="m-stack" data-gap="3" aria-labelledby="vl-question">
             <h2 id="vl-question" style="${sectionTitle}">A question for today</h2>
@@ -356,8 +359,10 @@ const onboarding = `<main style="min-block-size: 100vh; background: var(--m-colo
       </fieldset>
       <div class="m-card" style="padding: 0; gap: 0">
         <label class="m-cluster" data-justify="between" style="padding: var(--m-space-3) var(--m-space-4)"><span class="m-stack" data-gap="0"><span>Remind me to write</span><span class="m-muted" style="${small}">Every evening at 9:00 PM</span></span><input class="m-switch" type="checkbox" role="switch" checked></label>
-        <label class="m-cluster" data-justify="between" style="padding: var(--m-space-3) var(--m-space-4); ${hair}; margin-inline-start: var(--m-space-4); padding-inline-start: 0"><span>Add place and weather to new entries</span><input class="m-switch" type="checkbox" role="switch" checked></label>
-        <label class="m-cluster" data-justify="between" style="padding: var(--m-space-3) var(--m-space-4); ${hair}; margin-inline-start: var(--m-space-4); padding-inline-start: 0"><span>Show a question each day</span><input class="m-switch" type="checkbox" role="switch"></label>
+        ${rowRule}
+        <label class="m-cluster" data-justify="between" style="padding: var(--m-space-3) var(--m-space-4)"><span>Add place and weather to new entries</span><input class="m-switch" type="checkbox" role="switch" checked></label>
+        ${rowRule}
+        <label class="m-cluster" data-justify="between" style="padding: var(--m-space-3) var(--m-space-4)"><span>Show a question each day</span><input class="m-switch" type="checkbox" role="switch"></label>
       </div>
       <div class="m-stack" data-gap="2">
         <button type="submit" class="m-button" data-variant="primary" data-size="lg">Continue</button>
@@ -370,7 +375,7 @@ const onboarding = `<main style="min-block-size: 100vh; background: var(--m-colo
 // ---------- Settings: a section list beside grouped panels of rows ----------
 
 const setRow = (label: string, control: string, first = false, help = '') =>
-  `<div class="m-cluster" data-justify="between" data-gap="4" style="flex-wrap: nowrap; padding: var(--m-space-3) var(--m-space-4)${first ? '' : `; ${hair}`}"><span class="m-stack" data-gap="0"><span>${label}</span>${help ? `<span class="m-muted" style="${small}">${help}</span>` : ''}</span>${control}</div>`;
+  `${first ? '' : `${rowRule}\n                `}<div class="m-cluster" data-justify="between" data-gap="4" style="flex-wrap: nowrap; padding: var(--m-space-3) var(--m-space-4)"><span class="m-stack" data-gap="0"><span>${label}</span>${help ? `<span class="m-muted" style="${small}">${help}</span>` : ''}</span>${control}</div>`;
 const sel = (id: string, label: string, options: string[]) =>
   `<select class="m-select" id="${id}" aria-label="${label}" data-size="sm" style="inline-size: 11rem">${options.map((o, i) => `<option${i === 0 ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
 const sw = (label: string, on: boolean) =>
@@ -392,14 +397,14 @@ ${settingsSections
       </nav>
       <main>
         <div class="m-cluster" data-justify="between" style="padding: var(--m-space-4) var(--m-space-6); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
-          <h1 style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-bold)">Look and feel</h1>
+          <h1 style="${sectionTitle}">Look and feel</h1>
           ${toolbarBtn(I.x, 'Close settings')}
         </div>
         <div class="m-container" data-size="md" style="padding-block: var(--m-space-6) var(--m-space-12)">
           <div class="m-stack" data-gap="8">
             <section class="m-stack" data-gap="2" aria-labelledby="vl-set-app">
               <h2 id="vl-set-app" class="m-muted" style="${small}; font-weight: var(--m-font-weight-semibold); padding-inline: var(--m-space-4)">Appearance</h2>
-              <div class="m-card" data-variant="outline" style="padding: 0; gap: 0; border-radius: var(--m-radius-md)">
+              <div class="m-card" style="padding: var(--m-space-1) 0; gap: 0">
                 ${setRow('Theme', sel('vl-theme', 'Theme', ['Match the system', 'Light', 'Dark']), true)}
                 ${setRow('Entry font', sel('vl-font', 'Entry font', ['Humanist', 'System', 'Serif', 'Mono']))}
                 ${setRow('Text size', sel('vl-size', 'Text size', ['Medium', 'Small', 'Large']))}
@@ -408,7 +413,7 @@ ${settingsSections
             </section>
             <section class="m-stack" data-gap="2" aria-labelledby="vl-set-timeline">
               <h2 id="vl-set-timeline" class="m-muted" style="${small}; font-weight: var(--m-font-weight-semibold); padding-inline: var(--m-space-4)">Timeline</h2>
-              <div class="m-card" data-variant="outline" style="padding: 0; gap: 0; border-radius: var(--m-radius-md)">
+              <div class="m-card" style="padding: var(--m-space-1) 0; gap: 0">
                 ${setRow('Show photos beside entries', sw('Show photos beside entries', true), true)}
                 ${setRow('Show weather and place', sw('Show weather and place', true))}
                 ${setRow('Hide entry text', sw('Hide entry text', false), false, 'Shows titles only, for writing in public.')}
@@ -416,8 +421,8 @@ ${settingsSections
             </section>
             <section class="m-stack" data-gap="2" aria-labelledby="vl-set-data">
               <h2 id="vl-set-data" class="m-muted" style="${small}; font-weight: var(--m-font-weight-semibold); padding-inline: var(--m-space-4)">Your entries</h2>
-              <div class="m-card" data-variant="outline" style="padding: 0; gap: 0; border-radius: var(--m-radius-md)">
-                ${setRow('Export everything', '<button type="button" class="m-button" data-size="sm">Export…</button>', true, 'A folder of text files and photos.')}
+              <div class="m-card" style="padding: var(--m-space-1) 0; gap: 0">
+                ${setRow('Export everything', '<button type="button" class="m-button" data-variant="ghost" data-size="sm">Export…</button>', true, 'A folder of text files and photos.')}
                 ${setRow('<span style="color: var(--m-color-danger-fg)">Delete all entries</span>', '<button type="button" class="m-button" data-variant="danger" data-size="sm">Delete…</button>', false, '486 entries and 1,204 photos. This can’t be undone.')}
               </div>
             </section>
@@ -491,17 +496,17 @@ const cmpRow = (feature: string, a: string, b: string, c: string) =>
   `          <tr><td>${feature}</td><td style="text-align: center">${a}</td><td style="text-align: center">${b}</td><td style="text-align: center">${c}</td></tr>`;
 const tick = `<span aria-label="Included" style="display: inline-flex">${icon(I.check, 14)}</span>`;
 
-const pricing = `<div style="min-block-size: 100vh; background: var(--m-color-bg-canvas)">
-  <header class="m-navbar">
+// The public header: the wordmark, plain links at the right and one outlined, small-cornered button
+const siteHeader = (current: string) => `<header class="m-navbar">
     <a class="m-navbar-brand" href="#" style="gap: var(--m-space-2)"><span class="m-avatar" data-size="sm" style="border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">${icon(I.feather, 14)}</span> Keepsake</a>
     <nav class="m-navbar-nav" aria-label="Site" style="margin-inline-start: auto">
-      <a class="m-navbar-link" href="#">How it works</a>
-      <a class="m-navbar-link" href="#">Stories</a>
-      <a class="m-navbar-link" href="#" aria-current="page">Plans</a>
-      <a class="m-navbar-link" href="#">Help</a>
+${['How it works', 'Stories', 'Plans', 'Help'].map((l) => `      <a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${l}</a>`).join('\n')}
     </nav>
     <div class="m-navbar-actions"><a class="m-button" href="#" style="background: transparent; border-color: var(--m-color-accent-default); color: var(--m-color-accent-text); border-radius: var(--m-radius-sm)">Download</a></div>
-  </header>
+  </header>`;
+
+const pricing = `<div style="min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+${siteHeader('Plans')}
   <main style="background: var(--m-color-bg-sunken); padding-block: var(--m-space-16)">
     <div class="m-container">
       <div class="m-stack" data-gap="12">
@@ -538,50 +543,151 @@ ${cmpRow('Scanned pages', '', '', tick)}
 
 // ---------- Errors ----------
 
-const errorPage = (code: string, ic: string, title: string, body: string, actions: string) => `    <section class="m-stack" data-gap="4" data-align="center" style="text-align: center; padding-block: var(--m-space-12); ${hair}" aria-labelledby="vl-err-${code}">
-      <span style="${subtle}">${icon(ic, 40)}</span>
-      <span class="m-subtle" style="${small}; font-variant-numeric: tabular-nums">Error ${code}</span>
-      <h2 id="vl-err-${code}" style="${sectionTitle}">${title}</h2>
-      <p class="m-muted" style="max-inline-size: 26rem">${body}</p>
-      <div class="m-stack" data-gap="2" style="inline-size: 100%; max-inline-size: 16rem">${actions}</div>
-    </section>`;
+// A whole-page error as a grouped panel: a thin icon, the code, a bold title, one sentence and the pills
+const errorPage = (code: string, ic: string, title: string, body: string, actions: string) => `          <section class="m-card" style="padding: var(--m-space-8) var(--m-space-5)" aria-labelledby="vl-err-${code}">
+            <div class="m-stack" data-gap="3" data-align="center" style="text-align: center">
+              <span style="${subtle}">${icon(ic, 40)}</span>
+              <span class="m-subtle" style="${small}; font-variant-numeric: tabular-nums">Error ${code}</span>
+              <h3 id="vl-err-${code}" style="${sectionTitle}">${title}</h3>
+              <p class="m-muted">${body}</p>
+              <div class="m-stack" data-gap="2" style="inline-size: 100%; max-inline-size: 16rem">${actions}</div>
+            </div>
+          </section>`;
 
-const errors = `<main class="m-container" data-size="md" style="padding-block: var(--m-space-10)">
-  <div class="m-stack" data-gap="10">
-    <section class="m-stack" data-gap="5" aria-labelledby="vl-err-form">
-      <h1 id="vl-err-form" style="${largeTitle}">New journal</h1>
-      <div class="m-alert" data-tone="danger" role="alert">
-        <span class="m-alert-icon">${icon(I.alert, 18)}</span>
-        <div class="m-alert-content"><div class="m-alert-title">Two things to fix</div><div class="m-alert-body">The journal wasn’t made yet. Give it a name and choose when to be reminded.</div></div>
-      </div>
-      <div class="m-card" style="padding: var(--m-space-5)">
-        <div class="m-stack" data-gap="4">
-          <div class="m-field">
-            <label class="m-field-label" for="vl-err-name">Journal name</label>
-            <input class="m-input" id="vl-err-name" value="" aria-invalid="true" aria-describedby="vl-err-name-e" placeholder="Garden log">
-            <p class="m-field-error" id="vl-err-name-e">Give the journal a name; it can be one word.</p>
+// A notice in the page: a tinted callout with its one action, never a floating layer over the writing
+const notice = (tone: string, ic: string, title: string, body: string, action: string) =>
+  `<div class="m-alert" data-tone="${tone}" role="${tone === 'danger' ? 'alert' : 'status'}"><span class="m-alert-icon">${icon(ic, 18)}</span><div class="m-alert-content"><div class="m-alert-title">${title}</div>${body ? `<div class="m-alert-body">${body}</div>` : ''}<div class="m-alert-actions">${action}</div></div></div>`;
+
+const errors = shell(
+  'Start a journal',
+  `    <main class="m-container" data-size="md" style="padding-block: var(--m-space-8) var(--m-space-12)">
+      <div class="m-stack" data-gap="10">
+        <section class="m-stack" data-gap="5" aria-labelledby="vl-err-form">
+          <h1 id="vl-err-form" style="${largeTitle}">New journal</h1>
+          <div class="m-alert" data-tone="danger" role="alert">
+            <span class="m-alert-icon">${icon(I.alert, 18)}</span>
+            <div class="m-alert-content"><div class="m-alert-title">Two things to fix</div><div class="m-alert-body">The journal wasn’t made yet. Give it a name and choose when to be reminded.</div></div>
           </div>
-          <div class="m-field">
-            <label class="m-field-label" for="vl-err-time">Remind me at</label>
-            <input class="m-input" id="vl-err-time" value="25:30" aria-invalid="true" aria-describedby="vl-err-time-e" style="font-variant-numeric: tabular-nums">
-            <p class="m-field-error" id="vl-err-time-e">Use a time between 00:00 and 23:59.</p>
+          <div class="m-card" style="padding: var(--m-space-5)">
+            <div class="m-stack" data-gap="4">
+              <div class="m-field">
+                <label class="m-field-label" for="vl-err-name">Journal name</label>
+                <input class="m-input" id="vl-err-name" value="" aria-invalid="true" aria-describedby="vl-err-name-e" placeholder="Garden log">
+                <p class="m-field-error" id="vl-err-name-e">Give the journal a name; it can be one word.</p>
+              </div>
+              <div class="m-field">
+                <label class="m-field-label" for="vl-err-time">Remind me at</label>
+                <input class="m-input" id="vl-err-time" value="25:30" aria-invalid="true" aria-describedby="vl-err-time-e" style="font-variant-numeric: tabular-nums">
+                <p class="m-field-error" id="vl-err-time-e">Use a time between 00:00 and 23:59.</p>
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div class="m-cluster" data-justify="end" data-gap="2">
-        <button type="button" class="m-button">Cancel</button>
-        <button type="submit" class="m-button" data-variant="primary">Make journal</button>
-      </div>
-    </section>
-    <section class="m-stack" data-gap="3" aria-label="Notices">
-      <div class="m-toast" data-tone="danger" role="alert"><div class="m-toast-content"><div class="m-toast-title m-cluster" data-gap="2"><span style="display: inline-flex; color: var(--m-color-danger-fg)">${icon(I.cloud, 18)}</span>3 entries haven’t synced</div><div class="m-toast-body">They’re safe on this device and will sync when you’re back online.</div></div><button type="button" class="m-button" data-size="sm">Retry</button></div>
-      <div class="m-toast" data-tone="success" role="status"><div class="m-toast-content"><div class="m-toast-title m-cluster" data-gap="2"><span style="display: inline-flex; color: var(--m-color-success-fg)">${icon(I.check, 18)}</span>Entry moved to Garden log</div></div><button type="button" class="m-button" data-variant="ghost" data-size="sm">Undo</button></div>
-    </section>
+          <div class="m-cluster" data-justify="end" data-gap="2">
+            <button type="button" class="m-button">Cancel</button>
+            <button type="submit" class="m-button" data-variant="primary">Make journal</button>
+          </div>
+        </section>
+        <section class="m-stack" data-gap="3" aria-labelledby="vl-err-notices">
+          <h2 id="vl-err-notices" style="${sectionTitle}">Notices</h2>
+          ${notice('danger', I.cloud, '3 entries haven’t synced', 'They’re safe on this device and will sync when you’re back online.', '<button type="button" class="m-button" data-size="sm">Retry</button>')}
+          ${notice('success', I.check, 'Entry moved to Garden log', '', '<button type="button" class="m-button" data-variant="ghost" data-size="sm">Undo</button>')}
+        </section>
+        <section class="m-stack" data-gap="3" aria-labelledby="vl-err-pages">
+          <h2 id="vl-err-pages" style="${sectionTitle}">Whole pages</h2>
+          <div class="m-grid" style="--m-layout-grid-min: 13rem; --m-layout-grid-gap: var(--m-space-3)">
 ${errorPage('404', I.search, 'This entry isn’t here', 'It may have been deleted, or moved to a journal you no longer share.', `<a class="m-button" data-variant="primary" href="#">${icon(I.book, 16)} Go to your journals</a>`)}
-${errorPage('500', I.wifiOff, 'Something went wrong on our side', 'Nothing you wrote was lost. Try again in a moment.', `<button type="button" class="m-button" data-variant="primary">Try again</button><button type="button" class="m-button" data-variant="ghost">Get help</button>`)}
-${errorPage('403', I.lock, 'This journal is locked', 'Only its owner can open it. Ask them to share it with you.', `<button type="button" class="m-button" data-variant="primary">Ask for access</button><a class="m-button" data-variant="ghost" href="#">Go back</a>`)}
+${errorPage('500', I.wifiOff, 'Something went wrong on our side', 'Nothing you wrote was lost. Try again in a moment.', `<button type="button" class="m-button">Try again</button><button type="button" class="m-button" data-variant="ghost">Get help</button>`)}
+${errorPage('403', I.lock, 'This journal is locked', 'Only its owner can open it. Ask them to share it with you.', `<button type="button" class="m-button">Ask for access</button><a class="m-button" data-variant="ghost" href="#">Go back</a>`)}
+          </div>
+        </section>
+      </div>
+    </main>`,
+);
+
+// ---------- Reading: a public help article ----------
+
+const helpLink = (label: string) =>
+  `            <li><a href="#" style="color: var(--m-color-accent-text); text-decoration: none">${label}</a></li>`;
+
+const reading = `<div style="min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+  ${siteHeader('Help')}
+  <div class="m-container" style="padding-block: var(--m-space-10) var(--m-space-16)">
+    <div style="display: flex; flex-wrap: wrap; gap: var(--m-space-12); align-items: flex-start">
+      <main style="flex: 2 1 34rem; min-inline-size: 0">
+        <div class="m-stack" data-gap="6">
+          <form class="m-cluster" data-gap="2" role="search" style="flex-wrap: nowrap">
+            <input class="m-input" type="search" aria-label="Search the help guides" placeholder="Search the help guides" style="flex: 1; min-inline-size: 0">
+            <button type="submit" class="m-button" data-variant="primary" style="border-radius: var(--m-radius-sm)">${icon(I.search, 16)} Search</button>
+          </form>
+          <nav aria-label="Breadcrumb" style="${small}"><a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Help</a> <span class="m-subtle">›</span> <a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Writing on the web</a></nav>
+          <article class="m-stack" data-gap="5" aria-labelledby="vl-read-title" style="font-size: var(--m-font-size-lg); line-height: var(--m-font-leading-relaxed)">
+            <h1 id="vl-read-title" style="${largeTitle}">Move entries between journals</h1>
+            <p style="${sectionTitle}; line-height: var(--m-font-leading-tight)">Put an entry where it belongs, or gather a few into a new journal.</p>
+            <p>Every entry lives in one journal at a time. Moving it keeps its photos, place, weather and tags, and it keeps its date, so it lands in the right spot on the new journal’s timeline.</p>
+            <h2 style="${sectionTitle}">Move one entry</h2>
+            <p>Open the entry, choose More at the top right, then Move to journal. Pick the journal and the entry moves at once. You can undo it from the notice at the bottom of the window.</p>
+            ${photo('sky', 'inline-size: 100%; block-size: auto; aspect-ratio: 16 / 9; border-radius: var(--m-radius-sm)', 'Picture: the Move to journal menu')}
+            <h2 style="${sectionTitle}">Related guides</h2>
+            <ul class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-5)">
+${helpLink('Start a new journal')}
+${helpLink('Choose a colour for a journal')}
+${helpLink('Find an entry by date or place')}
+            </ul>
+          </article>
+        </div>
+      </main>
+      <aside class="m-stack" data-gap="8" style="flex: 1 1 16rem">
+        <section class="m-stack" data-gap="3" style="background: var(--m-color-bg-sunken); padding: var(--m-space-6)" aria-labelledby="vl-read-help">
+          <h2 id="vl-read-help" style="${sectionTitle}">Write to a person</h2>
+          <p style="line-height: var(--m-font-leading-relaxed)">Keeper and Archivist members hear back first.</p>
+          <a class="m-button" data-variant="primary" href="#" style="align-self: start; border-radius: var(--m-radius-sm)">Send a message</a>
+        </section>
+        <section class="m-stack" data-gap="3" style="padding-inline: var(--m-space-6)" aria-labelledby="vl-read-forum">
+          <h2 id="vl-read-forum" style="${sectionTitle}">Ask other writers</h2>
+          <p style="line-height: var(--m-font-leading-relaxed)">If a guide doesn’t answer it, the <a href="#" style="color: var(--m-color-accent-text)">community board</a> probably has.</p>
+        </section>
+      </aside>
+    </div>
+  </div>
+</div>`;
+
+// ---------- Sign-in: the band and the sheet, as on first use ----------
+
+const signIn = `<main style="min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+  <div style="background: var(--m-color-brand-default); color: var(--m-color-brand-fg); padding: var(--m-space-12) 0 var(--m-space-16)">
+    <div class="m-container" data-size="sm">
+      <div class="m-stack" data-gap="2">
+        <span class="m-cluster" data-gap="2"><span class="m-avatar" data-size="sm" style="border-radius: var(--m-radius-md); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">${icon(I.feather, 14)}</span><span style="font-weight: var(--m-font-weight-semibold)">Keepsake</span></span>
+        <h1 style="${largeTitle}">Welcome back</h1>
+        <p>Sign in to open your journals on this computer.</p>
+      </div>
+    </div>
+  </div>
+  <div class="m-container" data-size="sm" style="margin-block-start: calc(var(--m-space-8) * -1)">
+    <form class="m-stack" data-gap="6" style="background: var(--m-color-bg-canvas); border-start-start-radius: 28px; border-start-end-radius: 28px; padding: var(--m-space-8) var(--m-space-2) var(--m-space-12)">
+      <div class="m-field">
+        <label class="m-field-label" for="vl-si-email">Email</label>
+        <input class="m-input" id="vl-si-email" type="email" autocomplete="email" value="ada.reid@example.com" data-size="lg">
+      </div>
+      <div class="m-field">
+        <label class="m-field-label" for="vl-si-pass">Password</label>
+        <input class="m-input" id="vl-si-pass" type="password" autocomplete="current-password" value="correct horse" data-size="lg">
+        <p class="m-field-hint">Your journals stay encrypted; this unlocks them on this device only.</p>
+      </div>
+      <div class="m-stack" data-gap="2">
+        <button type="submit" class="m-button" data-variant="primary" data-size="lg">Sign in</button>
+        <button type="button" class="m-button" data-variant="ghost">Forgot your password?</button>
+      </div>
+      <div class="m-card" style="padding: var(--m-space-1) 0; gap: 0">
+        ${groupRow(I.lock, 'Use a passkey', '')}
+        ${inset}
+        ${groupRow(I.send, 'Email me a sign-in link', '')}
+      </div>
+      <p class="m-muted" style="text-align: center">New here? <a href="#" style="color: var(--m-color-accent-text)">Start a journal</a></p>
+    </form>
   </div>
 </main>`;
+
 
 export const vellumRecipes: ArchetypeRecipe[] = [
   {
@@ -630,7 +736,21 @@ export const vellumRecipes: ArchetypeRecipe[] = [
     name: 'errors',
     title: 'Errors',
     description:
-      'A danger callout above the form saying nothing was made, field errors under each field, banners for sync trouble and undo, and full pages for 404, 500 and a locked journal.',
+      'In the app: a danger callout above the form saying nothing was made, field errors under each field, tinted notices for sync trouble and undo in the page, and the 404, 500 and locked-journal pages as three grey panels.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A public help article: the public header, a search field with a small-cornered blue button, a breadcrumb, a 34px bold title over a bold 20px lede, text at 17px, a picture drawn as a token shape, related guides as blue links, and a grey side panel with one action.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The brand band with the wordmark and a large title, a white sheet with 28px top corners over it, two fields, a full-width primary pill and a ghost link, then a grey grouped panel of other ways in.',
+    html: signIn,
   },
 ];

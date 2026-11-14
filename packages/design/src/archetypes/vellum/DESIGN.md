@@ -9,7 +9,8 @@ personal record-keeping.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes (the seven every language has, a public help article and
+  sign-in) as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `vellum` preset of `@mariachi/design` (`data-theme="vellum"`,
@@ -59,8 +60,10 @@ that look like the platform's own.
     inner parts, 10px on inputs, selects and menus;
   - 14px on dialogs, alerts, toasts and tables; 20px on grouped panels and plan cards; 28px on the
     top of a sheet over a colour band;
-  - every button and segmented control is a pill.
-- **Shadow.** None on content. Menus and sheets: a half-pixel edge and a deep soft drop
+  - every button and segmented control in the app is a pill; on public help pages buttons have 4px
+    corners, as the product's site draws them.
+- **Shadow.** None on content: panels are set apart by a grey fill (or a white panel on grey), never
+  a drop shadow, and notices sit in the page. Menus and sheets: a half-pixel edge and a deep soft drop
   (`0 10px 30px` at 18%). Floating marketing screens: `0 4px 40px` at 15%.
 - **Motion.** 150, 250 and 400 ms, easing `cubic-bezier(0.25, 0.1, 0.25, 1)`; sheets use a gentle
   spring-like `cubic-bezier(0.2, 0.9, 0.3, 1)`. Nothing bounces.
@@ -92,8 +95,8 @@ scales are in the reference at the end.
   - the day numeral 24px, regular, tabular;
   - month headings and section titles 20px bold; entry titles 24px bold in the entry face;
   - large page titles 34px bold, tracked −1.5%; marketing headings 48px bold.
-- **Weights.** 400 for text, 500 for tabs and quiet emphasis, 600 for entry titles in lists and
-  buttons, 700 for headings.
+- **Weights.** Three: 400 for text (meta lines and field errors too), 600 for entry titles in lists,
+  buttons, field labels and tabs, 700 for headings. Never 500.
 - **Case.** Sentence case. Capitals only for the weekday in date tiles and tiny stat labels
   ("ENTRIES").
 
@@ -162,7 +165,7 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
 - **Input, textarea.** 40px, 10px corners, white, the system grey border; the focus ring in the
   control blue.
 - **Select.** The same box with a small chevron; in a settings row, about 11rem wide at the right.
-- **Field.** The label above at 13px medium, then the control, then help or error text at 13px.
+- **Field.** The label above at 13px semibold, then the control, then help or error text at 13px.
 - **Checkbox, radio.** 18px; the checkbox a 5px-rounded square, both filling with the control blue
   when checked.
 - **Switch.** The platform switch: 44 × 26px, a round white knob with a soft shadow, grey when off and
@@ -183,7 +186,7 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
   calendar, places) with the current one on a grey pill, search at the right; above an entry, Close,
   the date in subtle text, then More and New.
 - **Tabs.**
-  - **Text tabs:** grey labels; the current one in ink with a short bar under it.
+  - **Text tabs:** grey semibold labels; the current one in ink with a short bar under it.
   - **Pill** (the segmented control): a grey track with the current segment a white pill.
 - **Breadcrumb.** Muted links with "›" between and the current page in ink. In the app, a back
   chevron is preferred.
@@ -195,13 +198,13 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
     same day leave the tile out.
   - The title in 15px semibold, two lines of text, then the meta line: a tiny journal swatch, the
     journal's name in accent text, the time, place and weather.
-  - A square photo at the right, 72px, 4px corners. Rows are split by hairlines; months by a bold
-    20px heading.
+  - A square photo at the right, 72px, 4px corners. Rows are split by hairlines; months by a grey
+    band (`bg.sunken`) with a bold 20px heading.
 - **Table.** For plan comparisons and lists of records: an outlined panel with 14px corners, 13px
   capital column labels, hairline rows. Not for entries.
 - **Card** (the grouped panel). The grey fill, 20px corners, no border and no shadow, 20px padding.
-  Rows inside are split by inset hairlines. The `outline` variant is white with a hairline (plan
-  cards, settings groups).
+  Rows inside are split by inset dividers (the divider component), never by a border on each row.
+  The `outline` variant is white with a hairline (plan cards only).
 - **Badge.** A small pill, 11px semibold, on a tint, no border ("Most chosen", tags).
 - **Avatar.** Round, initials on the brand tint; the app mark is an ink tile with 8px corners.
 - **Divider.** A hairline; inset to line up with text inside grouped panels.
@@ -217,7 +220,7 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
 **Feedback and overlays**
 - **Alert.** A pale tint, 14px corners, no border and no stripe; an 18px status icon, a semibold
   title and the body in the tone's text colour.
-- **Toast.** A floating white banner (raised in dark) with 14px corners on the overlay shadow, a
+- **Toast.** For a transient confirmation outside the page shapes: a floating white banner (raised in dark) with 14px corners on the overlay shadow, a
   status icon, a semibold title, one line of detail and one action.
 - **Dialog** (a sheet). White, 14px corners, the overlay shadow over a 30% black scrim, a 20px bold
   title, buttons at the right with the primary last.
@@ -244,10 +247,12 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
   on submit.
 - **In a form:** a red-tinted alert above it, counting what to fix and saying nothing was made yet
   ("Two things to fix. The journal wasn't made yet."). Each field shows its own message.
-- **Somewhere else:** a floating banner ("3 entries haven't synced · Retry"), always saying the
-  writing is safe. Undo for anything reversible.
-- **A whole page:** centred. A 40px outline icon in the subtle colour, a small "Error 404" line, a
-  20px bold title, one sentence and stacked pills.
+- **Somewhere else:** a tinted notice in the page with its one action ("3 entries haven't synced ·
+  Retry"), always saying the writing is safe. Undo for anything reversible. It never floats over the
+  writing.
+- **A whole page:** centred in the app's frame, in a grey panel when several are shown. A 40px
+  outline icon in the subtle colour, a small "Error 404" line, a
+  20px bold title, one sentence and stacked pills; the primary only where it is the one thing to do.
   - **404:** "This entry isn't here", with Go to your journals.
   - **500:** "Something went wrong on our side" and "Nothing you wrote was lost", with Try again.
   - **403:** "This journal is locked", with Ask for access.
@@ -256,6 +261,49 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
 
 ## Page shapes (recipes)
 
+### The two families
+
+| | The app (dashboard, list and detail, settings, empty state, errors, onboarding, sign-in) | Public pages (pricing, reading) |
+| --- | --- | --- |
+| Header | None: the journal column carries the wordmark and the settings button. Onboarding opens with the brand band, its step and a large title; sign-in with the band, the wordmark and a large title | White, 72px: the wordmark at the left, 17px ink links (the current one in accent text), one outlined Download button with 4px corners at the right, a faint hairline under it |
+| Side | The 15rem cool-grey journal column on every app page except onboarding and sign-in; settings adds a grey section list | None; a help article has a grey side panel with one action at the right of the text |
+| Column | Panes: the column, a 24rem timeline, the entry at 40rem; single pages in 42rem; forms and flows in 30rem | 64rem; a help article's text in about 40rem beside a 16rem side panel |
+| Titles | 34px bold large titles (20px for a settings pane); 20px bold section titles and month bands; entry titles 24px in the entry face | 48px bold on the plans page, 34px on a help article, with a 20px bold lede |
+| Actions | Pills: one deep-blue primary per view, grey pills and blue ghost text for the rest | Plan buttons are 48px pills; a help page's buttons have 4px corners |
+| Footer | None; an entry ends with its meta footer | None in the recipes |
+| On a phone | The journal column stacks above the page | Plan cards stack; the side panel moves under the article |
+
+### Signature moves
+
+1. **The date leads.** Timeline rows open with a bordered tile: the weekday in 11px capitals over a
+   24px numeral, under grey month bands.
+2. **Colour says which journal.** A square swatch, a colour band behind the journal's title, the
+   open row and written calendar days in the journal's colour; actions in the deep blue.
+3. **Grey grouped panels.** 20px corners, no border, no shadow, rows split by inset dividers; a grey
+   journal column beside white pages.
+4. **Pills.** Every app button is a pill; the one that matters is deep blue and often full width.
+5. **Entry text in a warm humanist face** (Lato) at 17px and a 40rem measure, while the interface is
+   Inter at 15px.
+6. **Flat and quiet:** three weights, three to five text sizes on an app screen, nothing on the page
+   casts a shadow.
+
+### How a screen is assembled
+
+- **It opens with** the journal column at the left, then a 34px bold title with the date or a short
+  line in subtle text (or the brand band and its title on first use and sign-in).
+- **Reading order:** the title, then the thing to do now (a question with a full-width pill, a form,
+  a grouped panel), then lists and counts.
+- **How much one screen does:** one task and one primary pill; a dashboard may add a calendar and
+  counts beside it.
+- **When narrow:** the journal column stacks above; panes stack in reading order; full-width pills
+  stay full width.
+- **Too much content:** timelines scroll under month bands; long settings split into more grouped
+  panels under 13px group labels.
+- **None:** the frame stays (column, band, title, tabs); a centred block with a 40px icon, a 20px
+  title, one sentence and two stacked pills.
+
+### The recipes
+
 - **Dashboard** (Write).
   - "Write" as a 34px bold title with the date in subtle text, and round grey previous and next
     buttons.
@@ -263,19 +311,30 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
     moments (photos, places, voice memos) with counts and chevrons.
   - Beside it: the month calendar with written days in the brand colour, recently written entries,
     and streak and count tiles.
-- **List and detail.** The journal column, the timeline (toolbar of view glyphs, bold month headings,
+- **List and detail.** The journal column, the timeline (toolbar of view glyphs, grey month bands,
   date tiles, photos, the open row filled with the journal colour), and the open entry at a reading
   width with its meta footer.
 - **Onboarding.** A journal-colour band with a large title, a white sheet with 28px top corners
-  rising over it, a progress bar, one field, colour swatches, a grouped panel of switches and a
-  full-width primary pill.
-- **Settings.** Opened from the settings button by the wordmark: a grey section list whose current row fills with the action blue; a title bar with
-  Close; grouped outlined panels of label-and-control rows; a red destructive row last.
+  rising over it, a progress bar, one field, colour swatches, a grouped panel of switches split by
+  inset dividers and a full-width primary pill.
+- **Settings.** Opened from the settings button by the wordmark: a grey section list whose current
+  row fills with the action blue; a title bar with a 20px pane title and Close; grey grouped panels
+  of label-and-control rows split by inset dividers; Export as blue text; a red destructive row last.
 - **Empty state.** A new journal's colour band and title, text tabs, then a 40px feather, a bold
   heading, one sentence and two stacked pills.
-- **Pricing.** A white header, a grey band with a 48px bold heading, three white plan cards (the top
-  plan ringed in amber), 48px prices "per year", tick lists, pill buttons, and a comparison table.
-- **Errors.** The field, form, banner and full-page errors above, as one page.
+- **Pricing.** The public header, a grey band with a 48px bold heading, three white plan cards (the
+  top plan ringed in amber), 48px prices "per year", tick lists, pill buttons, and a comparison
+  table.
+- **Errors.** Inside the app's frame: "New journal" with a danger callout and field errors, two
+  tinted notices (sync trouble with Retry, a move with Undo), and the 404, 500 and locked-journal
+  pages as three grey panels.
+- **Reading.** A public help article: the public header, a search field with a 4px-cornered blue
+  Search, a breadcrumb, a 34px bold title over a 20px bold lede, 17px text with 20px bold section
+  headings, a picture drawn in tokens, related guides as blue links, and a grey side panel with one
+  4px-cornered action.
+- **Sign-in.** The brand band with the wordmark, "Welcome back" and one line; the white sheet with
+  two large fields, a full-width primary pill, a ghost "Forgot your password?", other ways in as a
+  grey grouped panel, and a link to start a journal.
 
 ## Words
 
