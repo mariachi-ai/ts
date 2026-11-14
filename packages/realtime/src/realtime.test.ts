@@ -116,6 +116,22 @@ describe('channel names', () => {
 });
 
 describe('Realtime', () => {
+  it("refuses a tenant-channel broadcast from a tenant whose id holds a colon", async () => {
+    const { a } = cluster();
+    await a.connect();
+    const victim = new FakeSocket();
+    const id = (await a.handleConnect({ userId: 'u', tenantId: 'a' }, victim))!;
+    await a.subscribe(id, 'tenant:a:b:chat');
+    // Built for tenant "a:b", this name is also tenant "a"'s channel "b:chat".
+    await expect(a.broadcast(ctx('a:b'), 'tenant:a:b:chat', { secret: true })).rejects.toMatchObject({ code: 'realtime/invalid-channel' });
+    expect(victim.messages()).toHaveLength(0);
+    // A tenant with a plain id, and a channel that isn't a tenant's, are unaffected.
+    await a.broadcast(ctx('a'), 'tenant:a:b:chat', { n: 1 });
+    await a.broadcast(ctx('a:b'), 'public:status', { n: 2 });
+    expect(victim.messages()).toHaveLength(1);
+    await a.disconnect();
+  });
+
   it('broadcasts across instances to channel subscribers only', async () => {
     const { a, b } = cluster();
     await a.connect();

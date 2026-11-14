@@ -12,4 +12,6 @@ New `tenantChannel(tenantId, ...segments)`, `userChannel(userId, ...segments)` a
 them, and throw `realtime/invalid-channel` for an id containing a colon. Use them for the names you
 broadcast to.
 
+`broadcast` refuses a tenant channel when `ctx.tenantId` contains a colon, for the same reason.
+
 Also stricter: `tenant:<id>:` with nothing after the last colon, and `public:` with no name, are denied.
