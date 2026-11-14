@@ -8,7 +8,7 @@
 2. A head: the name at 16px/500, the domain and size in subtle 13px under it, the fit bar with a large 24px score at the right; a muted hairline under the head.
 3. The evidence as a timeline: a green check circle, then the source in subtle 12px ("Funding"), the fact in ink 13px, and the reason it matched in the text green.
 4. Two pills at the foot: an outline "Open record" and a ghost "Not a fit".
-5. On a reading page the one thing is a post: a page rail, the breadcrumb with the date at the right, the display title, a muted lead, a rimmed picture and 16/27 prose.
+5. On a reading page the one thing is a post: a page rail, the breadcrumb with the date at the right, the display title (about 50px wide, 40px at 1024, 30px on a phone), a muted lead, a rimmed picture and 16/27 prose.
 
 ## Where it appears
 

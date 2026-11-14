@@ -19,12 +19,16 @@ change is named below.
 ## Principles
 
 - **Heavy words, quiet surfaces.** The one loud thing on a page is its headline: the display face at 800,
-  tracked in to −0.03em, at 2–3.4× the body. Everything else is 13–16px Geist on warm grey and white.
+  tracked in to −0.03em, at about 2–4× the body (less on a phone). Everything else is 13–16px Geist on
+  warm grey and white.
 - **The ink is the accent.** There is no brand blue. Actions are maroon (`#2e0000`) pills with white text;
   secondary actions are outline pills drawn in the ink at 20%. On dark, the pill turns cream with maroon text.
 - **Sheets and rims.** A page is a warm grey sheet with 40px corners inside a white 8px rim; a featured card
   is a white card inside a near-white 8px lip. Depth comes from these frames and a soft spread shadow, never
-  from heavy borders.
+  from heavy borders. On public pages and the doors the warm grey is the page's own ground and the rim is a
+  frame fixed to the window, drawn over the page as it scrolls: it is never a box around the content, so
+  nothing on a public page sits more than three frames deep. In the app the near-white sheet is a panel
+  beside the nav on the rim.
 - **The product is neutral and exact.** Inside the app, data sits on white panels with hairlines drawn as
   inset rings, 13px text, quiet sentence-case headers and small colour only where it means something: the
   green and amber fit bars, the blue of anything an agent filled in.
@@ -60,7 +64,9 @@ change is named below.
   On public pages: 20–24px between a headline and its lead, 48–64px between sections.
 - **Layout.**
   - The rim: 8px of white around a sheet with 40px corners, from a phone up; on a phone the sheet runs to
-    the edges with square corners.
+    the edges with square corners. On public pages and the doors it is fixed to the window (an empty ring
+    over the page, `position: fixed`, `pointer-events: none`) and the warm grey is the body's own ground; the
+    header plate sticks to the top of it.
   - Public text to 61.25rem (980px), pictures and product frames to 75rem (1200px), prose to 40rem.
   - The gutter is `clamp(1.25rem, 4vw, 2.5rem)`.
   - The app: a 240px nav on the white rim, then the near-white sheet with 24px corners and 20–32px padding.
@@ -81,7 +87,10 @@ Use tokens, never colour literals: `var(--m-color-accent-default)`, `var(--m-spa
   - controls and nav 14px; reading body 16px with a 1.7 line height (27px);
   - leads 18–20px in the muted colour;
   - section titles 24px Geist 600 at −0.025em; 32px Geist 500 at −0.045em for a public section;
-  - page titles in the app 32px display; public headlines 48–54px display (`--m-font-size-4xl`).
+  - page titles in the app 32px display; public headlines 48–54px display (`--m-font-size-4xl`), the doors'
+    too;
+  - a reading page's title steps down with the window: about 50px wide, 40px at 1024, 30px on a phone
+    (`clamp(1.875rem, 3.9vw, 3.1rem)`).
 - **Case.** Sentence case everywhere. Capitals only in mono labels ("02 YOUR DATA") and the tracked eyebrow over
   a page rail ("ON THIS PAGE", 12/600, +0.12em).
 - **Figures.** Tabular in tables and prices. A price is 42px Geist 600 tracked −0.055em with the old price
@@ -149,7 +158,7 @@ product panels), `m-stack` and `m-cluster` inside. A public section is 48–64px
 
 **Navigation**
 - **Navbar** (public). The header plate: white, 58px, at most 69rem wide, centred and joined to the top of the
-  white rim, with 24px corners at the bottom. The wordmark left, 14/500 muted links, then an outline pill
+  white rim, with 24px corners at the bottom; it stays there as the page scrolls (`data-sticky`). The wordmark left, 14/500 muted links, then an outline pill
   ("Log in") and the maroon pill. On a phone only the wordmark, the maroon pill and a nine-dot menu stay.
 - **Sidebar** (the app). On the white rim, no border: the workspace mark and name, then 14px rows with 14px
   icons in the muted colour, counts right-aligned in subtle text, a tracked capital group heading
@@ -227,14 +236,16 @@ product panels), `m-stack` and `m-cluster` inside. A public section is 48–64px
 
 ### The two families
 
-- **Public pages** (pricing, reading, a marketing page): the white rim and the warm grey `#ece9ea` sheet with
-  40px corners; the white header plate joined to the rim; heavy centred display headlines at 48–54px with a
+- **Public pages** (pricing, reading, a marketing page): the warm grey `#ece9ea` ground inside the white rim
+  with 40px corners, the rim fixed to the window; the white header plate joined to the rim; heavy centred display headlines at 48–54px with a
   muted 18–20px lead; maroon and outline pills at 44px; site cards with 24px corners and the md shadow; the
   maroon footer, which is a dark "window": a framed table of link columns with its own title bar. Body 16px.
 - **The app** (dashboard, list and detail, settings, empty state, errors): the nav on the white rim beside a
   near-white `#f8f8f8` sheet with 24px corners; a mono crumb and a 32px display title; white product panels
   with 12px corners and inset hairline rings; 13px text; pills at 28–34px; no footer.
-- **The doors** (onboarding, sign-in): the public sheet with no header links, one rimmed white card centred.
+- **The doors** (onboarding, sign-in): the public ground and fixed rim with no header links: the wordmark row
+  (with "Do this later" or "Start a free trial" at the right), a centred 48–54px display headline and its
+  muted lead, then one rimmed white card.
 
 ### How a screen is assembled
 
@@ -276,9 +287,11 @@ product panels), `m-stack` and `m-cluster` inside. A public section is 48–64px
   two pills; the maroon footer.
 - **Errors.** Field and form errors, a connection warning, a toast, and the three one-line whole pages.
 - **Reading.** A "Contents" rail with a dash on the current item, the breadcrumb with the date at the
-  right, a display title, a muted lead, a rimmed product picture, prose, and the footer.
-- **Sign-in.** A rimmed white card centred on the warm sheet: the wordmark, "Welcome back", two outline
-  pills, a divider, the email field and the maroon pill.
+  right, a display title that steps down on narrower windows, a muted lead, a rimmed product picture, prose,
+  and the footer.
+- **Sign-in.** The door shaped as onboarding is: the wordmark row with "Start a free trial", "Welcome back" as
+  the centred display headline with its lead, then one rimmed white card with two outline pills, a divider,
+  the email field and the maroon pill.
 
 ## Words
 

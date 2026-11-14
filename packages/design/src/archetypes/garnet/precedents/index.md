@@ -12,7 +12,7 @@ Garnet's screens are its nine recipes: the seven every language has, then `readi
 | `pricing` | Two plans, a period switch, the comparison, questions, the footer | marketing | public | [choose-an-option](../patterns/choose-an-option.md), [commit-to-the-main-action](../patterns/commit-to-the-main-action.md), [move-between-areas](../patterns/move-between-areas.md) |
 | `errors` | Field, form, connection, toast and whole-page errors | error | app | [show-an-error](../patterns/show-an-error.md) |
 | `reading` | A changelog post with its rail and a rimmed picture | detail | public | [show-one-thing](../patterns/show-one-thing.md), [move-between-areas](../patterns/move-between-areas.md) |
-| `sign-in` | The app's door: one rimmed card | form, firstUse | door | [commit-to-the-main-action](../patterns/commit-to-the-main-action.md) |
+| `sign-in` | The app's door, shaped as onboarding: the wordmark row, a centred headline and lead, one rimmed card | form, firstUse | door | [commit-to-the-main-action](../patterns/commit-to-the-main-action.md) |
 
 ## Which recipe to start from
 

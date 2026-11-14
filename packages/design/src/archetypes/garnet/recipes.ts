@@ -86,6 +86,9 @@ const rim = (inner: string, style = '') =>
 // From a phone up the page sits in a white rim with 40px corners; on a phone it runs to the edges
 const rimPad = 'min(0.5rem, max(0px, calc((100vw - 40rem) * 100)))';
 const sheetRadius = 'min(2.5rem, max(0px, calc((100vw - 40rem) * 100)))';
+// On public pages and the doors the warm grey is the page's own ground, and the white rim is a frame fixed to
+// the window, drawn over the page as it scrolls: an empty ring, never a box around the content
+const windowFrame = `<div aria-hidden="true" style="position: fixed; inset: ${rimPad}; z-index: 20; pointer-events: none; border-radius: ${sheetRadius}; box-shadow: 0 0 0 100vmax var(--m-color-bg-surface)"></div>`;
 
 // A company mark: a 16px rounded square with its initial on a tint (never a real logo)
 const mark = (letter: string, tone: string) =>
@@ -298,8 +301,8 @@ const stepTab = (n: string, label: string, state: 'done' | 'current' | 'next') =
 const pickOption = (id: string, title: string, desc: string, checked = false) =>
   `<label for="${id}" class="m-cluster" data-gap="3" data-align="start" style="flex-wrap: nowrap; padding: var(--m-space-4); border-radius: var(--m-radius-md); border: var(--m-border-width-thin) solid var(--m-color-border-${checked ? 'strong' : 'default'}); background: var(--m-color-bg-surface); cursor: pointer"><input class="m-radio" type="radio" name="gn-source" id="${id}"${checked ? ' checked' : ''} style="margin-block-start: 2px"><span class="m-stack" data-gap="1"><span style="font-weight: var(--m-font-weight-medium)">${title}</span><span style="${muted}; font-size: var(--m-font-size-sm)">${desc}</span></span></label>`;
 
-const onboarding = `<div style="min-block-size: 100vh; padding: ${rimPad}; background: var(--m-color-bg-surface)">
-  <main style="min-block-size: calc(100vh - 1rem); background: var(--m-color-bg-canvas); border-radius: ${sheetRadius}; padding: var(--m-space-6) var(--m-space-4) var(--m-space-16); display: flex; flex-direction: column; align-items: center; gap: var(--m-space-10)">
+const onboarding = `${windowFrame}
+  <main style="min-block-size: 100vh; padding: calc(var(--m-space-6) + ${rimPad}) var(--m-space-4) var(--m-space-16); display: flex; flex-direction: column; align-items: center; gap: var(--m-space-10)">
     <div class="m-cluster" data-justify="between" style="inline-size: min(100%, 61rem)">${wordmark()}<button type="button" class="m-button" data-variant="ghost" data-size="sm">Do this later</button></div>
     <ol class="m-cluster" data-gap="1" data-justify="center" style="padding: 3px; margin: 0; list-style: none; border-radius: var(--m-radius-full); background: var(--m-color-bg-sunken)" aria-label="Setup steps">
       ${stepTab('01', 'Workspace', 'done')}
@@ -328,8 +331,7 @@ const onboarding = `<div style="min-block-size: 100vh; padding: ${rimPad}; backg
       </form>`,
       'inline-size: min(100%, 34rem)',
     )}
-  </main>
-</div>`;
+  </main>`;
 
 // ── Settings: a grouped nav beside hairline rows in one white panel ─────────────────────────────────
 const setNav = (groups: [string, string[]][], current: string) =>
@@ -421,7 +423,7 @@ const emptyState = shell(
 // widths collapse to zero below 48rem, or above it for the menu)
 const wideOnly = 'max(0px, calc((100vw - 48rem) * 100))';
 const phoneOnly = 'max(0px, calc((48rem - 100vw) * 100))';
-const siteHeader = (current: string) => `    <header class="m-navbar" style="max-inline-size: 69rem; margin-inline: auto; border-end-start-radius: var(--m-radius-lg); border-end-end-radius: var(--m-radius-lg)">
+const siteHeader = (current: string) => `    <header class="m-navbar" data-sticky style="max-inline-size: 69rem; margin-inline: auto; border-end-start-radius: var(--m-radius-lg); border-end-end-radius: var(--m-radius-lg)">
       <a class="m-navbar-brand" href="#" style="color: var(--m-color-fg-default); text-decoration: none">${wordmark('var(--m-font-size-lg)')}</a>
       <nav class="m-navbar-nav" aria-label="Site" style="max-inline-size: ${wideOnly}; overflow: hidden">
 ${['Product', 'Stories', 'Careers', 'Pricing'].map((l) => `        <a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${l}${l === 'Product' ? ` ${icon(I.down, 12)}` : ''}</a>`).join('\n')}
@@ -446,12 +448,11 @@ const siteFooter = `  <footer data-theme="garnet" data-mode="dark" style="backgr
     </div>
     <p style="text-align: center; ${subtle}; font-size: var(--m-font-size-xs); margin-block-start: var(--m-space-12)">© 2026 Larch Software</p>
   </footer>`;
-const site = (current: string, main: string) => `<div style="min-block-size: 100vh; padding: ${rimPad}; padding-block-start: 0; background: var(--m-color-bg-surface)">
-  <div style="background: var(--m-color-bg-canvas); border-radius: 0 0 ${sheetRadius} ${sheetRadius}; padding-block-end: var(--m-space-2)">
+const site = (current: string, main: string) => `${windowFrame}
+<div style="min-block-size: 100vh; padding: 0 ${rimPad} ${rimPad}">
 ${siteHeader(current)}
 ${main}
 ${siteFooter}
-  </div>
 </div>`;
 
 // ── Pricing ─────────────────────────────────────────────────────────────────────────────────────────
@@ -607,7 +608,7 @@ const reading = site(
           <nav class="m-breadcrumb" aria-label="Breadcrumb"><ol><li><a href="#">Changelog</a></li><li><a href="#" aria-current="page">Saved views</a></li></ol></nav>
           <time datetime="2026-11-04" style="${subtle}; font-size: var(--m-font-size-md)">November 4, 2026</time>
         </div>
-        <h1 id="gn-post" style="${display('clamp(2.25rem, 5vw, 3.1rem)')}">Saved views</h1>
+        <h1 id="gn-post" style="${display('clamp(1.875rem, 3.9vw, 3.1rem)')}">Saved views</h1>
         <p style="${muted}; font-size: 1.2rem; line-height: 1.55; max-inline-size: 36rem">Keep the filters, columns and order you use every week, and open them in one click from the nav.</p>
         ${frameShot}
         <div class="m-prose" style="font-size: var(--m-font-size-lg)">
@@ -622,19 +623,20 @@ const reading = site(
     </main>`,
 );
 
-// ── Sign-in: the app's door, a rimmed white card on the warm sheet ──────────────────────────────────
-const signIn = `<div style="min-block-size: 100vh; padding: ${rimPad}; background: var(--m-color-bg-surface)">
-  <main style="min-block-size: calc(100vh - 1rem); background: var(--m-color-bg-canvas); border-radius: ${sheetRadius}; display: grid; place-items: center; padding: var(--m-space-10) var(--m-space-4)">
+// ── Sign-in: the app's door, shaped as onboarding is: the wordmark row, the centred display headline and its
+// lead on the warm ground, then one rimmed white card ─────────────────────────────────────────────────
+const signIn = `${windowFrame}
+  <main style="min-block-size: 100vh; padding: calc(var(--m-space-6) + ${rimPad}) var(--m-space-4) var(--m-space-16); display: flex; flex-direction: column; align-items: center; gap: var(--m-space-10)">
+    <div class="m-cluster" data-justify="between" style="inline-size: min(100%, 61rem)">${wordmark()}<a class="m-button" data-variant="ghost" data-size="sm" href="#">Start a free trial</a></div>
+    <div class="m-stack" data-gap="4" data-align="center" style="text-align: center; max-inline-size: 40rem">
+      <h1 id="gn-in-title" style="${display('clamp(2.25rem, 5vw, var(--m-font-size-4xl))')}">Welcome back</h1>
+      <p style="${muted}; font-size: var(--m-font-size-lg); line-height: var(--m-font-leading-relaxed)">Sign in to your team's workspace.</p>
+    </div>
     ${rim(
-      `<section class="m-stack" data-gap="6" style="background: var(--m-color-bg-surface); border-radius: var(--m-radius-lg); padding: clamp(var(--m-space-6), 6vw, var(--m-space-10))" aria-labelledby="gn-in-title">
-        <div class="m-stack" data-gap="4" data-align="center" style="text-align: center">
-          ${wordmark()}
-          <h1 id="gn-in-title" style="${display('var(--m-font-size-3xl)')}">Welcome back</h1>
-          <p style="${muted}; font-size: var(--m-font-size-md)">Sign in to your team's workspace.</p>
-        </div>
+      `<section class="m-stack" data-gap="5" style="background: var(--m-color-bg-surface); border-radius: var(--m-radius-lg); padding: clamp(var(--m-space-5), 4vw, var(--m-space-8))" aria-labelledby="gn-in-title">
         <div class="m-stack" data-gap="3">
-          <button type="button" class="m-button" data-size="lg" style="inline-size: 100%">${icon(I.mail, 16)} Continue with your work email</button>
-          <button type="button" class="m-button" data-size="lg" style="inline-size: 100%">${icon(I.key, 16)} Continue with a passkey</button>
+          <button type="button" class="m-button" data-size="lg" style="inline-size: 100%">${icon(I.mail)} Continue with your work email</button>
+          <button type="button" class="m-button" data-size="lg" style="inline-size: 100%">${icon(I.key)} Continue with a passkey</button>
         </div>
         <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap; ${subtle}; font-size: var(--m-font-size-xs)"><span style="flex: 1; ${hair}"></span>or with a link<span style="flex: 1; ${hair}"></span></div>
         <form class="m-stack" data-gap="3">
@@ -644,12 +646,10 @@ const signIn = `<div style="min-block-size: 100vh; padding: ${rimPad}; backgroun
           </div>
           <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Send me a sign-in link</button>
         </form>
-        <p style="${subtle}; font-size: var(--m-font-size-xs); text-align: center">New here? <a href="#" style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-medium)">Start a free trial</a></p>
       </section>`,
       'inline-size: min(100%, 27rem)',
     )}
-  </main>
-</div>`;
+  </main>`;
 
 export const garnetRecipes: ArchetypeRecipe[] = [
   {
@@ -691,7 +691,7 @@ export const garnetRecipes: ArchetypeRecipe[] = [
     name: 'pricing',
     title: 'Pricing',
     description:
-      'The public frame: a white rim, the warm sheet, the header plate; a heavy centred headline, a period switch with a yellow saving, a rimmed plan card beside a plain one, the comparison table, questions and the maroon footer.',
+      'The public frame: the warm ground inside a white rim fixed to the window, the header plate; a heavy centred headline, a period switch with a yellow saving, a rimmed plan card beside a plain one, the comparison table, questions and the maroon footer.',
     html: pricing,
   },
   {
@@ -705,13 +705,14 @@ export const garnetRecipes: ArchetypeRecipe[] = [
     name: 'reading',
     title: 'Reading',
     description:
-      'A changelog post: a "Contents" rail with a dash on the current section, a breadcrumb with the date at the right, a heavy title, a muted lead, a rimmed product picture and the prose at 16/27.',
+      'A changelog post: a "Contents" rail with a dash on the current section, a breadcrumb with the date at the right, a heavy title that steps down on narrower windows, a muted lead, a rimmed product picture and the prose at 16/27.',
     html: reading,
   },
   {
     name: 'sign-in',
     title: 'Sign-in',
-    description: 'The app’s door: a rimmed white card centred on the warm sheet with the wordmark, a heavy title, two outline pills and the maroon one.',
+    description:
+      'The app’s door, shaped as onboarding is: the wordmark row, a heavy centred headline and its lead on the warm ground, then one rimmed white card with two outline pills and the maroon one.',
     html: signIn,
   },
 ];
