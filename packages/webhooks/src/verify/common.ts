@@ -67,13 +67,17 @@ export function safeEqual(a: Buffer, b: Buffer): boolean {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
-/** Parses Unix seconds and checks them against the tolerance. */
-export function checkedTimestamp(provider: string, value: string | undefined, options: TimestampOptions): number {
+/**
+ * Parses Unix seconds and checks them against the tolerance. `text` is the timestamp exactly as
+ * sent: the sender signed those characters, so the MAC is computed over them and not over the
+ * parsed number (a leading zero would otherwise turn a valid signature into a mismatch).
+ */
+export function checkedTimestamp(provider: string, value: string | undefined, options: TimestampOptions): { timestampSeconds: number; text: string } {
   if (!value || !/^\d{1,12}$/.test(value)) return invalidSignature(provider, 'timestamp is missing or not Unix seconds');
   const timestampSeconds = Number(value);
   const now = options.nowSeconds ?? Math.floor(Date.now() / 1000);
   if (Math.abs(now - timestampSeconds) > (options.toleranceSeconds ?? DEFAULT_TOLERANCE_SECONDS)) {
     return invalidSignature(provider, 'timestamp is outside the tolerance');
   }
-  return timestampSeconds;
+  return { timestampSeconds, text: value };
 }

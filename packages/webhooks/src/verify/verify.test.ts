@@ -120,7 +120,27 @@ describe('verifyStripeWebhook', () => {
   it('accepts a signed delivery and takes the event id from the body', () => {
     const headers = { 'Stripe-Signature': signStripeWebhook('whsec_live', now, body) };
     expect(verifyStripeWebhook(body, headers, 'whsec_live', { nowSeconds: now })).toEqual({ eventId: 'evt_1', timestampSeconds: now });
-    expect(verifyStripeWebhook('not json', { 'stripe-signature': signStripeWebhook('k', now, 'not json') }, 'k', { nowSeconds: now })).toEqual({ timestampSeconds: now });
+    // A signed body with no id of its own is keyed on the signature that matched, so a replay is still a duplicate.
+    const plain = verifyStripeWebhook('not json', { 'stripe-signature': signStripeWebhook('k', now, 'not json') }, 'k', { nowSeconds: now });
+    expect(plain.eventId).toMatch(/^sig:[0-9a-f]{64}$/);
+    expect(verifyStripeWebhook('not json', { 'stripe-signature': signStripeWebhook('k', now, 'not json') }, 'k', { nowSeconds: now }).eventId).toBe(plain.eventId);
+    expect(verifyStripeWebhook('other text', { 'stripe-signature': signStripeWebhook('k', now, 'other text') }, 'k', { nowSeconds: now }).eventId).not.toBe(plain.eventId);
+    expect(verifyStripeWebhook('{"no":"id"}', { 'stripe-signature': signStripeWebhook('k', now, '{"no":"id"}') }, 'k', { nowSeconds: now }).eventId).toMatch(/^sig:/);
+  });
+
+  it('checks the signature over the timestamp exactly as it was sent', () => {
+    // A sender that writes its timestamp with a leading zero signed those characters.
+    const text = `0${now}`;
+    const stripeStyle = `t=${text},v1=${createHmac('sha256', 'k').update(`${text}.${body}`).digest('hex')}`;
+    expect(verifyStripeWebhook(body, { 'stripe-signature': stripeStyle }, 'k', { nowSeconds: now })).toEqual({ eventId: 'evt_1', timestampSeconds: now });
+
+    const secret = `whsec_${Buffer.from('0123456789abcdef0123456789abcdef').toString('base64')}`;
+    const [key] = parseStandardWebhookSecrets(secret);
+    const signature = `v1,${createHmac('sha256', key).update(`msg_1.${text}.${body}`).digest('base64')}`;
+    const headers = { 'webhook-id': 'msg_1', 'webhook-timestamp': text, 'webhook-signature': signature };
+    expect(verifyStandardWebhook(body, headers, secret, { nowSeconds: now })).toEqual({ eventId: 'msg_1', timestampSeconds: now });
+    // And the parsed number is not accepted in its place.
+    expect(() => verifyStandardWebhook(body, { ...headers, 'webhook-timestamp': String(now) }, secret, { nowSeconds: now })).toThrow(invalid);
   });
 
   it('refuses a changed body or timestamp, a stale delivery and a wrong secret', () => {
