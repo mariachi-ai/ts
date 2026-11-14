@@ -46,8 +46,14 @@ describe('FusionAuthAuthProvider.verify', () => {
     await expect(provider.verify(await sign({ tid: 'user.app.alice' }))).rejects.toMatchObject({ code: 'auth/invalid-token', message: expect.stringContaining('reserved') });
   });
 
-  it('does not check the issuer unless one is configured', async () => {
-    const lenient = createFusionAuthAuth({ serverUrl, clientId: 'app-1' });
+  it('does not check the issuer unless one is configured, and says so once when it is built', async () => {
+    const warnings: string[] = [];
+    const logger = { warn: (_context: Record<string, unknown>, message: string) => void warnings.push(message) };
+    createFusionAuthAuth({ serverUrl, clientId: 'app-1', issuer: 'acme.com', logger });
+    expect(warnings).toEqual([]);
+    const lenient = createFusionAuthAuth({ serverUrl, clientId: 'app-1', logger });
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0]).toContain('`iss` is not checked');
     expect((await lenient.verify(await sign({ tid: 't' }, 'app-1', 'anything.example'))).tenantId).toBe('t');
   });
 });

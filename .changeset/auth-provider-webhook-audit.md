@@ -24,7 +24,8 @@ and a tenant is authenticated.
 `@mariachi/auth-gotrue`: hooks are checked over the timestamp exactly as sent.
 
 `@mariachi/auth-fusionauth`: `verify` returns the verified payload in `claims`. The `issuer` option's
-comment said it defaulted to the server URL; it isn't checked unless set, and now says so.
+comment said it defaulted to the server URL; it isn't checked unless set, and now says so, and the
+provider warns once when built without one (through `logger` if given).
 
 All four providers' `verify`, and `createAuthWebhookDispatcher`, refuse a tenant in the reserved
 personal-tenant namespace (`user.`).

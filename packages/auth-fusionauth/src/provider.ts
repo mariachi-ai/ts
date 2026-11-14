@@ -27,6 +27,11 @@ export class FusionAuthAuthProvider implements AuthProvider {
 
   constructor(config: FusionAuthConfig) {
     this.config = config;
+    if (!config.issuer) {
+      const message = 'FusionAuth: no `issuer` configured, so the tokens\' `iss` is not checked (the audience still is). Set it to the tenant\'s Issuer.';
+      if (config.logger) config.logger.warn({ provider: 'fusionauth' }, message);
+      else process.emitWarning(message, { code: 'MARIACHI_FUSIONAUTH_ISSUER' });
+    }
     const baseUrl = config.serverUrl.replace(/\/$/, '');
     const jwksUrl = new URL('/.well-known/jwks.json', baseUrl);
     this.jwks = createRemoteJWKSet(jwksUrl);
