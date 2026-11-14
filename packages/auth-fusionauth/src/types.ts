@@ -3,6 +3,9 @@ export interface FusionAuthConfig {
   serverUrl: string;
   /** Application client ID used as JWT audience (aud) */
   clientId: string;
-  /** Optional custom issuer; defaults to serverUrl */
+  /**
+   * The `iss` every token must carry: the tenant's Issuer setting in FusionAuth (its default is
+   * `acme.com`, not the server URL). Not checked unless set, so set it.
+   */
   issuer?: string;
 }

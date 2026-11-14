@@ -1,5 +1,5 @@
 export type { ClerkConfig } from './types';
-export { ClerkAuthProvider } from './provider';
+export { ClerkAuthProvider, clerkIdentity, type ClerkSessionClaims } from './provider';
 export { createClerkMiddleware } from './middleware';
 export type { ClerkMiddlewareOptions } from './middleware';
 

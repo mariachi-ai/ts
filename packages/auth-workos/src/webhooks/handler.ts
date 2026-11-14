@@ -5,8 +5,8 @@ import type { AuthWebhookEvent, AuthWebhookHandler } from '@mariachi/auth';
 const SIGNATURE_HEADER = 'workos-signature';
 
 export interface WorkOSWebhookHandlerConfig {
-  /** The webhook endpoint's signing secret (WorkOS Dashboard → Webhooks). */
-  secret: string;
+  /** The webhook endpoint's signing secret (WorkOS Dashboard → Webhooks), or several while one is being rotated. */
+  secret: string | string[];
   /** Reject deliveries signed longer ago (or further ahead) than this. Default 180s, as the WorkOS SDK. */
   toleranceSeconds?: number;
   /** The clock, for tests. */
@@ -34,20 +34,20 @@ function header(headers: Record<string, string | string[] | undefined>, name: st
 }
 
 /** Parses `t=<ms>, v1=<hex>` (order and spaces don't matter). */
-function parseSignature(value: string): { timestamp: number; signatures: string[] } | null {
-  let timestamp: number | null = null;
+function parseSignature(value: string): { timestamp: number; text: string; signatures: string[] } | null {
+  let text: string | null = null;
   const signatures: string[] = [];
   for (const part of value.split(',')) {
     const [k, v] = part.trim().split('=', 2);
     if (!k || !v) continue;
-    if (k === 't' && /^\d+$/.test(v)) timestamp = Number(v);
-    else if (k === 'v1' && /^[0-9a-f]+$/i.test(v)) signatures.push(v.toLowerCase());
+    if (k === 't' && /^\d{1,15}$/.test(v)) text = v;
+    else if (k === 'v1' && /^[0-9a-f]+$/i.test(v) && v.length % 2 === 0) signatures.push(v.toLowerCase());
   }
-  return timestamp === null || signatures.length === 0 ? null : { timestamp, signatures };
+  return text === null || signatures.length === 0 ? null : { timestamp: Number(text), text, signatures };
 }
 
 /** The `v1` signature WorkOS computes: HMAC-SHA256, keyed with the secret, of `<t>.<raw body>`, in hex. */
-export function computeWorkOSSignature(secret: string, timestamp: number, rawBody: string | Buffer): string {
+export function computeWorkOSSignature(secret: string, timestamp: number | string, rawBody: string | Buffer): string {
   const raw = typeof rawBody === 'string' ? Buffer.from(rawBody, 'utf8') : rawBody;
   return createHmac('sha256', secret).update(`${timestamp}.`).update(raw).digest('hex');
 }
@@ -62,8 +62,11 @@ export class WorkOSWebhookHandler implements AuthWebhookHandler {
   private readonly toleranceMs: number;
   private readonly now: () => number;
 
+  private readonly secrets: string[];
+
   constructor(private readonly config: WorkOSWebhookHandlerConfig) {
-    if (!config.secret) throw new AuthError('auth/invalid-config', 'WorkOS webhooks: `secret` is required');
+    this.secrets = (Array.isArray(config.secret) ? config.secret : [config.secret]).filter((secret) => typeof secret === 'string' && secret.trim() !== '');
+    if (this.secrets.length === 0) throw new AuthError('auth/invalid-config', 'WorkOS webhooks: `secret` is required');
     this.toleranceMs = (config.toleranceSeconds ?? 180) * 1000;
     this.now = config.now ?? Date.now;
   }
@@ -77,10 +80,13 @@ export class WorkOSWebhookHandler implements AuthWebhookHandler {
     if (Math.abs(this.now() - parsed.timestamp) > this.toleranceMs) {
       throw new AuthError('auth/webhook-verification-failed', 'WorkOS webhook timestamp outside the tolerance');
     }
-    const expected = Buffer.from(computeWorkOSSignature(this.config.secret, parsed.timestamp, raw), 'hex');
-    const ok = parsed.signatures.some((sig) => {
-      const given = Buffer.from(sig, 'hex');
-      return given.length === expected.length && timingSafeEqual(given, expected);
+    // Over the timestamp exactly as sent: the sender signed those characters, not the parsed number.
+    const ok = this.secrets.some((secret) => {
+      const expected = Buffer.from(computeWorkOSSignature(secret, parsed.text, raw), 'hex');
+      return parsed.signatures.some((sig) => {
+        const given = Buffer.from(sig, 'hex');
+        return given.length === expected.length && timingSafeEqual(given, expected);
+      });
     });
     if (!ok) throw new AuthError('auth/webhook-verification-failed', 'WorkOS webhook signature invalid');
 

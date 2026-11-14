@@ -101,6 +101,15 @@ describe('GoTrueAuthProvider.verify', () => {
     expect(provider.name).toBe('gotrue');
   });
 
+  it('refuses a token whose org claim is in the reserved personal-tenant namespace', async () => {
+    const key = await makeKey('k-reserved');
+    published = [key.jwk];
+    await expect(createGoTrueAuth({ url: base }).verify(await sign(key, gotrueClaims({ org_id: 'user.app.alice' })))).rejects.toMatchObject({
+      code: 'auth/invalid-token',
+      message: expect.stringContaining('reserved'),
+    });
+  });
+
   it('leaves tenantId empty without the org claim, and reads a custom org claim and roles/scope', async () => {
     const key = await makeKey('k2');
     published = [key.jwk];

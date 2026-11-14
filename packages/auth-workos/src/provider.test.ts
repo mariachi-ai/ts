@@ -66,6 +66,13 @@ describe('WorkOSAuthProvider.verify', () => {
     expect(identity.claims?.client_id).toBe(CLIENT_ID);
   });
 
+  it('refuses a token whose organization is in the reserved personal-tenant namespace', async () => {
+    await expect(provider.verify(await sign(key, sessionClaims({ org_id: 'user.app.alice' })))).rejects.toMatchObject({
+      code: 'auth/invalid-token',
+      message: expect.stringContaining('reserved'),
+    });
+  });
+
   it('gives an empty tenant and no roles to a user outside any organization', async () => {
     const identity = await provider.verify(await sign(key, sessionClaims()));
     expect(identity.tenantId).toBe('');

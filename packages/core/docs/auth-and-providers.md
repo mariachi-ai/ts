@@ -18,8 +18,8 @@ Multi-tenant auth is consistent because every provider maps its own concepts int
 
 | Provider   | Tenant source in token        | Roles/scopes source   |
 |-----------|--------------------------------|------------------------|
-| **Clerk** | `org_id` → `tenantId`         | `org_role` → `scopes` |
-| **FusionAuth** | `applicationId` → `tenantId` | `roles[]` → `scopes`   |
+| **Clerk** | `org_id` → `tenantId`         | `org_role` → `roles`; that plus `org_permissions` → `scopes` |
+| **FusionAuth** | `tid`, else `applicationId` → `tenantId` | `roles[]` → `roles` and `scopes` |
 | **GoTrue** | `org_id` (configurable, added by a custom access-token hook) → `tenantId` | `role`, `roles[]`, `org_role` → `roles`; those plus `scope` → `scopes` |
 | **WorkOS** | `org_id` → `tenantId` | `role`/`roles` → `roles`, `permissions` → `scopes` |
 | **JWT** (core) | `tenantId` claim            | Custom claims / `scopes` |
@@ -128,6 +128,17 @@ await identity.signOut({ sessionId: tokens.sessionId, refreshToken });
 ## Webhooks
 
 - **Auth webhook flow** — `createAuthWebhookDispatcher` (from `@mariachi/auth`) takes any `AuthWebhookHandler`. Clerk, FusionAuth, GoTrue and WorkOS each provide a handler via `provider.createWebhookHandler({ secret })`. The dispatcher verifies the webhook (using the handler), normalizes the event to `AuthWebhookEvent`, and calls communication procedures (e.g. `auth.user.created`). Same flow for every provider; only the verification and event parsing are provider-specific.
+
+Every provider's handler follows two rules. The event id that dedup uses is one the signature
+covers, never a header a replay could change. And the tenant an event runs in comes from the signed
+body. An event whose tenant is in the reserved personal-tenant namespace is refused by the dispatcher.
+
+| Provider | Signature | Event id | Tenant |
+| --- | --- | --- | --- |
+| Clerk | Svix: HMAC over id, timestamp and body | `svix-id` (signed) | The body's organization, for organization events |
+| FusionAuth | A signed JWT holding the body's sha256 | The body's event id, else a digest of the body | The body's `tenantId` |
+| GoTrue | Standard Webhooks: HMAC over id, timestamp and body | `webhook-id` (signed) | The org claim in the body's claims |
+| WorkOS | HMAC over timestamp and body | The body's `id`, else a digest of the body | The body's `organization_id` |
 
 ## Authorization (RBAC)
 
