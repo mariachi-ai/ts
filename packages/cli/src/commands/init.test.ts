@@ -30,16 +30,16 @@ describe('mariachi init --auth', () => {
     await init(join(dir, 'app'), '--no-example');
     const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf-8'));
     expect(pkg.dependencies['@mariachi/auth-gotrue']).toBeUndefined();
-    expect(existsSync(join(dir, 'app/ensemble.environment.json'))).toBe(false);
+    expect(existsSync(join(dir, 'app/src/api/pages/sign-in.ts'))).toBe(false);
   });
 
-  it('generates the Ensemble login template with --auth ensemble', async () => {
-    await init(join(dir, 'app'), '--no-example', '--auth', 'ensemble');
+  it('generates the GoTrue sign-in template with --auth gotrue', async () => {
+    await init(join(dir, 'app'), '--no-example', '--auth', 'gotrue');
     const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf-8'));
     expect(pkg.dependencies).toHaveProperty('@mariachi/auth-gotrue');
     expect(pkg.dependencies).toHaveProperty('@mariachi/tenancy');
-    expect(existsSync(join(dir, 'app/ensemble.environment.json'))).toBe(true);
-    expect(existsSync(join(dir, 'app/seed/users.yaml'))).toBe(true);
+    expect(existsSync(join(dir, 'app/src/api/pages/sign-in.ts'))).toBe(true);
+    expect(existsSync(join(dir, 'app/src/api/controllers/me.controller.ts'))).toBe(true);
   });
 
   it('refuses an unknown provider', async () => {

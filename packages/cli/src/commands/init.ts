@@ -11,7 +11,7 @@ export function registerInitCommand(program: Command): void {
     .option('-n, --name <name>', 'package name (default: directory name)')
     .option('--no-example', 'skip the example "note" entity')
     .option('--mariachi-version <range>', 'version range for @mariachi/* dependencies')
-    .option('--auth <provider>', 'how users sign in: jwt (HS256 tokens from JWT_SECRET) or ensemble (Ensemble login: GoTrue, orgs as tenants)', 'jwt')
+    .option('--auth <provider>', 'how users sign in: jwt (HS256 tokens from JWT_SECRET) or gotrue (GoTrue / Supabase Auth, with a sign-in page)', 'jwt')
     .action(async (directory: string, opts: { name?: string; example: boolean; mariachiVersion?: string; auth: string }) => {
       try {
         const outputDir = resolve(directory);
@@ -31,8 +31,8 @@ export function registerInitCommand(program: Command): void {
         ]) {
           console.log(`  ${DIM}$${RESET} ${step}`);
         }
-        if (auth === 'ensemble') {
-          console.log(`\n  Sign-in is Ensemble's: commit drizzle/, then create the environment from ${DIM}ensemble.environment.json${RESET} (see README.md).`);
+        if (auth === 'gotrue') {
+          console.log(`\n  Sign-in is GoTrue's: set ${DIM}AUTH_URL${RESET} in .env (see README.md), then open ${DIM}/api/sign-in${RESET}.`);
         }
       } catch (error) {
         fail(error);

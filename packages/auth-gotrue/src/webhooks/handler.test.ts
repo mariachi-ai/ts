@@ -25,7 +25,7 @@ function signed(body: unknown, opts: { key?: Buffer; id?: string; ts?: number; e
   };
 }
 
-// The access-token hook's payload as GoTrue v2.197.0 sent it (reports/AU0/05d-hook-http-payload.json).
+// The access-token hook's payload as GoTrue v2.197.0 sent it.
 const accessTokenHook = (method = 'password') => ({
   metadata: { uuid: '1a5e06fe-1dae-42a2-9a25-9f2eb12f56ad', time: '2026-10-21T11:34:49.023243544Z', name: 'customize-access-token', ip_address: '172.21.0.5' },
   user_id: '190fe7b7-ba4b-46b6-950a-d3e323803432',

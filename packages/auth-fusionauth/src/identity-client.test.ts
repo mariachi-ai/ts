@@ -21,7 +21,7 @@ const faUser = (over: Partial<FusionAuthUser> = {}): FusionAuthUser => ({
   fullName: 'Ada Lovelace',
   imageUrl: 'https://img.example.org/ada.png',
   verified: true,
-  data: { externalId: 'ensemble-uuid-1' },
+  data: { externalId: 'app-uuid-1' },
   identities: [{ type: 'email', value: 'ada@example.org', verified: true, verifiedReason: 'Completed' }],
   ...over,
 });
@@ -58,7 +58,7 @@ describe('FusionAuthIdentityClient', () => {
     const out = await client.signInWithPassword({ email: 'ada@example.org', password: 'pw', ipAddress: '203.0.113.7' });
     expect(out).toEqual({
       status: 'signed-in',
-      user: { id: 'fa-user-1', email: 'ada@example.org', emailVerified: true, name: 'Ada Lovelace', avatarUrl: 'https://img.example.org/ada.png', externalId: 'ensemble-uuid-1' },
+      user: { id: 'fa-user-1', email: 'ada@example.org', emailVerified: true, name: 'Ada Lovelace', avatarUrl: 'https://img.example.org/ada.png', externalId: 'app-uuid-1' },
       tokens: { accessToken: ACCESS, refreshToken: 'rt-1', sessionId: 'rt-id-1', expiresAt: 1_792_656_827_000 },
     });
     expect(calls[0]).toMatchObject({ method: 'POST', url: 'https://auth.example.org/api/login', headers: { Authorization: 'fa-api-key', 'X-Forwarded-For': '203.0.113.7' } });
@@ -152,17 +152,17 @@ describe('FusionAuthIdentityClient', () => {
       if (c.method === 'POST') return { status: 200, body: { user: faUser({ email: 'new@example.org', identities: [{ type: 'email', value: 'new@example.org', verified: false, verifiedReason: 'Skipped' }] }) } };
       return { status: 200 };
     });
-    expect((await client.getUser('fa-user-1'))?.externalId).toBe('ensemble-uuid-1');
+    expect((await client.getUser('fa-user-1'))?.externalId).toBe('app-uuid-1');
     expect(await client.getUser('missing')).toBeNull();
     expect((await client.findUserByEmail('ada@example.org'))?.id).toBe('fa-user-1');
 
-    const created = await client.createUser({ email: 'new@example.org', emailVerified: true, externalId: 'ensemble-uuid-2', name: 'New' });
+    const created = await client.createUser({ email: 'new@example.org', emailVerified: true, externalId: 'app-uuid-2', name: 'New' });
     expect(created).toMatchObject({ email: 'new@example.org', emailVerified: true });
     const post = calls.find((c) => c.method === 'POST')!;
     expect(post.url).toBe('https://auth.example.org/api/user/registration');
     const sent = JSON.parse(post.body!);
     expect(sent).toMatchObject({
-      user: { email: 'new@example.org', fullName: 'New', data: { externalId: 'ensemble-uuid-2' } },
+      user: { email: 'new@example.org', fullName: 'New', data: { externalId: 'app-uuid-2' } },
       registration: { applicationId: 'app-1' },
       skipVerification: true,
       sendSetPasswordEmail: false,
