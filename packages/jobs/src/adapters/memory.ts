@@ -137,23 +137,30 @@ export class MemoryJobAdapter implements JobQueue, JobWorker, JobScheduler {
     this.scheduleTimers.delete(name);
   }
 
-  /** Waits for the schedule's next time, enqueues its job, and waits for the one after. */
-  private arm(schedule: ScheduleDefinition): void {
+  /**
+   * Waits for the schedule's next time after `after`, enqueues its job, and waits for the one after
+   * that. The next time is always counted from the last one, never from a clock that may have
+   * stepped back: a time that has run is not run again.
+   */
+  private arm(schedule: ScheduleDefinition, after = new Date()): void {
     this.disarm(schedule.name);
-    const due = nextRun(schedule, new Date());
+    const due = nextRun(schedule, after);
     // A timer can't wait longer than this; a schedule further off is looked at again then
     const wait = Math.min(due.getTime() - Date.now(), MAX_TIMEOUT_MS);
     const timer = setTimeout(() => {
       this.scheduleTimers.delete(schedule.name);
       // Replaced or removed while this was waiting: the newer one has its own timer
       if (!this.running || this.schedules.get(schedule.name) !== schedule) return;
-      if (Date.now() >= due.getTime()) {
-        // One job per schedule per time, however often this is armed
-        void this.enqueue(schedule.jobName, schedule.data ?? {}, { jobId: `schedule:${schedule.name}:${due.getTime()}` }).catch((error: unknown) =>
-          this.logger.error({ schedule: schedule.name, err: error }, 'could not enqueue a scheduled job'),
-        );
+      if (Date.now() < due.getTime()) {
+        // Not time yet (a long wait cut short, or the clock went back): keep waiting for the same time
+        this.arm(schedule, after);
+        return;
       }
-      this.arm(schedule);
+      // One job per schedule per time, under the id the Postgres queue gives the same tick
+      void this.enqueue(schedule.jobName, schedule.data ?? {}, { jobId: `schedule:${schedule.name}:${due.toISOString()}` }).catch((error: unknown) =>
+        this.logger.error({ schedule: schedule.name, err: error }, 'could not enqueue a scheduled job'),
+      );
+      this.arm(schedule, new Date(Math.max(due.getTime(), Date.now())));
     }, Math.max(0, wait));
     // A schedule alone doesn't keep the process alive
     timer.unref?.();

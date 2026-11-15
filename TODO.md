@@ -38,8 +38,13 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
 4. **Small fixes.**
    - FusionAuth's three `IdentityClient` methods that throw `auth/not-supported` (resetting a password
      with a token, and the two halves of verifying an email with a code).
-   - Settling usage records that were never forwarded and are past the resend window: listing them,
-     and marking each as "the provider has it" or "written off".
+   - Settling usage records that were never forwarded and are past the resend window. Agreed shape:
+     `listStaleUsage` (an operator call, across tenants) and `settleStaleUsage` with an outcome of
+     `provider-has-it` or `written-off` (a note required), kept in new columns (`settlement`,
+     `settled_at`, `settled_by`, `settlement_note`). The usage stays in the totals; `forwarded_at`
+     stays the provider's own confirmation; `summarizeUsage` gains `only: 'billed' | 'written-off'`.
+     Only records past the window can be settled, the same outcome twice does nothing, and a
+     different one is refused.
    - A rate limiter in Postgres, so a project with organizations and several processes shares its
      limits without Redis.
    - `mariachi doctor`'s hint for an unreachable Redis says `docker compose up -d` even when the
