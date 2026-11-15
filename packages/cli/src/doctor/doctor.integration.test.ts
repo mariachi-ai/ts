@@ -78,7 +78,8 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
       config: 'ok',
       database: 'fail',
       migrations: 'fail',
-      redis: 'fail',
+      // A new project runs its jobs in Postgres: Redis is not asked for
+      redis: 'skip',
       architecture: 'ok',
     });
     const found = byName(results);
@@ -208,8 +209,15 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
     const pkg = JSON.parse(await readFile(join(other, 'package.json'), 'utf8'));
     await writeFile(join(other, 'package.json'), JSON.stringify({ ...pkg, mariachi: { envFiles: ['.env.development', '.env'] } }, null, 2));
     // Committed defaults, and a personal file that overrides one of them
+    // A database of its own: every project has tables now (its job queue and search), so dev migrates it
+    const ownDatabase = new URL(databaseUrl);
+    ownDatabase.pathname = `/envfiles_${randomUUID().replaceAll('-', '')}`;
+    const admin = postgres(databaseUrl, { max: 1 });
+    await admin.unsafe(`create database ${ownDatabase.pathname.slice(1)}`);
+    await admin.end();
+    const otherUrl = ownDatabase.href;
     await writeFile(join(other, '.env.development'), `SERVICE_NAME=envfiles-app\nNODE_ENV=development\nPORT=3000\nDATABASE_URL=${NOWHERE}\nREDIS_URL=${redisUrl}\nJWT_SECRET=${'d'.repeat(40)}\n`);
-    await writeFile(join(other, '.env'), `DATABASE_URL=${databaseUrl}\n`);
+    await writeFile(join(other, '.env'), `DATABASE_URL=${otherUrl}\n`);
     // This test's own values, not the ones stubbed into the process for the other project
     vi.unstubAllEnvs();
     try {
@@ -217,9 +225,10 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
       expect(files).toEqual({ files: ['.env.development', '.env'], configured: true });
       const logs: string[] = [];
       const prepared = await prepareDev({ cwd: other, envFiles: files, exec: async () => 0, log: (line) => void logs.push(line), probeMs: 1500 });
-      expect(prepared.did).toEqual([]);
-      expect(prepared.env.DATABASE_URL).toBe(databaseUrl);
-      expect(await readFile(join(other, '.env'), 'utf8')).toBe(`DATABASE_URL=${databaseUrl}\n`);
+      // No 'env': nothing was copied over the project's own files. The first migration is written and applied.
+      expect(prepared.did).toEqual(['migration', 'migrate']);
+      expect(prepared.env.DATABASE_URL).toBe(otherUrl);
+      expect(await readFile(join(other, '.env'), 'utf8')).toBe(`DATABASE_URL=${otherUrl}\n`);
 
       const results = byName(await runDoctor({ cwd: other, env: projectEnv(other, files.files), envFiles: files, timeoutMs: 3000 }));
       expect(results.env).toMatchObject({ status: 'ok', detail: 'Env files: .env.development, .env' });
