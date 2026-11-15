@@ -5,6 +5,7 @@ import {
   generateEntity,
   generateIntegration,
   generateJob,
+  generatePage,
   generateService,
   type GenerateOptions,
   type GenerateResult,
@@ -18,6 +19,7 @@ const GENERATORS: Record<string, (options: GenerateOptions) => Promise<GenerateR
   controller: generateController,
   job: generateJob,
   integration: generateIntegration,
+  page: generatePage,
 };
 
 export function registerGenerateCommand(program: Command): void {

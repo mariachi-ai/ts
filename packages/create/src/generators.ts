@@ -8,12 +8,14 @@ import { E2E_HARNESS_FILE } from './templates/e2e';
 import { entityFiles } from './templates/entity';
 import { controllerFile, integrationFiles, jobFile, serviceFiles } from './templates/parts';
 import { projectFiles } from './templates/project';
+import { PAGES_CONTROLLER_FILE, PAGES_DIR, PAGES_LAYOUT_FILE, pageFile, pageTestFile, pageTitle } from './templates/ui';
 import { PROJECT_AUTH } from './types';
 import type {
   GenerateControllerConfig,
   GenerateEntityConfig,
   GenerateIntegrationConfig,
   GenerateJobConfig,
+  GeneratePageConfig,
   GenerateResult,
   GenerateServiceConfig,
   ProjectConfig,
@@ -41,7 +43,7 @@ export async function createProject(config: ProjectConfig): Promise<GenerateResu
   }
   await mkdir(config.outputDir, { recursive: true });
   const range = config.mariachiVersion ?? `^${MARIACHI_VERSION}`;
-  const project = await writeFiles(config.outputDir, projectFiles(config.name, range, auth, { e2e: config.e2e, organizations: config.organizations }));
+  const project = await writeFiles(config.outputDir, projectFiles(config.name, range, auth, { e2e: config.e2e, organizations: config.organizations, ui: config.ui }));
   if (config.example === false) return project;
   const example = await generateEntity({ name: 'note', projectRoot: config.outputDir });
   return { ...mergeResults(project, example), updated: [] };
@@ -124,6 +126,32 @@ export async function generateJob(config: GenerateJobConfig): Promise<GenerateRe
     [
       { file: LAYOUT.jobsIndex, marker: MARKERS.imports, line: `import { ${n.camel}Job } from './${n.kebab}.job';` },
       { file: LAYOUT.jobsIndex, marker: MARKERS.jobs, line: `${n.camel}Job,` },
+    ],
+    config,
+  );
+}
+
+/** Paths a page can't have: they are the API's and the static files'. */
+const RESERVED_PAGES = new Set(['api', 'assets']);
+
+/**
+ * A page: `src/api/pages/<name>.ts` and its test, its route at `/<name>` in the pages controller,
+ * and its link in the bar. For a project made with `--ui`.
+ */
+export async function generatePage(config: GeneratePageConfig): Promise<GenerateResult> {
+  assertProject(config.projectRoot);
+  if (!existsSync(join(config.projectRoot, PAGES_CONTROLLER_FILE))) {
+    throw new ConfigError('create/no-pages', `This project has no pages (${PAGES_CONTROLLER_FILE}): it was made without --ui`);
+  }
+  const n = names(config.name);
+  if (RESERVED_PAGES.has(n.kebab)) throw new ConfigError('create/reserved-page', `/${n.kebab} is not free for a page: the API and the static files are served there`);
+  return writeFiles(
+    config.projectRoot,
+    { [`${PAGES_DIR}/${n.kebab}.ts`]: pageFile(n), [`${PAGES_DIR}/${n.kebab}.test.ts`]: pageTestFile(n) },
+    [
+      { file: PAGES_CONTROLLER_FILE, marker: MARKERS.imports, line: `import { ${n.camel}Page } from '../pages/${n.kebab}';` },
+      { file: PAGES_CONTROLLER_FILE, marker: MARKERS.pages, line: `this.get('/${n.kebab}', { root: true, auth: false }, async () => htmlResponse(${n.camel}Page()));` },
+      { file: PAGES_LAYOUT_FILE, marker: MARKERS.nav, line: `{ href: '/${n.kebab}', label: ${JSON.stringify(pageTitle(n))} },` },
     ],
     config,
   );

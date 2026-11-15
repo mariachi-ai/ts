@@ -5,6 +5,7 @@ export {
   generateController,
   generateJob,
   generateIntegration,
+  generatePage,
 } from './generators';
 export { validate, RULES } from './validate/index';
 export { names, pluralize, type Names } from './names';
@@ -21,6 +22,7 @@ export type {
   GenerateControllerConfig,
   GenerateJobConfig,
   GenerateIntegrationConfig,
+  GeneratePageConfig,
   GenerateResult,
   ValidateOptions,
   ValidationResult,
