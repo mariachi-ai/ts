@@ -2,6 +2,11 @@
   "name": "@mariachi/audit",
   "version": "0.1.0",
   "description": "Append-only audit log enforced by a database trigger, with per-tenant hash chaining, tenant-scoped queries, retention and export.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/audit"
+  },
   "mariachi": {
     "category": "domain",
     "status": "beta",

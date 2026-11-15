@@ -2,6 +2,11 @@
   "name": "@mariachi/auth",
   "version": "0.1.0",
   "description": "JWT, OAuth, sessions, API keys with rotation and scopes, database-backed RBAC and brute-force protection.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/auth"
+  },
   "mariachi": {
     "category": "security",
     "status": "beta",

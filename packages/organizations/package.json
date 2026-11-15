@@ -2,6 +2,11 @@
   "name": "@mariachi/organizations",
   "version": "0.1.0",
   "description": "Organizations, memberships and invitations kept in the app's own database, for apps whose identity provider supplies none.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/organizations"
+  },
   "mariachi": {
     "category": "security",
     "status": "alpha",
