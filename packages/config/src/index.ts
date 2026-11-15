@@ -51,15 +51,25 @@ function parse<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, value: unknown, w
   }
 }
 
+let warnedNoEnvironment = false;
+
 /**
  * Loads config from env (+ optional .env) merged with `overrides`, validates it, and caches it
  * so later `useConfig()` calls return the same object.
  */
 export function loadConfig(overrides?: AppConfigInput, options: LoadConfigOptions = {}): AppConfig {
   const source = options.env ?? process.env;
-  if (!options.env) loadDotenv(options.dotenv, (source.NODE_ENV ?? source.ENV) === 'production');
+  // ENV decides over NODE_ENV, here as in buildConfigFromEnv
+  if (!options.env) loadDotenv(options.dotenv, (source.ENV || source.NODE_ENV) === 'production');
 
   const fromEnv = buildConfigFromEnv(source);
+  // Nothing says which environment this is, so it runs as development. Said once, because in production that is a mistake.
+  if (!options.env && !overrides?.env && !source.ENV && !source.NODE_ENV && !warnedNoEnvironment) {
+    warnedNoEnvironment = true;
+    process.emitWarning('Neither ENV nor NODE_ENV is set, so this app runs as "development". Set ENV=production (or development, or test) to say which it is.', {
+      code: 'MARIACHI_ENV_UNSET',
+    });
+  }
   const merged = deepMerge(fromEnv as Record<string, unknown>, (overrides ?? {}) as Record<string, unknown>);
   const config = parse(AppConfigSchema, merged, 'configuration');
 

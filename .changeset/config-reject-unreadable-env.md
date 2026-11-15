@@ -12,4 +12,5 @@ echoed in the message.
 **Changed:** an environment name other than `development`, `test` or `production` in `ENV` or
 `NODE_ENV` is now an error. Before, `NODE_ENV=staging` ran the app as `development`, with
 production safeguards off. If `NODE_ENV` has to keep such a value for other tooling, set `ENV` to
-one of the three; `ENV` decides.
+one of the three; `ENV` decides. With neither variable set the app still runs as `development`,
+and now warns once at start (`MARIACHI_ENV_UNSET`).

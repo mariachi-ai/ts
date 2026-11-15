@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { z } from 'zod';
 import { ConfigError } from '@mariachi/core';
 import {
@@ -70,6 +70,31 @@ describe('loadConfig', () => {
     expect(loadConfig({}, { env: { PORT: ' 8080 ' } }).server.port).toBe(8080);
     // NODE_ENV=staging is common for tooling; ENV then says which of the three the app runs as
     expect(loadConfig({}, { env: { NODE_ENV: 'staging', ENV: 'production' } }).env).toBe('production');
+  });
+
+  it('warns once when nothing says which environment this is, since it then runs as development', async () => {
+    vi.resetModules();
+    const fresh = await import('./index');
+    const warn = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined);
+    try {
+      // Told through options or overrides, or reading a test's own env: nothing to warn about
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('ENV', '');
+      fresh.loadConfig({}, { dotenv: false });
+      vi.stubEnv('NODE_ENV', '');
+      fresh.loadConfig({ env: 'production' }, { dotenv: false });
+      fresh.loadConfig({}, { env: {} });
+      expect(warn).not.toHaveBeenCalled();
+
+      expect(fresh.loadConfig({}, { dotenv: false }).env).toBe('development');
+      fresh.loadConfig({}, { dotenv: false });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]?.[0]).toMatch(/Neither ENV nor NODE_ENV is set, so this app runs as "development"/);
+      expect(warn.mock.calls[0]?.[1]).toEqual({ code: 'MARIACHI_ENV_UNSET' });
+    } finally {
+      warn.mockRestore();
+      vi.unstubAllEnvs();
+    }
   });
 
   it('defaults observability adapters to noop', () => {

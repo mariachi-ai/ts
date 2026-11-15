@@ -56,6 +56,9 @@ that isn't one, a boolean that isn't `true`/`false` (or `1`/`0`, `yes`/`no`, `on
 environment name other than the three. `ENV` decides over `NODE_ENV`, so when other tooling needs
 `NODE_ENV=staging`, set `ENV=production` for the app.
 
+**Production sets `ENV=production`** (or `NODE_ENV=production`). With neither set, the app runs as
+`development` and says so once at start (a process warning, code `MARIACHI_ENV_UNSET`).
+
 ## Developing the framework
 
 ```bash
