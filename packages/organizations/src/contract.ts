@@ -5,7 +5,13 @@ import { hashInvitationSecret, parseInvitationToken } from './tokens';
 import type { OrganizationAudit, OrganizationChange, OrganizationStore, OrganizationsConfig } from './types';
 
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child: () => silent };
-const as = (userId: string | null): Context => createContext({ userId, logger: silent });
+/** A signed-in person, or nobody. */
+const as = (userId: string | null): Context => createContext({ userId, identityType: userId ? 'session' : 'anonymous', logger: silent });
+/** A context as the API layer makes it: with the verified token's claims on `identity`. */
+const withClaims = (ctx: Context, claims: Record<string, unknown>): Context => Object.assign(ctx, { identity: { userId: ctx.userId, claims } });
+/** A signed-in person whose token states this address, verified unless said otherwise (`'unstated'`: the token doesn't say). */
+const person = (userId: string, email?: string, verified: boolean | 'unstated' = true): Context =>
+  withClaims(as(userId), { ...(email !== undefined ? { email } : {}), ...(verified !== 'unstated' ? { email_verified: verified } : {}) });
 const run = () => crypto.randomUUID().slice(0, 8);
 /** A user id no other test uses, so the tests can share one database. */
 const user = (name: string) => `${name}-${run()}`;
@@ -28,7 +34,7 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
       const { organization } = await orgs.create(as(owner), { name: `Team ${run()}`, owner: { email: `${owner}@example.com`, name: 'Olive Owner' } });
       const join = async (userId: string, role: 'admin' | 'member') => {
         const { token } = await orgs.invite(as(owner), organization.id, { email: `${userId}@example.com`, role });
-        await orgs.acceptInvitation(as(userId), { token, email: `${userId}@example.com`, emailVerified: true, name: userId });
+        await orgs.acceptInvitation(person(userId, `${userId}@example.com`), { token, name: userId });
       };
       await join(admin, 'admin');
       await join(member, 'member');
@@ -146,7 +152,7 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
         const other = remaining === owner ? admin : owner;
         if (!members.some((m) => m.userId === other)) {
           const { token } = await orgs.invite(as(remaining), id, { email: `${other}@example.com`, role: 'admin' });
-          await orgs.acceptInvitation(as(other), { token, email: `${other}@example.com`, emailVerified: true });
+          await orgs.acceptInvitation(person(other, `${other}@example.com`), { token });
         }
         if (remaining !== owner) {
           await orgs.changeRole(as(remaining), id, owner, 'owner');
@@ -169,7 +175,7 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
 
       // Back, by invitation, with the role now invited
       const { token } = await orgs.invite(as(owner), id, { email: `${member}@example.com`, role: 'admin' });
-      const back = await orgs.acceptInvitation(as(member), { token, email: `${member}@example.com`, emailVerified: true });
+      const back = await orgs.acceptInvitation(person(member, `${member}@example.com`), { token });
       expect(back.membership).toMatchObject({ userId: member, role: 'admin', status: 'active', invitedBy: owner });
       expect((await orgs.listMine(as(member))).map((mine) => mine.role)).toEqual(['admin']);
 
@@ -197,13 +203,13 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
       expect(JSON.stringify(stored)).not.toContain(parts?.secret);
       expect((await orgs.listInvitations(as(owner), id)).map((i) => [i.email, i.status])).toEqual([[address, 'pending']]);
 
-      const accepted = await orgs.acceptInvitation(as(invitee), { token, email: address, emailVerified: true, name: 'Ivy' });
+      const accepted = await orgs.acceptInvitation(person(invitee, address), { token, name: 'Ivy' });
       expect(accepted.organization.id).toBe(id);
       expect(accepted.membership).toMatchObject({ userId: invitee, role: 'member', email: address, name: 'Ivy', invitedBy: admin });
       expect(await orgs.listInvitations(as(owner), id)).toEqual([]);
       // Used once
-      await expect(orgs.acceptInvitation(as(invitee), { token, email: address, emailVerified: true })).rejects.toMatchObject(code('organizations/invitation-invalid'));
-      await expect(orgs.acceptInvitation(as(user('other')), { token, email: address, emailVerified: true })).rejects.toMatchObject(code('organizations/invitation-invalid'));
+      await expect(orgs.acceptInvitation(person(invitee, address), { token })).rejects.toMatchObject(code('organizations/invitation-invalid'));
+      await expect(orgs.acceptInvitation(person(user('other'), address), { token })).rejects.toMatchObject(code('organizations/invitation-invalid'));
       // And that address is a member now
       await expect(orgs.invite(as(owner), id, { email: address })).rejects.toMatchObject(code('organizations/already-member'));
       await expect(orgs.invite(as(owner), id, { email: 'not an address' })).rejects.toMatchObject(code('validation/invalid-input'));
@@ -218,18 +224,58 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
       const invalid = code('organizations/invitation-invalid');
 
       // A link that was forwarded or leaked is no use to anyone signed in under another address
-      await expect(orgs.acceptInvitation(as(user('mallory')), { token, email: 'mallory@example.com', emailVerified: true })).rejects.toMatchObject(code('organizations/email-mismatch'));
-      await expect(orgs.acceptInvitation(as(invitee), { token, emailVerified: true })).rejects.toMatchObject(code('organizations/email-mismatch'));
-      await expect(orgs.acceptInvitation(as(invitee), { token, email: address, emailVerified: false })).rejects.toMatchObject(code('organizations/email-unverified'));
-      await expect(orgs.acceptInvitation(as(invitee), { token, email: address })).rejects.toMatchObject(code('organizations/email-unverified'));
-      await expect(orgs.acceptInvitation(as(null), { token, email: address, emailVerified: true })).rejects.toMatchObject(code('organizations/user-required'));
+      await expect(orgs.acceptInvitation(person(user('mallory'), 'mallory@example.com'), { token })).rejects.toMatchObject(code('organizations/email-mismatch'));
+      await expect(orgs.acceptInvitation(person(invitee), { token })).rejects.toMatchObject(code('organizations/email-mismatch'));
+      await expect(orgs.acceptInvitation(person(invitee, address, false), { token })).rejects.toMatchObject(code('organizations/email-unverified'));
+      await expect(orgs.acceptInvitation(person(invitee, address, 'unstated'), { token })).rejects.toMatchObject(code('organizations/email-unverified'));
+      await expect(orgs.acceptInvitation(as(null), { token })).rejects.toMatchObject(code('organizations/user-required'));
+      // Joining is a person's own act: something acting with the invitee's user id, but not signed in as them, is refused
+      for (const identityType of ['api-key', 'service', 'webhook', 'anonymous']) {
+        const acting = withClaims(createContext({ userId: invitee, identityType, apiKeyId: 'key_1', logger: silent }), { email: address, email_verified: true });
+        await expect(orgs.acceptInvitation(acting, { token }), identityType).rejects.toMatchObject(code('organizations/user-required'));
+      }
+      expect(await orgs.access(as(invitee), id)).toBeNull();
 
       const flipped = `${secret.slice(0, -1)}${secret.endsWith('A') ? 'B' : 'A'}`;
       for (const bad of [`${invitation.id}.${flipped}`, `${crypto.randomUUID()}.${secret}`, invitation.id, secret, `${invitation.id}.`, '', 'x'.repeat(500), `${invitation.id}.${secret}.extra`]) {
-        await expect(orgs.acceptInvitation(as(invitee), { token: bad, email: address, emailVerified: true }), bad.slice(0, 60)).rejects.toMatchObject(invalid);
+        await expect(orgs.acceptInvitation(person(invitee, address), { token: bad }), bad.slice(0, 60)).rejects.toMatchObject(invalid);
       }
       // None of that used it up
-      expect((await orgs.acceptInvitation(as(invitee), { token, email: address.toUpperCase(), emailVerified: true })).membership.role).toBe('member');
+      expect((await orgs.acceptInvitation(person(invitee, address.toUpperCase()), { token })).membership.role).toBe('member');
+    });
+
+    it('takes the address from the verified identity only: nothing sent with the request can stand in for it', async () => {
+      const { orgs, id, owner } = await team();
+      const address = 'ivy@example.com';
+      const { token } = await orgs.invite(as(owner), id, { email: address });
+      const mallory = user('mallory');
+      // The invited address offered as input, by someone whose token states another: the input isn't read
+      const smuggled = { token, email: address, emailVerified: true, verified: true } as never;
+      await expect(orgs.acceptInvitation(person(mallory, 'mallory@example.com'), smuggled)).rejects.toMatchObject(code('organizations/email-mismatch'));
+      // A context with no verified identity at all states no address
+      await expect(orgs.acceptInvitation(as(mallory), smuggled)).rejects.toMatchObject(code('organizations/email-mismatch'));
+      await expect(orgs.acceptInvitation(withClaims(as(mallory), { email: address, email_verified: 'true' }), { token })).rejects.toMatchObject(code('organizations/email-unverified'));
+      await expect(orgs.acceptInvitation(withClaims(as(mallory), { email: { toString: () => address }, email_verified: true }), { token })).rejects.toMatchObject(code('organizations/email-mismatch'));
+      expect(await orgs.access(as(mallory), id)).toBeNull();
+
+      // A provider that states the address elsewhere: the app says where, here from the user's record
+      const records = new Map<string, { email: string; email_confirmed_at: string | null }>();
+      const custom = await setup({
+        verifiedEmail: async (ctx) => {
+          const record = records.get(ctx.userId ?? '');
+          return record ? { email: record.email, verified: record.email_confirmed_at !== null } : undefined;
+        },
+      });
+      const boss = user('boss');
+      const made = await custom.orgs.create(as(boss), { name: `Custom ${run()}` });
+      const invited = await custom.orgs.invite(as(boss), made.organization.id, { email: address });
+      const ivy = user('ivy');
+      // Claims on the token no longer count: the mapper is the one source
+      await expect(custom.orgs.acceptInvitation(person(ivy, address), { token: invited.token })).rejects.toMatchObject(code('organizations/email-mismatch'));
+      records.set(ivy, { email: address, email_confirmed_at: null });
+      await expect(custom.orgs.acceptInvitation(as(ivy), { token: invited.token })).rejects.toMatchObject(code('organizations/email-unverified'));
+      records.set(ivy, { email: 'Ivy@Example.com', email_confirmed_at: '2026-01-01T00:00:00Z' });
+      expect((await custom.orgs.acceptInvitation(as(ivy), { token: invited.token })).membership).toMatchObject({ userId: ivy, email: address });
     });
 
     it('replaces, resends and revokes an invitation, each ending the token sent before', async () => {
@@ -237,7 +283,7 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
       const other = await orgs.create(as(admin), { name: `Elsewhere ${run()}` });
       const invitee = user('ivy');
       const address = `${invitee}@example.com`;
-      const accept = (token: string) => orgs.acceptInvitation(as(invitee), { token, email: address, emailVerified: true });
+      const accept = (token: string) => orgs.acceptInvitation(person(invitee, address), { token });
       const invalid = code('organizations/invitation-invalid');
 
       const first = await orgs.invite(as(owner), id, { email: address, role: 'member' });
@@ -278,27 +324,27 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
       const { invitation, token } = await orgs.invite(as(owner), id, { email: address });
       expect(invitation.expiresAt.toISOString()).toBe('2026-03-01T13:00:00.000Z');
       now = new Date('2026-03-01T13:00:00Z');
-      await expect(orgs.acceptInvitation(as(invitee), { token, email: address, emailVerified: true })).rejects.toMatchObject(code('organizations/invitation-expired'));
+      await expect(orgs.acceptInvitation(person(invitee, address), { token })).rejects.toMatchObject(code('organizations/invitation-expired'));
       expect((await orgs.listInvitations(as(owner), id)).map((i) => i.status)).toEqual(['expired']);
       const resent = await orgs.resendInvitation(as(owner), id, invitation.id);
       expect(resent.invitation.expiresAt.toISOString()).toBe('2026-03-01T14:00:00.000Z');
-      expect((await orgs.acceptInvitation(as(invitee), { token: resent.token, email: address, emailVerified: true })).membership.userId).toBe(invitee);
+      expect((await orgs.acceptInvitation(person(invitee, address), { token: resent.token })).membership.userId).toBe(invitee);
     });
 
     it('checks the email as strictly as it is told to, and leaves a member who accepts with the role they have', async () => {
       const matching = await team({ emailCheck: 'match' });
       const a = await matching.orgs.invite(as(matching.owner), matching.id, { email: 'a@example.com' });
-      await expect(matching.orgs.acceptInvitation(as(user('a')), { token: a.token, email: 'b@example.com' })).rejects.toMatchObject(code('organizations/email-mismatch'));
-      expect((await matching.orgs.acceptInvitation(as(user('a')), { token: a.token, email: 'a@example.com' })).membership.role).toBe('member');
+      await expect(matching.orgs.acceptInvitation(person(user('a'), 'b@example.com', 'unstated'), { token: a.token })).rejects.toMatchObject(code('organizations/email-mismatch'));
+      expect((await matching.orgs.acceptInvitation(person(user('a'), 'a@example.com', 'unstated'), { token: a.token })).membership.role).toBe('member');
 
       const open = await team({ emailCheck: 'none' });
       const b = await open.orgs.invite(as(open.owner), open.id, { email: 'b@example.com' });
-      expect((await open.orgs.acceptInvitation(as(user('anyone')), { token: b.token })).membership.email).toBeNull();
+      expect((await open.orgs.acceptInvitation(person(user('anyone')), { token: b.token })).membership.email).toBeNull();
 
       // The owner, whose membership holds another address, accepts an invitation sent to a second address of theirs
       const { orgs, id, owner } = await team();
       const { token } = await orgs.invite(as(owner), id, { email: 'second@example.com', role: 'member' });
-      const accepted = await orgs.acceptInvitation(as(owner), { token, email: 'second@example.com', emailVerified: true });
+      const accepted = await orgs.acceptInvitation(person(owner, 'second@example.com'), { token });
       expect(accepted.membership).toMatchObject({ userId: owner, role: 'owner', email: `${owner}@example.com` });
       expect(await orgs.listInvitations(as(owner), id)).toEqual([]);
     });
@@ -312,7 +358,7 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
       const suspended = code('organizations/suspended');
       await expect(orgs.invite(as(admin), id, { email: 'new@example.com' })).rejects.toMatchObject(suspended);
       await expect(orgs.resendInvitation(as(admin), id, pending.invitation.id)).rejects.toMatchObject(suspended);
-      await expect(orgs.acceptInvitation(as(user('late')), { token: pending.token, email: 'late@example.com', emailVerified: true })).rejects.toMatchObject(suspended);
+      await expect(orgs.acceptInvitation(person(user('late'), 'late@example.com'), { token: pending.token })).rejects.toMatchObject(suspended);
       expect((await orgs.listMembers(as(owner), id)).total).toBe(3);
       expect((await orgs.reactivate(as(owner), id)).status).toBe('active');
       expect((await orgs.access(as(member), id))?.organization.status).toBe('active');
@@ -324,7 +370,7 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
         expect(await orgs.listMine(as(who))).toEqual([]);
       }
       await expect(orgs.reactivate(as(owner), id)).rejects.toMatchObject(code('organizations/not-found'));
-      await expect(orgs.acceptInvitation(as(user('late')), { token: pending.token, email: 'late@example.com', emailVerified: true })).rejects.toMatchObject(code('organizations/invitation-invalid'));
+      await expect(orgs.acceptInvitation(person(user('late'), 'late@example.com'), { token: pending.token })).rejects.toMatchObject(code('organizations/invitation-invalid'));
       // Its slug is not handed to someone else
       await expect(orgs.create(as(user('squatter')), { name: 'Squat', slug: organization.slug })).rejects.toMatchObject(code('organizations/slug-taken'));
     });
@@ -374,7 +420,7 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
 
       const { token } = await orgs.invite(as(owner), id, { email: `${admin}@example.com`, role: 'member' });
       failing = true;
-      await expect(orgs.acceptInvitation(as(admin), { token, email: `${admin}@example.com`, emailVerified: true })).rejects.toThrow('audit log is down');
+      await expect(orgs.acceptInvitation(person(admin, `${admin}@example.com`), { token })).rejects.toThrow('audit log is down');
       await expect(orgs.update(as(owner), id, { name: 'Unrecorded' })).rejects.toThrow('audit log is down');
       await expect(orgs.create(as(owner), { name: `Unrecorded ${run()}` })).rejects.toThrow('audit log is down');
       failing = false;
@@ -382,7 +428,7 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
       expect((await orgs.get(as(owner), id)).name).not.toBe('Unrecorded');
       expect(await orgs.listMine(as(owner))).toHaveLength(1);
       // The invitation the failed accept tried to use is still good
-      expect((await orgs.acceptInvitation(as(admin), { token, email: `${admin}@example.com`, emailVerified: true })).membership.role).toBe('member');
+      expect((await orgs.acceptInvitation(person(admin, `${admin}@example.com`), { token })).membership.role).toBe('member');
     });
 
     it('tells listeners about a change after it is kept, and survives a listener that throws', async () => {
@@ -397,7 +443,7 @@ export function organizationsContract(name: string, makeStore: () => Organizatio
       const id = organization.id;
       const invitee = user('ivy');
       const { token } = await orgs.invite(as(owner), id, { email: 'ivy@example.com' });
-      await orgs.acceptInvitation(as(invitee), { token, email: 'ivy@example.com', emailVerified: true });
+      await orgs.acceptInvitation(person(invitee, 'ivy@example.com'), { token });
       await orgs.changeRole(as(owner), id, invitee, 'admin');
       await orgs.removeMember(as(owner), id, invitee);
       await expect(orgs.leave(as(owner), id)).rejects.toMatchObject(code('organizations/last-owner'));

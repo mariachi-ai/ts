@@ -66,6 +66,8 @@ export const organizationInvitationsTable = defineTable(
     indexes: [
       // One pending invitation per address per organization
       index('organization_invitations_pending_uniq').on('organizationId', 'email').unique().where('accepted_at IS NULL AND revoked_at IS NULL'),
+      // A hash belongs to one invitation: a repeat is a bug, and fails here instead of going unnoticed
+      index('organization_invitations_token_hash_uniq').on('tokenHash').unique(),
     ],
   },
 );

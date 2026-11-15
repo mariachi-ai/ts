@@ -211,7 +211,7 @@ export class DrizzleOrganizationStore implements OrganizationStore {
       const [row] = await this.db.transaction((tx) => tx.insert(invitations).values(input).returning());
       return toInvitation(row as InvitationRow);
     } catch (error) {
-      if (brokenConstraint(error) !== undefined) throw new OrganizationsError('organizations/invitation-exists', 'That address already has an open invitation');
+      if (brokenConstraint(error)?.includes('pending')) throw new OrganizationsError('organizations/invitation-exists', 'That address already has an open invitation');
       throw error;
     }
   }

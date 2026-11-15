@@ -111,8 +111,24 @@ export interface OrganizationChange {
   userId?: string;
 }
 
+/** A user's email address as their identity provider states it. */
+export interface VerifiedEmail {
+  email?: string;
+  /** True only when the provider says the address is verified. */
+  verified?: boolean;
+}
+
 export interface OrganizationsConfig {
   store: OrganizationStore;
+  /**
+   * The signed-in user's email address, from their verified identity. Accepting an invitation asks
+   * this and nothing else for the address: it is not an argument, so a request body can't supply it.
+   *
+   * The default reads the standard claims of the request's verified token (`email` and
+   * `email_verified` on `ctx.identity.claims`, which the API layer sets). Give your own for a
+   * provider that states them elsewhere, or to ask the provider for the user.
+   */
+  verifiedEmail?: (ctx: Context) => VerifiedEmail | undefined | Promise<VerifiedEmail | undefined>;
   /** Membership and role changes are written here. A change whose entry can't be written is undone. */
   audit?: OrganizationAudit;
   /** How long an invitation can be accepted. Default seven days. */

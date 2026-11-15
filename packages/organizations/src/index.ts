@@ -13,6 +13,7 @@ export type {
   OrganizationStore,
   OrganizationsConfig,
   StoredInvitation,
+  VerifiedEmail,
 } from './types';
 export { hashInvitationSecret, invitationToken, isUuid, normalizeEmail, parseInvitationToken, slugify } from './tokens';
 export * from './schema/index';

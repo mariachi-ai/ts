@@ -14,6 +14,7 @@ import {
   type OrganizationStore,
   type OrganizationsConfig,
   type StoredInvitation,
+  type VerifiedEmail,
 } from './types';
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
@@ -33,7 +34,14 @@ const personSchema = z.object({ email: emailSchema.optional(), name: z.string().
 const createSchema = z.object({ name: nameSchema, slug: slugSchema.optional(), owner: personSchema.optional() });
 const updateSchema = z.object({ name: nameSchema.optional(), slug: slugSchema.optional() }).refine((v) => v.name !== undefined || v.slug !== undefined, 'Give a name or a slug to change');
 const inviteSchema = z.object({ email: emailSchema, role: roleSchema.default('member') });
-const acceptSchema = z.object({ token: z.string(), email: z.string().max(320).optional(), emailVerified: z.boolean().optional(), name: z.string().trim().max(200).optional() });
+const acceptSchema = z.object({ token: z.string(), name: z.string().trim().max(200).optional() });
+
+/** The standard claims of the request's verified token, where the API layer puts them. */
+function emailFromClaims(ctx: Context): VerifiedEmail | undefined {
+  const claims = (ctx as Context & { identity?: { claims?: Record<string, unknown> } | null }).identity?.claims;
+  if (!claims) return undefined;
+  return { email: typeof claims.email === 'string' ? claims.email : undefined, verified: claims.email_verified === true };
+}
 
 function parse<S extends z.ZodTypeAny>(schema: S, input: unknown): z.output<S> {
   const result = schema.safeParse(input);
@@ -66,6 +74,7 @@ export abstract class Organizations implements Instrumentable {
   protected readonly audit?: OrganizationAudit;
   protected readonly invitationTtlMs: number;
   protected readonly emailCheck: NonNullable<OrganizationsConfig['emailCheck']>;
+  protected readonly verifiedEmail: NonNullable<OrganizationsConfig['verifiedEmail']>;
   protected readonly reservedSlugs: Set<string>;
   protected readonly now: () => Date;
   private readonly listeners = new Set<(change: OrganizationChange) => void>();
@@ -79,6 +88,7 @@ export abstract class Organizations implements Instrumentable {
     this.audit = config.audit;
     this.invitationTtlMs = config.invitationTtlMs ?? SEVEN_DAYS;
     this.emailCheck = config.emailCheck ?? 'verified';
+    this.verifiedEmail = config.verifiedEmail ?? emailFromClaims;
     this.reservedSlugs = new Set((config.reservedSlugs ?? []).map((slug) => slug.toLowerCase()));
     this.now = config.now ?? (() => new Date());
   }
@@ -401,23 +411,28 @@ export abstract class Organizations implements Instrumentable {
   }
 
   /**
-   * The signed-in user accepts an invitation and becomes a member with the invited role. `email` and
-   * `emailVerified` are the user's address as the identity provider states it (the token's claims),
-   * never what the client typed. An invitation works once.
+   * The signed-in user accepts an invitation and becomes a member with the invited role. Their email
+   * address is not an argument: it comes from their verified identity (`verifiedEmail` in the config),
+   * so nothing a client sends can stand in for it. An invitation works once, and only for a person
+   * signed in (`ctx.identityType === 'session'`): not for an API key, a service or a webhook.
    */
-  async acceptInvitation(ctx: Context, input: { token: string; email?: string; emailVerified?: boolean; name?: string }): Promise<{ organization: Organization; membership: Membership }> {
+  async acceptInvitation(ctx: Context, input: { token: string; name?: string }): Promise<{ organization: Organization; membership: Membership }> {
     const userId = this.actor(ctx);
-    const { token, email: given, emailVerified, name } = parse(acceptSchema, input);
+    // Joining is a person's own act. An API key, a service or a webhook acting as the user is not that person
+    // confirming, and its email claims are the least trustworthy.
+    if (ctx.identityType !== 'session') throw new OrganizationsError('organizations/user-required', 'An invitation is accepted by the signed-in person it was sent to');
+    const { token, name } = parse(acceptSchema, input);
     const parts = parseInvitationToken(token);
     const found = parts ? await this.store.getInvitation(ctx, parts.invitationId) : null;
     // Compared whether or not there is an invitation, so the answer takes as long either way
     const matches = secretMatches(parts?.secret ?? '', found?.tokenHash ?? NO_INVITATION);
     if (!found || !matches) throw invalidInvitation();
     this.assertUsable(found);
-    const email = given ? normalizeEmail(given) : undefined;
+    const stated = (await this.verifiedEmail(ctx)) ?? {};
+    const email = typeof stated.email === 'string' && stated.email.trim() ? normalizeEmail(stated.email) : undefined;
     if (this.emailCheck !== 'none') {
       if (email !== found.email) throw new OrganizationsError('organizations/email-mismatch', 'This invitation was sent to another email address. Sign in with that address to accept it.');
-      if (this.emailCheck === 'verified' && emailVerified !== true) {
+      if (this.emailCheck === 'verified' && stated.verified !== true) {
         throw new OrganizationsError('organizations/email-unverified', 'Verify your email address, then accept the invitation');
       }
     }

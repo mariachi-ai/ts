@@ -17,8 +17,9 @@ built-in JWT adapter).
 - Three roles: `owner`, `admin`, `member`. An admin can't make or change an owner, and the last
   owner can't leave, be removed or be demoted, even when two owners act at once.
 - Invitations are single-use and expire (seven days by default). Only a hash of the token is
-  stored. Accepting requires the invited address, stated as verified by the identity provider,
-  unless `emailCheck` says otherwise.
+  stored. Accepting needs a signed-in person whose verified identity states the invited address
+  (`verifiedEmail` in the config says where to read it; the default is the token's `email` and
+  `email_verified` claims), unless `emailCheck` says otherwise. The address is never an argument.
 - `DrizzleOrganizationStore` (`@mariachi/organizations/postgres`) and `MemoryOrganizationStore`
   pass the same contract suite. Changes are written to an audit log when one is given.
 - `@mariachi/core` gains `OrganizationsError` and the HTTP statuses of its codes.

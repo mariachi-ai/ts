@@ -11,7 +11,7 @@ import { DrizzleOrganizationStore } from './store';
 
 let database: PostgresDatabase;
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child: () => silent };
-const as = (userId: string) => createContext({ userId, logger: silent });
+const as = (userId: string) => createContext({ userId, identityType: 'session', logger: silent });
 const rows = <T>(result: unknown): T[] => (Array.isArray(result) ? (result as T[]) : ((result as { rows: T[] }).rows ?? []));
 
 beforeAll(async () => {
@@ -60,6 +60,10 @@ describe('DrizzleOrganizationStore', () => {
     await expect(store.createInvitation(ctx, invitation)).rejects.toMatchObject({ code: 'organizations/invitation-exists' });
     // Once the first is revoked or accepted, the address can be invited again
     await store.updateInvitation(ctx, first.id, { revokedAt: new Date() });
-    expect((await store.createInvitation(ctx, invitation)).id).not.toBe(first.id);
+    const second = await store.createInvitation(ctx, { ...invitation, tokenHash: 'b'.repeat(64) });
+    expect(second.id).not.toBe(first.id);
+    // A hash belongs to one invitation: a repeat fails at the database, as itself
+    await store.updateInvitation(ctx, second.id, { revokedAt: new Date() });
+    await expect(store.createInvitation(ctx, { ...invitation, tokenHash: 'a'.repeat(64) })).rejects.not.toMatchObject({ code: 'organizations/invitation-exists' });
   });
 });

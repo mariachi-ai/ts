@@ -16,7 +16,10 @@ releases; until then you call the service from your own procedures.
 - **An organization is a tenant.** It is a row of the existing `tenants` table, and its id is the
   `tenantId` every tenant-scoped table, billing and RBAC already use. Nothing else in your app changes.
 - **A membership** joins a user to an organization with a role. A user can be in many organizations.
-  The user's id is the one in the verified token; the module keeps no users table.
+  The user's id is the one in the verified token; the module keeps no users table. That id is the
+  key of every membership, so it must be unique across everything your app accepts sign-ins from:
+  with one identity provider it is, and with several, give each provider's ids a prefix before they
+  reach `ctx.userId`.
 - **An invitation** is a single-use link for one email address, good for seven days.
 
 Three roles, highest first:
@@ -79,10 +82,22 @@ const { invitation, token } = await organizations.invite(ctx, organization.id, {
 await sendEmail(invitation.email, `${appUrl}/invitations/accept?token=${token}`);
 
 // 2. The invitee opens the link, signs in or signs up, and your page calls this as them.
-await organizations.acceptInvitation(ctx, {
-  token,
-  email: identity.claims.email,                   // from the verified token, never from the request body
-  emailVerified: identity.claims.email_verified === true,
+await organizations.acceptInvitation(ctx, { token });
+```
+
+**The invitee's email address is not an argument.** Accepting reads it from the user's verified
+identity, so nothing a client sends can stand in for it. By default that is the standard claims of
+the request's token, `email` and `email_verified`, which the API layer puts on `ctx.identity.claims`.
+For a provider that states them elsewhere, say where:
+
+```ts
+new DefaultOrganizations({
+  store,
+  // GoTrue (Supabase Auth) tokens carry `email` but no top-level `email_verified`
+  verifiedEmail: (ctx) => {
+    const claims = ctx.identity?.claims ?? {};
+    return { email: claims.email, verified: claims.user_metadata?.email_verified === true };
+  },
 });
 ```
 
@@ -96,6 +111,8 @@ await organizations.acceptInvitation(ctx, {
   requirement, for a provider that doesn't state it; `emailCheck: 'none'` lets anyone holding the
   link join. Choose either on purpose.
 - Someone who is already a member and accepts keeps the role they have.
+- Accepting is a person's own act: it needs a signed-in user (`ctx.identityType === 'session'`). An
+  API key, a service or a webhook is refused, whatever user it acts for.
 
 ## What it guarantees
 
@@ -109,7 +126,8 @@ await organizations.acceptInvitation(ctx, {
 - **Changes are audited** when you pass `audit` (`@mariachi/audit`'s logger fits): created, renamed,
   suspended, deleted, member added, role changed, removed, left, and every invitation step. A change
   whose audit entry can't be written is undone.
-- **`onChange(listener)`** tells you after a change is kept, for dropping a cached membership.
+- **`onChange(listener)`** tells you after a change is kept, for dropping a cached membership. It
+  fires in the process that made the change; to tell other processes at once, publish from it.
 
 ## Things to know
 
