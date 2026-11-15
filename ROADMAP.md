@@ -65,7 +65,7 @@ Each package's status is listed in the [catalog](packages/core/docs/packages.md)
 - Audit: an append-only trigger, a per-tenant hash chain kept in the database with `verifyChain`, tenant-scoped reads, retention and export.
 - Auth: database-backed RBAC permissions, API keys stored in Postgres with safe rotation, and atomic webhook dedup.
 - Feature flags with tenant overrides, and storage with streaming, presigned uploads and local signed URLs served through the facade.
-- Search on Typesense with typed fields, alias reindexing and quoted filters; rate limiting with three algorithms and per-tenant tiers; an integrations registry that can call functions, with per-tenant credentials.
+- Search on Postgres or Typesense with typed fields, alias reindexing and quoted filters; rate limiting with three algorithms and per-tenant tiers; an integrations registry that can call functions, with per-tenant credentials.
 - `@mariachi/testing` doubles kept honest by contract suites that also run against the real adapters.
 
 **Design and explorer.**

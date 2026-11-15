@@ -21,6 +21,10 @@ export function createSearch(config: SearchConfig): SearchClient {
     return new TypesenseSearchAdapter({ url, apiKey });
   }
   if (config.adapter === 'memory') return new MemorySearchAdapter();
+  if (config.adapter === 'postgres') {
+    // It needs the app's database handle, which a config object can't carry
+    throw new SearchError('search/unknown-adapter', "The Postgres search adapter is built from a database: createPostgresSearch(db) from '@mariachi/search/postgres'");
+  }
   throw new SearchError('search/unknown-adapter', `Unknown search adapter: ${config.adapter}`);
 }
 

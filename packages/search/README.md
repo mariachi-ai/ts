@@ -1,20 +1,32 @@
 # @mariachi/search
 
-Full-text search on Typesense (or in memory for tests), with typed fields including arrays,
-safe equality filters, facets, alias-based zero-downtime reindexing and query analytics.
+Full-text search in your Postgres database, on Typesense, or in memory for tests, with typed
+fields including arrays, safe equality filters, facets, alias-based zero-downtime reindexing and
+query analytics.
 
-**Status: beta.** Covered by unit tests, a Typesense integration test and the search contract
-suite. The API can change before 1.0.
+**Status: beta.** Covered by unit tests, integration tests against Postgres and Typesense, and
+the search contract suite, which all three adapters pass. The API can change before 1.0.
 
 Guide: [search.md](../core/docs/search.md)
+
+## Imports
+
+| Import | What |
+| --- | --- |
+| `@mariachi/search` | `createSearch`, `DefaultSearch`, the Typesense and memory adapters, analytics, types |
+| `@mariachi/search/postgres` | `createPostgresSearch(db, options?)`, `PostgresSearchAdapter`, `searchIndexStatements`, `searchTables` |
+| `@mariachi/search/schema` | `searchIndexesTable`, `searchDocumentsTable` |
+
+The Postgres adapter needs `@mariachi/database-postgres` and `drizzle-orm`, which are optional peers.
 
 ## Public API
 
 | Export | Purpose |
 | --- | --- |
 | `createSearch(config)` | `TypesenseSearchAdapter` or `MemorySearchAdapter` |
+| `createPostgresSearch(db, { language?, manageIndexes? })` | Search in the app's database: no search server, and indexing joins the surrounding transaction |
 | `DefaultSearch` | `search(ctx, index, query)`, `indexDocument`, `removeDocument`, `connect`, `disconnect`, `isHealthy` |
-| `SearchIndexer` | `syncDocument`, `removeDocument`, `reindexAll` (through an alias on Typesense) |
+| `SearchIndexer` | `syncDocument`, `removeDocument`, `reindexAll` (through an alias on Typesense and Postgres) |
 | `SearchAnalytics`, `MemorySearchAnalytics`, `RedisListAnalytics` | Best-effort query analytics |
 | `SearchIndex`, `SearchField`, `SearchFieldType`, `SearchQuery`, `SearchResult` | Types |
 
@@ -22,7 +34,7 @@ Guide: [search.md](../core/docs/search.md)
 
 | Option | Env | Notes |
 | --- | --- | --- |
-| `adapter` | `SEARCH_ADAPTER` | `'typesense'` or `'memory'` |
+| `adapter` | `SEARCH_ADAPTER` | `'typesense'` or `'memory'`. The Postgres adapter is built from the database handle, not from config |
 | `url` | `TYPESENSE_URL` | Default `http://localhost:8108` |
 | `apiKey` | `TYPESENSE_API_KEY` | Admin key for indexing, a search-only key for read-only processes |
 

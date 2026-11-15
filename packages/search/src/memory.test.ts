@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { MemorySearchAdapter } from './adapters/memory';
+import { createSearch } from './index';
 import { MemorySearchAnalytics, RedisListAnalytics } from './analytics';
+
+describe('createSearch', () => {
+  it('says how the Postgres adapter is built, since a config object cannot carry the database', () => {
+    expect(() => createSearch({ adapter: 'postgres' })).toThrow(/createPostgresSearch\(db\) from '@mariachi\/search\/postgres'/);
+    expect(() => createSearch({ adapter: 'elastic' })).toThrow(/Unknown search adapter/);
+    expect(createSearch({ adapter: 'memory' })).toBeInstanceOf(MemorySearchAdapter);
+  });
+});
 
 describe('MemorySearchAdapter', () => {
   it('refuses a query when the schema has no string fields and no queryBy', async () => {

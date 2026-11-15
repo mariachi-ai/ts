@@ -27,7 +27,7 @@ and `tsc --noEmit` before you finish.
 | Check a permission | `rbac.can(identity, action, resource)` | [auth-and-providers.md](./auth-and-providers.md#authorization-rbac) |
 | Turn a feature on per tenant | `createFeatureFlags` + `DrizzleFeatureFlagStore` | [feature-flags.md](./feature-flags.md) |
 | Store or serve files | `DefaultStorage` | [storage.md](./storage.md) |
-| Full-text search | `DefaultSearch` on Typesense | [search.md](./search.md) |
+| Full-text search | `DefaultSearch` on `createPostgresSearch(db)` (no extra server) or Typesense (typo tolerance) | [search.md](./search.md) |
 | Limit a tenant's usage outside HTTP | `DefaultRateLimiting.consumeTier` | [http.md](./http.md#rate-limits) |
 | Test without infrastructure | `@mariachi/testing` doubles | [testing.md](./testing.md) |
 | Style a UI consistently | `@mariachi/design` classes + a preset (`data-theme`) | [design.md](./design.md), [design-catalog.md](./design-catalog.md) |

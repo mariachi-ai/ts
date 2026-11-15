@@ -43,3 +43,5 @@ export { auditLogsTable } from '@mariachi/audit/schema';
 export { webhookLogsTable } from '@mariachi/webhooks/schema';
 
 export { eventOutboxTable } from '@mariachi/events/schema';
+
+export { searchIndexesTable, searchDocumentsTable } from '@mariachi/search/schema';
