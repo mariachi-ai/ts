@@ -1,7 +1,7 @@
-import { existsSync } from 'node:fs';
+import { loadEnvFiles } from './env-files';
 import { createProgram } from './program';
 
-// Variables already set in the environment win over the file.
-if (existsSync('.env')) process.loadEnvFile('.env');
+// The project's env files (package.json's mariachi.envFiles, else .env). Variables already set in the environment win.
+loadEnvFiles(process.cwd());
 
 createProgram().parse();

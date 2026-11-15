@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync } from 'node:fs';
-import { readFile, rm, symlink } from 'node:fs/promises';
+import { readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
 import postgres from 'postgres';
@@ -10,6 +10,7 @@ import { createProject, generateEntity } from '@mariachi/create';
 import { startPostgres, startRedis, stopAll } from '../../../../test/setup';
 import { planProjectMigration, writePlannedMigration } from '../db/project';
 import { prepareDev } from '../dev/prepare';
+import { envFiles, projectEnv } from '../env-files';
 import { runDoctor, type CheckResult } from './checks';
 
 const run = promisify(execFile);
@@ -156,9 +157,11 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
 
     vi.stubEnv('DATABASE_URL', NOWHERE);
     try {
-      const refused = prepare({ services: false });
-      await expect(refused.result).rejects.toMatchObject({ code: 'cli/services-unreachable' });
-      expect(refused.calls).toEqual([]);
+      // Something else runs the services (--no-services, or MARIACHI_DEV_SERVICES=off): Docker isn't called, and dev waits for them
+      const managed = prepare({ services: false, waitMs: 900 });
+      await expect(managed.result).rejects.toMatchObject({ code: 'cli/services-unreachable', message: expect.stringContaining("still isn't answering") });
+      expect(managed.calls).toEqual([]);
+      expect(managed.logs[0]).toBe('waiting for Postgres (not started here: services are managed outside this command)');
 
       const noDocker = prepare({ exec: async () => 127 });
       await expect(noDocker.result).rejects.toMatchObject({ code: 'cli/compose-failed' });
@@ -182,6 +185,55 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
     await expect(prepareDev({ cwd: resolve(__dirname), exec: async () => 0, log: () => {} })).rejects.toMatchObject({ code: 'cli/not-a-project' });
   });
 
+  it('never lets a secret into a result, whatever the failure says', async () => {
+    const password = 'S3cr3t-p4ssw0rd!';
+    const results = await doctor({
+      DATABASE_URL: `postgres://app:${encodeURIComponent(password)}@127.0.0.1:1/app?sslmode=disable`,
+      REDIS_URL: `redis://default:${password}@127.0.0.1:1`,
+      JWT_SECRET: 'short',
+    });
+    const text = JSON.stringify(results);
+    expect(text).not.toContain(password);
+    expect(text).not.toContain(encodeURIComponent(password));
+    expect(byName(results).database?.detail).toMatch(/^Can't reach Postgres at postgres:\/\/app:\*\*\*@127\.0\.0\.1:1\/app\?sslmode=disable: /);
+    expect(byName(results).redis?.detail).toMatch(/^Can't reach Redis at redis:\/\/default:\*\*\*@127\.0\.0\.1:1: /);
+    expect(byName(results).config?.status).toBe('fail');
+  });
+
+  it("uses the env files a project names: dev copies no .env.example over them, and doctor checks what they give", async () => {
+    const other = resolve(__dirname, '../../.e2e-project/doctor-envfiles');
+    await rm(other, { recursive: true, force: true });
+    await createProject({ name: 'envfiles-app', outputDir: other, example: false });
+    await symlink(resolve(__dirname, '../../node_modules'), join(other, 'node_modules'), 'dir');
+    const pkg = JSON.parse(await readFile(join(other, 'package.json'), 'utf8'));
+    await writeFile(join(other, 'package.json'), JSON.stringify({ ...pkg, mariachi: { envFiles: ['.env.development', '.env'] } }, null, 2));
+    // Committed defaults, and a personal file that overrides one of them
+    await writeFile(join(other, '.env.development'), `SERVICE_NAME=envfiles-app\nNODE_ENV=development\nPORT=3000\nDATABASE_URL=${NOWHERE}\nREDIS_URL=${redisUrl}\nJWT_SECRET=${'d'.repeat(40)}\n`);
+    await writeFile(join(other, '.env'), `DATABASE_URL=${databaseUrl}\n`);
+    // This test's own values, not the ones stubbed into the process for the other project
+    vi.unstubAllEnvs();
+    try {
+      const files = envFiles(other);
+      expect(files).toEqual({ files: ['.env.development', '.env'], configured: true });
+      const logs: string[] = [];
+      const prepared = await prepareDev({ cwd: other, envFiles: files, exec: async () => 0, log: (line) => void logs.push(line), probeMs: 1500 });
+      expect(prepared.did).toEqual([]);
+      expect(prepared.env.DATABASE_URL).toBe(databaseUrl);
+      expect(await readFile(join(other, '.env'), 'utf8')).toBe(`DATABASE_URL=${databaseUrl}\n`);
+
+      const results = byName(await runDoctor({ cwd: other, env: projectEnv(other, files.files), envFiles: files, timeoutMs: 3000 }));
+      expect(results.env).toMatchObject({ status: 'ok', detail: 'Env files: .env.development, .env' });
+      expect(results.database?.status).toBe('ok');
+      expect(results.redis?.status).toBe('ok');
+
+      const none = byName(await runDoctor({ cwd: other, env: {}, envFiles: { files: ['.env.staging'], configured: true }, timeoutMs: 1000 }));
+      expect(none.env).toMatchObject({ status: 'fail', detail: "None of the project's env files exists (.env.staging)", fix: 'Create .env.staging' });
+    } finally {
+      for (const [key, value] of Object.entries(env)) vi.stubEnv(key, value);
+      await rm(other, { recursive: true, force: true });
+    }
+  }, 60_000);
+
   it('runs from the command line: doctor --json exits 0 when ready and 1 when not; dev --prepare-only does the preparation', async () => {
     const cli = (args: string[], over: Record<string, string> = {}) =>
       run(process.execPath, [CLI, ...args], { cwd: project, env: { ...process.env, ...env, NO_COLOR: '1', ...over } }).then(
@@ -190,7 +242,7 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
       );
     const ready = await cli(['doctor', '--json']);
     expect(ready.code).toBe(0);
-    expect(JSON.parse(ready.stdout)).toMatchObject({ ready: true, checks: expect.arrayContaining([expect.objectContaining({ name: 'migrations', status: 'ok' })]) });
+    expect(JSON.parse(ready.stdout)).toMatchObject({ version: 1, ready: true, checks: expect.arrayContaining([expect.objectContaining({ name: 'migrations', status: 'ok' })]) });
 
     const text = await cli(['doctor']);
     expect(text.stdout).toMatch(/ok\s+database\s+Postgres /);
@@ -204,8 +256,14 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
 
     const prepared = await cli(['dev', '--prepare-only']);
     expect(prepared.code).toBe(0);
-    const offline = await cli(['dev', '--prepare-only', '--no-services'], { DATABASE_URL: NOWHERE });
+    const offline = await cli(['dev', '--prepare-only', '--no-services', '--wait', '700'], { DATABASE_URL: NOWHERE });
     expect(offline.code).toBe(1);
-    expect(offline.stderr).toMatch(/Can't reach Postgres at postgres:\/\/postgres:\*\*\*@127\.0\.0\.1:1\/none/);
+    expect(offline.stderr).toMatch(/Postgres at postgres:\/\/postgres:\*\*\*@127\.0\.0\.1:1\/none still isn't answering/);
+    expect(offline.stdout).toMatch(/waiting for Postgres \(not started here/);
+    // The same from the environment, with no flag to remember
+    const switched = await cli(['dev', '--prepare-only', '--wait', '700'], { DATABASE_URL: NOWHERE, MARIACHI_DEV_SERVICES: 'off' });
+    expect(switched.code).toBe(1);
+    expect(switched.stdout).toMatch(/waiting for Postgres \(not started here/);
+    expect(switched.stdout).not.toMatch(/docker compose/);
   }, 60_000);
 });

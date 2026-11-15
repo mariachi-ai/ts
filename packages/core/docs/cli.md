@@ -57,13 +57,30 @@ Gets a project from a fresh checkout to running, doing only what's missing:
 
 | Step | When | What it does |
 | --- | --- | --- |
-| `.env` | There is none | Copies `.env.example`. An existing `.env` is never written |
-| Services | The project has a Compose file, and its local Postgres or Redis isn't answering | `docker compose up -d`, then waits up to a minute for them. `--no-services` skips this |
+| `.env` | There is none, and the project hasn't named its own env files | Copies `.env.example`. An existing `.env` is never written |
+| Services | The project has a Compose file, and its local Postgres or Redis isn't answering | `docker compose up -d`, then waits up to a minute for them (`--wait <ms>`) |
 | First migration | The schema has tables and the migrations folder is empty | Writes `drizzle/0000_init.sql`. Later schema changes are never turned into migrations here: it prints a note, and `mariachi db generate` stays a deliberate step |
 | Migrate | Migrations are pending | Applies them |
 | Run | Always | `tsx watch --env-file=.env src/main.ts` (`--entry <file>`, `--no-watch`) |
 
 A database or Redis on another host is never started for you: `dev` says it can't reach it and stops.
+
+**Where something else runs the services** (a container platform, an environment's own Compose),
+pass `--no-services` or set `MARIACHI_DEV_SERVICES=off` in that environment. `dev` then never calls
+Docker: it waits for the database and Redis to answer, since they may still be starting, and says
+so if they don't.
+
+**Env files.** By default the app's environment is `.env`. A project that keeps it elsewhere names
+its files once in `package.json`, in order, a later file winning over an earlier one, missing files
+skipped:
+
+```json
+{ "mariachi": { "envFiles": [".env.development", ".env"] } }
+```
+
+Every `mariachi` command then loads those (variables already set in the environment still win),
+`dev` starts the app with them and never copies `.env.example`, and `doctor` checks what they
+produce. `--env-file <file>` (repeatable) replaces the list for one run of `dev` or `doctor`.
 
 ## doctor
 
@@ -87,8 +104,21 @@ for each problem:
 | `redis` | `REDIS_URL` is unset though `.env.example` lists it, or Redis doesn't answer | |
 | `architecture` | `mariachi validate` finds errors | It finds warnings |
 
-A check that depends on one that failed is skipped, not failed twice. Passwords in URLs are shown
-as `***`. `--strict` exits 1 on warnings too; `--timeout <ms>` sets how long to wait for a service.
+A check that depends on one that failed is skipped, not failed twice. `--strict` exits 1 on
+warnings too; `--timeout <ms>` sets how long to wait for a service.
+
+`--json` is a contract for tools and agents:
+
+```json
+{ "version": 1, "ready": false, "checks": [{ "name": "database", "status": "fail", "detail": "…", "fix": "docker compose up -d …" }] }
+```
+
+- `version` changes if the shape does. The nine check names above, and the four statuses (`ok`,
+  `warn`, `fail`, `skip`), are stable.
+- `fix` is one command or one sentence.
+- **No secret appears in `detail` or `fix`**, whatever a driver's error says: passwords in URLs,
+  secret-looking query parameters, and the values of variables named like secrets (`*_SECRET`,
+  `*_TOKEN`, `*_KEY`, `*_PASSWORD`) are replaced by `***`. A variable is named, never quoted.
 
 ## validate
 

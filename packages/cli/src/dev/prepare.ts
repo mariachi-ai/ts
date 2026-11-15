@@ -3,7 +3,7 @@ import { copyFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ConfigError, type Logger } from '@mariachi/core';
 import { PostgresAdapter, runMigrations } from '@mariachi/database-postgres';
-import { projectEnv } from '../commands/doctor';
+import { envFiles as projectEnvFiles, projectEnv, type EnvFiles } from '../env-files';
 import { readJournal } from '../db/migrations';
 import { planProjectMigration, writePlannedMigration } from '../db/project';
 import { composeFile, isLocal, safeUrl } from '../doctor/checks';
@@ -15,8 +15,14 @@ export interface PrepareOptions {
   schema?: string;
   /** Default `drizzle`. */
   migrations?: string;
-  /** Start the Compose services when a local Postgres or Redis isn't answering. Default true. */
+  /**
+   * Start the Compose services when a local Postgres or Redis isn't answering. Default true. With
+   * `false`, something else runs them (an environment's own Compose, a container platform): this
+   * only waits for them to answer.
+   */
   services?: boolean;
+  /** The project's env files. Default: package.json's `mariachi.envFiles`, else `.env`. */
+  envFiles?: EnvFiles;
   /** How long to wait for the services after starting them. Default 60000. */
   waitMs?: number;
   /** How long one attempt to reach a service may take. Default 3000. */
@@ -71,13 +77,15 @@ export async function prepareDev(options: PrepareOptions): Promise<Prepared> {
     throw new ConfigError('cli/not-a-project', 'Run this in a project made by `mariachi init` (no package.json or no src/ here)');
   }
 
-  if (!existsSync(join(cwd, '.env')) && existsSync(join(cwd, '.env.example'))) {
+  const files = options.envFiles ?? projectEnvFiles(cwd);
+  // Only for the default `.env`: a project that names its env files decides what's in them
+  if (!files.configured && !existsSync(join(cwd, '.env')) && existsSync(join(cwd, '.env.example'))) {
     // EXCL: never over a file that appeared since the check
     await copyFile(join(cwd, '.env.example'), join(cwd, '.env'), constants.COPYFILE_EXCL);
     log('created .env from .env.example');
     did.push('env');
   }
-  const env = projectEnv(cwd);
+  const env = projectEnv(cwd, files.files);
 
   const services: Array<{ name: string; url: string; probe: () => Promise<unknown> }> = [];
   if (env.DATABASE_URL) services.push({ name: 'Postgres', url: env.DATABASE_URL, probe: () => probeDatabase(env.DATABASE_URL as string, probeMs) });
@@ -88,13 +96,19 @@ export async function prepareDev(options: PrepareOptions): Promise<Prepared> {
   if (down.length) {
     const names = down.map((s) => `${s.name} at ${safeUrl(s.url)}`).join(' and ');
     const compose = composeFile(cwd);
-    if (options.services === false || !compose || !down.every((s) => isLocal(s.url))) {
-      throw new ConfigError('cli/services-unreachable', `Can't reach ${names}. ${compose && down.every((s) => isLocal(s.url)) ? 'Start them: docker compose up -d' : 'Start them, or correct the URLs in .env'}`);
+    const managedElsewhere = options.services === false;
+    if (!managedElsewhere && (!compose || !down.every((s) => isLocal(s.url)))) {
+      throw new ConfigError('cli/services-unreachable', `Can't reach ${names}. Start them, or correct the URLs in ${files.files[files.files.length - 1] ?? '.env'}`);
     }
-    log(`starting services (docker compose up -d): ${down.map((s) => s.name).join(', ')} not answering`);
-    const code = await options.exec('docker', ['compose', 'up', '-d']);
-    if (code !== 0) throw new ConfigError('cli/compose-failed', `docker compose up -d exited with ${code}. Is Docker running?`);
-    did.push('services');
+    if (managedElsewhere) {
+      // Something else starts them, and they may still be coming up
+      log(`waiting for ${down.map((s) => s.name).join(' and ')} (not started here: services are managed outside this command)`);
+    } else {
+      log(`starting services (docker compose up -d): ${down.map((s) => s.name).join(', ')} not answering`);
+      const code = await options.exec('docker', ['compose', 'up', '-d']);
+      if (code !== 0) throw new ConfigError('cli/compose-failed', `docker compose up -d exited with ${code}. Is Docker running? (Where something else runs the services, pass --no-services or set MARIACHI_DEV_SERVICES=off)`);
+      did.push('services');
+    }
     const deadline = Date.now() + (options.waitMs ?? 60_000);
     for (const service of down) {
       let last = await reachable(service.probe);

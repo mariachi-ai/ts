@@ -30,6 +30,8 @@ export interface DoctorOptions {
   timeoutMs?: number;
   /** The running Node version. Default `process.versions.node`. */
   nodeVersion?: string;
+  /** The project's env files, for the `env` check and its messages. Default `['.env']`, not configured. */
+  envFiles?: { files: string[]; configured: boolean };
 }
 
 const readJson = (file: string): Record<string, unknown> | null => {
@@ -74,15 +76,51 @@ function startHint(cwd: string, url: string, service: string): string {
   return composeFile(cwd) ? 'docker compose up -d (or: mariachi dev, which starts the services and waits for them)' : `Start ${service} on ${new URL(url).host}`;
 }
 
-/** A URL without its password, for messages. */
+const SECRET_NAME = /secret|token|password|passwd|pwd|key|credential|signature|sig$|auth/i;
+
+/** A URL without its password or the secrets in its query string, for messages. */
 export function safeUrl(url: string): string {
   try {
     const parsed = new URL(url);
     if (parsed.password) parsed.password = '***';
-    return parsed.toString();
+    for (const name of [...parsed.searchParams.keys()]) if (SECRET_NAME.test(name)) parsed.searchParams.set(name, '***');
+    return parsed.toString().replaceAll('%2A%2A%2A', '***');
   } catch {
     return '(not a URL)';
   }
+}
+
+/**
+ * The secret values an environment holds: passwords and secret-looking query values inside its
+ * URLs, and the values of variables whose names say they are secrets. What `redact` removes.
+ */
+export function secretsIn(env: Record<string, string | undefined>): string[] {
+  const found = new Set<string>();
+  for (const [name, value] of Object.entries(env)) {
+    if (!value) continue;
+    if (SECRET_NAME.test(name) && value.length >= 6) found.add(value);
+    if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) {
+      try {
+        const url = new URL(value);
+        // A password that is also the user, the scheme or the database (postgres:postgres@…/postgres) is a
+        // development default, not a secret: replacing it everywhere would blank ordinary words. Its place in a
+        // URL is still masked by `redact`.
+        const ordinary = new Set([url.username, url.protocol.replace(':', ''), url.hostname, ...url.pathname.split('/')]);
+        if (url.password && !ordinary.has(url.password)) for (const form of [url.password, decodeURIComponent(url.password)]) found.add(form);
+        for (const [key, v] of url.searchParams) if (SECRET_NAME.test(key) && v) found.add(v);
+      } catch {
+        // Not a URL after all
+      }
+    }
+  }
+  return [...found].filter((s) => s.length >= 3).sort((a, b) => b.length - a.length);
+}
+
+/** Text with every known secret, and the password of any URL in it, replaced by `***`. */
+export function redact(text: string, secrets: string[]): string {
+  let out = text;
+  for (const secret of secrets) out = out.split(secret).join('***');
+  return out.replace(/([a-z][a-z0-9+.-]*:\/\/[^\s:/@]*):[^\s@/]+@/gi, '$1:***@');
 }
 
 /**
@@ -97,7 +135,11 @@ export async function runDoctor(options: DoctorOptions): Promise<CheckResult[]> 
   const migrations = options.migrations ?? 'drizzle';
   const timeoutMs = options.timeoutMs ?? 5000;
   const results: CheckResult[] = [];
-  const add = (name: string, status: CheckStatus, detail: string, fix?: string) => void results.push({ name, status, detail, ...(fix ? { fix } : {}) });
+  // Results go to terminals, logs and model contexts: no secret value may ride along in a driver's error text
+  const secrets = secretsIn(env);
+  const add = (name: string, status: CheckStatus, detail: string, fix?: string) =>
+    void results.push({ name, status, detail: redact(detail, secrets), ...(fix ? { fix: redact(fix, secrets) } : {}) });
+  const files = options.envFiles ?? { files: ['.env'], configured: false };
 
   // --- the project
   const pkg = readJson(join(cwd, 'package.json'));
@@ -129,10 +171,17 @@ export async function runDoctor(options: DoctorOptions): Promise<CheckResult[]> 
     } else add('dependencies', 'ok', `@mariachi ${[...versions.keys()][0] ?? ''} installed`.trim());
   }
 
-  // --- .env
+  // --- the env files
   const example = existsSync(join(cwd, '.env.example')) ? exampleKeys(readFileSync(join(cwd, '.env.example'), 'utf8')) : [];
   const missing = example.filter((key) => !env[key]);
-  if (!existsSync(join(cwd, '.env')) && example.length) {
+  const present = files.files.filter((f) => existsSync(join(cwd, f)));
+  const last = files.files[files.files.length - 1] ?? '.env';
+  if (files.configured) {
+    // The project names its own env files: .env.example is not where they come from
+    if (!present.length) add('env', 'fail', `None of the project's env files exists (${files.files.join(', ')})`, `Create ${last}`);
+    else if (missing.length) add('env', 'warn', `.env.example lists ${missing.join(', ')}, which ${missing.length === 1 ? 'is' : 'are'} empty or missing in ${present.join(', ')}`, `Set them in ${last}`);
+    else add('env', 'ok', `Env files: ${present.join(', ')}${present.length < files.files.length ? ` (not present: ${files.files.filter((f) => !present.includes(f)).join(', ')})` : ''}`);
+  } else if (!present.length && example.length) {
     add('env', missing.length ? 'fail' : 'warn', `.env is missing${missing.length ? `, and the environment has no ${missing.join(', ')}` : ' (the environment has what .env.example lists)'}`, 'cp .env.example .env');
   } else if (missing.length) {
     add('env', 'warn', `.env.example lists ${missing.join(', ')}, which ${missing.length === 1 ? 'is' : 'are'} empty or missing here`, 'Set them in .env (copy the lines from .env.example)');
@@ -145,14 +194,14 @@ export async function runDoctor(options: DoctorOptions): Promise<CheckResult[]> 
     add('config', 'ok', 'The configuration loads');
   } catch (error) {
     configured = false;
-    add('config', 'fail', `The configuration does not load: ${reason(error)}`, 'Fix the variable it names in .env');
+    add('config', 'fail', `The configuration does not load: ${reason(error)}`, `Fix the variable it names in ${last}`);
   }
 
   // --- the database and its migrations
   const databaseUrl = env.DATABASE_URL;
   let database: DatabaseProbe | undefined;
   if (!databaseUrl) {
-    add('database', example.includes('DATABASE_URL') || configured ? 'fail' : 'skip', 'DATABASE_URL is not set', 'Set DATABASE_URL in .env');
+    add('database', example.includes('DATABASE_URL') || configured ? 'fail' : 'skip', 'DATABASE_URL is not set', `Set DATABASE_URL in ${last}`);
   } else {
     try {
       database = await probeDatabase(databaseUrl, timeoutMs);
@@ -186,7 +235,7 @@ export async function runDoctor(options: DoctorOptions): Promise<CheckResult[]> 
   // --- Redis
   const redisUrl = env.REDIS_URL;
   if (!redisUrl) {
-    if (example.includes('REDIS_URL')) add('redis', 'fail', 'REDIS_URL is not set, and .env.example says this project uses Redis', 'Set REDIS_URL in .env');
+    if (example.includes('REDIS_URL')) add('redis', 'fail', 'REDIS_URL is not set, and .env.example says this project uses Redis', `Set REDIS_URL in ${last}`);
     else add('redis', 'skip', 'REDIS_URL is not set; this project does not use Redis');
   } else {
     try {
