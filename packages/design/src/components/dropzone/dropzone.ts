@@ -35,6 +35,7 @@ export const dropzone = defineComponent({
     { fg: 'fg', bg: 'bg', min: 4.5 },
     { fg: 'hintFg', bg: 'bg', min: 4.5 },
     { fg: 'fg', bg: 'dragBg', min: 4.5 },
+    { fg: 'hintFg', bg: 'hoverBg', min: 4.5 },
     { fg: 'border', bg: 'color.bg.canvas', min: 3 },
   ],
   a11y: [

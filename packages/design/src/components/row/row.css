@@ -38,6 +38,11 @@
     color: var(--m-row-selected-fg);
   }
 
+  /* On the selected tint the detail and the trail take the row's text colour, which holds its contrast */
+  .m-row:is([aria-current]:not([aria-current="false"]), [aria-selected="true"]) :is(.m-row-meta, .m-row-trail) {
+    color: inherit;
+  }
+
   .m-row:is(:disabled, [aria-disabled="true"]) {
     opacity: 0.5;
     cursor: not-allowed;

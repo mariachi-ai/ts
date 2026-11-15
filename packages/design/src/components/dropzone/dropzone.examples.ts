@@ -6,25 +6,22 @@ const upload =
 export default defineExamples('dropzone', [
   {
     name: 'Drop zone',
-    description: 'Click, Tab and Space, or drop files anywhere on it: the native input lies over the whole area.',
-    html: `<div class="m-field">
-  <span class="m-field-label" id="ex-drop-label">Receipts</span>
-  <label class="m-dropzone">
-    <input type="file" multiple accept="image/png,image/jpeg,application/pdf" aria-labelledby="ex-drop-label ex-drop-title" aria-describedby="ex-drop-hint">
-    ${upload}
-    <span class="m-dropzone-title" id="ex-drop-title">Drop files here or browse</span>
-    <span class="m-dropzone-hint" id="ex-drop-hint">PNG, JPG or PDF, up to 10 MB each</span>
-  </label>
-</div>`,
+    description: 'Click, Tab and Space, or drop files anywhere on it: the native input lies over the whole area, and the label\'s text names it.',
+    html: `<label class="m-dropzone">
+  <input type="file" multiple accept="image/png,image/jpeg,application/pdf">
+  ${upload}
+  <span class="m-dropzone-title">Drop receipts here or browse</span>
+  <span class="m-dropzone-hint">PNG, JPG or PDF, up to 10 MB each</span>
+</label>`,
   },
   {
     name: 'Files dragged over',
     description: 'The state the behaviours set while files are over the area.',
     html: `<label class="m-dropzone" data-dragover>
-  <input type="file" aria-describedby="ex-drop2-hint">
+  <input type="file" accept=".csv">
   ${upload}
   <span class="m-dropzone-title">Drop to upload</span>
-  <span class="m-dropzone-hint" id="ex-drop2-hint">One CSV file, up to 5 MB</span>
+  <span class="m-dropzone-hint">One CSV file, up to 5 MB</span>
 </label>`,
   },
 ]);

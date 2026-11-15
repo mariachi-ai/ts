@@ -41,6 +41,8 @@ export const row = defineComponent({
     { fg: 'fg', bg: 'hoverBg', min: 4.5 },
     { fg: 'selectedFg', bg: 'selectedBg', min: 4.5 },
     { fg: 'metaFg', bg: 'color.bg.surface', min: 4.5 },
+    { fg: 'metaFg', bg: 'hoverBg', min: 4.5 },
+    { fg: 'trailFg', bg: 'hoverBg', min: 4.5 },
   ],
   a11y: [
     'Make the whole row one <a> (it navigates) or <button> (it acts); never nest another link or button inside it.',
