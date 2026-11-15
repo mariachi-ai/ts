@@ -1,5 +1,5 @@
 /**
- * The fingerprint probe: measures one rendered screen, at one width, as `docs/design-fingerprint.md` (spec 1)
+ * The fingerprint probe: measures one rendered screen, at one width, as `docs/design-fingerprint.md` (spec 1.2)
  * defines it. It runs in the page. Everything it needs is in this file's functions, which `probeSource`
  * joins into one expression for `page.evaluate`, so Mariachi's runner and any other browser runner run the same code.
  *
@@ -8,7 +8,7 @@
 
 export type MeasureValue = number | string | Record<string, number> | null;
 export interface ScreenMeasures {
-  specVersion: 1;
+  specVersion: 1.2;
   width: number;
   measures: Record<string, MeasureValue>;
 }
@@ -229,7 +229,11 @@ const s = cs(e); return r.width > 0 && r.height > 0 && s.visibility !== 'hidden'
   const media = vis.filter((e) => {
     const r = rectOf(e);
     const s = cs(e);
-    if (r.width < 48 || r.height < 48 || (r.width >= W * 0.95 && r.height >= H * 0.6)) return false;
+    if (r.width >= W * 0.95 && r.height >= H * 0.6) return false;
+    // Spec 1.2: an inline SVG drawing is a picture when it's big enough to be one: both sides at least 48px, or
+    // 4,096px² (so a wide drawing counts). An icon (32px or less) never reaches either; an SVG inside one is a part.
+    if (e.tagName.toLowerCase() === 'svg') return !e.parentElement?.closest('svg') && ((r.width >= 48 && r.height >= 48) || r.width * r.height >= 4096);
+    if (r.width < 48 || r.height < 48) return false;
     if (/^(IMG|VIDEO|CANVAS|PICTURE)$/.test(e.tagName)) return true;
     return s.backgroundImage !== 'none' && !(e.textContent ?? '').trim();
   });
@@ -278,7 +282,16 @@ const out: number[] = []; for (let i = 1; i < k.length; i++) { const d = k[i].to
   m['density.targets'] = controls.filter((e) => inWin(rectOf(e))).length;
   const listy = colls.filter((c) => c.kind === 'list' || c.kind === 'table');
   m['density.rowsVisible'] = listy.length ? med(listy.map((c) => c.items.filter((i) => inWin(rectOf(i))).length)) : null;
-  m['density.rowHeight'] = listy.length ? med(listy.map((c) => med(c.items.map((i) => rectOf(i).height))!)) : null;
+  // Spec 1.2: rows are the innermost repeated group of similar items (cards that hold rows give the rows, not the
+  // cards), the one with the most items when several qualify (the median over those tied). Similar: two thirds of the
+  // items within a quarter of the group's median height. When no group is that even, the innermost of all of them.
+  const heightsOf = (c: Coll) => c.items.map((i) => rectOf(i).height);
+  const even = (c: Coll) => { const hs = heightsOf(c); const mh = med(hs)!; return hs.filter((h) => Math.abs(h - mh) <= 0.25 * mh).length >= (2 / 3) * hs.length; };
+  const innermost = (pool: Coll[]) => pool.filter((c) => !pool.some((o) => o !== c && c.items.some((i) => i.contains(o.parent))));
+  const rowGroups = innermost(listy.some(even) ? listy.filter(even) : listy);
+  const mostItems = Math.max(0, ...rowGroups.map((c) => c.items.length));
+  const rowHeights = rowGroups.filter((c) => c.items.length === mostItems).map((c) => med(heightsOf(c))!);
+  m['density.rowHeight'] = med(rowHeights);
 
   // Structure
   let depth = 0;
@@ -297,16 +310,50 @@ const out: number[] = []; for (let i = 1; i < k.length; i++) { const d = k[i].to
   m['structure.collections'] = shares(collCounts);
 
   // Colour
-  // The action colour as drawn: the declared primary's fill, else the most common saturated control fill, else the token
+  // The ground (spec 1.1): what sits under nine points across the window (a card, a shell or the canvas); the colour
+  // of median lightness is the page's ground. The topmost element at a point that isn't a cookie or consent notice
+  // (those sit over the page, not in it)
+  const groundAt = (x: number, y: number) => {
+    const top = document.elementsFromPoint(x, y).find((e) => !consent.some((c) => c === e || c.contains(e))) ?? null;
+    for (let e: Element | null = top; e; e = e.parentElement) { const c = ownBg(e); if (c) return c; }
+    return canvas;
+  };
+  const groundCols: [number, number, number, number][] = [];
+  for (const fx of [0.2, 0.5, 0.8]) for (const fy of [0.25, 0.5, 0.75]) groundCols.push(groundAt(W * fx, H * fy));
+  const lightness = (c: [number, number, number, number]) => rgbToOklch([c[0], c[1], c[2]])[0];
+  const ground = [...groundCols].sort((a, b) => lightness(a) - lightness(b))[groundCols.length >> 1];
+  const danger = parseCssColor(rootCs.getPropertyValue('--m-color-danger-solid').trim()) ?? parseCssColor(rootCs.getPropertyValue('--m-color-danger-fg').trim());
+  const DESTRUCTIVE = /\b(delete|remove|discard|cancel subscription|close account)\b/i;
+  const near = (c: [number, number, number, number] | null, ref: [number, number, number, number] | null, d: number) => !!c && !!ref && c[3] > 0.5 && deltaE2000(lab(c), lab(ref)) <= d;
+  // The action colour as drawn. Spec 1.2 finds it by role and shape, not chroma, so a black primary is still the
+  // primary: the declared primary's fill; else, among filled button-shaped controls, the fill that differs most from
+  // the ground (of the fills within ΔE 10 of the most, the most common), whatever its colour; else the token.
   const declaredPrimary = vis.find((e) => e.matches('.m-button[data-variant="primary"]'));
   let accent = declaredPrimary ? ownBg(declaredPrimary) : null;
   if (!accent) {
-    const tally = new Map<string, number>();
-    for (const e of controls) { const c = ownBg(e); if (c && rgbToOklch([c[0], c[1], c[2]])[1] > 0.1) tally.set(c.slice(0, 3).join(','), (tally.get(c.slice(0, 3).join(',')) ?? 0) + 1); }
-    const best = [...tally.entries()].sort((a, b) => b[1] - a[1])[0];
-    accent = best ? ([...best[0].split(',').map(Number), 1] as [number, number, number, number]) : parseCssColor(rootCs.getPropertyValue('--m-color-accent-default').trim());
+    const BUTTONISH = 'button, [role="button"], input[type="submit"], input[type="button"], .m-button, a[href]';
+    const CHOSEN = '[aria-selected="true"], [aria-current]:not([aria-current="false"]), [aria-pressed="true"], :checked';
+    const fills = new Map<string, { c: [number, number, number, number]; n: number; d: number }>();
+    for (const e of controls) {
+      // A button, or a link drawn as one, of a button's size. Not a selected tab or the current page (a state, not an
+      // action), and not a destructive control (its danger colour stands out by design: labelled as one, declared as
+      // one, or drawn in the danger colour itself)
+      const r = rectOf(e);
+      if (!e.matches(BUTTONISH) || e.matches(CHOSEN) || r.height < 24 || r.height > 72 || r.width < 24) continue;
+      const c = ownBg(e);
+      // Filled: a face of its own, set apart from what it sits on, that stands out from the ground
+      if (!c || deltaE2000(lab(c), lab(behind(e))) < 10) continue;
+      const d = deltaE2000(lab(c), lab(ground));
+      if (d < 15 || DESTRUCTIVE.test(e.textContent ?? '') || e.matches('[data-variant="danger"]') || near(c, danger, 5)) continue;
+      const k = c.slice(0, 3).join(',');
+      const f = fills.get(k) ?? { c, n: 0, d };
+      f.n++;
+      fills.set(k, f);
+    }
+    const most = Math.max(0, ...[...fills.values()].map((f) => f.d));
+    const best = [...fills.values()].filter((f) => f.d >= most - 10).sort((a, b) => b.n - a.n || b.d - a.d)[0];
+    accent = best ? [best.c[0], best.c[1], best.c[2], 1] : parseCssColor(rootCs.getPropertyValue('--m-color-accent-default').trim());
   }
-  const near = (c: [number, number, number, number] | null, ref: [number, number, number, number] | null, d: number) => !!c && !!ref && c[3] > 0.5 && deltaE2000(lab(c), lab(ref)) <= d;
   const isPrimary = (e: Element) => isControl(e) && (e.matches('.m-button[data-variant="primary"]') || near(ownBg(e), accent, 5));
   let accentArea = 0;
   const accentOn: Record<string, number> = {};
@@ -356,16 +403,9 @@ const out: number[] = []; for (let i = 1; i < k.length; i++) { const d = k[i].to
 const s = kinds.includes('shadow'); if (b && s) bs.both++; else if (b) bs.borderOnly++; else if (s) bs.shadowOnly++; }
   m['shape.borderAndShadow'] = shares(bs);
 
-  // Spec 1.1: what a page shows most, which the counts above can't see. The ground: the median lightness of what
-  // sits under nine points across the window (a card, a shell or the canvas), so a dark language reads dark.
-  // The topmost element at the point that isn't a cookie or consent notice (those sit over the page, not in it)
-  const groundAt = (x: number, y: number) => {
-    const top = document.elementsFromPoint(x, y).find((e) => !consent.some((c) => c === e || c.contains(e))) ?? null;
-    for (let e: Element | null = top; e; e = e.parentElement) { const c = ownBg(e); if (c) return c; }
-    return canvas;
-  };
-  const grounds: number[] = [];
-  for (const fx of [0.2, 0.5, 0.8]) for (const fy of [0.25, 0.5, 0.75]) { const c = groundAt(W * fx, H * fy); grounds.push(rgbToOklch([c[0], c[1], c[2]])[0]); }
+  // Spec 1.1: what a page shows most, which the counts above can't see. The ground's lightness, so a dark language
+  // reads dark (the ground is found above, with the colour)
+  const grounds = groundCols.map(lightness);
   m['colour.ground'] = round(med(grounds)!, 3);
   // The action colour's hue (OKLCH), turned so the wrap falls at yellow (rare for an action colour) and kept above 0;
   // none when the action colour is near grey, where hue means nothing
@@ -400,13 +440,12 @@ const s = kinds.includes('shadow'); if (b && s) bs.both++; else if (b) bs.border
   }
   m['emphasis.primaryAt'] = shares(at);
   m['emphasis.primaryWidth'] = primWin.length ? round(med(primWin.map((e) => rectOf(e).width / (e.parentElement?.getBoundingClientRect().width || W)))!, 3) : null;
-  const danger = parseCssColor(rootCs.getPropertyValue('--m-color-danger-solid').trim()) ?? parseCssColor(rootCs.getPropertyValue('--m-color-danger-fg').trim());
   const destr: Record<string, number> = {};
   for (const e of controls) {
     const t = (e.textContent ?? '').trim();
     const bgD = near(ownBg(e), danger, 10);
     const fgD = near(parseCssColor(cs(e).color), danger, 10);
-    if (!/\b(delete|remove|discard|cancel subscription|close account)\b/i.test(t) && !bgD && !fgD) continue;
+    if (!DESTRUCTIVE.test(t) && !bgD && !fgD) continue;
     const k = bgD ? 'dangerFill' : fgD ? 'dangerText' : 'plain';
     destr[k] = (destr[k] ?? 0) + 1;
   }
@@ -473,7 +512,7 @@ const s = kinds.includes('shadow'); if (b && s) bs.both++; else if (b) bs.border
   const mr = rectOf(mainCol);
   m['states.centred'] = Math.abs((mr.left + mr.right) / 2 - W / 2) <= 0.1 * W && Math.abs((Math.max(0, mr.top) + Math.min(H, mr.bottom)) / 2 - H / 2) <= 0.1 * H ? 1 : 0;
 
-  return { specVersion: 1, width: W, measures: m };
+  return { specVersion: 1.2, width: W, measures: m };
 }
 
 /** The probe as one expression for `page.evaluate(probeSource)`: the helpers, then `measureScreen()`. */
