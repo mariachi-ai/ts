@@ -52,6 +52,11 @@ export interface KitStore {
   readonly root: string;
   index(): KitStoreIndex;
   list(): KitSummary[];
+  has(id: string): boolean;
+  /** `kit.json` alone: parsed, and its bytes as built. Reads no other file. */
+  manifest(id: string): { manifest: KitManifest; bytes: Buffer };
+  /** One file of a kit, checked against the sha256 `kit.json` records. Only a path `kit.json` names. */
+  file(id: string, rel: string): Buffer;
   read(id: string): Kit;
 }
 
@@ -86,33 +91,57 @@ export function openKitStore(root?: string): KitStore {
     return parsed;
   };
 
-  const read = (id: string): Kit => {
-    const known = index().kits.map((k) => k.id);
-    if (!KIT_ID.test(id) || !known.includes(id)) {
-      throw new DesignKitsError('design-kits/unknown-kit', `Unknown kit "${id}". Kits: ${known.join(', ')}`, { id, kits: known });
+  const has = (id: string): boolean => typeof id === 'string' && KIT_ID.test(id) && index().kits.some((k) => k.id === id);
+
+  /** The kit's folder, after checking the id is one of this store's kits: an id never becomes a path otherwise. */
+  const folder = (id: string): string => {
+    if (!has(id)) {
+      const known = index().kits.map((k) => k.id);
+      throw new DesignKitsError('design-kits/unknown-kit', `Unknown kit "${String(id)}". Kits: ${known.join(', ')}`, { id, kits: known });
     }
-    const dir = path.join(base, 'kits', id);
-    const manifestBytes = fs.readFileSync(path.join(dir, 'kit.json'));
-    const manifest = parseManifest(manifestBytes, `kits/${id}/kit.json`);
-    const files = new Map<string, Buffer>();
-    for (const [rel, sha] of Object.entries(manifest.files)) {
-      const own = path.join(dir, ...rel.split('/'));
-      const from = fs.existsSync(own) ? own : path.join(base, 'shared', sha);
-      let bytes: Buffer;
-      try {
-        bytes = fs.readFileSync(from);
-      } catch {
-        throw new DesignKitsError('design-kits/corrupt', `Kit "${id}" is missing ${rel} in the installed @mariachi/design-kits; reinstall it`, { id, file: rel });
-      }
-      if (sha256(bytes) !== sha) {
-        throw new DesignKitsError('design-kits/corrupt', `Kit "${id}": ${rel} doesn't match the sha256 in kit.json; reinstall @mariachi/design-kits`, { id, file: rel });
-      }
-      files.set(rel, bytes);
-    }
-    return { manifest, manifestBytes, files };
+    return path.join(base, 'kits', id);
   };
 
-  return { root: base, index, list: () => index().kits, read };
+  const manifest = (id: string): { manifest: KitManifest; bytes: Buffer } => {
+    const bytes = fs.readFileSync(path.join(folder(id), 'kit.json'));
+    return { manifest: parseManifest(bytes, `kits/${id}/kit.json`), bytes };
+  };
+
+  /** A file the manifest names, from the kit's folder or from `shared/`, checked against its sha256. */
+  const checked = (id: string, dir: string, rel: string, sha: string): Buffer => {
+    const own = path.join(dir, ...rel.split('/'));
+    const from = fs.existsSync(own) ? own : path.join(base, 'shared', sha);
+    let bytes: Buffer;
+    try {
+      bytes = fs.readFileSync(from);
+    } catch {
+      throw new DesignKitsError('design-kits/corrupt', `Kit "${id}" is missing ${rel} in the installed @mariachi/design-kits; reinstall it`, { id, file: rel });
+    }
+    if (sha256(bytes) !== sha) {
+      throw new DesignKitsError('design-kits/corrupt', `Kit "${id}": ${rel} doesn't match the sha256 in kit.json; reinstall @mariachi/design-kits`, { id, file: rel });
+    }
+    return bytes;
+  };
+
+  const file = (id: string, rel: string): Buffer => {
+    const dir = folder(id);
+    const { manifest: kit } = manifest(id);
+    // Only what kit.json lists is a file of the kit. The path is looked up, never joined to a folder as given,
+    // so nothing outside the kit can be named: not `kit.json` itself, not `../other-kit/…`, not an absolute path.
+    const sha = typeof rel === 'string' && Object.hasOwn(kit.files, rel) ? kit.files[rel] : undefined;
+    if (!sha) throw new DesignKitsError('design-kits/unknown-file', `Kit "${id}" has no file ${JSON.stringify(rel)}`, { id, file: rel });
+    return checked(id, dir, rel, sha);
+  };
+
+  const read = (id: string): Kit => {
+    const dir = folder(id);
+    const { manifest: kit, bytes: manifestBytes } = manifest(id);
+    const files = new Map<string, Buffer>();
+    for (const [rel, sha] of Object.entries(kit.files)) files.set(rel, checked(id, dir, rel, sha));
+    return { manifest: kit, manifestBytes, files };
+  };
+
+  return { root: base, index, list: () => index().kits, has, manifest, file, read };
 }
 
 /** Every kit in this package: id, label, kind, category, mode, fonts and size. */
@@ -123,4 +152,38 @@ export function listKits(store: KitStore = openKitStore()): KitSummary[] {
 /** One kit, put back together and checked: the manifest, `kit.json`'s bytes, and every file. */
 export function readKit(id: string, store: KitStore = openKitStore()): Kit {
   return store.read(id);
+}
+
+/** Whether this package has a kit of that id. */
+export function hasKit(id: string, store: KitStore = openKitStore()): boolean {
+  return store.has(id);
+}
+
+/**
+ * A kit's `kit.json`, as a project that adds the kit gets it: its id, label, mode and `dataTheme`, the
+ * design version and commit it was built from (`mariachi.version`, `mariachi.commit`), its fonts, and
+ * every file with its sha256. Reads that one file.
+ */
+export function kitJson(id: string, store: KitStore = openKitStore()): KitManifest {
+  return store.manifest(id).manifest;
+}
+
+/** `kit.json`'s bytes exactly as built, for writing or serving it unchanged. */
+export function kitJsonBytes(id: string, store: KitStore = openKitStore()): Buffer {
+  return store.manifest(id).bytes;
+}
+
+/**
+ * One file of a kit, without writing the kit anywhere: for a server that hands out single files, or
+ * a tool that assembles a kit in memory. `path` must be one `kit.json` lists; anything else, `kit.json`
+ * included, is refused (`design-kits/unknown-file`). The bytes are checked against the sha256
+ * `kit.json` records before they are returned.
+ */
+export function readKitFile(id: string, path: string, store: KitStore = openKitStore()): Buffer {
+  return store.file(id, path);
+}
+
+/** Where the design catalog shipped with this package is: `components[]`, `archetypes[]`, presets and tokens. */
+export function catalogPath(root: string = defaultStoreRoot()): string {
+  return path.join(root, 'catalog.json');
 }

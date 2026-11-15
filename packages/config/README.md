@@ -22,10 +22,45 @@ Guides: [feature-flags.md](../core/docs/feature-flags.md), [conventions.md](../c
 | --- | --- |
 | `loadConfig(overrides?, options?)` / `useConfig()` | Build (once) and read the validated `AppConfig`; invalid input throws `ConfigError` with readable issues |
 | `registerConfigSection` / `useConfigSection` | Typed, validated config for your own modules |
+| `secret(schema)`, `secretUrl(schema)`, `REDACTED` | Mark a field in your own section as a secret, so it shows as `[REDACTED]` when logged |
+| `hideContents(instance, label)` | For a class that holds secrets (a secrets adapter of your own): an instance logs as its label |
 | `createSecrets(config)`, `Secrets`, `EnvSecretsAdapter` | Secrets, optionally per tenant |
 | `createFeatureFlags(config)` | `'store'` (cached, tenant overrides, rollouts) or `'static'` flags |
 | `DrizzleFeatureFlagStore` | `get`, `set`, `setTenantOverride` on the `feature_flags` table |
 | `evaluateFlag`, `CachedFeatureFlags`, `StoreFeatureFlagAdapter`, `StaticFeatureFlagAdapter` | Building blocks |
+
+## Secrets in logs
+
+Reading a secret gives its value: `config.auth.jwtSecret` is the secret. Logging, printing or
+serialising the config, or any part of it, does not:
+
+```ts
+logger.info({ config }, 'starting');          // jwtSecret: "[REDACTED]", url: "postgres://app:***@db:5432/app"
+console.log(config.database);                 // the same
+JSON.stringify(config.billing);               // the same
+```
+
+Every key, secret and API key in the built-in config shows as `[REDACTED]`, and a URL
+(`database.url`, `redis.url`, `email.smtpUrl`, `email.apiUrl`, `ai.baseUrl`, `search.url`, the Sentry DSN) keeps everything but its password
+and any query parameter named like a credential (`?password=`, `?sslkey=`, `?access_token=`). The
+secrets store shows as `[Secrets]`, whatever it holds. Mark the secrets
+in your own sections the same way:
+
+```ts
+import { registerConfigSection, secret, secretUrl } from '@mariachi/config';
+
+registerConfigSection('payments', {
+  schema: z.object({ apiKey: secret(z.string()), callbackUrl: secretUrl(z.string().url()).optional() }),
+});
+```
+
+What this doesn't cover: a copy made with spread or `structuredClone` (`{ ...config.auth }`) is a
+plain object and prints in full, as does the value itself once read (`logger.info({ key:
+config.ai.apiKey })`). The logger's own field-name rules (`password`, `token`, `secret`, `apiKey`,
+`authorization`) still catch some of those; don't rely on them for a copied config.
+
+A logger of your own should pass what it is given through `redactForOutput` from `@mariachi/core`
+before writing it, as the built-in ones do. `JSON.stringify` and `console.log` need nothing.
 
 ## Environment
 

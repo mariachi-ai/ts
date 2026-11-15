@@ -27,7 +27,6 @@ export const obsidianArchetype: Archetype = {
       'keyboard-first',
       'command menu',
       'status icons',
-      'subtle glow',
       'minimal',
     ],
   },

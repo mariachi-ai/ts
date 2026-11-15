@@ -22,7 +22,9 @@ const well = { light: '#f7f7f7', dark: '#202f36' };
 // Selected: a pale sky tint with a light-blue outline and blue text
 const skyTint = { light: '#ddf4ff', dark: '#1a3546' };
 const skyLine = { light: '#84d8ff', dark: '#3f87ab' };
-const skyText = { light: '#0b6fb0', dark: '#49c0f8' };
+// The text blue keeps the sky blue's OKLCH hue (237°), only darker, so links and selected text read as the same
+// blue as the solid sky (the earlier #0b6fb0 drifted to 246° and counted as a second hue)
+const skyText = { light: '#0070a0', dark: '#49c0f8' };
 // The pale green tint behind "correct" and the learner's own row
 const greenTint = { light: '#d7ffb8', dark: '#1f3a1a' };
 // The 3D lip: a solid band below each button in its own darker step (the reference's 0 4px 0)
@@ -68,7 +70,7 @@ export const marigold = extendTheme(minimal, {
         fg: onBright,
         text: skyText,
       },
-      // The signature green: banners, the logo mark, the learner's highlights
+      // The signature green: fills only (banners, the landing footer band, highlights). Never text: 2.1:1 on white
       brand: {
         default: { light: green, dark: greenDark },
         fg: onBright,
@@ -76,6 +78,8 @@ export const marigold = extendTheme(minimal, {
       },
       success: {
         bg: greenTint,
+        // Also the language's text green: the one green that reads as text on white (5.5:1; the brand green is
+        // 2.1:1 and the lip green 3.0:1). Green headlines on public pages use it, never the brand green
         fg: { light: '#3b7700', dark: greenDark },
         border: { light: '#a5ed6e', dark: '#3f6a1f' },
         solid: { light: green, dark: greenDark },
@@ -126,7 +130,9 @@ export const marigold = extendTheme(minimal, {
         '3xl': '3rem',
         '4xl': '3.875rem',
       },
-      weight: { regular: '500', medium: '600', semibold: '700', bold: '800' },
+      // Two weights, like the reference: every screen measured uses one or two (51 of 51). Medium reads as
+      // regular and semibold as bold, so no third weight appears by accident
+      weight: { regular: '500', medium: '500', semibold: '800', bold: '800' },
       leading: { tight: '1.1', normal: '1.45', relaxed: '1.6' },
       tracking: { tight: '-0.02em', normal: '0', wide: '0.05em' },
       body: { weight: '500' },
@@ -268,10 +274,14 @@ export const marigold = extendTheme(minimal, {
       gap: 'var(--m-space-2)',
       labelFg: 'var(--m-color-fg-default)',
       labelFontSize: 'var(--m-font-size-md)',
-      labelFontWeight: '700',
+      labelFontWeight: '800',
       hintFg: 'var(--m-color-fg-muted)',
       hintFontSize: 'var(--m-font-size-sm)',
-      errorFontWeight: '700',
+      errorFontWeight: '800',
+      // No required marker: red is for errors only, and every field on the language's forms is required unless its
+      // label says "(optional)". The source's account forms show no marker (DESIGN.md, Forms)
+      requiredMarker: '""',
+      requiredFg: 'var(--m-color-fg-muted)',
     },
     // Ticked and on are the selection blue (the reference's blue lip step, 3:1 on white)
     checkbox: {
@@ -377,7 +387,7 @@ export const marigold = extendTheme(minimal, {
       shadow: 'none',
       brandFamily: 'var(--m-font-family-display)',
       brandSize: '2rem',
-      brandWeight: '900',
+      brandWeight: '800',
       link: {
         radius: '12px',
         fontSize: 'var(--m-font-size-sm)',
@@ -449,7 +459,8 @@ export const marigold = extendTheme(minimal, {
       border: 'var(--m-color-border-default)',
       borderWidth: '2px',
     },
-    divider: { width: '2px', labelTransform: 'uppercase', labelTracking: '0.05em' },
+    // The labelled divider ("OR" on the sign-in form): uppercase grey at the 15px label size
+    divider: { width: '2px', labelFontSize: 'var(--m-font-size-sm)', labelTransform: 'uppercase', labelTracking: '0.05em' },
     // Feedback is a pale tint in the tone with a 2px outline of the tone and a heavy title
     alert: {
       borderWidth: '2px',
@@ -509,7 +520,7 @@ export const marigold = extendTheme(minimal, {
       paddingX: 'var(--m-space-3)',
       paddingY: 'var(--m-space-2)',
       fontSize: 'var(--m-font-size-sm)',
-      fontWeight: '700',
+      fontWeight: '800',
     },
     // Thick rounded bars; the green fill is one step darker than the reference's to hold 3:1
     progress: {
@@ -526,7 +537,7 @@ export const marigold = extendTheme(minimal, {
       paddingX: 'var(--m-space-6)',
       paddingY: '1.375rem',
       summarySize: 'var(--m-font-size-md)',
-      summaryWeight: '600',
+      summaryWeight: '500',
       contentFg: 'var(--m-color-fg-muted)',
     },
     skeleton: {
@@ -544,7 +555,19 @@ export const marigold = extendTheme(minimal, {
       fontWeight: '800',
     },
     code: { radius: '12px', inlineRadius: '8px', bg: well, inlineBg: well, border: 'var(--m-color-border-default)' },
-    prose: { linkFg: skyText, linkDecoration: 'none', maxWidth: '40rem', h2Border: 'transparent' },
+    // The reading column is the form column, 42rem (the source's post column measures 680px); links are blue with no
+    // underline at rest; section headings are the card-title step (24px), smaller headings the body size
+    prose: {
+      linkFg: skyText,
+      linkDecoration: 'none',
+      maxWidth: '42rem',
+      h2Border: 'transparent',
+      h1Size: 'var(--m-font-size-2xl)',
+      h2Size: 'var(--m-font-size-xl)',
+      h3Size: 'var(--m-font-size-md)',
+      h4Size: 'var(--m-font-size-md)',
+      imageRadius: 'var(--m-radius-lg)',
+    },
     // Messages are speech bubbles: the other side's in white with a grey outline, the person's in the
     // sky tint with blue text
     chat: {

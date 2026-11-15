@@ -114,6 +114,13 @@ export class AuditError extends MariachiError {
   }
 }
 
+export class OrganizationsError extends MariachiError {
+  constructor(code: string, message: string, metadata?: Record<string, unknown>) {
+    super(code, message, metadata);
+    this.name = 'OrganizationsError';
+  }
+}
+
 export class AIError extends MariachiError {
   constructor(code: string, message: string, metadata?: Record<string, unknown>) {
     super(code, message, metadata);
@@ -197,6 +204,7 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'auth/webhook-verification-failed': 401,
   'auth/oauth-state-mismatch': 400,
   'auth/oauth-pkce-missing': 400,
+  'auth/cross-site-request': 403,
   'auth/webhook-invalid-payload': 400,
   'auth/session-expired': 401,
   'auth/invalid-session': 401,
@@ -208,13 +216,31 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'http/invalid-json': 400,
   'http/payload-too-large': 413,
   'http/unsupported-media-type': 415,
+  'http/invalid-multipart': 400,
+  'http/too-many-files': 413,
+  'http/too-many-fields': 413,
+  'http/file-too-large': 413,
+  'http/field-too-large': 413,
+  'http/unsupported-file-type': 415,
   'http/not-found': 404,
   'http/method-not-allowed': 405,
   'webhooks/unauthorized': 401,
   'webhooks/invalid-payload': 400,
   'tenancy/missing-tenant': 400,
   'tenancy/mismatch': 403,
+  'tenancy/reserved-tenant': 403,
   'tenancy/suspended': 403,
+  'organizations/user-required': 401,
+  'organizations/forbidden': 403,
+  'organizations/suspended': 403,
+  'organizations/email-mismatch': 403,
+  'organizations/email-unverified': 403,
+  'organizations/last-owner': 409,
+  'organizations/already-member': 409,
+  'organizations/slug-taken': 409,
+  'organizations/invalid-role': 400,
+  'organizations/invitation-invalid': 400,
+  'organizations/invitation-expired': 410,
   'rate-limit/exceeded': 429,
   'rate-limit/unknown-tier': 500,
   'rate-limit/backend-failed': 503,
@@ -240,7 +266,10 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'storage/path-traversal': 400,
   'storage/invalid-signature': 403,
   'search/missing-query-fields': 400,
+  'search/tenant-required': 500,
   'ai/request-failed': 502,
+  // The client closed the request (nginx's 499): nobody is there to read another status
+  'ai/aborted': 499,
   'ai/providers-exhausted': 502,
   'integrations/invalid-output': 502,
   'integrations/invalid-signature': 401,

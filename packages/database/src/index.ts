@@ -19,6 +19,7 @@ export type {
   ColumnReference,
   ColumnType,
   IndexDefinition,
+  IndexMethod,
   CheckDefinition,
   ReferentialAction,
   InferEntity,

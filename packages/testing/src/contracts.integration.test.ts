@@ -1,15 +1,18 @@
 import { afterAll, beforeAll } from 'vitest';
 import { CreateBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { MemoryCacheAdapter, RedisCacheAdapter, RedisDistributedLock } from '@mariachi/cache';
-import { applySchema, createPostgresDatabase, type PostgresDatabase } from '@mariachi/database-postgres';
+import { column, defineTable } from '@mariachi/database';
+import { applySchema, createPostgresDatabase, DrizzleRepository, type PostgresDatabase } from '@mariachi/database-postgres';
+import { sql } from 'drizzle-orm';
 import { notificationsTable } from '@mariachi/notifications';
 import { DrizzleNotificationStore } from '@mariachi/notifications/postgres';
 import { TypesenseSearchAdapter } from '@mariachi/search';
+import { createPostgresSearch, searchDocumentsTable, searchIndexesTable } from '@mariachi/search/postgres';
 import { S3StorageAdapter } from '@mariachi/storage';
 import { startMinio, startPostgres, startRedis, startTypesense, stopAll } from '../../../test/setup';
 import { TestCacheClient } from './adapters/cache';
 import { TestLock } from './adapters/lock';
-import { cacheContract, inboxContract, lockContract, searchContract, storageContract } from './contracts/index';
+import { cacheContract, inboxContract, lockContract, repositoryContract, searchContract, storageContract, type ContractNote } from './contracts/index';
 
 /*
  * The same suites as contracts.test.ts, against real infrastructure. If a double and its real
@@ -22,6 +25,17 @@ const infra: {
   redisUrl?: string;
   database?: PostgresDatabase;
 } = {};
+// The table the repository contract runs on: tenant-scoped and soft-deleted, as most app tables are
+const contractNotes = defineTable('contract_notes', {
+  id: column.uuid().primaryKey().defaultRandom(),
+  tenantId: column.text().notNull(),
+  name: column.text().notNull(),
+  score: column.integer(),
+  createdAt: column.timestamp().notNull().defaultNow(),
+  deletedAt: column.timestamp(),
+});
+class ContractNotes extends DrizzleRepository<ContractNote> {}
+
 const closers: Array<() => Promise<void>> = [];
 
 beforeAll(async () => {
@@ -40,7 +54,9 @@ beforeAll(async () => {
   infra.redisUrl = redisUrl;
   infra.database = createPostgresDatabase({ url: pgUrl });
   await infra.database.connect();
-  await applySchema(infra.database.db, [notificationsTable]);
+  await applySchema(infra.database.db, [notificationsTable, searchIndexesTable, searchDocumentsTable]);
+  await infra.database.db.execute(sql`drop table if exists contract_notes`);
+  await applySchema(infra.database.db, [contractNotes]);
 }, 300_000);
 
 afterAll(async () => {
@@ -62,8 +78,10 @@ storageContract('s3 (minio)', () =>
 );
 
 searchContract('typesense', () => new TypesenseSearchAdapter(infra.typesense!));
+searchContract('postgres', () => createPostgresSearch(infra.database!.db));
 
 inboxContract('postgres', () => new DrizzleNotificationStore(infra.database!.db));
+repositoryContract('postgres', () => new ContractNotes(contractNotes, infra.database!.db));
 
 cacheContract('redis', (prefix) => {
   const cache = new RedisCacheAdapter({ adapter: 'redis', url: infra.redisUrl!, prefix });

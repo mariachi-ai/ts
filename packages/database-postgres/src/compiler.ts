@@ -16,6 +16,7 @@ import {
   jsonb,
   numeric,
   doublePrecision,
+  customType,
   index,
   uniqueIndex,
   check,
@@ -23,6 +24,9 @@ import {
   type PgTableWithColumns,
   type AnyPgColumn,
 } from 'drizzle-orm/pg-core';
+
+/** Written with `to_tsvector(...)` in SQL; reads back as Postgres prints it. */
+const tsvector = customType<{ data: string }>({ dataType: () => 'tsvector' });
 
 const compiledTables = new WeakMap<TableDefinition, PgTableWithColumns<any>>();
 const enums = new Map<string, ReturnType<typeof pgEnum>>();
@@ -88,6 +92,9 @@ function compilePgColumn(def: TableDefinition, key: string, col: ColumnDefinitio
     case 'enum':
       builder = enumFor(def, key, col)(dbName);
       break;
+    case 'tsvector':
+      builder = tsvector(dbName);
+      break;
     default:
       throw new ConfigError('database/unknown-column-type', `Unknown column type: ${(col as ColumnDefinition).type}`);
   }
@@ -141,7 +148,8 @@ export function compileTable<T extends TableDefinition>(def: T): PgTableWithColu
     const extras: any[] = [];
     for (const idx of def.indexes ?? []) {
       const cols = idx.columns.map((c) => t[c]);
-      let built = (idx.unique ? uniqueIndex(idx.name) : index(idx.name)).on(cols[0], ...cols.slice(1));
+      const named = idx.unique ? uniqueIndex(idx.name) : index(idx.name);
+      let built = idx.using && idx.using !== 'btree' ? named.using(idx.using, cols[0], ...cols.slice(1)) : named.on(cols[0], ...cols.slice(1));
       if (idx.where) built = built.where(sql.raw(idx.where));
       extras.push(built);
     }

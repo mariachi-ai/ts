@@ -18,13 +18,62 @@ Multi-tenant auth is consistent because every provider maps its own concepts int
 
 | Provider   | Tenant source in token        | Roles/scopes source   |
 |-----------|--------------------------------|------------------------|
-| **Clerk** | `org_id` → `tenantId`         | `org_role` → `scopes` |
-| **FusionAuth** | `applicationId` → `tenantId` | `roles[]` → `scopes`   |
+| **Clerk** | `org_id` → `tenantId`         | `org_role` → `roles`; that plus `org_permissions` → `scopes` |
+| **FusionAuth** | `tid`, else `applicationId` → `tenantId` | `roles[]` → `roles` and `scopes` |
 | **GoTrue** | `org_id` (configurable, added by a custom access-token hook) → `tenantId` | `role`, `roles[]`, `org_role` → `roles`; those plus `scope` → `scopes` |
 | **WorkOS** | `org_id` → `tenantId` | `role`/`roles` → `roles`, `permissions` → `scopes` |
 | **JWT** (core) | `tenantId` claim            | Custom claims / `scopes` |
 
 After verification, the rest of the stack (controllers, services, RBAC, tenancy) only sees `ctx.userId`, `ctx.tenantId`, and `ctx.scopes`. Authorization (`AuthorizationAdapter`) is tenant-aware: `grant(userId, role, tenantId)` and `can(identity, action, resource)` use `identity.tenantId` so roles are per-tenant.
+
+### Users with no organization: personal tenants
+
+Every provider above gives a user who belongs to no organization an empty `tenantId`, and the
+framework refuses an identity with no tenant (`tenancy/missing-tenant`), because tenant-scoped
+tables, billing and roles all key on it. For an app where people sign up on their own (or before
+they join a team), wrap the verifier:
+
+```ts
+import { withPersonalTenants } from '@mariachi/auth';
+import { isPersonalTenant } from '@mariachi/core';
+
+const auth = withPersonalTenants(provider, { namespace: 'main' });   // any provider, JWTAdapter or SessionManager
+api.withAuthStrategy('session', bearerStrategy(auth));
+
+// A user with no organization now arrives with ctx.tenantId = 'user.main.<userId>'.
+if (isPersonalTenant(ctx.tenantId)) { /* a single person's workspace: hide team features */ }
+```
+
+Everything downstream is unchanged: a personal tenant is a tenant with one member, so repositories
+scope to it, billing gives it its own customer and credits, and roles are granted in it. A user
+who later joins an organization arrives with that organization's tenant; their personal one is
+still theirs when the token names no organization.
+
+When the provider has no organizations at all, [`@mariachi/organizations`](./organizations.md) keeps
+them, with memberships and invitations, in your own database.
+
+The rules, which are enforced and tested:
+
+- **Namespaced by issuer.** The id is `user.<namespace>.<userId>`, the user id percent-encoded so
+  the id holds no colon or slash. A user id is only unique within its issuer, so each verifier gets
+  a `namespace` (two verifiers share one only if they share a user directory). Choose it once:
+  changing it moves every user to a new, empty tenant.
+- **Only for a person.** `identityType: 'session'` only; an API key or a service with no tenant
+  keeps none.
+- **Only when the tenant is absent.** An organization's tenant passes through untouched.
+- **Never from a claim.** Every tenant id starting with `user.` is reserved (tenant ids only:
+  channel names, labels and other strings are unaffected). A token that names one as its tenant is
+  refused by the wrapper and by `JWTAdapter`, and the API facade (`tenancy/reserved-tenant`),
+  `createAuthMiddleware` and realtime's `handleConnect` refuse any identity that carries one
+  without the wrapper's mark, whether or not personal tenants are in use. The mark is a symbol on
+  the identity object, which no token payload can contain. Don't use ids starting with `user.` for
+  your own tenants.
+
+With `JWTAdapter`, also pass `requireTenant: false` and sign such users' tokens with an empty
+`tenantId`; with `SessionManager`, create their sessions with an empty `tenantId`. Neither a token
+nor a session ever stores a personal tenant: the wrapper gives it on every verification. For
+realtime, pass `handleConnect` the identity object the wrapped verifier returned (or a spread of
+it), so the mark comes with it.
 
 ## Flow: request → identity → context
 
@@ -47,8 +96,9 @@ After verification, the rest of the stack (controllers, services, RBAC, tenancy)
 | **`@mariachi/auth`** | Defines `ResolvedIdentity`, `AuthenticationAdapter`, `AuthProvider`, `AuthWebhookHandler`; provides `createAuth` (JWT, API key), `createAuthMiddleware`, `createAuthWebhookDispatcher`, RBAC. No dependency on any specific IdP. |
 | **`@mariachi/auth-clerk`** | Implements `AuthProvider`: verifies Clerk JWTs, maps `org_id` → `tenantId`, `org_role` → scopes; provides `createClerkAuth()`, `createClerkMiddleware(provider)`, Clerk webhook handler and controller. |
 | **`@mariachi/auth-fusionauth`** | Implements `AuthProvider`: verifies FusionAuth JWTs via JWKS, maps `applicationId` → `tenantId`, `roles` → scopes; provides `createFusionAuthAuth()`, `FusionAuthWebhookHandler` (sync verify with HMAC or PEM). Implements `IdentityClient` (`createFusionAuthIdentityClient()`) on the Login, OAuth and User APIs, with `fusionAuthEmailVouched()` deciding `emailVerified`. |
-| **`@mariachi/auth-gotrue`** | Implements `AuthProvider` for GoTrue (Supabase Auth, and Ensemble's per-app auth): verifies access tokens against GoTrue's JWKS (ES256 by default, never HMAC) with issuer and audience (`authenticated`), maps `sub` → `userId`, `session_id` → `sessionId`, the org claim → `tenantId`, `role`/`roles`/`org_role` → `roles` and `scopes`, and keeps the whole payload (`aal`, `amr`, `act`, `is_anonymous`, …) in `claims`; a short JWKS cache (60 s) so a rotated-out key stops verifying. Provides `createGoTrueAuth()` and `GoTrueWebhookHandler` for GoTrue's HTTP hooks (Standard Webhooks: `webhook-id`, `webhook-timestamp`, `webhook-signature`, secret `v1,whsec_…`), normalized to `AUTH_EVENT_TYPES`. Set `GOTRUE_JWT_ISSUER` on GoTrue: it omits `iss` otherwise. An app that reaches GoTrue on an internal address (an Ensemble preview: `http://127.0.0.1:9999`) passes `discoverIssuer: true` to read the issuer from GoTrue's `/.well-known/openid-configuration`, re-read with the JWKS. |
+| **`@mariachi/auth-gotrue`** | Implements `AuthProvider` for GoTrue (Supabase Auth, hosted or your own): verifies access tokens against GoTrue's JWKS (ES256 by default, never HMAC) with issuer and audience (`authenticated`), maps `sub` → `userId`, `session_id` → `sessionId`, the org claim → `tenantId`, `role`/`roles`/`org_role` → `roles` and `scopes`, and keeps the whole payload (`aal`, `amr`, `act`, `is_anonymous`, …) in `claims`; a short JWKS cache (60 s) so a rotated-out key stops verifying. Provides `createGoTrueAuth()` and `GoTrueWebhookHandler` for GoTrue's HTTP hooks (Standard Webhooks: `webhook-id`, `webhook-timestamp`, `webhook-signature`, secret `v1,whsec_…`), normalized to `AUTH_EVENT_TYPES`. Set `GOTRUE_JWT_ISSUER` on GoTrue: it omits `iss` otherwise. An app that reaches GoTrue on an internal address (a sidecar, say: `http://127.0.0.1:9999`) passes `discoverIssuer: true` to read the issuer from GoTrue's `/.well-known/openid-configuration`, re-read with the JWKS. |
 | **`@mariachi/auth-workos`** | Implements `AuthProvider`: verifies WorkOS AuthKit JWTs via JWKS (issuer and `client_id` checked; `audience` for tokens AuthKit issues as an OAuth server, e.g. MCP), maps `org_id` → `tenantId`, `permissions` → scopes; `WorkOSWebhookHandler` verifies `WorkOS-Signature`. Implements `IdentityClient` (`createWorkOSIdentityClient()`) on `@workos-inc/node`, an optional peer loaded on first use. |
+| **`@mariachi/auth-oidc`** | Implements `AuthProvider` for any standard OpenID Connect issuer (Auth0, Cognito, Keycloak, Entra ID, Okta, Firebase, your own): finds the keys through discovery, verifies signature, issuer and a required audience, never HMAC, over HTTPS only, and maps tenant, roles and scopes from configurable claims (`org_id`, `roles`, `scope`/`scp`/`permissions` by default; roles are not scopes unless `rolesAsScopes`); `validate` for provider-specific checks; provides `createOidcAuth()`. No webhooks and no `IdentityClient`: the provider's own page signs users in. See its [README](../../auth-oidc/README.md). |
 
 ## Headless sign-in: `IdentityClient`
 
@@ -83,6 +133,17 @@ await identity.signOut({ sessionId: tokens.sessionId, refreshToken });
 
 - **Auth webhook flow** — `createAuthWebhookDispatcher` (from `@mariachi/auth`) takes any `AuthWebhookHandler`. Clerk, FusionAuth, GoTrue and WorkOS each provide a handler via `provider.createWebhookHandler({ secret })`. The dispatcher verifies the webhook (using the handler), normalizes the event to `AuthWebhookEvent`, and calls communication procedures (e.g. `auth.user.created`). Same flow for every provider; only the verification and event parsing are provider-specific.
 
+Every provider's handler follows two rules. The event id that dedup uses is one the signature
+covers, never a header a replay could change. And the tenant an event runs in comes from the signed
+body. An event whose tenant is in the reserved personal-tenant namespace is refused by the dispatcher.
+
+| Provider | Signature | Event id | Tenant |
+| --- | --- | --- | --- |
+| Clerk | Svix: HMAC over id, timestamp and body | `svix-id` (signed) | The body's organization, for organization events |
+| FusionAuth | A signed JWT holding the body's sha256 | The body's event id, else a digest of the body | The body's `tenantId` |
+| GoTrue | Standard Webhooks: HMAC over id, timestamp and body | `webhook-id` (signed) | The org claim in the body's claims |
+| WorkOS | HMAC over timestamp and body | The body's `id`, else a digest of the body | The body's `organization_id` |
+
 ## Authorization (RBAC)
 
 Roles are per tenant. Assignments live in `user_roles`, and each role's permissions live on its
@@ -111,6 +172,53 @@ await rbac.can(identity, 'update', 'posts');            // checks identity.tenan
 After `defineRole`, call `rbac.refreshPermissions()` to apply it in this process right away; other
 processes reload after `permissionTtlMs`. Granting a role that doesn't exist throws
 `auth/unknown-role`.
+
+## Sessions
+
+`SessionManager` issues opaque server-side sessions: a random 256-bit token the client holds, and a
+row in `sessions` (via `DrizzleSessionStore`) that holds only the token's sha256. Unlike a JWT, a
+session can be revoked at once, listed ("your devices") and signed out everywhere.
+
+```ts
+import { SessionManager } from '@mariachi/auth';
+import { DrizzleSessionStore } from '@mariachi/auth/postgres';
+import { bearerStrategy } from '@mariachi/api-facade';
+
+const sessions = new SessionManager(new DrizzleSessionStore(database.db), {
+  ttlSeconds: 30 * 24 * 3600,            // ends after 30 days without use
+  maxLifetimeSeconds: 90 * 24 * 3600,    // and 90 days after sign-in, however often it's used
+});
+
+// After you've checked who the user is (an IdentityClient sign-in, an OAuth callback, ...):
+const { token, session } = await sessions.create({ userId, tenantId, scopes, userAgent, ipAddress });
+
+// Verify it on requests: `Authorization: Bearer <token>`, or the named cookie.
+api.withAuthStrategy('session', bearerStrategy(sessions, { cookie: 'session' }));
+
+await sessions.revoke(session.id);                              // sign out this session (the id from ctx.sessionId)
+await sessions.revoke(idFromRequest, { userId: ctx.userId! });  // "sign out that device": not-found unless it's this user's
+await sessions.revokeAllForUser(userId, tenantId);              // sign out everywhere in this tenant
+const devices = await sessions.list(userId, tenantId);          // live sessions, newest activity first
+```
+
+`revokeAllForUser` and `list` without a `tenantId` cover the user's sessions in **every** tenant.
+When a session id arrives in a request, always revoke with the owner, so one user can't end
+another's session.
+
+`verify` fails with `auth/invalid-session` (unknown or revoked) or `auth/session-expired`. Expiry
+slides: each use at least `touchIntervalSeconds` (default 60) after the last pushes it `ttlSeconds`
+ahead, but never past `maxLifetimeSeconds` from sign-in (default 90 days; `null` for no limit).
+Pass `sliding: false` to make `ttlSeconds` the whole lifetime. Add `sessionsTable` from `@mariachi/auth/schema`
+to your schema, and delete old rows on a schedule:
+
+```ts
+defineJob({ name: 'purge-sessions', schema: z.object({}), handler: async () => void (await sessions.purgeExpired()) });
+jobs.schedule({ name: 'purge-sessions', cron: '0 4 * * *', jobName: 'purge-sessions', data: {} });
+```
+
+`InMemorySessionStore` is for tests and a single process. A cookie session in a browser also needs
+CSRF protection for state-changing requests, which the framework doesn't provide yet: set the
+cookie `HttpOnly`, `Secure` and `SameSite=Lax` or `Strict`, and don't change state on `GET`.
 
 ## API keys
 

@@ -8,15 +8,21 @@ export interface ProjectConfig {
   /** Override the `@mariachi/*` version range written to package.json. Default `^<framework version>`. */
   mariachiVersion?: string;
   /**
-   * How users sign in. `jwt` (default): HS256 tokens from `JWT_SECRET` (`JWTAdapter`). `ensemble`:
-   * Ensemble's per-app auth, GoTrue at `/auth/v1` verified with `@mariachi/auth-gotrue`, the tenant
-   * from the `org_id` claim (`@mariachi/tenancy`), plus the Ensemble environment file, seeded users
-   * and an example sign-in page.
+   * End-to-end test support: `pnpm test:e2e`, `src/testing/`, a first test, and one per generated
+   * entity, with `@mariachi/testing` and `testcontainers` as devDependencies. The tests need Docker.
+   * Default true; `false` leaves all of it out (and `generate entity` then writes no end-to-end test).
+   */
+  e2e?: boolean;
+  /**
+   * How users sign in. `jwt` (default): HS256 tokens from `JWT_SECRET` (`JWTAdapter`). `gotrue`:
+   * GoTrue (Supabase Auth, hosted or your own), verified with `@mariachi/auth-gotrue`; the tenant is
+   * the token's organization claim (`@mariachi/tenancy`) or the user's personal tenant, with an
+   * example sign-in page and `GET /api/me`.
    */
   auth?: ProjectAuth;
 }
 
-export const PROJECT_AUTH = ['jwt', 'ensemble'] as const;
+export const PROJECT_AUTH = ['jwt', 'gotrue'] as const;
 export type ProjectAuth = (typeof PROJECT_AUTH)[number];
 
 export interface GenerateOptions {

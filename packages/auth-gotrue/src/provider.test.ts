@@ -56,7 +56,7 @@ async function sign(key: Key, claims: Record<string, unknown>, opts: { iss?: str
     .sign(key.privateKey);
 }
 
-// What GoTrue v2.197.0 puts in an access token (reports/AU0/03-04), plus a hook's org claims.
+// What GoTrue v2.197.0 puts in an access token, plus a hook's org claims.
 const gotrueClaims = (over: Record<string, unknown> = {}) => ({
   sub: '594ff93a-cb07-4b26-ad54-2c9594aee06e',
   email: 'admin@seed.test',
@@ -99,6 +99,15 @@ describe('GoTrueAuthProvider.verify', () => {
       iss: base,
     });
     expect(provider.name).toBe('gotrue');
+  });
+
+  it('refuses a token whose org claim is in the reserved personal-tenant namespace', async () => {
+    const key = await makeKey('k-reserved');
+    published = [key.jwk];
+    await expect(createGoTrueAuth({ url: base }).verify(await sign(key, gotrueClaims({ org_id: 'user.app.alice' })))).rejects.toMatchObject({
+      code: 'auth/invalid-token',
+      message: expect.stringContaining('reserved'),
+    });
   });
 
   it('leaves tenantId empty without the org claim, and reads a custom org claim and roles/scope', async () => {
@@ -191,7 +200,7 @@ describe('GoTrueAuthProvider.verify', () => {
 });
 
 describe('GoTrueAuthProvider with discoverIssuer', () => {
-  // In an Ensemble preview the app reaches GoTrue on loopback, but tokens carry the public issuer.
+  // An app that reaches GoTrue on loopback (a sidecar), while tokens carry the public issuer.
   const publicIssuer = 'https://preview-1.example.dev/auth/v1';
 
   it("verifies against the issuer GoTrue's discovery document names, not the internal url", async () => {

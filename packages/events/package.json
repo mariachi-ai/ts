@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/events",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "Domain events with envelopes, consumer groups, Redis Streams/NATS JetStream adapters, dead letters and a transactional outbox.",
   "mariachi": {
     "category": "async",
@@ -25,6 +25,11 @@
       "types": "./dist/outbox.d.ts",
       "import": "./dist/outbox.js",
       "require": "./dist/outbox.cjs"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js",
+      "require": "./dist/schema.cjs"
     }
   },
   "main": "./dist/index.cjs",

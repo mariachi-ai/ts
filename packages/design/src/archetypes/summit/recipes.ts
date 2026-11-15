@@ -1,12 +1,13 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Summit's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
- * (no colour literals), with sample data from a made-up training app ("Trailmark"). They follow the
+ * Summit's nine layout recipes (the seven every language has, then reading and sign-in): framework-free
+ * HTML using only @mariachi/design classes and tokens (no colour literals), with sample data from a made-up training app ("Trailmark"). They follow the
  * language's real screen patterns: a white 56px top bar with an orange line under the current link,
  * three columns on a cool off-white (the athlete, the feed, challenges), feed cards with a stats row of
  * big figures and small units, a token-drawn route map, achievements and a props row; the activity
  * page's left column with an orange bar, segment tables and a top-ten board; plan cards on a dark band.
+ * Type keeps two weights (400 and 600) and the ramp's sizes; the app bar carries one orange button.
  * Maps are drawn from tokens; they are placeholders, never real maps.
  */
 
@@ -90,29 +91,32 @@ const I = {
   warn: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
 };
 
-// Type: bold compact headings, small grey labels, tabular figures with small units
+// Type: semibold compact headings, small grey labels, tabular figures with small units
 const num = 'font-variant-numeric: tabular-nums';
-const bold = 'font-weight: var(--m-font-weight-bold); line-height: var(--m-font-leading-tight)';
+const bold = 'font-weight: var(--m-font-weight-semibold); line-height: var(--m-font-leading-tight)';
 const pageTitle = `${bold}; font-size: var(--m-font-size-xl)`;
 const label = 'font-size: var(--m-font-size-xs); color: var(--m-color-fg-subtle)';
 const meta = 'font-size: var(--m-font-size-xs); color: var(--m-color-fg-muted)';
 const caps =
-  'font-size: 0.6875rem; font-weight: var(--m-font-weight-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--m-color-fg-subtle)';
+  'font-size: var(--m-font-size-xs); font-weight: var(--m-font-weight-semibold); text-transform: uppercase; letter-spacing: 0.04em; color: var(--m-color-fg-subtle)';
 const hair = 'border-block-start: var(--m-border-width-thin) solid var(--m-color-border-muted)';
 const link = 'color: inherit; text-decoration: none';
-const unit = (v: string, u: string) =>
-  `${v}<span style="font-size: 0.6em; font-weight: var(--m-font-weight-regular); margin-inline-start: 0.12em">${u}</span>`;
+// Units sit small beside the figure: 14px beside a big figure, 12px inside a 14px table cell
+const unit = (v: string, u: string, size = 'var(--m-font-size-sm)') =>
+  `${v}<span style="font-size: ${size}; font-weight: var(--m-font-weight-regular); margin-inline-start: 0.12em">${u}</span>`;
+const unitXs = (v: string, u: string) => unit(v, u, 'var(--m-font-size-xs)');
 
 // The wordmark: the app's own name in heavy capitals in the signature orange (no logo)
 const wordmark = (size = 'var(--m-font-size-lg)') =>
-  `<a href="#" class="m-navbar-brand" style="font-weight: 800; font-size: ${size}; letter-spacing: -0.02em; text-transform: uppercase; color: var(--m-color-brand-default); text-decoration: none">Trailmark</a>`;
+  `<a href="#" class="m-navbar-brand" style="font-weight: var(--m-font-weight-semibold); font-size: ${size}; line-height: 1; letter-spacing: -0.02em; text-transform: uppercase; color: var(--m-color-brand-default); text-decoration: none">Trailmark</a>`;
 
-// The top bar: white, 56px, links in near-black with a 2px signature-orange line under the current one
+// The top bar: white, 56px, four links in near-black with a 2px signature-orange line under the current one,
+// and the one orange button of the app's chrome (the membership offer) before the bell
 const topbar = (current: string) => {
-  const links = ['Feed', 'Calendar', 'Routes', 'Crews', 'Events']
+  const links = ['Feed', 'Training', 'Routes', 'Crews']
     .map(
       (l) =>
-        `      <a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''} style="gap: var(--m-space-1)${l === current ? '; box-shadow: inset 0 -2px 0 var(--m-color-brand-default)' : ''}">${l}${l === 'Routes' || l === 'Feed' ? ` ${icon(I.down, 14)}` : ''}</a>`,
+        `      <a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''} style="gap: var(--m-space-1)${l === current ? '; box-shadow: inset 0 -2px 0 var(--m-color-brand-default)' : ''}">${l}${l === 'Feed' || l === 'Training' || l === 'Routes' ? ` ${icon(I.down, 14)}` : ''}</a>`,
     )
     .join('\n');
   return `<header class="m-navbar" style="padding-inline: max(var(--m-space-4), calc((100% - 76rem) / 2))">
@@ -122,6 +126,7 @@ const topbar = (current: string) => {
 ${links}
     </nav>
     <div class="m-navbar-actions">
+      <button type="button" class="m-button" data-variant="primary" data-size="sm">Start free trial</button>
       <span style="position: relative; display: inline-flex">
         <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Notifications, 4 new" style="color: var(--m-color-fg-muted)">${icon(I.bell, 20)}</button>
         <span class="m-sidebar-count" aria-hidden="true" style="position: absolute; inset-block-start: 0; inset-inline-end: 0; font-size: 0.625rem">4</span>
@@ -158,7 +163,7 @@ const statsRow = (items: string[]) =>
   `<div class="m-cluster" data-gap="4" style="flex-wrap: nowrap">${items.join('<span aria-hidden="true" style="align-self: stretch; inline-size: 1px; background: var(--m-color-border-default)"></span>')}</div>`;
 
 const avatarPile = (names: string[]) =>
-  `<span class="m-avatar-group" aria-hidden="true">${names.map((n) => `<span class="m-avatar" data-size="sm" style="inline-size: 1.25rem; block-size: 1.25rem; font-size: 0.5rem">${n}</span>`).join('')}</span>`;
+  `<span class="m-avatar-group" aria-hidden="true">${names.map(() => '<span class="m-avatar" data-size="sm" style="inline-size: 1.25rem; block-size: 1.25rem"></span>').join('')}</span>`;
 
 // The props row: a face pile and counts on the left; square grey buttons on the right
 const propsRow = (pile: string[], props: number, comments: number) =>
@@ -191,7 +196,7 @@ const feedEntry = (o: {
 }) => `          <article class="m-card" style="padding: 0" aria-label="${o.title}">
             <div class="m-card-body m-stack" data-gap="3" style="padding: var(--m-space-6) var(--m-space-6) var(--m-space-4)">
               <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap">
-                <span class="m-avatar">${o.initials}</span>
+                <span class="m-avatar" style="font-size: var(--m-font-size-md)">${o.initials}</span>
                 <div class="m-stack" data-gap="0">
                   <a href="#" style="${link}; font-weight: var(--m-font-weight-semibold)">${o.name}</a>
                   <span class="m-cluster" data-gap="1" style="${meta}">${icon(o.sport, 14)} ${o.when}</span>
@@ -219,18 +224,18 @@ const week = [
   ['S', 54],
 ] as const;
 const weekBars = `<svg viewBox="0 0 210 84" width="100%" role="img" aria-label="Distance by day this week: Monday 6.3 km, Wednesday 10.5 km, Thursday 4.2 km, Saturday 14.4 km, Sunday 8.1 km" style="display: block; block-size: auto">
-${week.map(([d, v], i) => `                <rect x="${i * 30 + 6}" y="${v ? 66 - v * 0.6 : 64}" width="18" height="${v ? v * 0.6 : 2}" rx="2" style="fill: ${v ? 'var(--m-color-brand-default)' : 'var(--m-color-border-default)'}"/><text x="${i * 30 + 15}" y="80" text-anchor="middle" style="fill: var(--m-color-fg-subtle); font-size: 10px">${d}</text>`).join('\n')}
+${week.map(([d, v], i) => `                <rect x="${i * 30 + 6}" y="${v ? 66 - v * 0.6 : 64}" width="18" height="${v ? v * 0.6 : 2}" rx="2" style="fill: ${v ? 'var(--m-color-brand-default)' : 'var(--m-color-border-default)'}"/><text x="${i * 30 + 15}" y="80" text-anchor="middle" style="fill: var(--m-color-fg-subtle); font-size: var(--m-font-size-xs)">${d}</text>`).join('\n')}
               </svg>`;
 
 const leaderRow = (rank: string, initials: string, name: string, time: string, me = false, crown = false) =>
-  `<tr${me ? ' style="background: var(--m-color-brand-subtle)"' : ''}><td style="${num}; inline-size: 2rem">${crown ? `<span style="color: var(--m-color-warning-solid); display: inline-flex" aria-label="First">${icon(I.crown, 16)}</span>` : rank}</td><td><span class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><span class="m-avatar" data-size="sm" style="inline-size: 1.5rem; block-size: 1.5rem; font-size: 0.625rem">${initials}</span>${me ? `<strong>${name}</strong>` : name}</span></td><td data-numeric style="${num}">${time}</td></tr>`;
+  `<tr${me ? ' style="background: var(--m-color-brand-subtle)"' : ''}><td style="${num}; inline-size: 2rem">${crown ? `<span style="color: var(--m-color-warning-solid); display: inline-flex" aria-label="First">${icon(I.crown, 16)}</span>` : rank}</td><td><span class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><span class="m-avatar" data-size="sm" style="inline-size: 1.5rem; block-size: 1.5rem; font-size: var(--m-font-size-xs)">${initials}</span>${me ? `<strong style="font-weight: var(--m-font-weight-semibold)">${name}</strong>` : name}</span></td><td data-numeric style="${num}">${time}</td></tr>`;
 
 const challenge = (ic: string, name: string, detail: string, pct: number) =>
   `<li class="m-cluster" data-gap="3" data-align="start" style="flex-wrap: nowrap">
                   <span aria-hidden="true" style="display: inline-grid; place-items: center; flex: none; inline-size: 2.5rem; block-size: 2.5rem; border-radius: 4px; background: var(--m-color-brand-subtle); color: var(--m-color-accent-text)">${icon(ic, 20)}</span>
                   <div class="m-stack" data-gap="1" style="flex: 1">
                     <a href="#" style="${link}; font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-semibold)">${name}</a>
-                    <progress class="m-progress" data-size="sm" value="${pct}" max="100" aria-label="${name}: ${pct}%">${pct}%</progress>
+                    <progress class="m-progress" data-size="sm" value="${pct}" max="100" aria-label="${name}: ${pct}%"></progress>
                     <span style="${label}">${detail}</span>
                   </div>
                 </li>`;
@@ -243,7 +248,7 @@ const dashboard = `<div style="min-block-size: 100vh; background: var(--m-color-
       <div class="m-stack" data-gap="4" style="flex: 1 1 15rem; min-inline-size: 0">
         <section class="m-card" aria-labelledby="sm-me">
           <div class="m-card-body m-stack" data-gap="4" style="align-items: center; text-align: center">
-            <span class="m-avatar" data-size="lg" style="border: 2px solid var(--m-color-brand-default)">NH</span>
+            <span class="m-avatar" data-size="lg" style="font-size: var(--m-font-size-lg); border: 2px solid var(--m-color-brand-default)">NH</span>
             <h2 id="sm-me" style="${bold}; font-size: var(--m-font-size-lg)">Noor Haddad</h2>
             <div class="m-cluster" data-justify="center" data-gap="4" style="flex-wrap: nowrap">
               ${stat('Following', '86')}
@@ -263,7 +268,7 @@ const dashboard = `<div style="min-block-size: 100vh; background: var(--m-color-
             ${weekBars}
             <div class="m-stack" data-gap="1">
               <div class="m-cluster" data-justify="between" style="font-size: var(--m-font-size-xs)"><span>Weekly goal</span><span style="${num}">43.5 / 50 km</span></div>
-              <progress class="m-progress" data-size="sm" value="87" max="100" aria-label="Weekly goal: 87%">87%</progress>
+              <progress class="m-progress" data-size="sm" value="87" max="100" aria-label="Weekly goal: 87%"></progress>
             </div>
           </div>
         </section>
@@ -288,7 +293,7 @@ ${feedEntry({
   ],
   route: runRoute,
   wins: [
-    achievement(I.medal, '<span><strong>2 personal records</strong>, including your fastest 10 km</span>'),
+    achievement(I.medal, '<span><strong style="font-weight: var(--m-font-weight-semibold)">2 personal records</strong>, including your fastest 10 km</span>'),
     achievement(
       I.trophy,
       'Third-best time on <a href="#" style="color: var(--m-color-accent-text); text-decoration: none; font-weight: var(--m-font-weight-semibold)">Weir Bridge Sprint</a>',
@@ -313,7 +318,7 @@ ${feedEntry({
   ],
   route: rideRoute,
   wins: [
-    achievement(I.crown, '<span><strong>Local leader</strong> on Kestrel Hill Climb, 14 efforts in 90 days</span>'),
+    achievement(I.crown, '<span><strong style="font-weight: var(--m-font-weight-semibold)">Local leader</strong> on Kestrel Hill Climb, 14 efforts in 90 days</span>'),
   ],
   pile: ['NH', 'TR'],
   props: 31,
@@ -365,7 +370,7 @@ ${feedEntry({
 // then segments with the open one's top-ten board
 const elevation = `<svg viewBox="0 0 600 120" width="100%" role="img" aria-label="Elevation profile: 1,126 m gained, highest point 512 m" style="display: block; block-size: auto">
               <g style="stroke: var(--m-color-border-muted); stroke-width: 1"><path d="M40 20 H600"/><path d="M40 55 H600"/><path d="M40 90 H600"/></g>
-              <g style="fill: var(--m-color-fg-subtle); font-size: 8px"><text x="0" y="24">500 m</text><text x="0" y="59">300 m</text><text x="0" y="94">100 m</text><text x="40" y="116">0 km</text><text x="300" y="116">32 km</text><text x="560" y="116">64 km</text></g>
+              <g style="fill: var(--m-color-fg-subtle); font-size: var(--m-font-size-xs)"><text x="0" y="24">500 m</text><text x="0" y="59">300 m</text><text x="0" y="94">100 m</text><text x="40" y="116">0 km</text><text x="300" y="116">32 km</text><text x="560" y="116">64 km</text></g>
               <path d="M40 100 L80 92 L120 60 L150 34 L180 70 L220 88 L260 52 L290 30 L320 64 L360 84 L400 74 L440 40 L470 26 L500 58 L540 84 L600 96 L600 104 L40 104 Z" style="fill: var(--m-color-border-default)"/>
               <path d="M220 88 L260 52 L290 30 L290 104 L220 104 Z" style="fill: var(--m-color-brand-subtle)"/>
               <path d="M220 88 L260 52 L290 30" style="fill: none; stroke: var(--m-color-brand-default); stroke-width: 2"/>
@@ -411,12 +416,12 @@ const listDetail = `<div style="min-block-size: 100vh; background: var(--m-color
       <div class="m-stack" data-gap="4">
         <section class="m-card" style="padding: 0; overflow: hidden" aria-labelledby="sm-act">
           <div class="m-cluster" data-justify="between" style="padding: var(--m-space-3) var(--m-space-4); background: var(--m-color-bg-sunken); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
-            <span class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-lg)"><span style="color: var(--m-color-brand-default); display: inline-flex">${icon(I.ride, 20)}</span><span><strong>Aiko Brandt</strong> – Ride</span></span>
+            <span class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-lg)"><span style="color: var(--m-color-brand-default); display: inline-flex">${icon(I.ride, 20)}</span><span><strong style="font-weight: var(--m-font-weight-semibold)">Aiko Brandt</strong> – Ride</span></span>
             <span class="m-cluster" data-gap="3" style="${meta}; ${num}"><span class="m-cluster" data-gap="1">${icon(I.props, 16)} 31</span><span class="m-cluster" data-gap="1">${icon(I.comment, 16)} 7</span><button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Share">${icon(I.share, 16)}</button></span>
           </div>
           <div class="m-grid" style="--m-layout-grid-min: 18rem; --m-layout-grid-gap: 0">
             <div class="m-cluster" data-gap="4" data-align="start" style="flex-wrap: nowrap; padding: var(--m-space-6); border-inline-end: var(--m-border-width-thin) solid var(--m-color-border-muted)">
-              <span class="m-avatar" data-size="lg">AB</span>
+              <span class="m-avatar" data-size="lg" style="font-size: var(--m-font-size-lg)">AB</span>
               <div class="m-stack" data-gap="2">
                 <span style="${meta}">9:15 AM on Wednesday, November 11 · Wexford Ridge</span>
                 <h1 id="sm-act" style="${pageTitle}">Three climbs before lunch</h1>
@@ -452,9 +457,9 @@ const listDetail = `<div style="min-block-size: 100vh; background: var(--m-color
               <caption class="m-sr-only">Segments on this ride</caption>
               <thead><tr><th scope="col"><span class="m-sr-only">Starred</span></th><th scope="col">Name</th><th scope="col" data-numeric>Time</th><th scope="col" data-numeric>Speed</th><th scope="col" data-numeric>Power</th><th scope="col" data-numeric>HR</th></tr></thead>
               <tbody>
-                ${segRow('Orchard Lane Drag', '3.2 km · 41 m · 1.3%', '6:08', unit('31.3', 'km/h'), unit('228', 'W'), unit('151', 'bpm'))}
-                ${segRow('Kestrel Hill Climb', '5.6 km · 288 m · 5.1%', '18:42', unit('18.0', 'km/h'), unit('271', 'W'), unit('168', 'bpm'), true, true)}
-                ${segRow('Quarry Road Descent', '2.4 km · −176 m · −7.3%', '3:12', unit('45.0', 'km/h'), unit('96', 'W'), unit('139', 'bpm'))}
+                ${segRow('Orchard Lane Drag', '3.2 km · 41 m · 1.3%', '6:08', unitXs('31.3', 'km/h'), unitXs('228', 'W'), unitXs('151', 'bpm'))}
+                ${segRow('Kestrel Hill Climb', '5.6 km · 288 m · 5.1%', '18:42', unitXs('18.0', 'km/h'), unitXs('271', 'W'), unitXs('168', 'bpm'), true, true)}
+                ${segRow('Quarry Road Descent', '2.4 km · −176 m · −7.3%', '3:12', unitXs('45.0', 'km/h'), unitXs('96', 'W'), unitXs('139', 'bpm'))}
               </tbody>
             </table>
           </div>
@@ -496,7 +501,7 @@ const listDetail = `<div style="min-block-size: 100vh; background: var(--m-color
 const sportTile = (ic: string, name: string, picked = false) =>
   `<label class="m-stack" data-gap="2" style="align-items: center; cursor: pointer; font-size: var(--m-font-size-sm)${picked ? '; font-weight: var(--m-font-weight-semibold); color: var(--m-color-accent-text)' : ''}">
               <input type="checkbox" class="m-sr-only"${picked ? ' checked' : ''}>
-              <span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 4rem; block-size: 4rem; border-radius: 9999px; ${picked ? 'background: var(--m-color-brand-subtle); color: var(--m-color-accent-text); box-shadow: inset 0 0 0 2px var(--m-color-brand-default)' : 'background: var(--m-color-bg-sunken); color: var(--m-color-fg-muted)'}">${icon(ic, 28)}</span>
+              <span aria-hidden="true" style="display: inline-grid; place-items: center; inline-size: 4rem; block-size: 4rem; border-radius: 9999px; ${picked ? 'background: var(--m-color-brand-subtle); color: var(--m-color-accent-text); box-shadow: inset 0 0 0 2px var(--m-color-brand-default)' : 'background: var(--m-color-bg-sunken); color: var(--m-color-fg-muted)'}">${icon(ic, 20)}</span>
               ${name}
             </label>`;
 
@@ -507,11 +512,11 @@ const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color
       <div class="m-card-body m-stack" data-gap="6" style="padding: var(--m-space-8)">
         <div class="m-stack" data-gap="2">
           <div class="m-cluster" data-justify="between"><span style="${caps}">Step 2 of 4</span><a href="#" style="${meta}; text-decoration: none">Skip</a></div>
-          <progress class="m-progress" data-size="sm" value="50" max="100" aria-label="Step 2 of 4">50%</progress>
+          <progress class="m-progress" data-size="sm" value="50" max="100" aria-label="Step 2 of 4"></progress>
         </div>
         <div class="m-stack" data-gap="2" style="text-align: center">
           <h1 id="sm-ob" style="${bold}; font-size: var(--m-font-size-2xl)">What do you train for?</h1>
-          <p style="color: var(--m-color-fg-muted)">Pick everything you do. We'll set up your stats, maps and goals for each.</p>
+          <p style="font-size: var(--m-font-size-sm); color: var(--m-color-fg-muted)">Pick everything you do. We'll set up your stats, maps and goals for each.</p>
         </div>
         <fieldset class="m-grid" style="--m-layout-grid-min: 5.5rem; --m-layout-grid-gap: var(--m-space-4); border: 0; padding: 0; margin: 0">
           <legend class="m-sr-only">Sports</legend>
@@ -531,7 +536,7 @@ const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color
           <p class="m-field-hint" id="sm-ob-goal-h">You can change it any week. Most new members start between 15 and 30 km.</p>
         </div>
         <label class="m-cluster" data-gap="3" style="flex-wrap: nowrap; font-size: var(--m-font-size-sm)"><input type="checkbox" class="m-checkbox" checked> Show me crews and events near my home area</label>
-        <div class="m-stack" data-gap="2">
+        <div class="m-stack" data-gap="2" style="position: sticky; inset-block-end: 0; padding-block: var(--m-space-3); background: var(--m-color-bg-surface)">
           <button type="button" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Continue</button>
           <button type="button" class="m-button" data-variant="ghost" style="inline-size: 100%">Back</button>
         </div>
@@ -541,17 +546,13 @@ const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color
   </main>
 </div>`;
 
-// Settings: the account column on the left, label-and-value rows with pencil buttons, privacy radios
+// Settings: the account column on the left, then every value as a row: a small grey label over the value
+// and a pencil to change it, as the reference's settings pages do (no switches, no radio lists)
 const settingRow = (lbl: string, value: string, last = false) =>
   `<div class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding-block: var(--m-space-3)${last ? '' : '; border-block-end: var(--m-border-width-thin) solid var(--m-color-border-muted)'}">
               <span class="m-stack" data-gap="0"><span style="${label}">${lbl}</span><span style="font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-semibold)">${value}</span></span>
               <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Edit ${lbl.toLowerCase()}" style="color: var(--m-color-fg-subtle)">${icon(I.pencil, 16)}</button>
             </div>`;
-const choice = (name: string, value: string, title: string, sub: string, checked = false) =>
-  `<label class="m-cluster" data-gap="3" data-align="start" style="flex-wrap: nowrap"><input type="radio" class="m-radio" name="${name}" value="${value}"${checked ? ' checked' : ''}><span class="m-stack" data-gap="0"><span style="font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-semibold)">${title}</span><span style="${label}">${sub}</span></span></label>`;
-const toggle = (id: string, title: string, sub: string, on = false, last = false) =>
-  `<div class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding-block: var(--m-space-4)${last ? '' : '; border-block-end: var(--m-border-width-thin) solid var(--m-color-border-muted)'}"><label for="${id}" class="m-stack" data-gap="0"><span style="font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-semibold)">${title}</span><span style="${label}">${sub}</span></label><input type="checkbox" role="switch" class="m-switch" id="${id}"${on ? ' checked' : ''}></div>`;
-
 const settings = `<div style="min-block-size: 100vh; background: var(--m-color-bg-canvas)">
   ${topbar('')}
   <main class="m-container" data-size="lg" style="padding-block: var(--m-space-8) var(--m-space-16)">
@@ -575,7 +576,7 @@ const settings = `<div style="min-block-size: 100vh; background: var(--m-color-b
         <section class="m-card" aria-label="Your details">
           <div class="m-card-body">
             <div class="m-cluster" data-gap="4" style="padding-block-end: var(--m-space-4); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-muted)">
-              <span class="m-avatar" data-size="lg">NH</span>
+              <span class="m-avatar" data-size="lg" style="font-size: var(--m-font-size-lg)">NH</span>
               <div class="m-stack" data-gap="1"><span style="font-weight: var(--m-font-weight-semibold)">Noor Haddad</span><span style="${label}">Member since March 2021</span></div>
               <button type="button" class="m-button" data-size="sm" style="margin-inline-start: auto">${icon(I.upload, 16)} Change photo</button>
             </div>
@@ -592,16 +593,11 @@ const settings = `<div style="min-block-size: 100vh; background: var(--m-color-b
         <section class="m-card" aria-labelledby="sm-vis">
           <div class="m-card-body m-stack" data-gap="4">
             <div class="m-stack" data-gap="1"><h2 id="sm-vis" style="${bold}; font-size: var(--m-font-size-lg)">Who sees your sessions</h2><span style="font-size: var(--m-font-size-sm); color: var(--m-color-fg-muted)">Applies to new uploads. Change older ones from each session.</span></div>
-            <fieldset class="m-stack" data-gap="3" style="border: 0; padding: 0; margin: 0">
-              <legend class="m-sr-only">Who sees your sessions</legend>
-              ${choice('vis', 'all', 'Anyone on Trailmark', 'Shows on boards and in search')}
-              ${choice('vis', 'mutual', 'People you follow back', 'Hidden from public boards', true)}
-              ${choice('vis', 'me', 'Just you', 'Nobody else sees the map or stats')}
-            </fieldset>
             <div>
-              ${toggle('sm-hide', 'Hide the start and finish', 'Trims 200 m from each end of every map', true)}
-              ${toggle('sm-board', 'Appear on crew boards', 'Your times count in crew rankings', true)}
-              ${toggle('sm-beacon', 'Share live location while recording', 'Only with the two contacts you choose', false, true)}
+              ${settingRow('Sessions', 'People you follow back')}
+              ${settingRow('Start and finish', 'Hidden, 200 m from each end')}
+              ${settingRow('Crew boards', 'Your times count')}
+              ${settingRow('Live location', 'Off', true)}
             </div>
           </div>
         </section>
@@ -639,7 +635,7 @@ const emptyState = `<div style="min-block-size: 100vh; background: var(--m-color
   ${topbar('Routes')}
   <main class="m-container" data-size="lg" style="padding-block: var(--m-space-8) var(--m-space-16)">
     <div class="m-stack" data-gap="6">
-      <div class="m-cluster" data-justify="between"><h1 style="${bold}; font-size: var(--m-font-size-2xl)">Your routes</h1><button type="button" class="m-button" data-variant="primary">${icon(I.plus, 18)} Plan a route</button></div>
+      <div class="m-cluster" data-justify="between"><h1 style="${bold}; font-size: var(--m-font-size-2xl)">Your routes</h1><button type="button" class="m-button">${icon(I.upload, 18)} Import a route file</button></div>
       <div class="m-tabs">
         <div class="m-tab-list" role="tablist" aria-label="Routes">
           <button type="button" class="m-tab" role="tab" aria-selected="true">Saved</button>
@@ -684,7 +680,7 @@ const plan = (o: {
           <div class="m-card-body m-stack" data-gap="5" style="padding: var(--m-space-8)">
             <div><span class="m-badge" data-variant="solid"${o.light ? ' data-tone="neutral"' : ''}>${o.tag}</span></div>
             <h2 style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-semibold); text-transform: uppercase; letter-spacing: 0.08em">${o.name}</h2>
-            <p style="${num}"><span style="font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-bold); line-height: 1">${o.price}</span> <span style="font-size: var(--m-font-size-sm)">${o.per}</span></p>
+            <p style="${num}"><span style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-semibold); line-height: 1">${o.price}</span> <span style="font-size: var(--m-font-size-sm)">${o.per}</span></p>
             <p style="font-size: var(--m-font-size-xs); color: var(--m-color-fg-muted)">${o.note}</p>
             <button type="button" class="m-button" data-variant="${o.light ? 'primary' : 'secondary'}" data-size="lg" style="border-radius: 16px; inline-size: 100%">${o.cta}</button>
           </div>
@@ -696,8 +692,8 @@ const pricing = `<div style="min-block-size: 100vh; background: var(--m-color-bg
     <main class="m-container" data-size="lg" style="padding-block: var(--m-space-16)">
       <div class="m-stack" data-gap="10">
         <div class="m-stack" data-gap="4" style="text-align: center; align-items: center">
-          <span style="font-weight: 800; text-transform: uppercase; letter-spacing: -0.02em">Trailmark <span style="font-weight: var(--m-font-weight-semibold); text-transform: none; letter-spacing: 0">Membership</span></span>
-          <h1 style="${bold}; font-size: clamp(var(--m-font-size-2xl), 5vw, var(--m-font-size-3xl)); max-inline-size: 44rem">Train with a plan. Race with your crew.</h1>
+          <span style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-semibold); text-transform: uppercase; letter-spacing: -0.02em">Trailmark <span style="font-weight: var(--m-font-weight-semibold); text-transform: none; letter-spacing: 0">Membership</span></span>
+          <h1 style="${bold}; font-size: var(--m-font-size-2xl); max-inline-size: 44rem">Train with a plan. Race with your crew.</h1>
           <p style="font-size: var(--m-font-size-lg); color: var(--m-color-fg-muted); max-inline-size: 36rem">Every board, every route tool and your fitness trend, free for the first 14 days.</p>
           <div class="m-tabs" data-variant="pill" style="inline-size: 16rem"><div class="m-tab-list" role="tablist" aria-label="Billing" style="inline-size: 100%">
             <button type="button" class="m-tab" role="tab" aria-selected="true" style="flex: 1">Yearly</button>
@@ -744,7 +740,7 @@ const pricing = `<div style="min-block-size: 100vh; background: var(--m-color-bg
     </div>
   </main>
   <div class="m-cluster" data-justify="between" data-theme="summit" data-mode="dark" style="padding: var(--m-space-4) max(var(--m-space-4), calc((100% - 60rem) / 2)); background: var(--m-color-bg-surface); color: var(--m-color-fg-default)">
-    <div class="m-stack" data-gap="0"><strong>Two weeks of everything, on us.</strong><span style="font-size: var(--m-font-size-xs)">$6.67/month after the trial, billed yearly. Taxes may apply.</span></div>
+    <div class="m-stack" data-gap="0"><strong style="font-weight: var(--m-font-weight-semibold)">Two weeks of everything, on us.</strong><span style="font-size: var(--m-font-size-xs)">$6.67/month after the trial, billed yearly. Taxes may apply.</span></div>
     <button type="button" class="m-button" data-variant="primary">Start free trial</button>
   </div>
 </div>`;
@@ -753,7 +749,7 @@ const pricing = `<div style="min-block-size: 100vh; background: var(--m-color-bg
 const errorCard = (code: string, ic: string, tone: string, title: string, body: string, actions: string) =>
   `    <section class="m-card" data-size="lg" aria-labelledby="sm-err-${code}">
       <div class="m-card-body m-cluster" data-gap="6" data-align="start" style="flex-wrap: nowrap">
-        <span aria-hidden="true" style="display: inline-grid; place-items: center; flex: none; inline-size: 3.5rem; block-size: 3.5rem; border-radius: 9999px; background: var(--m-color-${tone}-bg); color: var(--m-color-${tone}-fg)">${icon(ic, 28)}</span>
+        <span aria-hidden="true" style="display: inline-grid; place-items: center; flex: none; inline-size: 3.5rem; block-size: 3.5rem; border-radius: 9999px; background: var(--m-color-${tone}-bg); color: var(--m-color-${tone}-fg)">${icon(ic, 24)}</span>
         <div class="m-stack" data-gap="3">
           <span style="${caps}">Error ${code}</span>
           <h2 id="sm-err-${code}" style="${bold}; font-size: var(--m-font-size-xl)">${title}</h2>
@@ -796,7 +792,7 @@ const errors = `<div style="min-block-size: 100vh; background: var(--m-color-bg-
         </div>
       </div>
     </form>
-    <div class="m-toast" data-tone="danger" role="status"><div class="m-toast-content"><div class="m-toast-title">Upload didn't finish</div><div class="m-toast-body">Your watch file is safe on this device. We'll try again on Wi-Fi.</div></div><button type="button" class="m-button" data-variant="primary" data-size="sm">${icon(I.refresh, 16)} Retry now</button></div>
+    <div class="m-toast" data-tone="danger" role="status"><div class="m-toast-content"><div class="m-toast-title">Upload didn't finish</div><div class="m-toast-body">Your watch file is safe on this device. We'll try again on Wi-Fi.</div></div><button type="button" class="m-button" data-variant="ghost" data-size="sm">${icon(I.refresh, 16)} Retry now</button></div>
     <section class="m-card" style="padding: 0; overflow: hidden" aria-labelledby="sm-err-404">
       <div class="m-grid" style="--m-layout-grid-min: 16rem; --m-layout-grid-gap: 0; align-items: center">
         <svg viewBox="0 0 300 220" width="100%" aria-hidden="true" style="display: block; block-size: 100%; background: var(--m-color-bg-sunken)">
@@ -806,7 +802,7 @@ const errors = `<div style="min-block-size: 100vh; background: var(--m-color-bg-
           <path d="M240 192 l20 16 m0 -16 l-20 16" style="stroke: var(--m-color-danger-solid); stroke-width: 4; stroke-linecap: round"/>
         </svg>
         <div class="m-stack" data-gap="3" style="padding: var(--m-space-8)">
-          <span style="font-size: var(--m-font-size-4xl); font-weight: 800; line-height: 1; color: var(--m-color-accent-text); ${num}">404</span>
+          <span style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-semibold); line-height: 1; color: var(--m-color-accent-text); ${num}">404</span>
           <h2 id="sm-err-404" style="${bold}; font-size: var(--m-font-size-xl)">Wrong turn. This trail doesn't go anywhere.</h2>
           <p style="font-size: var(--m-font-size-sm); color: var(--m-color-fg-muted)">The page moved or never existed. From here you can:</p>
           <ul class="m-stack" data-gap="1" style="font-size: var(--m-font-size-sm); padding-inline-start: var(--m-space-5)">
@@ -821,6 +817,100 @@ ${errorCard('500', I.warn, 'danger', 'We dropped the baton', 'Something broke on
 ${errorCard('403', I.lock, 'info', 'This session is just for followers', 'Lena Kowal shares sessions with people she follows back. Ask to follow and you’ll see it once she accepts.', `<button type="button" class="m-button" data-variant="primary">Ask to follow</button><a class="m-button" data-variant="ghost" href="#">${icon(I.left, 16)} Back to your feed</a>`)}
   </div>
   </main>
+</div>`;
+
+// The public family: the site header (no search, no bell): the wordmark, four plain links, "Log in" as a
+// white button and the one orange button at the top right
+const siteHeader = (login = true) => `<header class="m-navbar" style="padding-inline: max(var(--m-space-4), calc((100% - 76rem) / 2))">
+    ${wordmark()}
+    <nav class="m-navbar-nav" aria-label="Main">
+${['Sports', 'Training', 'Routes', 'Membership'].map((l) => `      <a class="m-navbar-link" href="#">${l}</a>`).join('\n')}
+    </nav>
+    <div class="m-navbar-actions">
+      ${login ? '<a class="m-button" data-size="sm" href="#">Log in</a>\n      ' : ''}<a class="m-button" data-variant="primary" data-size="sm" href="#">Sign up free</a>
+    </div>
+  </header>`;
+
+// Reading: a help article on the white page. A breadcrumb with ›, a 32px bold title, a grey lede, the
+// byline, 24px section headings and 16px text, the article's sections in a column at the right with a
+// grey rule and the current one near-black, and a last line asking whether it helped
+const helpSections = ['How a segment is matched', 'Why an effort is missing', 'Hiding your efforts', 'Reporting a bad segment'];
+const reading = `<div style="min-block-size: 100vh; background: var(--m-color-bg-surface)">
+  ${siteHeader()}
+  <main class="m-container" data-size="lg" style="padding-block: var(--m-space-8) var(--m-space-16)">
+    <div class="m-cluster" data-justify="between" style="padding-block-end: var(--m-space-8)">
+      <nav class="m-breadcrumb" aria-label="Breadcrumb"><ol><li><a href="#">Help</a></li><li><a href="#">Boards and segments</a></li><li aria-current="page">How segment boards work</li></ol></nav>
+      <input class="m-input" type="search" data-size="sm" aria-label="Search help" placeholder="Search help" style="inline-size: 16rem">
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: var(--m-space-12); align-items: flex-start">
+      <article class="m-stack" data-gap="6" aria-labelledby="sm-read" style="flex: 3 1 30rem; min-inline-size: 0; max-inline-size: 42rem">
+        <div class="m-stack" data-gap="3">
+          <h1 id="sm-read" style="${bold}; font-size: var(--m-font-size-2xl)">How segment boards work</h1>
+          <p style="color: var(--m-color-fg-muted)">What puts an effort on a board, why one can be missing, and how to keep yours off the public ones.</p>
+          <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap">
+            <span class="m-avatar" data-size="sm">MD</span>
+            <span class="m-stack" data-gap="0" style="${meta}"><span>Written by Mara Dunn</span><span>Updated November 3, 2026</span></span>
+          </div>
+        </div>
+        <div class="m-stack" data-gap="4" style="line-height: var(--m-font-leading-relaxed)">
+          <h2 style="${bold}; font-size: var(--m-font-size-lg)">How a segment is matched</h2>
+          <p>A segment is a stretch of road or trail that anyone can race. When you upload a session, Trailmark checks your route against every segment nearby. If your line follows one from its start to its finish, your time goes on its board.</p>
+          <p>Boards rank everyone's best effort. Yours shows in bold, and a crown marks the fastest of the year. You can filter a board by crews you belong to, by age group or by this week.</p>
+          <h2 style="${bold}; font-size: var(--m-font-size-lg)">Why an effort is missing</h2>
+          <p>The usual reason is the start or the finish. If your watch lost signal near either end, the line won't match. Sessions marked private, or uploaded more than a year late, are never ranked.</p>
+          <p>Short segments are the most sensitive. A gap of a few seconds under a bridge is enough to miss a 400 m sprint, while a long climb tolerates it.</p>
+          <h2 style="${bold}; font-size: var(--m-font-size-lg)">Hiding your efforts</h2>
+          <p>Turn off "Appear on public boards" in Visibility settings. Your efforts stay on your own page and on crew boards for the crews you choose.</p>
+        </div>
+        <div class="m-cluster" data-gap="3" style="padding-block-start: var(--m-space-4); ${hair}">
+          <span style="font-size: var(--m-font-size-sm)">Was this article useful?</span>
+          <button type="button" class="m-button" data-size="sm">Yes</button>
+          <button type="button" class="m-button" data-size="sm">No</button>
+        </div>
+      </article>
+      <nav aria-label="In this article" style="flex: 1 1 14rem; min-inline-size: 0; border-inline-start: 2px solid var(--m-color-border-default)">
+        <ul class="m-stack" data-gap="3" style="list-style: none; padding: 0 0 0 var(--m-space-4); font-size: var(--m-font-size-sm)">
+${helpSections.map((t, i) => `          <li><a href="#" style="${link}; color: ${i ? 'var(--m-color-fg-muted)' : 'var(--m-color-fg-default)'}${i ? '' : '; font-weight: var(--m-font-weight-semibold)'}">${t}</a></li>`).join('\n')}
+        </ul>
+      </nav>
+    </div>
+  </main>
+</div>`;
+
+// Sign-in: the site header with only the orange join button, a token-drawn map across the screen in
+// place of a photograph, and one near-black panel: a "Log in" band, two white buttons for other ways in,
+// an "or" rule, the email field, remember me, the full-width orange button and the link to join
+const otherWay = (ic: string, label: string) =>
+  `<button type="button" class="m-button" style="inline-size: 100%">${icon(ic, 20)} ${label}</button>`;
+const signIn = `<div style="min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+  ${siteHeader(false)}
+  <div style="position: relative; overflow: hidden">
+    <div aria-hidden="true" style="position: absolute; inset: 0; opacity: 0.6">${map(rideRoute, 400, 'Background map').replace('role="img"', '').replace('block-size: auto', 'block-size: 100%')}</div>
+    <main style="position: relative; display: grid; place-items: center; padding: var(--m-space-10) var(--m-space-4) var(--m-space-16)">
+      <section data-theme="summit" data-mode="dark" aria-labelledby="sm-in" style="inline-size: min(100%, 25rem); background: var(--m-color-bg-surface); color: var(--m-color-fg-default); box-shadow: var(--m-shadow-lg)">
+        <h1 id="sm-in" style="${bold}; font-size: var(--m-font-size-2xl); text-align: center; padding: var(--m-space-6); background: var(--m-color-bg-canvas)">Log in</h1>
+        <div class="m-stack" data-gap="4" style="padding: var(--m-space-6) var(--m-space-6) var(--m-space-8)">
+          <div data-theme="summit" data-mode="light" class="m-stack" data-gap="2" style="background: transparent">
+            ${otherWay('<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>', 'Continue with a passkey')}
+            ${otherWay(I.users, 'Continue with work sign-in')}
+          </div>
+          <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap; font-size: var(--m-font-size-sm)" role="separator" aria-label="or">
+            <span aria-hidden="true" style="flex: 1; ${hair}"></span>or<span aria-hidden="true" style="flex: 1; ${hair}"></span>
+          </div>
+          <form class="m-stack" data-gap="4">
+            <div class="m-field">
+              <label class="m-field-label" for="sm-in-email">Email</label>
+              <input class="m-input" id="sm-in-email" type="email" autocomplete="email" placeholder="you@example.com">
+            </div>
+            <label class="m-cluster" data-gap="2" style="flex-wrap: nowrap; font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-semibold)"><input class="m-checkbox" type="checkbox"> Remember me</label>
+            <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Log in</button>
+          </form>
+          <a href="#" style="${link}; text-align: center; font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-semibold)">Create an account</a>
+          <p style="text-align: center; font-size: var(--m-font-size-xs); color: var(--m-color-fg-muted)">By continuing you agree to the <a href="#" style="color: inherit">terms</a> and the <a href="#" style="color: inherit">privacy notice</a>.</p>
+        </div>
+      </section>
+    </main>
+  </div>
 </div>`;
 
 export const summitRecipes: ArchetypeRecipe[] = [
@@ -872,5 +962,19 @@ export const summitRecipes: ArchetypeRecipe[] = [
     description:
       'Red messages under the fields with a red notice above that says nothing is saved, a dark banner, the 404 dead end drawn as routes, and 500 and 403 cards.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A help article on the white page under the site header: a › breadcrumb, a 32px bold title, a grey lede and the byline, 24px section headings over 16px text with orange links, and the sections in a ruled column at the right.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign-in',
+    description:
+      'The site header with only the orange join button, a token-drawn map behind, and one near-black panel: the "Log in" band, two white buttons for other ways in, the email field, remember me and a full-width orange button.',
+    html: signIn,
   },
 ];

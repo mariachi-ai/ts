@@ -1,22 +1,46 @@
-import { NotFoundError, type Context } from '@mariachi/core';
+import { DatabaseError, NotFoundError, ValidationError, type Context } from '@mariachi/core';
 import type { CursorPaginatedResult, CursorPaginationParams, Entity, FilterCondition, FindOptions, PaginatedResult, PaginationParams, QueryFilter, Repository, SortParams } from '../types';
 
-export class TestRepository<T extends Entity> implements Repository<T> {
-  private readonly store: T[] = [];
-  private readonly tenantColumn?: string;
+/** SQL LIKE as a regular expression: `%` is any run of characters, `_` exactly one. */
+function likePattern(pattern: string, caseInsensitive: boolean): RegExp {
+  const source = [...pattern].map((ch) => (ch === '%' ? '[\\s\\S]*' : ch === '_' ? '[\\s\\S]' : ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))).join('');
+  return new RegExp(`^${source}$`, caseInsensitive ? 'i' : '');
+}
 
-  constructor(options?: { tenantColumn?: string }) {
+/**
+ * An in-memory `Repository` that refuses what the Postgres one refuses. With `tenantColumn` set it
+ * is tenant-scoped the same way: every operation needs `ctx.tenantId` (`database/tenant-required`),
+ * a row can't be written for another tenant (`database/tenant-mismatch`), and only `crossTenant()`
+ * reads across tenants. Rows with `deletedAt` set are hidden from reads and updates. The shared
+ * `repositoryContract` runs against both.
+ */
+export class TestRepository<T extends Entity> implements Repository<T> {
+  private store: T[] = [];
+  private readonly tenantColumn?: string;
+  private readonly resourceName: string;
+  private allowCrossTenant = false;
+
+  constructor(options?: { tenantColumn?: string; resourceName?: string }) {
     this.tenantColumn = options?.tenantColumn;
+    this.resourceName = options?.resourceName ?? 'Entity';
+  }
+
+  /**
+   * A view of this repository, over the same rows, that doesn't scope by tenant. As with the real
+   * one, every use should be deliberate (admin tooling, cross-tenant jobs).
+   */
+  crossTenant(): this {
+    const clone = Object.create(Object.getPrototypeOf(this)) as this;
+    Object.assign(clone, this, { allowCrossTenant: true });
+    return clone;
   }
 
   private filterByContext(ctx: Context, items: T[]): T[] {
-    return items.filter((item) => {
-      if (this.tenantColumn && ctx.tenantId) {
-        const tenantId = (item as Record<string, unknown>)[this.tenantColumn];
-        if (tenantId !== ctx.tenantId) return false;
-      }
-      return true;
-    });
+    if (!this.tenantColumn || this.allowCrossTenant) return items;
+    // Fails closed: without a tenant the real repository refuses, it doesn't read every tenant's rows
+    if (!ctx.tenantId) throw new DatabaseError('database/tenant-required', 'Query on tenant-scoped table requires ctx.tenantId');
+    const column = this.tenantColumn;
+    return items.filter((item) => (item as Record<string, unknown>)[column] === ctx.tenantId);
   }
 
   private isFilterConditions(filter: QueryFilter<T>): filter is FilterCondition[] {
@@ -30,13 +54,20 @@ export class TestRepository<T extends Entity> implements Repository<T> {
       return filter.every((cond) => {
         const val = (item as Record<string, unknown>)[cond.field];
         switch (cond.op) {
-          case 'eq': return val === cond.value;
-          case 'neq': return val !== cond.value;
-          case 'gt': return (val as any) > (cond.value as any);
-          case 'gte': return (val as any) >= (cond.value as any);
-          case 'lt': return (val as any) < (cond.value as any);
-          case 'lte': return (val as any) <= (cond.value as any);
-          default: return true;
+          // As in SQL: null is matched with IS NULL, and a comparison with a missing value is never true
+          case 'eq': return cond.value === null ? val == null : val != null && val === cond.value;
+          case 'neq': return cond.value === null ? val != null : val != null && val !== cond.value;
+          case 'gt': return val != null && (val as any) > (cond.value as any);
+          case 'gte': return val != null && (val as any) >= (cond.value as any);
+          case 'lt': return val != null && (val as any) < (cond.value as any);
+          case 'lte': return val != null && (val as any) <= (cond.value as any);
+          case 'in': return Array.isArray(cond.value) && cond.value.length > 0 && val != null && cond.value.includes(val);
+          case 'notIn': return !Array.isArray(cond.value) || cond.value.length === 0 || (val != null && !cond.value.includes(val));
+          case 'like': return typeof val === 'string' && likePattern(String(cond.value), false).test(val);
+          case 'ilike': return typeof val === 'string' && likePattern(String(cond.value), true).test(val);
+          case 'isNull': return val == null;
+          case 'isNotNull': return val != null;
+          default: throw new ValidationError(`Unknown filter op ${(cond as FilterCondition).op}`);
         }
       });
     }
@@ -44,7 +75,7 @@ export class TestRepository<T extends Entity> implements Repository<T> {
     for (const [key, value] of Object.entries(filter)) {
       if (value === undefined) continue;
       const itemVal = (item as Record<string, unknown>)[key];
-      if (itemVal !== value) return false;
+      if (value === null ? itemVal != null : itemVal !== value) return false;
     }
     return true;
   }
@@ -93,35 +124,41 @@ export class TestRepository<T extends Entity> implements Repository<T> {
   }
 
   async create(ctx: Context, data: Partial<T>): Promise<T> {
-    const entity = {
-      ...data,
-      id: crypto.randomUUID(),
-      ...(this.tenantColumn && ctx.tenantId ? { [this.tenantColumn]: ctx.tenantId } : {}),
-    } as T;
+    const row = { ...data } as Record<string, unknown>;
+    if (this.tenantColumn && !this.allowCrossTenant) {
+      if (!ctx.tenantId) throw new DatabaseError('database/tenant-required', 'Insert into tenant-scoped table requires ctx.tenantId');
+      if (row[this.tenantColumn] !== undefined && row[this.tenantColumn] !== ctx.tenantId) {
+        throw new DatabaseError('database/tenant-mismatch', 'Cannot insert a row for another tenant');
+      }
+      row[this.tenantColumn] = ctx.tenantId;
+    }
+    const entity = { ...row, id: crypto.randomUUID() } as T;
     this.store.push(entity);
     return entity;
   }
 
   async update(ctx: Context, id: string, data: Partial<Omit<T, 'id'>>): Promise<T> {
-    const filtered = this.filterByContext(ctx, this.store);
-    const idx = this.store.findIndex((i) => i.id === id && filtered.includes(i));
-    if (idx === -1) throw new NotFoundError('testing/not-found', `Entity not found: ${id}`);
-    const updated = { ...this.store[idx], ...data } as T;
+    const visible = this.excludeDeleted(this.filterByContext(ctx, this.store));
+    const idx = this.store.findIndex((i) => i.id === id && visible.includes(i));
+    if (idx === -1) throw new NotFoundError(this.resourceName, id);
+    // A row never changes its id or its tenant through an update
+    const patch = Object.fromEntries(Object.entries(data).filter(([key]) => key !== 'id' && key !== this.tenantColumn));
+    const updated = { ...this.store[idx], ...patch } as T;
     this.store[idx] = updated;
     return updated;
   }
 
   async softDelete(ctx: Context, id: string): Promise<void> {
-    const filtered = this.filterByContext(ctx, this.store);
-    const item = filtered.find((i) => i.id === id);
-    if (!item) return;
+    const item = this.excludeDeleted(this.filterByContext(ctx, this.store)).find((i) => i.id === id);
+    if (!item) throw new NotFoundError(this.resourceName, id);
     (item as Record<string, unknown>).deletedAt = new Date();
   }
 
   async hardDelete(ctx: Context, id: string): Promise<void> {
     const filtered = this.filterByContext(ctx, this.store);
     const idx = this.store.findIndex((i) => i.id === id && filtered.includes(i));
-    if (idx !== -1) this.store.splice(idx, 1);
+    if (idx === -1) throw new NotFoundError(this.resourceName, id);
+    this.store.splice(idx, 1);
   }
 
   async paginate(
@@ -154,7 +191,7 @@ export class TestRepository<T extends Entity> implements Repository<T> {
 
   async getById(ctx: Context, id: string): Promise<T> {
     const item = await this.findById(ctx, id);
-    if (!item) throw new NotFoundError('testing/not-found', `Entity not found: ${id}`);
+    if (!item) throw new NotFoundError(this.resourceName, id);
     return item;
   }
 
@@ -173,7 +210,14 @@ export class TestRepository<T extends Entity> implements Repository<T> {
     return created;
   }
 
+  /** As `DrizzleRepository`: a bulk write with no condition from the caller is refused. */
+  private requireFilter(operation: string, filter: QueryFilter<T> | undefined): void {
+    const hasFilter = Array.isArray(filter) ? filter.length > 0 : Object.values(filter ?? {}).some((v) => v !== undefined);
+    if (!hasFilter) throw new DatabaseError('database/unsafe-operation', `${operation} requires a non-empty filter`);
+  }
+
   async updateWhere(ctx: Context, filter: QueryFilter<T>, data: Partial<Omit<T, 'id'>>): Promise<number> {
+    this.requireFilter('updateWhere', filter);
     const matches = await this.findMany(ctx, filter);
     for (const item of matches) await this.update(ctx, item.id, data);
     return matches.length;
@@ -181,7 +225,7 @@ export class TestRepository<T extends Entity> implements Repository<T> {
 
   async restore(ctx: Context, id: string): Promise<T> {
     const item = this.filterByContext(ctx, this.store).find((i) => i.id === id);
-    if (!item) throw new NotFoundError('testing/not-found', `Entity not found: ${id}`);
+    if (!item) throw new NotFoundError(this.resourceName, id);
     (item as Record<string, unknown>).deletedAt = null;
     return item;
   }
@@ -196,6 +240,7 @@ export class TestRepository<T extends Entity> implements Repository<T> {
   }
 
   async deleteWhere(ctx: Context, filter: QueryFilter<T>, options?: { hard?: boolean }): Promise<number> {
+    this.requireFilter('deleteWhere', filter);
     const filtered = this.filterByContext(ctx, this.store);
     const toDelete = filtered.filter((i) => this.matchesFilter(i, filter));
     let count = 0;

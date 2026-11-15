@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createContext, type Logger } from '@mariachi/core';
+import { createContext, markPersonalTenant, type Logger } from '@mariachi/core';
 import {
   CLOSE_CODES,
   DefaultRealtime,
@@ -7,6 +7,9 @@ import {
   MemoryBackplaneHub,
   MemoryPresenceStore,
   defaultChannelAuthorizer,
+  tenantChannel,
+  tenantUserChannel,
+  userChannel,
   type ConnectionIdentity,
   type RealtimeConfig,
   type RealtimeSocket,
@@ -66,10 +69,81 @@ describe('defaultChannelAuthorizer', () => {
     expect(allow(alice, 'public:status', 'publish')).toBe(false);
     expect(allow(alice, 'admin')).toBe(false);
     expect(allow({ userId: 'x', tenantId: null }, 'tenant:null')).toBe(false);
+    expect(allow(alice, 'tenant')).toBe(false);
+    expect(allow(alice, 'tenant:t1:')).toBe(false);
+    expect(allow(alice, 'tenant:t10:chat')).toBe(false);
+    expect(allow(alice, 'user:alice2')).toBe(false);
+    expect(allow(alice, 'user:alice:inbox')).toBe(true);
+    expect(allow(alice, 'user')).toBe(false);
+    expect(allow(alice, 'public:')).toBe(false);
+  });
+
+  it('matches whole ids, so an id with dots or dashes works and one with a colon is refused', () => {
+    const allow = (id: ConnectionIdentity, ch: string) => defaultChannelAuthorizer(id, ch, 'subscribe');
+    const solo: ConnectionIdentity = { userId: 'auth0|123', tenantId: 'user.app.auth0%7C123' };
+    expect(allow(solo, 'tenant:user.app.auth0%7C123:notes')).toBe(true);
+    expect(allow(solo, 'user:auth0|123:inbox')).toBe(true);
+
+    // `tenant:a:b:chat` would be both tenant a's channel "b:chat" and tenant a:b's channel "chat".
+    const colon: ConnectionIdentity = { userId: 'urn:user:9', tenantId: 'a:b' };
+    expect(allow(colon, 'tenant:a:b:chat')).toBe(false);
+    expect(allow(colon, 'tenant:a:b')).toBe(false);
+    expect(allow(colon, 'user:urn:user:9')).toBe(false);
+    // A tenant whose id is a prefix of another's doesn't reach it.
+    expect(allow({ userId: 'u', tenantId: 'a' }, 'tenant:a:b:chat')).toBe(true);
+    expect(allow({ userId: 'u', tenantId: 'ab' }, 'tenant:a:b:chat')).toBe(false);
+  });
+});
+
+describe('channel names', () => {
+  it('are built the way the default authorizer reads them', () => {
+    expect(tenantChannel('t1')).toBe('tenant:t1');
+    expect(tenantChannel('t1', 'chat', 'general')).toBe('tenant:t1:chat:general');
+    expect(userChannel('alice', 'inbox')).toBe('user:alice:inbox');
+    expect(tenantUserChannel('t1', 'alice', 'inbox')).toBe('tenant:t1:user:alice:inbox');
+    expect(defaultChannelAuthorizer(alice, tenantChannel('t1', 'chat'), 'subscribe')).toBe(true);
+    expect(defaultChannelAuthorizer(alice, tenantUserChannel('t1', 'alice', 'inbox'), 'subscribe')).toBe(true);
+    expect(defaultChannelAuthorizer(bob, tenantUserChannel('t1', 'alice', 'inbox'), 'subscribe')).toBe(false);
+  });
+
+  it("refuse an id that could be read as another tenant's or user's channel", () => {
+    const invalid = expect.objectContaining({ code: 'realtime/invalid-channel' });
+    expect(() => tenantChannel('a:b', 'chat')).toThrow(invalid);
+    expect(() => userChannel('urn:user:9')).toThrow(invalid);
+    expect(() => tenantUserChannel('t1', 'a:b')).toThrow(invalid);
+    expect(() => tenantChannel('')).toThrow(invalid);
   });
 });
 
 describe('Realtime', () => {
+  it('refuses a connection whose personal tenant was not given by withPersonalTenants', async () => {
+    const { a } = cluster();
+    await a.connect();
+    const forged = new FakeSocket();
+    expect(await a.handleConnect({ userId: 'mallory', tenantId: 'user.main.alice' }, forged)).toBeNull();
+    expect(forged.closed?.code).toBe(4001);
+    expect(forged.sent[0]).toMatchObject({ type: 'error', code: 'realtime/unauthorized' });
+    const given = new FakeSocket();
+    expect(await a.handleConnect(markPersonalTenant({ userId: 'alice', tenantId: 'user.main.alice' }), given)).not.toBeNull();
+    await a.disconnect();
+  });
+
+  it("refuses a tenant-channel broadcast from a tenant whose id holds a colon", async () => {
+    const { a } = cluster();
+    await a.connect();
+    const victim = new FakeSocket();
+    const id = (await a.handleConnect({ userId: 'u', tenantId: 'a' }, victim))!;
+    await a.subscribe(id, 'tenant:a:b:chat');
+    // Built for tenant "a:b", this name is also tenant "a"'s channel "b:chat".
+    await expect(a.broadcast(ctx('a:b'), 'tenant:a:b:chat', { secret: true })).rejects.toMatchObject({ code: 'realtime/invalid-channel' });
+    expect(victim.messages()).toHaveLength(0);
+    // A tenant with a plain id, and a channel that isn't a tenant's, are unaffected.
+    await a.broadcast(ctx('a'), 'tenant:a:b:chat', { n: 1 });
+    await a.broadcast(ctx('a:b'), 'public:status', { n: 2 });
+    expect(victim.messages()).toHaveLength(1);
+    await a.disconnect();
+  });
+
   it('broadcasts across instances to channel subscribers only', async () => {
     const { a, b } = cluster();
     await a.connect();

@@ -74,7 +74,7 @@ transaction as the data, and a relay publishes it afterwards.
 import { Outbox, OutboxRelay } from '@mariachi/events/outbox';
 
 // src/schema/index.ts, so `mariachi db generate` creates mariachi_event_outbox:
-//   export { eventOutboxTable } from '@mariachi/events/outbox';
+//   export { eventOutboxTable } from '@mariachi/events/schema';
 
 const outbox = new Outbox(database.db, { source: 'api' });
 await withTransaction(database.db, ctx, async () => {

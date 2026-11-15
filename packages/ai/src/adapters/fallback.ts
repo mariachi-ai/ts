@@ -1,6 +1,6 @@
 import { AIError } from '@mariachi/core';
-import type { AIMessage, AIResponse, StreamChunk, ToolDefinition } from '../types';
-import type { Adapter } from '../session/manager';
+import type { AIMessage, AIResponse, StreamChunk } from '../types';
+import { isFinalError, type Adapter, type AdapterCallConfig } from '../session/manager';
 
 export interface FallbackProvider {
   id: string;
@@ -9,12 +9,10 @@ export interface FallbackProvider {
   models?: string[];
 }
 
-type CallConfig = { model?: string; tools?: ToolDefinition[] };
+type CallConfig = AdapterCallConfig;
 
-/** Budget and missing-session errors are the caller's problem; another provider would fail the same way. */
-function isFinal(error: unknown): boolean {
-  return error instanceof AIError && (error.code === 'ai/token-budget-exceeded' || error.code === 'ai/session-not-found');
-}
+/** Budget, missing-session and cancelled calls are the caller's; another provider would fail the same way, or shouldn't be asked. */
+const isFinal = isFinalError;
 
 function describe(provider: FallbackProvider, model: string | undefined, error: unknown): string {
   return `${provider.id}${model ? `/${model}` : ''}: ${error instanceof Error ? error.message : String(error)}`;
@@ -28,6 +26,14 @@ function describe(provider: FallbackProvider, model: string | undefined, error: 
 export class FallbackAdapter implements Adapter {
   constructor(private readonly providers: FallbackProvider[]) {
     if (providers.length === 0) throw new AIError('ai/config', 'FallbackAdapter requires at least one provider');
+  }
+
+  /**
+   * True only when every provider would report tool calls in a stream: it says so itself, or it has
+   * no `stream`, in which case its reply is generated whole and its tool calls passed on.
+   */
+  get streamsToolCalls(): boolean {
+    return this.providers.every((provider) => !provider.adapter.stream || provider.adapter.streamsToolCalls === true);
   }
 
   private attempts(config: CallConfig): Array<{ provider: FallbackProvider; model: string | undefined }> {
@@ -58,7 +64,7 @@ export class FallbackAdapter implements Adapter {
       try {
         if (!provider.adapter.stream) {
           const response = await provider.adapter.generate(messages, { ...config, model });
-          yield { content: response.content, done: true, usage: response.usage };
+          yield { content: response.content, done: true, usage: response.usage, model: response.model, ...(response.toolCalls?.length ? { toolCalls: response.toolCalls } : {}) };
           return;
         }
         for await (const chunk of provider.adapter.stream(messages, { ...config, model })) {

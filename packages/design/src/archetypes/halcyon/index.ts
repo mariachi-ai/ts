@@ -26,7 +26,7 @@ export const halcyonArchetype: Archetype = {
   icons: {
     set: 'lucide',
     stroke: 1.25,
-    size: { text: 16, control: 14 },
+    size: { text: 16, control: 12 },
     style: 'outline',
     actions: {
       add: 'plus',

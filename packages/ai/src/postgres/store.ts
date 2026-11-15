@@ -4,7 +4,7 @@ import { aiMessagesTable } from '../schema/messages';
 import { aiSessionsTable } from '../schema/sessions';
 import { aiTelemetryTable } from '../schema/telemetry';
 import type { AISessionStore, SessionState } from '../session/manager';
-import type { AIMessage, AITelemetryEntry } from '../types';
+import type { AIMessage, AITelemetryEntry, SessionConfig } from '../types';
 
 const sessions = compileTable(aiSessionsTable);
 const messages = compileTable(aiMessagesTable);
@@ -25,7 +25,7 @@ export class DrizzleAISessionStore implements AISessionStore {
         systemPrompt: session.systemPrompt ?? undefined,
         tenantId: session.tenantId,
         userId: session.userId,
-        ...(session.config ?? {}),
+        ...restored(session.config),
       },
       totalInputTokens: session.totalInputTokens,
       totalOutputTokens: session.totalOutputTokens,
@@ -43,7 +43,7 @@ export class DrizzleAISessionStore implements AISessionStore {
       userId: state.config.userId ?? '',
       model: state.config.model ?? 'default',
       systemPrompt: state.config.systemPrompt ?? null,
-      config: state.config,
+      config: stored(state.config),
       totalInputTokens: state.totalInputTokens,
       totalOutputTokens: state.totalOutputTokens,
       updatedAt: new Date(),
@@ -65,23 +65,44 @@ export class DrizzleAISessionStore implements AISessionStore {
         role: message.role,
         content: message.content,
         toolCalls: message.toolCalls ?? null,
+        interrupted: message.interrupted ? true : null,
       })));
     });
   }
 
-  async recordTelemetry(entry: AITelemetryEntry & { tenantId: string }): Promise<void> {
+  async recordTelemetry(entry: AITelemetryEntry): Promise<void> {
     await this.db.insert(telemetry).values({
       sessionId: entry.sessionId,
-      tenantId: entry.tenantId,
+      tenantId: entry.tenantId ?? '',
       model: entry.model,
       inputTokens: entry.inputTokens,
       outputTokens: entry.outputTokens,
       latencyMs: Math.round(entry.latencyMs),
       costUsd: entry.costUsd.toFixed(6),
+      estimated: entry.estimated ?? false,
     });
   }
 }
 
+/**
+ * What is saved of a session's config. A tool is a function and a schema, which JSON can't hold: its
+ * name is saved, and the session gets the registered tool of that name back when it is opened.
+ */
+function stored(config: SessionConfig): Record<string, unknown> {
+  const { tools, ...rest } = config;
+  const toolNames = rest.toolNames ?? tools?.map((tool) => tool.name);
+  return { ...rest, ...(toolNames ? { toolNames } : {}) };
+}
+
+/** A saved config, read back. Rows saved before tool names were kept hold the remains of the tools themselves: only their names are used. */
+function restored(config: unknown): Partial<SessionConfig> {
+  if (!config || typeof config !== 'object') return {};
+  const { tools, ...rest } = config as Record<string, unknown>;
+  const fromOldRow = Array.isArray(tools) ? tools.map((tool) => (tool as { name?: unknown } | null)?.name).filter((name): name is string => typeof name === 'string') : undefined;
+  const toolNames = rest.toolNames === '*' || Array.isArray(rest.toolNames) ? (rest.toolNames as string[] | '*') : fromOldRow;
+  return { ...(rest as Partial<SessionConfig>), ...(toolNames ? { toolNames } : {}) };
+}
+
 function toMessage(row: Record<string, any>): AIMessage {
-  return { role: row.role, content: row.content, toolCalls: row.toolCalls ?? undefined };
+  return { role: row.role, content: row.content, toolCalls: row.toolCalls ?? undefined, ...(row.interrupted ? { interrupted: true } : {}) };
 }

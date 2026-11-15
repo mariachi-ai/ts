@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Measures every design language's recipes with the fingerprint probe (docs/design-fingerprint.md), at the three
-// widths, and writes dist/archetypes/<id>/fingerprint.json and checks.json, the raw screens, and the
-// distinctiveness matrix (dist/fingerprints/matrix.json). Needs a built package and Chrome.
+// widths, and writes dist/archetypes/<id>/fingerprint.json and checks.json, and the raw screens and the
+// distinctiveness matrix to packages/design/.fingerprints/ (matrix.json). Needs a built package and Chrome.
 //
 //   pnpm --filter @mariachi/design fingerprint [id,id,…]
 //   pnpm --filter @mariachi/design fingerprint --matrix   (rebuild the matrix from the saved screens, no browser)
@@ -15,7 +15,7 @@ import { buildChecks, buildFingerprint, distance, probeSource, quantile, RECIPE_
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
-const out = path.join(dist, 'fingerprints');
+const out = path.join(root, '.fingerprints'); // outside dist, so a rebuild keeps the measured screens
 const matrixOnly = process.argv.includes('--matrix');
 const only = process.argv.slice(2).find((a) => !a.startsWith('--'))?.split(',');
 const ids = fs.readdirSync(path.join(dist, 'archetypes')).filter((d) => fs.existsSync(path.join(dist, 'archetypes', d, 'recipes')) && (!only || only.includes(d))).sort();
@@ -27,6 +27,8 @@ if (matrixOnly) {
   for (const id of ids) { const f = path.join(out, `${id}.screens.json`); if (fs.existsSync(f)) screensOf[id] = JSON.parse(fs.readFileSync(f, 'utf8')); }
 } else {
 const browser = await chromium.launch(process.env.MARIACHI_CHROME ? { executablePath: process.env.MARIACHI_CHROME } : { channel: 'chrome' });
+const { archetypes } = await import('../dist/index.js');
+const darkFirst = new Set(archetypes.filter((a) => a.tags.mode === 'dark-first').map((a) => a.id));
 const ctx = await browser.newContext({ deviceScaleFactor: 1, reducedMotion: 'no-preference', colorScheme: 'light' });
 const page = await ctx.newPage();
 fs.mkdirSync(out, { recursive: true });
@@ -39,6 +41,8 @@ for (const id of ids) {
     for (const [width, [w, h]] of Object.entries(WIDTHS)) {
       await page.setViewportSize({ width: w, height: h });
       await page.goto(`file://${file}`, { waitUntil: 'networkidle' });
+      // A dark-first language is measured in its own mode
+      if (darkFirst.has(id)) await page.evaluate(() => document.documentElement.setAttribute('data-mode', 'dark'));
       await page.evaluate(async () => {
         await document.fonts.ready;
         await Promise.race([Promise.all(document.getAnimations().map((a) => a.finished.catch(() => {}))), new Promise((r) => setTimeout(r, 1000))]);
@@ -62,19 +66,21 @@ console.log();
 // The distinctiveness matrix: each language's own screens (each recipe held out in turn) against its checks,
 // against every other language's screens, and its screens against every other language's checks.
 const fps = Object.fromEntries(ids.filter((id) => screensOf[id]?.length).map((id) => [id, buildFingerprint(id, screensOf[id], { mode: 'language', measuredAt: '' })]));
-const checks = Object.fromEntries(Object.keys(fps).map((id) => [id, buildChecks(fps[id])]));
+const PAD = process.env.MARIACHI_SINGLE_PAD === undefined ? undefined : Number(process.env.MARIACHI_SINGLE_PAD);
+const checks = Object.fromEntries(Object.keys(fps).map((id) => [id, buildChecks(fps[id], { singlePad: PAD })]));
 const sp = spreads(Object.values(fps));
 const med = (xs) => quantile(xs, 0.5);
 const FLOOR = 0.05;
 const rows = [];
 const measured = ids.filter((id) => screensOf[id]?.length);
+if (measured.length < 2) { console.log('One language measured: no matrix (it needs at least two).'); process.exit(0); }
 for (const L of measured) {
   const own = [];
   for (const recipe of Object.keys(RECIPE_KINDS)) {
     const rest = screensOf[L].filter((s) => s.id !== recipe);
     const held = screensOf[L].filter((s) => s.id === recipe);
     if (!held.length) continue;
-    const c = buildChecks(buildFingerprint(L, rest, { mode: 'language', measuredAt: '' }));
+    const c = buildChecks(buildFingerprint(L, rest, { mode: 'language', measuredAt: '' }), { singlePad: PAD });
     for (const s of held) own.push(distance(s.result.measures, c, sp, s.kinds));
   }
   const strangers = measured.filter((M) => M !== L).flatMap((M) => screensOf[M].map((s) => distance(s.result.measures, checks[L], sp, s.kinds)));

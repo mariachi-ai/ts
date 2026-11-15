@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Flint's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
+ * Flint's nine layout recipes: framework-free HTML using only @mariachi/design classes and tokens
  * (no colour literals), with sample data from a made-up product ("Lathe", an agent workspace used by
  * the Kestrel team: repositories kestrel-api, web-console and ledger-sync). The language comes from a
  * desktop code editor, so the web translation is a dashboard-style app in its spirit: a near-black
@@ -79,6 +79,11 @@ const meta = 'font-size: var(--m-font-size-sm); color: var(--m-color-fg-muted)';
 const small = 'font-size: var(--m-font-size-sm)';
 const ui = 'font-size: var(--m-font-size-md)';
 const num = 'font-variant-numeric: tabular-nums';
+// The one emphasis weight: 500 for box titles, labels and bold words; titles stay regular
+const boxTitle = 'font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-medium)';
+// The wordmark beside the tile: 500, as the site bar's brand
+const wordmark = 'font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-medium)';
+const em = (t: string) => `<strong style="font-weight: var(--m-font-weight-medium)">${t}</strong>`;
 const mono = 'font-family: var(--m-font-family-mono); font-size: var(--m-font-size-sm)';
 const pageTitle =
   'font-family: var(--m-font-family-display); font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-regular); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
@@ -123,7 +128,7 @@ const me = `<div class="m-sidebar-section" style="margin-block-start: auto">
       </div>
     </div>`;
 
-// The side panel: its own sections and order; the treatment (28px rows, 6px current step, quiet keys) is the reference's
+// The side panel: its own sections and order; the treatment (31px rows, 6px current step, quiet keys) is the reference's
 const sidebar = (current: string) => `<nav class="m-sidebar" aria-label="Main" style="min-block-size: 100%">
     ${top}
     <div class="m-sidebar-section">
@@ -254,7 +259,7 @@ const dashboard = shell(
         <section class="m-card" aria-labelledby="fl-merged">
           <div class="m-card-body m-stack" data-gap="3">
             <div class="m-cluster" data-justify="between">
-              <h2 id="fl-merged" style="${ui}">Merged per day</h2>
+              <h2 id="fl-merged" style="${boxTitle}">Merged per day</h2>
               <div class="m-cluster" data-gap="4" style="${meta}">
                 <span class="m-cluster" data-gap="2">${dot('success-solid', '')} By an agent</span>
                 <span class="m-cluster" data-gap="2">${dot('warning-solid', '')} By hand</span>
@@ -269,7 +274,7 @@ const dashboard = shell(
         </section>
         <section class="m-stack" data-gap="2" aria-labelledby="fl-open">
           <div class="m-cluster" data-justify="between">
-            <h2 id="fl-open" style="${ui}">Open changes <span class="m-muted" style="${num}">(14)</span></h2>
+            <h2 id="fl-open" style="${boxTitle}">Open changes <span class="m-muted" style="${num}">(14)</span></h2>
             <button type="button" class="m-button" data-variant="ghost" data-size="sm">${icon(I.filter, 14)} Filter</button>
           </div>
           <div class="m-table-wrap">
@@ -382,7 +387,7 @@ const listDetail = shell(
             <summary><span class="m-tool-call-name" style="display: inline-flex; align-items: center; gap: var(--m-space-2)">${icon(I.terminal, 14)} Ran <span style="${mono}">pnpm test delivery</span></span><span class="m-tool-call-status">Passed</span><span class="m-tool-call-duration">9s</span></summary>
             <div class="m-tool-call-body"><pre class="m-code" tabindex="0"><code>✓ delivery/retry.test.ts (6 tests)\n✓ delivery/park.test.ts (3 tests)</code></pre></div>
           </details>
-          <p style="${ui}; line-height: var(--m-font-leading-relaxed)">Sends now retry up to <strong>five times</strong> with the policy's backoff. After the last failure the body is parked in <code class="m-code-inline">webhook_parked</code>, so nothing is lost and it can be replayed from the console.</p>
+          <p style="${ui}; line-height: var(--m-font-leading-relaxed)">Sends now retry up to ${em('five times')} with the policy's backoff. After the last failure the body is parked in <code class="m-code-inline">webhook_parked</code>, so nothing is lost and it can be replayed from the console.</p>
           <section class="m-card" aria-label="Files changed" style="--m-card-padding-md: 0; --m-card-gap: 0">
             <div class="m-cluster" data-justify="between" style="padding: var(--m-space-2) var(--m-space-3); border-block-end: ${hair}"><span style="${small}">3 files changed</span><a href="#" style="${small}; color: var(--m-color-fg-muted); text-decoration: none">Review</a></div>
             <ul style="padding: var(--m-space-1) 0; list-style: none">
@@ -424,15 +429,15 @@ const listDetail = shell(
 
 /* ---------------------------------------------------------------- onboarding */
 
-const repoOption = (name: string, detail: string, checked = false) =>
-  `<label class="m-cluster" data-gap="3" style="flex-wrap: nowrap; padding: var(--m-space-2) var(--m-space-3); border-block-end: ${hair}; cursor: pointer">
+const repoOption = (name: string, detail: string, checked = false, last = false) =>
+  `<label class="m-cluster" data-gap="3" style="flex-wrap: nowrap; padding: var(--m-space-1) var(--m-space-3); min-block-size: 32px; ${last ? '' : `border-block-end: ${hair}; `}cursor: pointer">
               <input class="m-checkbox" type="checkbox"${checked ? ' checked' : ''}>
-              <span class="m-stack" data-gap="0" style="flex: 1; min-inline-size: 0"><span style="${ui}">${name}</span><span style="${meta}">${detail}</span></span>
+              <span style="${ui}; flex: 1; min-inline-size: 0">${name}</span><span style="${meta}; white-space: nowrap">${detail}</span>
             </label>`;
 
 const onboarding = `<div class="m-stack" data-align="center" style="min-block-size: 100vh; background: var(--m-color-bg-canvas); padding: var(--m-space-6) var(--m-space-4) var(--m-space-16)">
   <div class="m-cluster" data-justify="between" style="inline-size: 100%; max-inline-size: 1152px">
-    <span class="m-cluster" data-gap="2" style="${ui}">${tile()} Lathe</span>
+    <span class="m-cluster" data-gap="2" style="${wordmark}">${tile()} Lathe</span>
     <span style="${meta}; ${num}">Step 2 of 3</span>
   </div>
   <div class="m-container" data-size="sm" style="--m-layout-container-max-sm: 480px; margin-block-start: clamp(var(--m-space-8), 12vh, var(--m-space-16))">
@@ -447,19 +452,16 @@ const onboarding = `<div class="m-stack" data-align="center" style="min-block-si
         <p class="m-muted" style="${ui}; line-height: var(--m-font-leading-relaxed)">Agents clone only what you choose here, each run on its own branch. You can add more later from a repository's menu.</p>
       </div>
       <fieldset class="m-card" style="--m-card-padding-md: 0; --m-card-gap: 0; padding: 0; margin: 0">
-        <legend class="m-sr-only">Repositories</legend>
+        <legend class="m-sr-only" style="font-weight: var(--m-font-weight-medium)">Repositories</legend>
         <div class="m-cluster" data-justify="between" style="padding: var(--m-space-2) var(--m-space-3); border-block-end: ${hair}">
-          <span class="m-cluster" data-gap="2" style="${small}">${icon(I.branch, 14)} kestrel-team</span>
+          <span class="m-cluster" data-gap="2" style="${boxTitle}">${icon(I.branch, 14)} kestrel-team</span>
           <span style="${meta}; ${num}">2 of 5 selected</span>
         </div>
         ${repoOption('kestrel-api', 'TypeScript · updated 2h ago', true)}
         ${repoOption('web-console', 'TypeScript · updated today', true)}
         ${repoOption('ledger-sync', 'Go · updated yesterday')}
         ${repoOption('mobile-shell', 'Swift · updated last week')}
-        <label class="m-cluster" data-gap="3" style="flex-wrap: nowrap; padding: var(--m-space-2) var(--m-space-3); cursor: pointer">
-          <input class="m-checkbox" type="checkbox">
-          <span class="m-stack" data-gap="0" style="flex: 1"><span style="${ui}">infra-terraform</span><span style="${meta}">HCL · updated in March</span></span>
-        </label>
+        ${repoOption('infra-terraform', 'HCL · updated in March', false, true)}
       </fieldset>
       <div class="m-stack" data-gap="2">
         <button type="button" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Continue <span style="opacity: 0.6">↵</span></button>
@@ -763,6 +765,115 @@ const errors = shell(
     </div>`,
 );
 
+/* ---------------------------------------------------------------- reading */
+
+// The public docs: the 52px site bar with search and its key, a sunken docs panel of 31px text rows
+// under muted group labels (the current one in the link colour, no fill), one article column (a muted
+// section name, a 36px regular title, 14px text, 22px section heads) and "On this page" at the right.
+// On a phone the article comes first and the panel drops below it.
+const docLink = (label: string, current = false) =>
+  `<li><a class="m-sidebar-link" href="#"${current ? ' aria-current="page" style="background: transparent; color: var(--m-color-accent-text)"' : ''}>${label}</a></li>`;
+const docGroup = (name: string, items: string[], current?: string) => `<div class="m-sidebar-section">
+      <h2 class="m-sidebar-heading">${name}</h2>
+      <ul>
+        ${items.map((l) => docLink(l, l === current)).join('\n        ')}
+      </ul>
+    </div>`;
+const tocLink = (label: string, nested = false, current = false) =>
+  `<li><a href="#" style="display: block; padding-block: var(--m-space-1); ${nested ? 'padding-inline-start: var(--m-space-3); ' : ''}color: var(--m-color-fg-${current ? 'default' : 'muted'}); text-decoration: none">${label}</a></li>`;
+
+const reading = `<div style="background: var(--m-color-bg-canvas); min-block-size: 100vh; font-size: var(--m-font-size-lg)">
+  <header class="m-navbar" data-sticky data-translucent style="border-block-end: ${hair}">
+    <a class="m-navbar-brand" href="#">${tile('20px')} Lathe</a>
+    <nav class="m-navbar-nav" aria-label="Site">
+      <a class="m-navbar-link" href="#" aria-current="page">Docs</a>
+      <a class="m-navbar-link" href="#">Guides</a>
+      <a class="m-navbar-link" href="#">API</a>
+    </nav>
+    <label class="m-cluster" data-gap="2" style="flex: 0 1 320px; flex-wrap: nowrap; min-inline-size: 0; margin-inline: auto; padding: var(--m-space-1) var(--m-space-3); border: ${hair}; border-radius: var(--m-radius-md); color: var(--m-color-fg-muted); ${ui}">${icon(I.search, 14)}<input type="search" placeholder="Find in the docs" aria-label="Find in the docs" style="flex: 1; min-inline-size: 0; border: 0; background: transparent; color: inherit; font: inherit"><span style="${meta}">⌘K</span></label>
+    <div class="m-navbar-actions">
+      <a class="m-button" data-variant="ghost" href="#" style="${pill}">Log in</a>
+      <a class="m-button" data-variant="primary" href="#" style="${pill}">Start building</a>
+    </div>
+  </header>
+  <div class="m-split" style="--m-layout-split-side: 240px; --m-layout-split-gap: 0; flex-wrap: wrap-reverse">
+    <nav class="m-sidebar" aria-label="Docs" style="padding-block-start: var(--m-space-6)">
+    ${docGroup('Start', ['Introduction', 'Install', 'First task'])}
+    ${docGroup('Agents', ['How a task runs', 'Rules', 'Schedules', 'Cloud runs', 'Reviews'], 'Schedules')}
+    ${docGroup('Workspace', ['Repositories', 'Webhooks', 'Data retention'])}
+    </nav>
+    <div class="m-cluster" data-gap="10" data-align="start" style="flex-wrap: wrap; padding: var(--m-space-10) clamp(var(--m-space-4), 4vw, var(--m-space-12)) var(--m-space-16)">
+      <article class="m-stack" data-gap="5" aria-labelledby="fl-doc" style="flex: 1 1 480px; max-inline-size: 672px; min-inline-size: 0; line-height: var(--m-font-leading-relaxed)">
+        <div class="m-stack" data-gap="2">
+          <span style="color: var(--m-color-fg-muted)">Agents</span>
+          <h1 id="fl-doc" style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-regular); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Schedules</h1>
+        </div>
+        <p>A schedule starts a task on its own, on a branch of its own, at the times you set. Use it for the chores nobody wants on a Monday: patch releases, flaky-test reports, stale branches.</p>
+        <p>Each run is an ordinary task. It shows up in the side panel with a clock beside it, and it ${em('never pushes to a protected branch')}; it opens a pull request and waits for a person.</p>
+        <pre class="m-code" tabindex="0"><code>schedule:
+  every: weekday at 07:00
+  repository: kestrel-api
+  task: Update dependencies with patch releases</code></pre>
+        <h2 style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-regular); letter-spacing: var(--m-font-tracking-tight); margin-block-start: var(--m-space-6)">How a run starts</h2>
+        <ol class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-5); margin: 0">
+          <li>Lathe checks out a fresh branch from the base you chose.</li>
+          <li>The agent works through the task with the repository's rules.</li>
+          <li>Checks run; if they pass, a pull request opens for review.</li>
+        </ol>
+        <h2 style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-regular); letter-spacing: var(--m-font-tracking-tight); margin-block-start: var(--m-space-6)">Limits</h2>
+        <p>A workspace can hold 20 schedules. Runs that overlap wait for the one before to finish, so a slow run never stacks up behind itself.</p>
+        <nav class="m-cluster" data-justify="between" aria-label="Pages" style="padding-block-start: var(--m-space-6); margin-block-start: var(--m-space-4); border-block-start: ${hair}">
+          <a href="#" class="m-stack" data-gap="0" style="text-decoration: none"><span style="${meta}">Previous</span><span style="color: var(--m-color-fg-default)">Rules</span></a>
+          <a href="#" class="m-stack" data-gap="0" style="text-decoration: none; text-align: end"><span style="${meta}">Next</span><span style="color: var(--m-color-fg-default)">Cloud runs</span></a>
+        </nav>
+      </article>
+      <aside aria-label="On this page" style="flex: 0 0 192px; position: sticky; top: 72px; ${ui}">
+        <ul style="list-style: none; padding: 0 0 var(--m-space-3); margin: 0; border-block-end: ${hair}">
+          ${tocLink('Schedules', false, true)}
+          ${tocLink('How a run starts')}
+          ${tocLink('Base branch', true)}
+          ${tocLink('Checks', true)}
+          ${tocLink('Limits')}
+        </ul>
+        <a href="#" class="m-cluster" data-gap="2" style="padding-block: var(--m-space-3); color: var(--m-color-fg-muted); text-decoration: none">${icon(I.copy, 14)} Copy as text</a>
+      </aside>
+    </div>
+  </div>
+</div>`;
+
+/* ---------------------------------------------------------------- sign-in */
+
+// The door: the flow's top line (the mark and the name), one narrow column on the panel colour, a
+// regular 22px title, two secondary ways in, an "or" rule, one field and one wide inverted Continue
+// with its key, then a muted line to join. No box around it, as onboarding.
+const signIn = `<div class="m-stack" data-align="center" style="min-block-size: 100vh; background: var(--m-color-bg-canvas); padding: var(--m-space-6) var(--m-space-4) var(--m-space-16)">
+  <div class="m-cluster" data-justify="between" style="inline-size: 100%; max-inline-size: 1152px">
+    <span class="m-cluster" data-gap="2" style="${wordmark}">${tile()} Lathe</span>
+    <a href="#" style="${meta}; text-decoration: none">Back to the site</a>
+  </div>
+  <main class="m-container" data-size="sm" style="--m-layout-container-max-sm: 360px; margin-block-start: clamp(var(--m-space-8), 14vh, var(--m-space-16))">
+    <div class="m-stack" data-gap="6">
+      <div class="m-stack" data-gap="2">
+        <h1 style="${pageTitle}">Log in to Lathe</h1>
+        <p class="m-muted" style="${ui}">Use the account your team invited.</p>
+      </div>
+      <div class="m-stack" data-gap="2">
+        <a class="m-button" data-size="lg" href="#" style="inline-size: 100%">${icon(I.branch, 14)} Continue with GitHub</a>
+        <a class="m-button" data-size="lg" href="#" style="inline-size: 100%">${icon(I.key, 14)} Continue with single sign-on</a>
+      </div>
+      <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap; ${meta}" role="separator" aria-label="or"><span style="flex: 1; border-block-start: ${hair}"></span>or<span style="flex: 1; border-block-start: ${hair}"></span></div>
+      <form class="m-stack" data-gap="3">
+        <div class="m-field">
+          <label class="m-field-label" for="fl-in-email">Email</label>
+          <input class="m-input" data-size="lg" id="fl-in-email" type="email" placeholder="you@company.com" autocomplete="email">
+        </div>
+        <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Continue <span style="opacity: 0.6">↵</span></button>
+      </form>
+      <p style="${meta}">New to Lathe? <a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Create an account</a></p>
+    </div>
+  </main>
+</div>`;
+
 export const flintRecipes: ArchetypeRecipe[] = [
   {
     name: 'dashboard',
@@ -812,5 +923,19 @@ export const flintRecipes: ArchetypeRecipe[] = [
     description:
       'Field errors under the field and a summary above them in a dialog, a failed command in the thread with what happens next, a toast that keeps the task queued, and full pages for 404, 500 and no access.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A public docs page: the 52px site bar with a search box and its key, a sunken docs panel of 31px text rows under muted labels (the current one in the link colour), one article column with a muted section name, a 36px regular title, 14px text, a code block and 22px section heads, and "On this page" at the right.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The flow\'s top line and one 360px column on the panel colour: a 22px regular title, two secondary ways in, an "or" rule, an email field and one wide inverted Continue with its key, then a muted line to join.',
+    html: signIn,
   },
 ];

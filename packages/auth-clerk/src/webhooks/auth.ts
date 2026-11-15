@@ -20,7 +20,8 @@ export class ClerkWebhookAuth extends AuthController {
     }
     try {
       verifyClerkWebhook(this.signingSecret, req.rawBody, svixHeaders);
-      return { provider: 'clerk', verified: true, metadata: { svixId: svixHeaders['svix-id'] } };
+      // The Svix id is part of what's signed, so it's safe to deduplicate on.
+      return { provider: 'clerk', verified: true, eventId: svixHeaders['svix-id'], metadata: { svixId: svixHeaders['svix-id'] } };
     } catch {
       return null;
     }

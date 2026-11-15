@@ -5,7 +5,7 @@ import { DesignKitsError } from './errors';
 import { fixtureStore, FONT, kitFiles, snapshot, tmp, writeSource } from './fixture';
 import { isKitPath, parseManifest, sha256 } from './manifest';
 import { packKits } from './pack';
-import { listKits, openKitStore, readKit } from './store';
+import { hasKit, kitJson, kitJsonBytes, listKits, openKitStore, readKit, readKitFile } from './store';
 
 const code = (fn: () => unknown): string | undefined => {
   try {
@@ -79,6 +79,59 @@ describe('openKitStore', () => {
     expect(code(() => store.read('linen'))).toBe('design-kits/corrupt');
     fs.rmSync(font);
     expect(code(() => store.read('marigold'))).toBe('design-kits/corrupt');
+  });
+
+  it('gives one file of a kit, or its kit.json alone, without putting the kit together', () => {
+    const { store, source } = fixtureStore();
+    expect(hasKit('linen', store)).toBe(true);
+    expect(hasKit('nope', store)).toBe(false);
+    expect(hasKit('../linen', store)).toBe(false);
+
+    // kit.json as a project gets it: parsed, and the very bytes the build wrote
+    const built = fs.readFileSync(path.join(source, 'linen', 'kit.json'));
+    expect(kitJsonBytes('linen', store).equals(built)).toBe(true);
+    const manifest = kitJson('linen', store);
+    expect(manifest).toMatchObject({ id: 'linen', dataTheme: 'linen', mariachi: { package: '@mariachi/design' } });
+    expect(Object.keys(manifest.files).sort()).toEqual(Object.keys(readKit('linen', store).manifest.files).sort());
+
+    // Every file the manifest names, one at a time, is the file the whole kit has: its own and the shared ones
+    const whole = readKit('linen', store);
+    for (const rel of Object.keys(manifest.files)) {
+      const one = readKitFile('linen', rel, store);
+      expect(one.equals(whole.files.get(rel) as Buffer), rel).toBe(true);
+      expect(sha256(one)).toBe(manifest.files[rel]);
+    }
+    expect(readKitFile('linen', Object.keys(manifest.files).find((rel) => rel.startsWith('fonts/')) as string, store).length).toBeGreaterThan(0);
+  });
+
+  it('refuses any path kit.json does not name, and never reads outside the kit for one', () => {
+    const { store, root } = fixtureStore();
+    const names = Object.keys(kitJson('linen', store).files);
+    const outside = path.join(root, 'kits', 'marigold', 'tokens.css');
+    expect(fs.existsSync(outside)).toBe(true);
+    for (const rel of ['kit.json', '../marigold/tokens.css', '../../kits/marigold/tokens.css', outside, '/etc/hosts', '', '.', 'fonts', `${names[0]}/`, `./${names[0]}`, '__proto__', 'constructor', 'toString']) {
+      expect(code(() => readKitFile('linen', rel, store)), JSON.stringify(rel)).toBe('design-kits/unknown-file');
+    }
+    for (const rel of [undefined, null, 42, {}, ['tokens.css']]) {
+      expect(code(() => readKitFile('linen', rel as never, store)), String(rel)).toBe('design-kits/unknown-file');
+    }
+    // An id is checked before it is ever part of a path
+    for (const id of ['nope', '../linen', 'linen/../marigold', '', 'LINEN']) {
+      expect(code(() => readKitFile(id, names[0] as string, store)), id).toBe('design-kits/unknown-kit');
+      expect(code(() => kitJson(id, store)), id).toBe('design-kits/unknown-kit');
+    }
+  });
+
+  it('checks a single file against kit.json, as it checks a whole kit', () => {
+    const { store, root } = fixtureStore();
+    const shared = path.join(root, 'shared', sha256(FONT));
+    const font = Object.entries(kitJson('linen', store).files).find(([, sha]) => sha === sha256(FONT))?.[0] as string;
+    fs.writeFileSync(shared, Buffer.from('not the font'));
+    expect(code(() => readKitFile('linen', font, store))).toBe('design-kits/corrupt');
+    // A file that wasn't touched is still served
+    expect(readKitFile('linen', 'tokens.css', store).length).toBeGreaterThan(0);
+    fs.writeFileSync(path.join(root, 'kits', 'linen', 'tokens.css'), 'tampered');
+    expect(code(() => readKitFile('linen', 'tokens.css', store))).toBe('design-kits/corrupt');
   });
 
   it('says so when there are no packed kits, or they are in a newer format', () => {

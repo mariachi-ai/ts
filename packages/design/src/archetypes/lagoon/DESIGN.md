@@ -11,7 +11,7 @@ that should feel as native and familiar as the phone in your pocket.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `lagoon` preset of `@mariachi/design` (`data-theme="lagoon"`,
@@ -91,10 +91,11 @@ are in the reference at the end.
 ## Icons
 
 - Lucide, outlined, **1.75px stroke**, round caps (the reference's regular-weight symbols): 18px in
-  round buttons, 16px beside small text, 30px in feature lists, 44–64px for empty states (at
-  1.25–1.5px).
-- Icons are ink in round buttons (white glass, or grey on a details page), blue in feature lists and
-  checks, grey for empty states.
+  the round glass, grey and pale blue buttons, 16px beside small text and in the composer's send
+  arrow, 15px inside settings tiles, 22px for the red not-sent mark, 44–64px for empty and error
+  states (at 1.25–1.5px). No 24–40px feature glyphs.
+- Icons are ink in round glass and grey buttons, blue in the pale blue round buttons and in checks,
+  grey for empty states.
 - Settings sections lead with a white glyph on a small coloured rounded-square tile (red, blue,
   orange, green or grey).
 - **The same icon for the same action, every time:**
@@ -207,7 +208,8 @@ All 36 of the library's components, as Lagoon draws them. Every one is in `galle
 - **Alert.** An inline notice: a pale tint, 14px corners, no border, an 18px icon, a semibold title
   and one line ("You're offline" in the orange tint, a failed form in the red tint).
 - **Toast.** The notification banner: raised white, 20px corners, the long soft shadow; a semibold
-  title, a grey line, one capsule action and a small close.
+  title, a grey line, one capsule action and a small close. It arrives at the top right of the
+  window, under the round buttons, as the system's notifications do.
 - **Dialog.** The sheet: the grouped grey, 24px corners, no border; the title 17px bold, fields in
   white, capsules at the bottom right with the primary last.
 - **Popover and menu.** Raised white, 12px corners, the long soft shadow, 5px inside; 28px rows at
@@ -247,7 +249,7 @@ All 36 of the library's components, as Lagoon draws them. Every one is in `galle
 - **A message that didn't send:** a red circled exclamation beside the bubble and "Not sent." under
   it, with a way to try again. Never drop the message.
 - **Connection:** an orange-tint notice ("You're offline"); messages wait and send on reconnect.
-- **Somewhere else:** a notification banner with what happened and one action.
+- **Somewhere else:** a notification banner at the top right with what happened and one action.
 - **A whole page:** a white grouped card, centred: a large grey outline glyph, the code in small
   mono, a 20px bold title, one grey sentence and one or two capsules.
   - **404:** "This chat isn't here" with Back to chats.
@@ -258,6 +260,38 @@ All 36 of the library's components, as Lagoon draws them. Every one is in `galle
 
 ## Page shapes (recipes)
 
+### The families
+
+| | The window (dashboard, list and detail, settings, empty state, errors) | Sheets and flows (onboarding, sign-in) | Public pages (pricing, reading) |
+| --- | --- | --- | --- |
+| Frame | The 19rem grey sidebar beside the pane; no header bar: round glass buttons float at the pane's top corners, the person's circle over the name capsule in the middle. Empty and error pages keep it | No sidebar, no bar: the mark (sign-in) or the wordmark and the step (onboarding) above one column on the grouped grey | The opaque site bar on the page colour: the wordmark, four grey links (the current one in a grey capsule), a blue text "Sign in" and the one blue capsule |
+| Column | The thread fills the pane, padded about 4%; details and settings are 30–40rem, centred on the grouped grey | 24–30rem, centred | Pricing to 68rem; an article 40rem under a 46rem help bar |
+| Titles | 17px bold in a pane's header; 28px bold for a person or group; 22px bold for an empty state; 20px bold on a full-page error | 28px bold | 34px bold for an article (on 17px text, as the phone's large title over its body); a 36–48px headline for marketing |
+| Text | Messages and settings rows 15px, conversation rows 13px, times and receipts 11px | 15px, footnotes 11px | 17px in an article; 15px on pricing |
+| Buttons | Capsules; the one blue capsule or the current row is the only blue to press | One blue capsule: full width (sign-in) or last at the right (onboarding) | Capsules; the site bar's blue capsule and the suggested plan's |
+| On a phone | A page reached from the list (details, a settings section, a thread with an error) comes first and the list follows below, as the phone pushes it; the home and empty search show the list | The column fills the width | The site bar keeps the wordmark and its two buttons; plans and the article stack to one column |
+
+### Signature moves
+
+1. **Blue is yours.** Your bubbles, the one blue capsule, the current row or pin, checks and links; their bubbles are a flat light grey, and nothing else is coloured but status and settings tiles.
+2. **Tailed bubbles in runs.** 2px apart, a tail on the last of each run, the sender's name above the first and their circle beside the last, a centred "**Today** 9:40 AM" between runs and a quiet "**Delivered**" under your last.
+3. **Round glass, no bar.** Controls float as 36px round buttons with a hairline ring and a soft drop; the pane never has a header bar with a rule.
+4. **Circles for people.** Initials on soft tints: 40px in rows, 64px pinned, 88px on a details page or the setup sheet; the chosen one ringed in blue.
+5. **Grouped cards on the grouped grey.** White, 20px corners, no border, 44px rows with hairlines inset to the text, a small grey title above and a muted 11px footnote below.
+6. **Capsules for everything you press,** circles for icon buttons, with 18px glyphs in the glass, grey and pale blue ones.
+
+### How a screen is assembled
+
+- **It opens with** the frame: the sidebar (wordmark and two round buttons, the capsule search, then circles and rows) and the pane's floating round buttons. Sheets open with the large circle or the mark; public pages with the site bar.
+- **Reading order:** the person or the title in the middle, then what they said or what you can set: bubbles top to bottom, or grouped cards in sections, each with its small grey title.
+- **How much one screen does:** one conversation, one person or group, or one settings section. A details page is one centred column; settings never show two sections at once.
+- **When narrow:** the sidebar narrows and the pane keeps its padding; at phone width the window becomes two screens (the list, and the page reached from it) and shows the one the recipe is about first.
+- **Too much content:** the list scrolls under the pinned circles; long settings sections stay one column of grouped cards; a long thread scrolls with the composer fixed at the bottom.
+- **None:** the frame stays; the pane or the list shows a large grey outline glyph, a 22px bold title and one sentence, with at most a blue capsule and a grey one.
+- **Two families, one type system:** public pages keep the app's face, weights and capsules; only the site bar, the larger titles and the 17px article text change.
+
+### The recipes
+
 - **Dashboard (the window).** The sidebar (wordmark and round buttons, capsule search, segmented
   sections, pinned circles with the current one in blue, conversation rows with unread dots), and
   the thread: round glass buttons in the corners, the circle over the name capsule, timestamps,
@@ -266,20 +300,33 @@ All 36 of the library's components, as Lagoon draws them. Every one is in `galle
 - **List and detail.** The conversation list with the current row in solid blue, and the group's
   details on the grouped grey: a round close button and an "Edit" capsule, an 88px circle, a 28px
   bold name, round grey actions with ink glyphs, a segmented control, member circles with "Add",
-  blue link rows, switch rows and a red "Leave" row in grouped cards.
-- **Onboarding.** A centred welcome on the grouped grey: a large blue tile, a 34px bold title, three
-  features with 30px blue icons, a grouped card for the name, a full-width blue capsule, a blue
-  text link and page dots.
+  blue link rows, switch rows and a red "Leave" row in grouped cards. On a phone the details come
+  first.
+- **Onboarding.** The first step, your name and picture, as a raised sheet on the grouped grey: the
+  wordmark and "Step 1 of 2" above it; an 88px circle, the 28px bold name, one muted line, three
+  pale blue round buttons (photo, emoji, edit); a row of looks to choose, the chosen one ringed in
+  blue, with a blue "More looks"; who to share them with as a grouped card of two rows with a blue
+  check; then "Set up later" (grey) and "Continue" (blue) at the bottom right.
 - **Settings.** The sidebar with a capsule search, the account row and sections with coloured tiles
   (the current one in blue); the open section as grouped cards with switch rows, menus and chevron
-  rows, small grey titles above and footnotes below, and a red reset row.
-- **Empty state.** A search with no results in the sidebar (a grey glyph, "No results", one line),
-  and the thread pane at rest: a large grey glyph, a 22px bold title, one sentence, two capsules.
-- **Pricing.** An invented product's plans: the opaque toolbar, a bold centred headline, a segmented
-  control, three white cards on the grouped grey (the suggested one ringed in blue), a comparison
-  table in a grouped card and grouped questions.
-- **Errors.** The unsent message, the offline notice, a banner, a sheet with field errors and the
-  full-page errors above, as one page.
+  rows, small grey titles above and footnotes below, and a red reset row. On a phone the section
+  comes first.
+- **Empty state.** A search with no results in the sidebar and the thread pane at rest, both drawn
+  the same way: a large grey glyph, a 22px bold title, one sentence; the pane adds two capsules.
+- **Pricing.** An invented product's plans: the site bar, a bold centred headline, a segmented
+  control, three white cards on the grouped grey (the suggested one ringed in blue) with their
+  features as 44px rows between inset hairlines, a comparison table in a grouped card and grouped
+  questions.
+- **Errors.** In the window: the offline notice at the top of the thread, the message that didn't
+  send with its red mark and "Not sent.", and a banner at the top right; below the window, on the
+  grouped grey, a sheet with field errors and the full-page errors (404, 500, no access).
+- **Reading.** A public help article: the site bar; the help name and a capsule search over a
+  hairline; a breadcrumb, a 34px bold title and 17px text; a sample thread in a grouped-grey card;
+  numbered steps; sections between full hairlines with 22px bold headings; a tinted tip; "Was this
+  page helpful?" with two capsules; a small grey footer.
+- **Sign-in.** On the grouped grey: the blue mark, a 28px bold title and one muted line, one grouped
+  card with the email and password rows (the label at the left, the field at the right), a footnote,
+  a full-width blue capsule, and two blue text links.
 
 ## Words
 

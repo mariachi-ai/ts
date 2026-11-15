@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/design-kits",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "Every @mariachi/design language and preset as a kit a project copies in and owns: tokens, base styles, self-hosted fonts, motion and DESIGN.md, with a sha256 per file.",
   "mariachi": {
     "category": "design",
@@ -23,6 +23,7 @@
       "import": "./dist/index.js"
     },
     "./kits.json": "./dist/kits.json",
+    "./catalog.json": "./dist/catalog.json",
     "./package.json": "./package.json"
   },
   "main": "./dist/index.js",
@@ -54,5 +55,10 @@
     "tsup": "^8",
     "typescript": "^5.7",
     "vitest": "^3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/design-kits"
   }
 }

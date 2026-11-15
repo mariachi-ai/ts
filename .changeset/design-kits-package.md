@@ -14,3 +14,8 @@ copy the project has edited instead of replacing it (exit 1, unless `--force`), 
 place so the project's imports don't change, and never removes a file that isn't a kit's. `mariachi design list` shows the kits beside the
 presets and components. Each kit now carries the licence of every font it copies, as
 `fonts/<family>.LICENSE.txt`, recorded in `kit.json`.
+
+Tools that serve or assemble a kit without writing it use `hasKit(id)`, `kitJson(id)`,
+`kitJsonBytes(id)` and `readKitFile(id, path)`, which gives only the files `kit.json` lists, each
+checked against its sha256. The design catalog (components, languages, presets, tokens) ships as
+`@mariachi/design-kits/catalog.json`: it is too large for `@mariachi/design`, which leaves it out.

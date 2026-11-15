@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Solace's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
+ * Solace's nine layout recipes (the seven every language has, then reading and sign-in): framework-free HTML using only @mariachi/design classes and tokens
  * (no colour literals), with sample data from a made-up wellbeing app, "Lull". They follow the
  * language's real screen patterns, translated from the phone to a desktop width: a white header
  * with charcoal links and one blue pill, a day laid out as a timeline of big bordered session cards,
@@ -74,6 +74,9 @@ const art = (bg: string, sun: string, hill: string, h = '7.5rem', radius = 'var(
 
 const h1 =
   'font-size: var(--m-font-size-3xl); font-weight: 700; letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
+// The big title of a public page, an empty place or a whole-page error: 48px, tight
+const display =
+  'font-size: var(--m-font-size-4xl); font-weight: 700; letter-spacing: var(--m-font-tracking-tight); line-height: 1.1';
 const h2 =
   'font-size: var(--m-font-size-2xl); font-weight: 700; letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
 const h3 =
@@ -105,7 +108,8 @@ ${navItems.map((l) => `      <li><a class="m-navbar-link" href="#"${l === curren
 const metaLine = (ic: string, text: string) =>
   `<span class="m-cluster" data-gap="2" style="${meta}">${icon(ic, 16)} ${text}</span>`;
 
-// A session card in the day's timeline: a bold title, two lines of detail with icons, a picture
+// A session card in the day's timeline: a bold title, two lines of detail with icons, a picture. The
+// session up next is the featured card: raised, with the day's one blue pill to begin it.
 const session = (
   title: string,
   kind: [string, string],
@@ -120,18 +124,30 @@ const session = (
       : state === 'done'
         ? `<span style="display: inline-grid; place-items: center; inline-size: 1.25rem; block-size: 1.25rem; border-radius: 9999px; background: var(--m-color-success-solid); color: var(--m-color-success-on-solid)" aria-label="Done">${icon(I.check, 12)}</span>`
         : `<span style="inline-size: 1.25rem; block-size: 1.25rem; border-radius: 9999px; border: 2px solid var(--m-color-border-default); background: var(--m-color-bg-surface)" aria-label="Later"></span>`;
-  return `            <li class="m-cluster" data-gap="4" data-align="center" style="flex-wrap: nowrap">
-              <span style="display: grid; place-items: center; inline-size: 1.25rem; flex: none">${marker}</span>
-              <a href="#" class="m-card" data-interactive style="flex: 1; text-decoration: none; color: inherit${featured ? '; box-shadow: var(--m-shadow-md)' : ''}">
-                <div class="m-card-body m-cluster" data-justify="between" data-gap="4" style="flex-wrap: nowrap">
+  const body = `<div class="m-card-body m-cluster" data-justify="between" data-gap="4" style="flex-wrap: nowrap">
                   <div class="m-stack" data-gap="2">
-                    <h3 style="${featured ? h2 : h3}">${title}</h3>
+                    <h3 style="${featured ? h2 : h3}">${featured ? `<a href="#" style="color: inherit; text-decoration: none">${title}</a>` : title}</h3>
                     ${metaLine(kind[0], kind[1])}
-                    ${metaLine(I.clock, length)}
+                    ${metaLine(I.clock, length)}${
+                      featured
+                        ? `
+                    <div style="padding-block-start: var(--m-space-2)"><button type="button" class="m-button" data-variant="primary">${solid(I.play, 16)} Begin</button></div>`
+                        : ''
+                    }
                   </div>
                   <div style="inline-size: 40%; max-inline-size: 15rem; flex: none">${pic}</div>
-                </div>
-              </a>
+                </div>`;
+  return `            <li class="m-cluster" data-gap="4" data-align="center" style="flex-wrap: nowrap">
+              <span style="display: grid; place-items: center; inline-size: 1.25rem; flex: none">${marker}</span>
+              ${
+                featured
+                  ? `<article class="m-card" style="flex: 1; box-shadow: var(--m-shadow-md)">
+                ${body}
+              </article>`
+                  : `<a href="#" class="m-card" data-interactive style="flex: 1; text-decoration: none; color: inherit">
+                ${body}
+              </a>`
+              }
             </li>`;
 };
 
@@ -178,8 +194,8 @@ const dashboard = `${header('Home')}
     <div class="m-grid" style="--m-layout-grid-min: 22rem; --m-layout-grid-gap: var(--m-space-10); align-items: start; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr))">
       <section aria-label="Tonight's plan" style="grid-column: span 2; min-inline-size: 0">
         <ol class="m-stack" data-gap="5" style="padding: 0; list-style: none; background: linear-gradient(var(--m-color-border-default), var(--m-color-border-default)) 0.5625rem 0 / 2px 100% no-repeat">
-${session('Settle the day', [I.video, 'Video'], '4–6 min', art(tone.sun, tone.brand, tone.white, '8.5rem'), 'done', true)}
-${session('Breathe out the to-do list', [I.headphones, 'Guided session'], '3 min', art(tone.blue, tone.sun, tone.pale), 'now')}
+${session('Settle the day', [I.video, 'Video'], '4–6 min', art(tone.sun, tone.brand, tone.white), 'done')}
+${session('Breathe out the to-do list', [I.headphones, 'Guided session'], '3 min', art(tone.blue, tone.sun, tone.pale, '8.5rem'), 'now', true)}
 ${session('Check in with yourself', [I.pencil, 'Reflection'], '5 min', art(tone.brand, tone.sun, tone.blue), 'next')}
 ${session('Drifting off by the lake', [I.moon, 'Sleep story'], '35 min', art(tone.night, tone.sun, tone.blue), 'next')}
         </ol>
@@ -292,9 +308,9 @@ ${row('Letting a hard day go', I.headphones, 'Course · 7 days · 10 min', art(t
         <p style="font-size: var(--m-font-size-lg); line-height: var(--m-font-leading-normal); max-inline-size: 36rem">Notice the voice in your head, and practise answering it the way you would answer a friend.</p>
       </div>
       <div class="m-stack" data-gap="3">
-        <h2 style="${h3}">Choose your guide</h2>
-        <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap"><span class="m-avatar" data-size="md">MV</span><button type="button" class="m-button" aria-pressed="true" style="flex: 1; --m-button-secondary-bg: var(--m-color-bg-inverse); --m-button-secondary-fg: var(--m-color-fg-inverse); --m-button-secondary-hover-bg: var(--m-color-bg-inverse)">Marisol</button></div>
-        <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap"><span class="m-avatar" data-size="md">TO</span><button type="button" class="m-button" aria-pressed="false" style="flex: 1; --m-button-secondary-bg: var(--m-color-bg-surface); --m-button-secondary-border: var(--m-color-border-default); --m-button-shadow: none">Theo</button></div>
+        <h2 style="font-size: var(--m-font-size-lg); font-weight: 700; letter-spacing: var(--m-font-tracking-tight)">Choose your guide</h2>
+        <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap"><span class="m-avatar" data-size="sm">MV</span><button type="button" class="m-button" aria-pressed="true" style="flex: 1; --m-button-secondary-bg: var(--m-color-bg-inverse); --m-button-secondary-fg: var(--m-color-fg-inverse); --m-button-secondary-hover-bg: var(--m-color-bg-inverse)">Marisol</button></div>
+        <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap"><span class="m-avatar" data-size="sm">TO</span><button type="button" class="m-button" aria-pressed="false" style="flex: 1; --m-button-secondary-bg: var(--m-color-bg-surface); --m-button-secondary-border: var(--m-color-border-default); --m-button-shadow: none">Theo</button></div>
       </div>
       <div class="m-cluster" data-gap="3">
         <button type="button" class="m-button" data-variant="primary" data-size="lg" style="flex: 1">${solid(I.play, 16)} Begin course</button>
@@ -317,7 +333,7 @@ const onboarding = `<main class="m-container" data-size="sm" style="padding-bloc
   <form class="m-stack" data-gap="6" aria-labelledby="sl-onb-title">
     <div class="m-cluster" data-justify="between">
       <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="Back">${icon(I.left)}</button>
-      <span style="${meta}; font-weight: 500" id="sl-onb-step">2 of 4</span>
+      <span style="${meta}" id="sl-onb-step">2 of 4</span>
       <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="Close">${icon(I.x)}</button>
     </div>
     <progress class="m-progress" data-size="sm" value="2" max="4" aria-labelledby="sl-onb-step">2 of 4</progress>
@@ -330,7 +346,7 @@ const onboarding = `<main class="m-container" data-size="sm" style="padding-bloc
       <legend class="m-sr-only">Your goals</legend>
 ${option('sleep', 'Fall asleep more easily', true)}
 ${option('worry', 'Worry a little less', false)}
-${option('focus', 'Keep my focus at work', true)}
+${option('focus', 'Keep my focus at work', false)}
 ${option('kind', 'Be kinder to myself', false)}
 ${option('habit', 'Build a daily habit', false)}
     </fieldset>
@@ -382,13 +398,22 @@ ${settingsNav.map(([l, ic]) => `            <li><a class="m-sidebar-link" href="
         </div>
       </nav>
       <div class="m-stack" data-gap="10">
+        <section class="m-card" data-variant="sunken" aria-labelledby="sl-plan" style="border-radius: var(--m-radius-md)">
+          <div class="m-card-body m-cluster" data-justify="between" data-gap="4">
+            <div class="m-stack" data-gap="1">
+              <h2 id="sl-plan" style="${h3}">Monthly membership</h2>
+              <p class="m-muted">Renews on March 3 at $11.99. A year is $64.99, about half as much.</p>
+            </div>
+            <button type="button" class="m-button" data-variant="primary">Switch to yearly</button>
+          </div>
+        </section>
         <section class="m-stack" data-gap="2" aria-labelledby="sl-acct">
           <h2 id="sl-acct" style="${h2}">Account</h2>
           <dl class="m-stack" data-gap="0">
 ${setting('First name', 'Priya', 'Edit')}
 ${setting('Email address', 'priya.r@example.com', 'Manage')}
 ${setting('Password', '••••••••••', 'Edit')}
-${setting('Membership', 'Yearly · renews March 3', 'Manage')}
+${setting('Membership', 'Monthly · renews March 3', 'Manage')}
           </dl>
         </section>
         <section class="m-stack" data-gap="2" aria-labelledby="sl-rem">
@@ -410,14 +435,14 @@ ${toggle('streak', 'Show my streak', 'Hide it if counting days feels like pressu
 </main>`;
 
 const emptyState = `${header('Library')}
-<main class="m-container" data-size="sm" style="padding-block: var(--m-space-16)">
-  <div class="m-stack" data-gap="5" data-align="center" style="text-align: center">
+<main class="m-container" style="padding-block: var(--m-space-8) var(--m-space-16)">
+  <div class="m-stack" data-gap="5" data-align="center" style="text-align: center; padding: var(--m-space-16) var(--m-space-6); border-radius: 24px; background: var(--m-color-bg-sunken)">
     <svg viewBox="0 0 200 140" width="200" height="140" aria-hidden="true"><circle cx="86" cy="76" r="56" style="fill: var(--m-color-brand-default)"/><circle cx="150" cy="40" r="24" style="fill: var(--m-color-warning-solid)"/><rect x="104" y="100" width="88" height="28" rx="14" style="fill: var(--m-color-accent-default)"/></svg>
-    <h1 style="${h2}">Nothing saved for offline yet</h1>
+    <h1 style="${display}">Nothing saved for offline yet</h1>
     <p class="m-muted" style="font-size: var(--m-font-size-lg); max-inline-size: 26rem">Save a session and it plays without a connection: on a plane, a train, or with your phone on airplane mode at night.</p>
     <div class="m-cluster" data-gap="3" data-justify="center">
       <button type="button" class="m-button" data-variant="primary">Browse the library</button>
-      <button type="button" class="m-button">How saving works</button>
+      <button type="button" class="m-button" style="--m-button-secondary-bg: var(--m-color-bg-surface)">How saving works</button>
     </div>
   </div>
 </main>`;
@@ -449,15 +474,15 @@ const trial = (
             <span style="display: grid; place-items: center; inline-size: 2.5rem; block-size: 2.5rem; border-radius: 9999px; background: var(--m-color-brand-default); color: var(--m-color-brand-fg)">${icon(ic, 18)}</span>
             ${last ? '' : '<span style="flex: 1; inline-size: 4px; min-block-size: 1.5rem; border-radius: 9999px; background: var(--m-color-brand-subtle)"></span>'}
           </span>
-          <span class="m-stack" data-gap="1" style="padding-block-end: var(--m-space-4)"><span style="${h3}">${when}</span><span class="m-muted">${what}</span></span>
+          <span class="m-stack" data-gap="1" style="padding-block-end: var(--m-space-4)"><span style="font-size: var(--m-font-size-lg); font-weight: 700; letter-spacing: var(--m-font-tracking-tight)">${when}</span><span class="m-muted">${what}</span></span>
         </li>`;
 
 const pricing = `<header class="m-navbar" style="justify-content: center">${brand}</header>
 <main class="m-container" data-size="md" style="padding-block: var(--m-space-12) var(--m-space-16)">
   <div class="m-stack" data-gap="12">
     <div class="m-stack" data-gap="4" data-align="center" style="text-align: center">
-      <p style="font-size: var(--m-font-size-xl); font-weight: 700; letter-spacing: var(--m-font-tracking-tight); color: var(--m-color-fg-muted)">Two weeks free, then one price</p>
-      <h1 style="font-size: var(--m-font-size-4xl); font-weight: 700; letter-spacing: var(--m-font-tracking-tight); line-height: 1.1">Rest easier, <span style="color: var(--m-color-brand-default)">all year</span></h1>
+      <p style="font-size: var(--m-font-size-2xl); font-weight: 700; letter-spacing: var(--m-font-tracking-tight); color: var(--m-color-fg-muted)">Two weeks free, then one price</p>
+      <h1 style="${display}">Rest easier, <span style="color: var(--m-color-brand-default)">all year</span></h1>
       <p class="m-muted" style="font-size: var(--m-font-size-lg)">Every session, sleep story and course. Cancel any time before your trial ends.</p>
     </div>
     <fieldset class="m-stack" data-gap="3" style="border: 0; padding: 0; margin: 0 auto; inline-size: 100%; max-inline-size: 43rem">
@@ -510,10 +535,10 @@ const errorPage = (
   body: string,
   actions: string,
   shape: string,
-) => `  <section class="m-stack" data-gap="4" data-align="center" style="text-align: center; padding-block: var(--m-space-12); ${rule}" aria-labelledby="sl-err-${code}">
+) => `  <section class="m-stack" data-gap="4" data-align="center" style="text-align: center; padding: var(--m-space-12) var(--m-space-6); border-radius: 24px; background: var(--m-color-bg-sunken)" aria-labelledby="sl-err-${code}">
     ${shape}
     <span style="font-family: var(--m-font-family-mono); ${meta}">Error ${code}</span>
-    <h1 id="sl-err-${code}" style="${h2}">${title}</h1>
+    <h1 id="sl-err-${code}" style="${display}">${title}</h1>
     <p class="m-muted" style="max-inline-size: 26rem; font-size: var(--m-font-size-lg)">${body}</p>
     <div class="m-cluster" data-gap="3" data-justify="center">${actions}</div>
   </section>`;
@@ -560,10 +585,135 @@ const errors = `<main class="m-container" data-size="sm" style="padding-block: v
       </div>
     </section>
 ${errorPage('404', 'We can’t find that page', 'It may have moved, or the link has a typo. Your sessions are all still here.', `<a class="m-button" data-variant="primary" href="#">${icon(I.home, 18)} Back home</a>`, shapeLost)}
-${errorPage('500', 'Something went wrong on our side', 'Nothing you did. Your progress is saved. Give it a moment and try again.', `<button type="button" class="m-button" data-variant="primary">Try again</button><a class="m-button" href="#">Get help</a>`, shapeBroken)}
-${errorPage('403', 'This one is for members', 'Your plan doesn’t include coaching yet. Ask your workplace admin, or see what’s included.', `<a class="m-button" data-variant="primary" href="#">See plans</a><a class="m-button" href="#">Go back</a>`, shapeLocked)}
+${errorPage('500', 'Something went wrong on our side', 'Nothing you did. Your progress is saved. Give it a moment and try again.', `<button type="button" class="m-button" data-variant="primary">Try again</button><a class="m-button" href="#" style="--m-button-secondary-bg: var(--m-color-bg-surface)">Get help</a>`, shapeBroken)}
+${errorPage('403', 'This one is for members', 'Your plan doesn’t include coaching yet. Ask your workplace admin, or see what’s included.', `<a class="m-button" data-variant="primary" href="#">See plans</a><a class="m-button" href="#" style="--m-button-secondary-bg: var(--m-color-bg-surface)">Go back</a>`, shapeLocked)}
   </div>
 </main>`;
+
+// The public family: the site header (the mark, a few charcoal links, "Log in" and the one blue pill
+// at the right) and the warm off-white footer
+const siteLinks = ['Sessions', 'Sleep', 'Courses', 'Articles', 'Plans'];
+const siteHeader = (current: string) => `<header class="m-navbar">
+  ${brand}
+  <nav class="m-navbar-nav" aria-label="Main">
+    <ul>
+${siteLinks.map((l) => `      <li><a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${l}</a></li>`).join('\n')}
+    </ul>
+  </nav>
+  <div class="m-navbar-actions">
+    <a class="m-button" data-variant="ghost" href="#">Log in</a>
+    <a class="m-button" data-variant="primary" href="#">Try it free</a>
+  </div>
+</header>`;
+
+const footCol = (title: string, links: string[]) => `<section class="m-stack" data-gap="3" aria-label="${title}">
+        <h2 style="font-size: var(--m-font-size-md); font-weight: 700; letter-spacing: var(--m-font-tracking-tight)">${title}</h2>
+        <ul class="m-stack" data-gap="2" style="padding: 0; list-style: none">
+${links.map((l) => `          <li><a href="#" style="color: var(--m-color-fg-default); text-decoration: none">${l}</a></li>`).join('\n')}
+        </ul>
+      </section>`;
+const siteFooter = `<footer style="background: var(--m-color-bg-sunken)">
+  <div class="m-container" style="padding-block: var(--m-space-12)">
+    <div class="m-grid" style="--m-layout-grid-min: 12rem; --m-layout-grid-gap: var(--m-space-8)">
+      ${footCol('Lull', ['About us', 'Careers', 'For teams', 'Give a gift'])}
+      ${footCol('Practice', ['Sessions', 'Sleep', 'Courses', 'Articles'])}
+      ${footCol('Help', ['Help centre', 'Contact us', 'Your plan', 'Accessibility'])}
+    </div>
+    <p style="${meta}; padding-block-start: var(--m-space-8)">© 2026 Lull · <a href="#" style="color: inherit">Terms</a> · <a href="#" style="color: inherit">Privacy</a></p>
+  </div>
+</footer>`;
+
+// Reading: a public article. The contents of the article in a side column, a breadcrumb with ">", a
+// 48px bold title, the date, the warm off-white byline box, a picture band, 18px text with blue
+// underlined links, a session to try in the player, and three more articles as cards.
+const contents = ['Why a wind-down helps', 'A ten-minute routine', 'When sleep still won’t come'];
+const more = (title: string, kind: string, pic: string) =>
+  `<a href="#" class="m-card" data-interactive style="text-decoration: none; color: inherit; overflow: hidden">${pic}<div class="m-card-body m-stack" data-gap="1"><span style="${meta}">${kind}</span><span style="${h3}">${title}</span></div></a>`;
+
+const reading = `${siteHeader('Articles')}
+<main class="m-container" style="padding-block: var(--m-space-10) var(--m-space-16)">
+  <div class="m-split" style="--m-layout-split-side: 15rem; --m-layout-split-gap: var(--m-space-12); align-items: flex-start">
+    <nav class="m-stack" data-gap="4" aria-labelledby="sl-toc">
+      <h2 id="sl-toc" style="font-size: var(--m-font-size-lg)">In this article</h2>
+      <ul class="m-stack" data-gap="3" style="padding: 0; list-style: none; font-size: var(--m-font-size-sm)">
+${contents.map((c) => `        <li><a href="#" style="color: var(--m-color-fg-default); text-decoration: none">${c}</a></li>`).join('\n')}
+      </ul>
+    </nav>
+    <article class="m-stack" data-gap="6" aria-labelledby="sl-art" style="max-inline-size: 48rem">
+      <nav class="m-breadcrumb" aria-label="Breadcrumb" style="--m-breadcrumb-separator: '>'"><ol><li><a href="#">Articles</a></li><li><a href="#">Sleep</a></li><li aria-current="page">A gentler way to wind down</li></ol></nav>
+      <div class="m-stack" data-gap="3">
+        <h1 id="sl-art" style="${display}">A gentler way to wind down</h1>
+        <p style="font-size: var(--m-font-size-xs)">Published March 4, 2026 · 6 min read</p>
+      </div>
+      <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap; align-self: start; padding: var(--m-space-3) var(--m-space-5) var(--m-space-3) var(--m-space-3); border-radius: var(--m-radius-md); background: var(--m-color-bg-sunken)">
+        <span class="m-avatar" data-size="md">LE</span>
+        <span style="font-weight: 700">Written by <a href="#" style="color: var(--m-color-accent-text); text-decoration: none">the Lull editors</a></span>
+      </div>
+      ${art(tone.sun, tone.brand, tone.white, '22rem', 'var(--m-radius-md)')}
+      <div class="m-stack" data-gap="4" style="font-size: var(--m-font-size-lg); line-height: var(--m-font-leading-normal)">
+        <p>Most of us go to bed with the day still running. The mind keeps sorting emails and conversations long after the light is off, and sleep waits for it to finish.</p>
+        <p>A wind-down gives it somewhere to land. It doesn’t need to be long: ten minutes of the same few steps each night tells the body that the day is over. <a href="#" style="color: var(--m-color-accent-text)">Our sleep course</a> walks through one a night for a week.</p>
+        <h2 style="${h2}">A ten-minute routine</h2>
+        <p>Dim the lights, put the phone face down across the room, and breathe out for longer than you breathe in. When a thought arrives, notice it, name it, and let it pass.</p>
+      </div>
+      ${player('Ten minutes to wind down', 'Guided session · 10 min', '0:00', '10:00', 0)}
+      <section class="m-stack" data-gap="4" aria-labelledby="sl-more">
+        <h2 id="sl-more" style="${h2}">Keep reading</h2>
+        <div class="m-grid" style="--m-layout-grid-min: 13rem; --m-layout-grid-gap: var(--m-space-6)">
+          ${more('Why we wake at 3 a.m.', 'Sleep', art(tone.night, tone.sun, tone.blue, '7.5rem', '0'))}
+          ${more('Breathing for busy days', 'Stress', art(tone.sun, tone.brand, tone.white, '7.5rem', '0'))}
+          ${more('The habit of starting small', 'Mindfulness', art(tone.brand, tone.sun, tone.pale, '7.5rem', '0'))}
+        </div>
+      </section>
+    </article>
+  </div>
+</main>
+${siteFooter}`;
+
+// Sign-in: the mark alone at the top left over a sky that pales from white to a soft blue; one white
+// sheet with 32px corners: a 24px bold title, a line with the link to join, the email field, the full-
+// width blue Continue, the terms box, an "or" rule and warm off-white pills for other ways in.
+const otherWay = (ic: string, label: string) =>
+  `<button type="button" class="m-button" style="inline-size: 100%">${icon(ic)} ${label}</button>`;
+// Under the sheet's actions, what the product holds: three round token shapes with a short label
+const moment = (label: string, bg: string, dot: string) =>
+  `<li class="m-stack" data-gap="2" data-align="center" style="text-align: center; font-size: var(--m-font-size-sm)"><svg viewBox="0 0 56 56" width="56" height="56" aria-hidden="true"><circle cx="28" cy="28" r="28" style="fill: var(--m-color-bg-sunken)"/><circle cx="28" cy="30" r="15" style="fill: ${bg}"/><circle cx="40" cy="17" r="6" style="fill: ${dot}"/></svg>${label}</li>`;
+const signIn = `<div style="min-block-size: 100vh; background: linear-gradient(to bottom, var(--m-color-info-bg), var(--m-color-info-border))">
+<header style="padding: var(--m-space-4) var(--m-space-8)">${brand}</header>
+<main style="display: grid; place-items: center; padding: var(--m-space-6) var(--m-space-4) var(--m-space-16)">
+  <section class="m-card" aria-labelledby="sl-in" style="inline-size: min(100%, 25rem); --m-card-radius: 2rem; --m-card-border: transparent; --m-card-shadow: var(--m-shadow-overlay)">
+    <div class="m-card-body m-stack" data-gap="5" style="padding: var(--m-space-10) var(--m-space-8)">
+      <div class="m-stack" data-gap="2" data-align="center" style="text-align: center">
+        <h1 id="sl-in" style="${h2}">Log in</h1>
+        <p style="font-size: var(--m-font-size-sm)">New to Lull? <a href="#" style="color: var(--m-color-accent-text)">Start for free</a></p>
+      </div>
+      <form class="m-stack" data-gap="4">
+        <div class="m-field">
+          <label class="m-field-label" for="sl-in-email">Email address</label>
+          <input class="m-input" id="sl-in-email" type="email" autocomplete="email">
+        </div>
+        <button type="submit" class="m-button" data-variant="primary" style="inline-size: 100%">Continue</button>
+        <label class="m-cluster" data-gap="3" data-align="start" style="flex-wrap: nowrap; font-size: var(--m-font-size-sm)"><input class="m-checkbox" type="checkbox"><span>I agree to the <a href="#" style="color: var(--m-color-accent-text)">terms</a> and have read how we use my details.</span></label>
+      </form>
+      <div class="m-cluster" data-gap="4" style="flex-wrap: nowrap; font-size: var(--m-font-size-sm)" role="separator" aria-label="or">
+        <span aria-hidden="true" style="flex: 1; ${rule}"></span>or<span aria-hidden="true" style="flex: 1; ${rule}"></span>
+      </div>
+      <div class="m-stack" data-gap="3">
+        ${otherWay('<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>', 'Continue with a passkey')}
+        ${otherWay(I.users, 'Continue with work sign-in')}
+      </div>
+      <section class="m-stack" data-gap="4" aria-labelledby="sl-in-more" style="padding-block-start: var(--m-space-2)">
+        <h2 id="sl-in-more" style="font-size: var(--m-font-size-lg); font-weight: 700; letter-spacing: var(--m-font-tracking-tight); text-align: center">Something for every part of the day</h2>
+        <ul class="m-cluster" data-gap="4" data-justify="center" style="padding: 0; list-style: none; flex-wrap: nowrap">
+          ${moment('Ease a busy mind', tone.brand, tone.sun)}
+          ${moment('Sleep more soundly', tone.sun, tone.blue)}
+          ${moment('Make sense of a day', tone.blue, tone.brand)}
+        </ul>
+      </section>
+    </div>
+  </section>
+</main>
+</div>`;
 
 export const solaceRecipes: ArchetypeRecipe[] = [
   {
@@ -613,5 +763,19 @@ export const solaceRecipes: ArchetypeRecipe[] = [
     description:
       'Red field borders with the fix underneath, a summary above the form, a charcoal toast, the confirm sheet, and full pages for 404, 500 and 403.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A public article: the site header with its one blue pill, the contents beside it, a 48px bold title, the warm off-white byline, a picture band, 18px text, a session in the player and more articles as cards.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The mark alone over a sky that pales to soft blue; one white sheet with 32px corners, a 24px bold title, the email field, a full-width blue pill and warm off-white pills for other ways in.',
+    html: signIn,
   },
 ];

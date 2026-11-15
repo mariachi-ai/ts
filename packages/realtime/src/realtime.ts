@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { Context, Disposable, Instrumentable, Logger, MetricsAdapter, TracerAdapter } from '@mariachi/core';
-import { RealtimeError, resolveInstrumentation, withSpan, type InstrumentationDeps } from '@mariachi/core';
+import { RealtimeError, claimsReservedTenant, resolveInstrumentation, withSpan, type InstrumentationDeps } from '@mariachi/core';
 import { defaultChannelAuthorizer } from './authorize';
 import { MemoryBackplane, MemoryPresenceStore } from './adapters/memory';
 import {
@@ -95,6 +95,13 @@ export abstract class Realtime implements Instrumentable, Disposable {
    */
   async handleConnect(identity: ConnectionIdentity, socket: RealtimeSocket, connectionId: string = randomUUID()): Promise<string | null> {
     return withSpan(this.tracer, 'realtime.connect', { connectionId, userId: identity.userId }, async () => {
+      // A `user.` tenant is only ever given by withPersonalTenants; one that came from a token's own claim is forged.
+      if (claimsReservedTenant(identity)) {
+        this.metrics?.increment('realtime.connections.rejected', 1, { reason: 'reserved-tenant' });
+        socket.send({ type: 'error', code: 'realtime/unauthorized', message: 'Identity names a reserved personal tenant' });
+        socket.close(CLOSE_CODES.unauthorized, 'Unauthorized');
+        return null;
+      }
       const conn: LocalConnection = {
         info: { connectionId, identity, channels: new Set(), connectedAt: new Date() },
         socket,
@@ -226,7 +233,12 @@ export abstract class Realtime implements Instrumentable, Disposable {
   }
 
   /** Sends to every subscriber of `channel` on every instance. */
-  async broadcast(_ctx: Context, channel: string, data: unknown, options: { excludeConnectionId?: string } = {}): Promise<void> {
+  async broadcast(ctx: Context, channel: string, data: unknown, options: { excludeConnectionId?: string } = {}): Promise<void> {
+    // A tenant whose id holds a colon can't subscribe to any tenant channel, so a tenant channel
+    // built from that id can only reach another tenant's subscribers.
+    if ((channel === 'tenant' || channel.startsWith('tenant:')) && ctx.tenantId?.includes(':')) {
+      throw new RealtimeError('realtime/invalid-channel', 'A tenant id containing ":" can\'t broadcast to a tenant channel: the name could be read as another tenant\'s channel');
+    }
     return withSpan(this.tracer, 'realtime.broadcast', { channel }, () =>
       this.fanout({ kind: 'channel', channel, excludeConnectionId: options.excludeConnectionId }, { type: 'message', channel, data }),
     );

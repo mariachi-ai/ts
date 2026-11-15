@@ -2,6 +2,7 @@ import { ConfigError, fromZodError, isZodError, loadOptionalPeer } from '@mariac
 import type { z } from 'zod';
 import { AppConfigSchema, type AppConfig, type AppConfigInput } from './schema';
 import { buildConfigFromEnv, readEnv } from './env';
+import { protectSecrets } from './redact';
 import type { ConfigOptions, SecretsAdapter, FeatureFlagAdapter } from './types';
 import { EnvSecretsAdapter } from './adapters/env';
 import { Secrets } from './secrets';
@@ -51,15 +52,25 @@ function parse<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, value: unknown, w
   }
 }
 
+let warnedNoEnvironment = false;
+
 /**
  * Loads config from env (+ optional .env) merged with `overrides`, validates it, and caches it
  * so later `useConfig()` calls return the same object.
  */
 export function loadConfig(overrides?: AppConfigInput, options: LoadConfigOptions = {}): AppConfig {
   const source = options.env ?? process.env;
-  if (!options.env) loadDotenv(options.dotenv, (source.NODE_ENV ?? source.ENV) === 'production');
+  // ENV decides over NODE_ENV, here as in buildConfigFromEnv
+  if (!options.env) loadDotenv(options.dotenv, (source.ENV || source.NODE_ENV) === 'production');
 
   const fromEnv = buildConfigFromEnv(source);
+  // Nothing says which environment this is, so it runs as development. Said once, because in production that is a mistake.
+  if (!options.env && !overrides?.env && !source.ENV && !source.NODE_ENV && !warnedNoEnvironment) {
+    warnedNoEnvironment = true;
+    process.emitWarning('Neither ENV nor NODE_ENV is set, so this app runs as "development". Set ENV=production (or development, or test) to say which it is.', {
+      code: 'MARIACHI_ENV_UNSET',
+    });
+  }
   const merged = deepMerge(fromEnv as Record<string, unknown>, (overrides ?? {}) as Record<string, unknown>);
   const config = parse(AppConfigSchema, merged, 'configuration');
 
@@ -69,9 +80,12 @@ export function loadConfig(overrides?: AppConfigInput, options: LoadConfigOption
       (section.fromEnv?.(read) ?? {}) as Record<string, unknown>,
       ((config.sections[name] as Record<string, unknown>) ?? {}),
     );
-    config.sections[name] = parse(section.schema, raw, `config section "${name}"`);
+    // A section's own secrets (marked with secret() in its schema) are hidden the same way
+    config.sections[name] = protectSecrets(parse(section.schema, raw, `config section "${name}"`), section.schema);
   }
 
+  // From here on, logging or serialising the config (or any part of it) shows secrets as [REDACTED]
+  protectSecrets(config, AppConfigSchema);
   cachedConfig = config;
   return config;
 }
@@ -118,6 +132,7 @@ export type { AppConfig, AppConfigInput, ConfigOptions, SecretsAdapter, FeatureF
 export type { FlagContext, FeatureFlagRecord, FeatureFlagStore, TenantFlagOverride } from './types';
 export { AppConfigSchema };
 export { buildConfigFromEnv, readEnv };
+export { REDACTED, hideContents, secret, secretUrl } from './redact';
 export { EnvSecretsAdapter } from './adapters/env';
 export { Secrets } from './secrets';
 export { CachedFeatureFlags, StoreFeatureFlagAdapter, StaticFeatureFlagAdapter } from './flags/adapters';

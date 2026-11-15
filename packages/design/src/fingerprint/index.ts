@@ -5,6 +5,7 @@ export {
   buildFingerprint,
   checkMessage,
   clearRange,
+  ZERO_IS_A_HABIT,
   distance,
   KINDS,
   quantile,

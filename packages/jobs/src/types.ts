@@ -2,6 +2,7 @@ import type { z } from 'zod';
 import type { Context } from '@mariachi/core';
 
 export interface JobConfig {
+  /** `bullmq` (Redis) or `memory`. The Postgres queue is `createPostgresJobQueue` from `@mariachi/jobs/postgres`. */
   adapter: 'bullmq' | 'memory' | (string & {});
   redisUrl?: string;
   prefix?: string;

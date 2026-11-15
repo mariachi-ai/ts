@@ -1,7 +1,7 @@
 {
   "name": "@mariachi/notifications",
-  "version": "0.0.5",
-  "description": "Email (Resend, SMTP), SMS (Twilio), push (FCM) and in-app notifications with preferences, per-channel queued delivery and delivery tracking.",
+  "version": "0.1.0",
+  "description": "Email (Resend, SMTP, Postmark, SendGrid), SMS (Twilio), push (FCM) and in-app notifications with preferences, per-channel queued delivery and delivery tracking.",
   "mariachi": {
     "category": "domain",
     "status": "beta",
@@ -58,7 +58,8 @@
   },
   "peerDependencies": {
     "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
-    "drizzle-orm": "^0.38"
+    "drizzle-orm": "^0.38",
+    "nodemailer": ">=6"
   },
   "peerDependenciesMeta": {
     "@mariachi/database-postgres": {
@@ -66,11 +67,15 @@
     },
     "drizzle-orm": {
       "optional": true
+    },
+    "nodemailer": {
+      "optional": true
     }
   },
   "devDependencies": {
     "@mariachi/database-postgres": "workspace:*",
     "drizzle-orm": "^0.38",
+    "nodemailer": "^10.5.0",
     "tsup": "^8",
     "typescript": "^5.7",
     "vitest": "^3"

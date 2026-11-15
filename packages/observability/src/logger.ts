@@ -3,11 +3,11 @@ import { ConfigError } from '@mariachi/core';
 import { PinoLoggerAdapter } from './adapters/logging/pino';
 import { ConsoleLoggerAdapter } from './adapters/logging/console';
 
-export function createLogger(config?: { adapter?: string; level?: string }): Logger {
+export function createLogger(config?: { adapter?: string; level?: string; pretty?: boolean }): Logger {
   const adapter = config?.adapter ?? 'pino';
   switch (adapter) {
     case 'pino':
-      return new PinoLoggerAdapter({ level: config?.level });
+      return new PinoLoggerAdapter({ level: config?.level, pretty: config?.pretty });
     case 'console':
       return new ConsoleLoggerAdapter({}, config?.level);
     default:

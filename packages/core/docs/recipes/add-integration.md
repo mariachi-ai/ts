@@ -73,6 +73,7 @@ The client is a thin wrapper around the external API.
 **File:** `integrations/<name>/client.ts`
 
 ```ts
+import { IntegrationError } from '@mariachi/core';
 import type { GitHubCredentials } from './credentials';
 import type { CreateIssueInput, CreateIssueOutput } from './types';
 
@@ -93,7 +94,7 @@ export async function createIssue(
   });
 
   if (!res.ok) {
-    throw new Error(`GitHub API error: ${res.status} ${await res.text()}`);
+    throw new IntegrationError('integrations/upstream-failed', `GitHub API error: ${res.status}`, { status: res.status, body: await res.text() });
   }
 
   const data = (await res.json()) as { id: number; number: number; html_url: string };
@@ -110,6 +111,7 @@ Use `defineIntegrationFn` from `@mariachi/integrations`.
 **File:** `integrations/<name>/index.ts`
 
 ```ts
+import { IntegrationError } from '@mariachi/core';
 import { defineIntegrationFn } from '@mariachi/integrations';
 import type { IntegrationContext } from '@mariachi/integrations';
 import { createIssue } from './client';
@@ -127,7 +129,7 @@ export const githubCreateIssue = defineIntegrationFn<CreateIssueInput, CreateIss
   handler: async (input: CreateIssueInput, ctx: IntegrationContext): Promise<CreateIssueOutput> => {
     const credentials = (ctx as GitHubIntegrationContext).credentials;
     if (!credentials) {
-      throw new Error('GitHub credentials required');
+      throw new IntegrationError('integrations/missing-credential', 'GitHub credentials required');
     }
     return createIssue(credentials, input);
   },

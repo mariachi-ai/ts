@@ -1,0 +1,14 @@
+# Questions
+
+At most ten, about reasons and conflicts, ordered by how much the answer would change the library.
+
+1. **What do sign-in and sign-up really look like?** Both pages were skipped (they carry an automated-sign-in notice the capture treats as a bot check). The `sign-in` recipe follows the log-in page's order of parts and the published form rules; its provider icons are 24px, against 16px everywhere else. The `onboarding` picks are inferred. Screenshots of both, at 1440 and 390, would confirm or correct them.
+2. **On a phone, is the screen the main view?** The recipes put the main view first and the collection under it, as the phone app keeps the collection on a tab of its own. The web player at 390 keeps both side by side and cuts off the main view. Should the language gain a bottom tab bar on phones, and a mini player with a play button instead of the clipped now-playing bar?
+3. **Does home open with a greeting?** The signed-in home in the published screenshot opens with a 32px greeting over shortcut tiles; the signed-out home opens straight on shelves with 24px titles (a heading ratio of 1.5 against the recipe's 2.29). Which is current?
+4. **Why is the header pill white in the app and green on the site?** The web player's "Log in" and the pinned sign-up bar's pill are white; the plans and help pages' header pill is green. The library follows both (white in the app's top bar, green on public pages). Is that deliberate, or is one older?
+5. **Two footers.** The main view's foot (bold 16px titles, grey links in 30px rows) and the site footer (12px uppercase titles at 900, white links in 40px rows). The library maps 900 to 800 so a page keeps three weights. Which should a new public page inside the app's domain use?
+6. **Why do episodes get rules and songs don't?** Episode rows on a show page are split by hairlines; song rows never are. Is it the description (a taller, two-part row) that earns the rule?
+7. **Is the plans page's new hero the direction?** The current plans page opens on a 128px/900 display title over a video, where the first study saw plan cards with tier colours. The recipe keeps the plan cards and the 96px/800 title (a 900 would be a fourth weight).
+8. **The snackbar's colour.** Blue (the announcement colour) is a reading of the desktop app; white with black text (the inverted set) is the other likely one. No live snackbar was seen.
+9. **Light mode:** every studied screen is dark; the light palette is the published one, not a product seen in use. Should Cadence lead with dark only?
+10. **Art placeholders.** The recipes draw covers as token gradients with a glyph, so the probe counts them as panels (one level deeper than the source's images) and as four hues a window. Should the library draw placeholders as plain pictures instead, so the numbers compare like with like?

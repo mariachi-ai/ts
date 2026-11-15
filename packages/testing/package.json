@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/testing",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "Test doubles kept honest by contract suites shared with the real adapters, plus factories and a harness.",
   "mariachi": {
     "category": "tooling",
@@ -9,7 +9,9 @@
     "entry": [
       "createTestHarness",
       "createTestContext",
-      "TestRepository"
+      "TestRepository",
+      "createTestAuth",
+      "startPostgres"
     ]
   },
   "type": "module",
@@ -51,6 +53,14 @@
     "@mariachi/search": "workspace:*",
     "@mariachi/storage": "workspace:*",
     "zod": "^3"
+  },
+  "peerDependencies": {
+    "testcontainers": ">=10"
+  },
+  "peerDependenciesMeta": {
+    "testcontainers": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3",

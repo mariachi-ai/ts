@@ -9,7 +9,9 @@ video messages, feedback, async updates.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes;
+- **`brief.md`** is the one-page summary, with [`patterns/`](./patterns/), [`never.md`](./never.md)
+  and [`precedents/`](./precedents/index.md) for the depth;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `heather` preset of `@mariachi/design` (`data-theme="heather"`,
@@ -67,7 +69,7 @@ The tokens are in the `heather` preset of `@mariachi/design` (`data-theme="heath
   - A 240px white sidebar with a hairline edge.
   - A top bar with a wide, rounded search field (40px, 12px corners).
   - Content is fluid up to 80rem; card grids use 17rem columns and 16px gaps.
-  - The viewer page puts the video on the `#f8f8f8` well and a 416px side panel on the right.
+  - The viewer page puts the video on the `#f8f8f8` well and a 435px side panel on the right.
   - Forms and onboarding sit in a 30rem column; settings to about 56rem.
 - **Density.** 1 by default. For dense screens, set `--m-density: 0.875` on the page; controls and
   padding shrink together.
@@ -85,10 +87,14 @@ are in the reference at the end.
   - body 14px with a 1.57 line height (22px);
   - small text, hints, table headers and chips 12px;
   - large body and card titles 16px;
-  - section headings 20px, the video title 24px, page titles 32px, at bold;
-  - the public site's headings much larger (56px and up), bold, tight.
-- **Weights.** 400 for text, 500 for buttons, tabs, nav and labels, 600 for small headers and
-  badges, and the reference's own 653 for bold headings and titles.
+  - section headings 20px; the title of one thing (a video, a flow step, the sign-in card) 24px;
+    page titles in the app 32px; all at 653;
+  - public pages run their text at 16px, with a headline of 36–54px that shrinks with the window
+    (about 3.4 times the text at 1440) and plan names at 40px; an article's title is 32px.
+- **Weights: three, and only three, on every screen.** 400 for text; 500 for buttons, tabs, nav
+  rows, field labels and avatars' initials; 653 for headings, titles, counts that matter, badges,
+  table headers and sidebar group headings. There is no 600: `semibold` is set to 653, the same
+  as `bold`.
 - **Case.** Sentence case everywhere. Uppercase only for tiny promo tags on the public site
   ("TEAM FAVOURITE", "NEW").
 - **Figures.** Durations and counts use tabular figures: `6:12`, `38 views`.
@@ -142,7 +148,7 @@ All 36 of the library's components, as Heather draws them. Every one is in `gall
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: fluid to 80rem, 50rem for settings, 30rem for forms;
-- `m-split`, a 240px sidebar beside the main column (on the viewer page, the 416px side panel);
+- `m-split`, a 240px sidebar beside the main column (on the viewer page, the 435px side panel);
 - `m-grid`, for video cards (17rem columns, 16px gaps) and folders (14rem, 12px);
 - `m-stack` and `m-cluster`, for everything inside.
 
@@ -151,11 +157,14 @@ Sections are 24px apart.
 **Actions and forms**
 - **Button.** 12px corners, medium 14px labels, 36px by default, 32px (`sm`) in toolbars, 40px
   (`lg`) for Comment and Start recording.
-  - **Primary:** solid blue, white text. One per view ("New recording", "Invite").
+  - **Primary:** solid blue, white text. At most two in view: one belongs to the frame (the
+    sidebar's record button, or the site bar's primary) and at most one to the page ("New
+    recording", "Invite", the favourite plan). A flow has just one.
   - **Secondary** (the default): white with a hairline and charcoal text ("New folder", "Save").
   - **Ghost:** no fill, muted text; for icon buttons and toolbars ("Copy", "Find").
   - **Danger:** solid red, only to confirm deleting.
-  - **Split:** Share and its link button sit together as one primary, with a thin divider.
+  - **Share** on the viewer page is one primary; copying the link is a ghost icon button beside the
+    title.
   - On the public site, buttons are full pills.
 - **Input, textarea.** 36px, 8px corners, white, a 1px `#8c8f97` border. Focused: a blue border
   and the focus ring. The search field in the top bar is 40px with 12px corners and a search icon
@@ -172,14 +181,15 @@ Sections are 24px apart.
 - **Sidebar.** 240px, white, a hairline edge.
   - Top: the product wordmark and a collapse button, then the workspace switcher (a bordered box
     with the workspace's square avatar, name, member count and a chevron).
-  - Rows are 15px semibold with a 20px icon, 6px corners; the current one is pale blue with blue
-    text and icon. Counts sit right, subtle.
-  - Groups are separated by a hairline; group headings are 12px semibold subtle, with a ghost `+`.
+  - Rows are 15px medium (500) with a 20px icon, 6px corners and 6px above and below, so about
+    36px tall; the current one is pale blue with blue text and icon, at the same weight. Counts sit
+    right, subtle.
+  - Groups are separated by a hairline; group headings are 12px bold (653) subtle, with a ghost `+`.
   - The record button sits at the bottom, solid blue and full width.
 - **Navbar** (public pages). White, 60px, a hairline below; medium 14px links with 6px hover
   fills; Log in (secondary) and the primary at the right.
 - **Top bar** (in the app). No fill: the search field on the left; notifications and the avatar on
-  the right. On the viewer page it also holds the split Share button, more and search.
+  the right. On the viewer page it also holds the Share button, more and search.
 - **Tabs.**
   - **Underline:** medium 14px in subtle grey, 16px apart; the current one blue over a 2px blue
     line, on a hairline. A count or a collapse button may sit at the right end.
@@ -192,23 +202,23 @@ Sections are 24px apart.
 
 **Data and content**
 - **Table.**
-  - No frame and no header fill; 12px semibold subtle headers in sentence case.
+  - No frame and no header fill; 12px bold (653) subtle headers in sentence case.
   - Rows are 14px, hairline-separated, with a faint `#f8f8f8` hover.
   - A checkbox column on the left, avatars beside names, roles as badges, dates and emails muted,
     a ghost `ellipsis` button at the end.
 - **Card.** White, 16px corners, a hairline, no shadow; 16px padding.
-  - A video card puts the thumbnail flush at the top, then the author's avatar with "name · when"
+  - A video card puts the thumbnail flush at the top (one picture, painted from token colours), then the author's avatar with "name · when"
     and the sharing state, the title at 16px bold, and the counts row (eye, comment, smile icons).
-  - The duration chip sits bottom right on the thumbnail: charcoal, white 12px semibold, 8px corners.
+  - The duration chip sits bottom right on the thumbnail: charcoal, white 12px bold, 8px corners.
   - A clickable card lifts with the soft shadow on hover.
-- **Badge.** 20px tall, 4px corners, 12px semibold, sentence case: grey ("Creator"), blue ("Admin",
+- **Badge.** 20px tall, 4px corners, 12px bold (653), sentence case: grey ("Creator"), blue ("Admin",
   "New"), amber ("Invited"), green, red.
-- **Avatar.** Round, initials on pale blue in blue text; square with 4–8px corners for a workspace.
+- **Avatar.** Round, medium initials on pale blue in blue text; square with 4–8px corners for a workspace.
   24px in rows, 32px in bars, 40px in headers; stacked groups overlap with a white ring.
 - **Divider.** A hairline. Settings sections are separated by hairlines, not boxes.
 - **Accordion.** Hairline rows, 16px medium questions, a chevron on the right. No fills.
 - **Code, kbd.** JetBrains Mono at 12px; blocks on `#f8f8f8` with 8px corners and a hairline;
-  inline code on the quiet fill with 4px corners. Keys are small 4px grey boxes in semibold sans.
+  inline code on the quiet fill with 4px corners. Keys are small 4px grey boxes in medium sans.
 - **Prose.** 14px body, 1.57 line height, at most about 68 characters a line, links in blue.
 - **Progress.** A round 4–6px bar: blue on the quiet fill. The video's own progress is a 4px blue
   line along the bottom of the frame.
@@ -252,9 +262,10 @@ Sections are 24px apart.
   ("Nobody was invited yet"). Focus moves to it.
 - **Somewhere else:** a flag with what happened, whether anything was lost, and one action ("Upload
   stopped at 64% · Retry").
-- **A whole page:** centred, with a 64px round grey badge holding a 28px outline icon, the code in
-  small mono, a 32px bold title, one sentence and one or two buttons.
-  - **404:** "We can't find that video", with Go to your library.
+- **A whole page:** inside the app frame (sidebar and top bar stay), centred in the content
+  column, with a 64px round grey badge holding a 28px outline icon, the code in small mono, a 32px
+  bold title, one sentence and one or two buttons.
+  - **404:** "We can't find that video", with Back to the library.
   - **500:** "Something went wrong on our side" and "nothing was changed", with Try again.
   - **403:** "This video is private", naming who shared it, with Request access.
 - **Words.** Say what happened, whether anything changed, and what to do. Warm and direct; no
@@ -262,33 +273,86 @@ Sections are 24px apart.
 
 ## Page shapes (recipes)
 
+### The families
+
+| | The app (dashboard, settings, empty state, errors) | The video page (list and detail) | Flows (onboarding, sign-in) | Public pages (pricing, reading) |
+| --- | --- | --- | --- | --- |
+| Frame | The 240px white sidebar (wordmark, workspace switcher, rows, channels, the record button at the bottom) and a bare top bar with the 40px search. Empty and error pages keep it | A white top bar (sidebar toggle, wordmark; Share, more, search, notifications, avatar), a title band, and the 435px side panel on the right | No sidebar, no top bar: the wordmark above one column | The 60px white site bar: wordmark, four medium links, Log in and the one primary; the footer of link columns at the end |
+| Column | Fluid to 80rem; settings to 56rem; errors to 50rem | The video on the grey well, 24px around it | 30rem (onboarding) or 26rem (sign-in), centred | Pricing to 80rem; an article 50rem with its text at 40rem |
+| Titles | 32px at 653 under a muted context line ("Library") | 24px at 653 with "author · date" under it | 24px at 653 | A 36–54px headline at 653 (pricing), 32px for an article; plan names 40px |
+| Text | 14px, labels 14px medium, small 12px | 14px; transcript lines 14px with blue 12px times | 14px | 16px |
+| Buttons | 12px corners; the sidebar's record button and at most one more solid blue for the page | Share is the one solid blue | One full-width solid blue | Full pills; the favourite plan solid blue, the others pale blue |
+| On a phone | The page comes first; the sidebar drops below it | The video and title first; the side panel below | The column fills the width | The site bar keeps the wordmark and the two buttons; plans stack |
+
+### Signature moves
+
+1. **Three weights on every screen:** 400 text, 500 controls and labels, 653 headings. No 600.
+2. **One blue, for the action and the current place:** the solid buttons (the record button and the
+   page's one action), the current nav row (pale blue, blue text), the current tab (blue over a 2px
+   line), links and times. Nothing else is coloured but status.
+3. **The video leads:** the recording is a picture in a 16px hairline frame, on the grey well, with
+   a round blue play button; thumbnails lead every card with a charcoal duration chip.
+4. **The side panel of tabs:** Comments, Transcript, Details at the right of the video; the playing
+   transcript line pale blue with a 1px blue edge.
+5. **Hairlines, then shadow:** cards, folders, panels and the video frame have a hairline and 16px
+   corners and no shadow; only what floats (the reaction bar, menus, flags, dialogs) lifts.
+6. **12px buttons in the app, pills on the public site.**
+7. **The app frame stays:** sidebar and the wide search on every app page, empty and error included.
+
+### How a screen is assembled
+
+- **It opens with** the frame, then a muted context line over the 32px title on the left and the
+  page's actions on the right (secondary first, the one primary last). The video page opens with its
+  title band; public pages with the site bar and a centred headline; flows with the wordmark.
+- **Reading order:** the title, then tabs or the controls that shape what follows (underline tabs
+  with a count at the right end, sort selects), then the things themselves (folders, then the card
+  grid; or titled settings sections on hairlines).
+- **How much one screen does:** one area. The library shows folders and videos; the video page
+  shows one video with its conversation; settings show one workspace, section by section.
+- **When narrow:** the page comes first and the sidebar drops below it; card grids go to one column;
+  the side panel drops below the video; actions wrap under the title.
+- **Too much content:** grids load more as you scroll, with the count beside the tabs; settings add
+  tabs across the top, never a second sidebar.
+- **None:** the frame and the title stay; a soft grey well in the content column holds a 64px
+  pale-blue circle with an outline icon, a 20px heading, one sentence and the primary.
+
+### The recipes
+
 - **Dashboard** (the library).
-  - The shell: sidebar, then the top bar with the wide search.
+  - The frame: sidebar, then the top bar with the wide search.
   - A muted "Library" line over the 32px title; New folder (secondary) and New recording (primary,
     with a chevron) on the right.
   - Underline tabs with the count at the right end, then folders as small bordered tiles, then the
     video card grid with sort selects.
 - **List and detail** (the video page).
-  - A white title band: the 24px title, "author · date", a bordered viewers chip with stacked
-    avatars, copy-link and download icon buttons.
+  - A white top bar with Share as the one primary; a white title band: the 24px title, "author ·
+    date", a bordered viewers chip with stacked avatars, copy-link and download icon buttons.
   - The video on the grey well with 16px corners and a round blue play button.
   - The reaction bar (a floating card of emoji buttons) beside Comment.
   - The summary with time chips, up next, then comments and the comment box.
-  - On the right, a white side panel: underline tabs (Transcript current), a ghost toolbar, and
-    the transcript lines with blue timestamps, the playing line pale blue with a blue border.
-- **Onboarding.** A 30rem column: the wordmark and "Step 3 of 3", a thin progress bar, a 32px
-  title, choice tiles (the chosen one pale blue with a blue edge), then the recorder panel: pill
-  segments for what to record, camera and microphone selects with a level meter, the camera-bubble
-  switch and a large Start recording button.
-- **Settings.** The 32px title under a muted workspace line, underline tabs, then titled sections
-  separated by hairlines: name with Save, icon upload, radios for who can watch, switches that
-  apply at once, the members table with search and Invite, and Delete last.
-- **Empty state.** A soft grey well with a 64px pale-blue circle and a video icon, a 20px bold
-  heading, one sentence, Start recording and Upload a video.
-- **Pricing.** The public navbar, a huge bold centred heading, team size and billing radios with a
-  "Save" tag, four roomy cards with 32px corners (the favourite pale blue with a blue edge and an
-  uppercase tag), pill buttons, check lists, and questions below.
-- **Errors.** The field, form, flag and full-page errors above, as one page.
+  - On the right, the 435px white side panel: underline tabs (Transcript current), a ghost toolbar,
+    and the transcript lines with blue times, the playing line pale blue with a blue border.
+- **Onboarding.** A 30rem column: the wordmark and "Step 3 of 3", a thin progress bar, a 24px
+  title and one muted line, choice tiles (the chosen one pale blue with a blue edge), then the
+  recorder panel: pill segments for what to record, camera and microphone selects with a level
+  meter, the camera-bubble switch and a large Start recording button.
+- **Settings.** In the frame: the 32px title under a muted workspace line, underline tabs, then titled
+  sections separated by hairlines: name with Save, icon upload, radios for who can watch, switches
+  that apply at once, the members table with search and Invite, and Delete last.
+- **Empty state.** In the frame: a breadcrumb and the 32px title with Add people, then a soft grey
+  well with a 64px pale-blue circle and a video icon, a 20px heading, one sentence, Start recording
+  and Upload a video.
+- **Pricing.** The site bar, a 36–54px centred headline, team size and a Monthly/Yearly segment
+  with a "Save" tag, four roomy cards with 32px corners (the favourite pale blue with a blue edge and
+  an uppercase tag), pill buttons, check lists, questions and the footer.
+- **Errors.** In the frame: the share form with its summary and field errors, a flag with Retry,
+  then not found, failure and no access as centred blocks.
+- **Reading.** The site bar; a breadcrumb, a 32px title, the byline with copy-link and bookmark
+  icon buttons, a lede; the video on the grey well; its chapters as transcript rows; then 16px text
+  with 20px section headings, a "Did this help?" row and the footer.
+- **Sign-in.** The wordmark over one white hairline card: a 24px title and one muted line, the email
+  field, Continue as the one full-width primary, then two other ways in (secondary, full width)
+  under a hairline; a line to create an account and the fine print below.
 
 ## Words
 
@@ -301,6 +365,8 @@ Sections are 24px apart.
 | Do | Don't |
 | --- | --- |
 | Keep one blue for the action and the current place | Add a second accent or colour nav icons |
+| Use three weights: 400, 500 and 653 | A fourth weight, or 600 |
+| Keep the sidebar and search on empty and error pages | Drop the frame for a bare centred page |
 | Draw cards with a hairline and 16px corners | Give resting cards a drop shadow |
 | Use 12px buttons in the app | Square 2–4px buttons, or pills inside the app |
 | Show time as pale-blue chips with blue figures | Plain grey timestamps in transcripts and comments |

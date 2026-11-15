@@ -1,11 +1,11 @@
 {
   "name": "@mariachi/auth-gotrue",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "GoTrue (Supabase Auth) JWT verification through its JWKS (ES256), and its signed hooks (Standard Webhooks).",
   "mariachi": {
     "category": "security",
     "status": "alpha",
-    "useWhen": "Using GoTrue (Supabase Auth, or Ensemble's per-app auth) as the identity provider",
+    "useWhen": "Using GoTrue (Supabase Auth, hosted or your own) as the identity provider",
     "entry": [
       "createGoTrueAuth",
       "GoTrueWebhookHandler"

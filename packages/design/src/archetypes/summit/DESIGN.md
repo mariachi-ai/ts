@@ -2,14 +2,17 @@
 
 Category: bold and fast. Sporty and loud: warm near-black text on a cool off-white, white cards with
 4px corners and a long faint shadow, one signature orange for the brand, routes, achievements and the
-current item, a burnt orange for every action, bold compact type, and stats rows of big figures with
+current item, a burnt orange for every action, compact type in two weights, and stats rows of big figures with
 small units. The dark mode is a warm near-black. For fitness, training and sports apps that should
 feel fast, competitive and social.
 
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes (the seven every
+  language has, then `reading` and `sign-in`);
+- **`brief.md`** is the one-page summary, **`patterns/`** says what the language does for each job and
+  what it doesn't, **`never.md`** lists its refusals, and **`precedents/index.md`** maps the recipes;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `summit` preset of `@mariachi/design` (`data-theme="summit"`,
@@ -27,7 +30,7 @@ The tokens are in the `summit` preset of `@mariachi/design` (`data-theme="summit
   signature orange.
 - **Warm greys, quiet chrome.** Text and chrome are warm near-black and grey (`#21211f`, `#43423f`,
   `#64635e`). Cards are plain white with 4px corners; the page is a cool off-white. Nothing is
-  decorated; energy comes from the orange, the figures and bold headings.
+  decorated; energy comes from the orange, the figures and semibold headings.
 - **Competitive and social.** Every session can earn achievements (a medal for a personal record, a
   crown for the top of a board) and gather props and comments. Boards are tables with the rank, the
   athlete and the time, the current athlete's row tinted.
@@ -76,16 +79,22 @@ scales are in the reference at the end.
 
 ## Type
 
-- **Families.** Instrument Sans throughout: regular (400) for text, semibold (600) for names, labels
-  and buttons, bold (700) for headings and plan prices, extra bold (800) for the wordmark and the
-  404. Compact, never light.
+- **Families.** Instrument Sans throughout, in **two weights only**: regular (400) for text, figures
+  and units, semibold (600) for headings, names, labels, buttons, prices, the wordmark and the 404.
+  Never 500, 700 or 800, never light. (The source's current public pages measure two weights, 400
+  and 600, on most screens: titles, buttons and links at 600.)
 - **Mono.** JetBrains Mono, only for codes and file names.
 - **Sizes** (the reference's ramp):
-  - UI text 14px with a 1.3 line height; labels and meta 12px; tiny capitals 11px;
+  - **Four or five sizes on a screen, always from the ramp** (12, 14, 16, 20, 24, 32): never a size
+    between steps, never a unit scaled from its figure;
+  - UI text 14px with a 1.3 line height; labels, meta and tiny capitals 12px;
   - body and table text 14–16px;
-  - feed titles and card headings 20px at 700; page titles 24–32px at 700;
-  - stats: 20–24px in feeds, 32px in an activity header, with the unit at 60% and regular weight;
-  - marketing headlines 48–64px at 700 with a 1.1 line height.
+  - feed titles and card headings 20px at 600; page titles 32px at 600; card titles in side
+    columns 16px at 600;
+  - stats: 20–24px in feeds, 32px in an activity header, with the unit at 14px in regular weight
+    (12px inside a 14px table cell);
+  - the largest text is about twice the body (1.9–2.3×): a 32px title over 14–16px text, also on
+    plans and error pages. Marketing headlines are 32px, not 48–64px.
 - **Case.** Title-like sentence case for headings and buttons. Small grey capitals, tracked 4%, label
   table headers in marketing tables, section headings in side columns and steps ("STEP 2 OF 4"). Plan
   names are capitals tracked 8%.
@@ -177,15 +186,19 @@ All 36 of the library's components, as Summit draws them. Every one is in `galle
 
 **Navigation**
 - **Navbar** (the top bar). White, 56px, a hairline and a 1px drop at the bottom.
-  - The wordmark (heavy capitals in the signature orange) and a search icon at the left.
-  - 14px near-black links; the current one has a 2px signature-orange line at the bottom edge of
-    the bar (set `box-shadow: inset 0 -2px 0 var(--m-color-brand-default)` on it); some open menus
-    and carry a small chevron.
-  - At the right: a text link to the membership, the bell with an orange count pill, the avatar
-    with a chevron, and the orange `circle-plus`.
+  - The wordmark (capitals in the signature orange, 20px at 600) and a search icon at the left.
+  - Four 14px near-black links; the current one has a 2px signature-orange line at the bottom edge
+    of the bar (set `box-shadow: inset 0 -2px 0 var(--m-color-brand-default)` on it); three open
+    menus and carry a small chevron.
+  - At the right: **"Start free trial"**, a small primary button (the one orange button of the app's
+    chrome), the bell with an orange count pill, the avatar with a chevron, and the orange
+    `circle-plus`.
+  - **On public pages** (reading, sign-in, the site's pages) the bar drops search, the bell and the
+    avatar: the wordmark, four plain links, "Log in" as a small white button and "Sign up free" as
+    the orange one at the top right. The sign-in page shows only the orange one.
 - **Sidebar** (the activity page's and settings' left column). White with a hairline frame and 4px
   corners. Items are 14px grey with optional 16px icons, rows of about 40px; the current one is
-  near-black, semibold, with a 3px signature-orange bar on its left. Section headings are 11px grey
+  near-black, semibold, with a 3px signature-orange bar on its left. Section headings are 12px grey
   capitals. Counts are orange pills with white figures.
   - In settings and in board filter lists, the current item is instead filled with the action
     orange and white text: set `background: var(--m-color-accent-default)`,
@@ -208,13 +221,14 @@ All 36 of the library's components, as Summit draws them. Every one is in `galle
   - Rows are 14px, split by warm hairlines, `#fafafa` on hover. Numbers are tabular and right-aligned
     with small units.
   - Boards: rank (a yellow crown for first), a small round avatar and the name, the time. The
-    current athlete's row is pale orange and bold.
+    current athlete's row is pale orange and semibold.
 - **Card.** White, 4px corners, a `#f2f2f0` hairline and the long faint shadow, 24px padding. Titles
-  are 20px bold. Feed entries are cards with an avatar header, a bold title, the stats row, a map
+  are 20px semibold. Feed entries are cards with an avatar header, a semibold title, the stats row, a map
   inset by the card's padding, an achievements list, then the props row under a hairline.
 - **Badge.** 4px corners, 12px semibold, sentence case: grey for tags ("Gravel"), orange solid for
   "New" and member tags, the tone washes for status.
-- **Avatar.** Round, initials at 600 on the hairline grey: 32px small, 48px in feeds, 64px in headers
+- **Avatar.** Round, initials at 600 on the hairline grey (12px small, 16px in feeds, 20px in
+  headers, so they stay on the ramp): 32px small, 48px in feeds, 64px in headers
   (with a 2px orange ring on the athlete's own card). Crews and clubs use 4px squares. Face piles
   overlap by 8px with a white ring.
 - **Divider.** A warm hairline (`#f2f2f0` inside cards, `#e0e0de` between sections). Stats rows use
@@ -234,12 +248,12 @@ All 36 of the library's components, as Summit draws them. Every one is in `galle
   - A pale wash of the tone, 4px corners, no border and no side stripe, 12px padding.
   - A 20px status icon, a semibold title and the body in 14px.
 - **Toast.**
-  - The near-black slab with 4px corners, a bold white title, light grey detail and one orange
+  - The near-black slab with 4px corners, a semibold white title, light grey detail and one orange
     action. It reads the same whatever the tone; the words carry it.
   - The marketing pages' sticky bottom bar is the same slab, full width.
 - **Dialog.**
   - White, 8px corners, the long shadow over a 70% black scrim, 24px padding.
-  - The title is 24px bold; a square hairline close button sits top right.
+  - The title is 24px semibold; a square hairline close button sits top right.
   - Actions at the bottom: the primary orange, Cancel as a white button.
 - **Popover and menu.**
   - White, 4px corners, a hairline border and the short shadow, 4px inner padding.
@@ -273,18 +287,63 @@ All 36 of the library's components, as Summit draws them. Every one is in `galle
   ("Your watch file is safe on this device"), with one orange action ("Retry now").
 - **A whole page:**
   - **Not found** is a white card split in two: a token-drawn dead-end route on the quiet fill, then
-    a huge orange "404", a bold line with a wink ("Wrong turn. This trail doesn't go anywhere.") and
+    a 32px orange "404", a 24px line with a wink ("Wrong turn. This trail doesn't go anywhere.") and
     a short list of ways out as orange links.
   - **Failure (500)** and **no access (403)** are white cards: a 28px icon in a 56px circle of the
-    tone's wash, "ERROR 500" in tiny capitals, a 24px bold title, one or two sentences and one or two
+    tone's wash, "ERROR 500" in tiny capitals, a 24px semibold title, one or two sentences and one or two
     buttons.
 - **Words.** Sporty but plain. Say whether the session or data is safe, say what to do next, and keep
   the wink to the title. No codes in sentences, no blame.
 
 ## Page shapes (recipes)
 
+### The two families
+
+| | The app (dashboard, list and detail, settings, empty state, errors, onboarding) | Public pages (pricing, reading, sign-in) |
+| --- | --- | --- |
+| Frame | The 56px white top bar: wordmark, search, four links (the current with the orange line at the bar's foot), "Start free trial", the bell, the avatar and the orange `circle-plus`. Onboarding has the wordmark alone, centred | The same bar without search, bell or avatar: wordmark, four plain links, "Log in" white and "Sign up free" orange at the top right (sign-in: only the orange one) |
+| Ground | The cool off-white with white 4px cards | Reading is white with no cards; pricing opens on a dark band with an orange glow; sign-in puts one near-black panel over a token-drawn map |
+| Column | 76rem; side columns 11–14rem with a hairline frame; forms 30rem | Reading 42rem beside a 14rem sections column; plans in 64rem; the sign-in panel 25rem |
+| Titles | 32px at 600 for a page, 20px for a card, 16px in a side card | 32px at 600 for a page title or a plans headline; 20px section headings in an article |
+| Text | 14px UI, 12px labels, figures 20–32px with 14px units | 16px article text with a 1.5 line height and a 16px grey lede |
+| The orange button | The bar's "Start free trial", plus at most one on the page (Continue, Plan a route, Save, Upgrade) | "Sign up free" at the top right, plus the page's one (the picked plan, Log in) |
+| On a phone | Columns stack; the side column moves above the main one; the bar keeps the wordmark, the trial and the icons | The sections column drops under the article; plan cards stack; the panel takes the width less 16px |
+
+### Signature moves
+
+1. **A row of figures.** Distance, time and climb as big tabular figures with a small 14px unit and
+   a 12px grey label, split by hairlines; every session, week and route leads with one.
+2. **One orange button at the top right, and one more at most.** The bar's trial or "Join for
+   free", then the page's single action. `observed`: on the source's public pages 38% of primary
+   actions sit in the window's top-right cell, and every window holds 0–2.
+3. **The orange line marks where you are:** under the current top-bar link, as a 3px bar beside the
+   current side item or segment, under the current tab; filled orange only in settings lists.
+4. **Two weights, compact sizes.** 400 and 600, four or five sizes from 12 to 32px, the largest about
+   twice the body. `observed`: 2 weights and about 4 sizes on most of the source's public pages.
+5. **White cards with 4px corners on the cool off-white**, a faint long shadow, hairlines inside;
+   4px buttons and fields everywhere except the 16px plan cards.
+6. **Token-drawn maps with a signature-orange route** stand in for every map and photo; a green dot
+   marks the start.
+
+### How a screen is assembled
+
+- **It opens with** the 56px white bar, then the page title (32px at 600) with at most one button at
+  its right; an activity or settings page opens with its side column instead.
+- **Reading order:** the figures or the title first, then the main column (the feed, the segments,
+  the rows), then what sits beside it (challenges, the board, the account card).
+- **How much one screen does:** one feed, one session, one settings area, one plan choice. Two
+  orange buttons at most in the window: the bar's and the page's.
+- **When narrow:** side columns stack above the main one; stats rows keep one line and drop the
+  smaller second row; tables scroll inside their frame.
+- **Too much content:** feeds load more on scroll; boards show the top ten and "See the full
+  board"; settings sections stack as cards.
+- **None:** the frame stays; one card says so with a dashed token route (see
+  [say-nothing-is-here](./patterns/say-nothing-is-here.md)).
+
+### The recipes
+
 - **Dashboard.**
-  - The white top bar with the orange line under the current link.
+  - The white top bar with the orange line under the current link and "Start free trial".
   - Three columns on the off-white screen: the athlete card (avatar with an orange ring, name,
     three counts, the latest session) and the week (a stats row, seven bars, the weekly goal); the
     feed (a small select to choose whose sessions, then feed entries with stats rows, maps,
@@ -296,25 +355,36 @@ All 36 of the library's components, as Summit draws them. Every one is in `galle
     tags beside the big stats row and a second, smaller row.
   - The map and elevation profile, then the segments table with the open one marked by the orange
     bar and its detail below: this effort, actions, and the top-ten board.
-- **Onboarding.** One white card at 30rem under a centred wordmark: a step label and bar, a bold
-  question, sport tiles (round, filling pale orange with an orange ring when picked), one goal
-  field with a unit select, a checkbox, a full-width orange button.
-- **Settings.** The settings column (the current item filled orange), a profile card of rows with
-  a small grey label over a semibold value and a pencil button, visibility radios and switches,
-  deleting the account last, and a narrow side column with the account (plan and an orange Upgrade)
-  and linked devices.
-- **Empty state.** Underline tabs, then one card: a token-drawn dashed route, a bold title, one
-  sentence and an orange and a white button.
+- **Onboarding.** One white card at 30rem under a centred wordmark: a step label and bar, a 32px
+  question, a 14px grey line, sport tiles (round, filling pale orange with an orange ring when
+  picked), one goal field with a unit select, a checkbox, and Continue and Back held at the foot of
+  the window.
+- **Settings.** The settings column (the current item filled orange), a profile card and a
+  visibility card of rows (a small grey label over a semibold value and a pencil button; no
+  switches or radio lists), deleting the account last, and a narrow side column with the account
+  (plan and an orange Upgrade) and linked devices.
+- **Empty state.** A title with a white "Import a route file" button, underline tabs, then one
+  card: a token-drawn dashed route, a 24px title, one sentence and an orange and a white button.
 - **Pricing.**
-  - A dark band (`data-mode="dark"`) with an orange glow from the top left, a bold headline, and a
+  - A dark band (`data-mode="dark"`) with an orange glow from the top left, a 32px headline, and a
     segmented Yearly and Monthly switch.
-  - Three plan cards with 16px corners: a small solid tag, the plan name in tracked capitals, a big
-    price with a small period, the billing line and a full-width button. The picked plan is light
-    (`data-mode="light"` inside the band) with the orange button.
+  - Three plan cards with 16px corners: a small solid tag, the plan name in tracked capitals, a
+    32px price with a small period, the billing line and a full-width button. The picked plan is
+    light (`data-mode="light"` inside the band) with the orange button.
   - A comparison card with tiny capital headers, an icon per feature, near-black ticks for free and
     orange ticks for members; questions in an accordion; the near-black bar with the trial button
     (sticky to the bottom of the window in a real page).
-- **Errors.** The field, form, banner and full-page errors above, as one page.
+- **Errors.** The field, form, banner and full-page errors above, as one page. The banner's action
+  is orange text, so the form's Save stays the page's one orange button.
+- **Reading.** A help article on white under the public bar: a › breadcrumb with a search field at
+  the right, a 32px title, a 16px grey lede, the byline (small avatar, writer and date in 12px),
+  20px section headings over 16px text, the sections in a 14px column at the right with a 2px grey
+  rule (the current one near-black and semibold), and "Was this article useful?" with two
+  small white buttons.
+- **Sign-in.** The public bar with only "Sign up free"; a token-drawn map across the screen in
+  place of a photograph; one near-black 25rem panel: a darker band with "Log in" at 32px, two white
+  buttons for other ways in, an "or" rule, the email field, "Remember me", a full-width orange "Log
+  in" and "Create an account", then a 12px line about the terms.
 
 ## Words
 
@@ -333,6 +403,7 @@ All 36 of the library's components, as Summit draws them. Every one is in `galle
 | Use the burnt action orange for buttons, links and counts | Use the signature orange for small text or button fills |
 | Keep cards white with 4px corners on the off-white screen | Round cards into pills, or use heavy shadows |
 | Mark the current item with an orange line or bar (an orange fill in settings and filters) | Mark it with a grey or tinted block |
-| Make headings bold and compact | Use light or thin weights |
+| Make headings semibold and compact, in two weights | Use light weights, or a third weight |
+| Keep one orange button in the window (the bar's trial, or the page's one action) | Put three orange buttons in one view |
 | Draw maps from tokens as placeholders | Embed real map tiles or photos in a recipe |
 | Use the blue only for focus | Use blue for actions or links |

@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/explorer",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "private": false,
   "description": "Explorer for the whole framework: packages, docs, API, error codes, dependency graph, CLI, tables and the design library, generated from the repo.",
   "mariachi": {

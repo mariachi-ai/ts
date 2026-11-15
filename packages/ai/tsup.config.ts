@@ -2,7 +2,7 @@ import { defineConfig } from 'tsup';
 
 export default defineConfig({
   entry: { index: 'src/index.ts', schema: 'src/schema/index.ts', postgres: 'src/postgres/index.ts', anthropic: 'src/anthropic.ts' },
-  external: ['@mariachi/database-postgres', 'drizzle-orm', '@ai-sdk/anthropic'],
+  external: ['@mariachi/database-postgres', 'drizzle-orm', '@ai-sdk/anthropic', '@ai-sdk/google'],
   format: ['esm', 'cjs'],
   dts: true,
   clean: true,

@@ -11,7 +11,9 @@ import type {
 export interface DatabaseConfig {
   adapter: string;
   url: string;
+  /** @deprecated Not used: the Postgres driver opens connections on demand and closes idle ones. Only `poolMax` bounds the pool. */
   poolMin?: number;
+  /** The most connections the pool opens. Default 10. */
   poolMax?: number;
   /** Per-statement timeout. Default 30s. */
   statementTimeoutMs?: number;

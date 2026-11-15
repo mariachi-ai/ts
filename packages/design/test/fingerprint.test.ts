@@ -56,6 +56,19 @@ describe('fingerprint', () => {
     expect(checkMessage(checks.checks[0], 4)).toBeNull();
     expect(checkMessage(checks.checks[0], 7)).toBe('This screen uses 7 text sizes. Your screens use 3.5 to 4.5.');
   });
+  it('gives words a check on a real product, never on a language (its recipes\' words are invented)', () => {
+    const wordy = [2, 2, 2, 2, 2].map((n, i) => screen(`w${i}`, ['list'], { 'words.buttonLength': n }));
+    const lang = buildFingerprint('lang', wordy, { mode: 'language', measuredAt: '' });
+    const real = buildFingerprint('real', wordy, { mode: 'existing', measuredAt: '' });
+    expect(buildChecks(lang).checks.map((c) => c.id)).toEqual([]);
+    expect(buildChecks(real).checks.map((c) => c.id)).toEqual(['words.buttonLength']);
+  });
+  it('counts a range of exactly 0 as clear where 0 is a habit (square corners, no shadows)', () => {
+    expect(clearRange([0, 0], 'shape.controlRadius')).toBe(true);
+    expect(clearRange([0, 0], 'structure.elevated')).toBe(true);
+    expect(clearRange([0, 4], 'shape.controlRadius')).toBe(false);
+    expect(clearRange([0, 0], 'type.sizes')).toBe(false);
+  });
   it('treats a range stuck at 0 or spread wide as not clear', () => {
     expect(clearRange([0, 0])).toBe(false);
     expect(clearRange([2, 9])).toBe(false);
@@ -65,7 +78,12 @@ describe('fingerprint', () => {
     const checks = buildChecks(fp);
     expect(distance({ 'type.sizes': 4 }, checks, { 'type.sizes': 2 })).toBe(0);
     expect(distance({ 'type.sizes': 6.5 }, checks, { 'type.sizes': 2 })).toBe(1);
-    expect(spreads([fp, fp, fp])['type.sizes']).toBeGreaterThan(0);
+    expect(spreads([fp, fp, fp])['type.sizes']).toBe(0);
+  });
+  it('leaves out a check every library shares, instead of dividing by no spread', () => {
+    const checks = buildChecks(fp);
+    expect(distance({ 'type.sizes': 9 }, checks, { 'type.sizes': 0 })).toBe(0);
+    expect(distance({ 'type.sizes': 9 }, checks, {})).toBeGreaterThan(0);
   });
   it('interpolates quantiles', () => {
     expect(quantile([1, 2, 3, 4], 0.5)).toBe(2.5);

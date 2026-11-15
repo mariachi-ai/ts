@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Quire's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
+ * Quire's nine layout recipes: framework-free HTML using only @mariachi/design classes and tokens
  * (no colour literals), with sample data from a small publication's writing studio ("Alder Press").
  * They follow the language's real screen patterns: a calm grey sidebar where the current row is a
  * white tile, a toolbar of round icon buttons and capsule groups, white pages that float on a soft
@@ -88,6 +88,10 @@ const roundBtn = (ic: string, name: string) =>
 // A chip: a date in blue, a flag in red, a weekday in grey, a desk tag in its tint
 const chip = (text: string, tone = '', ic = '') =>
   `<span class="m-badge"${tone ? ` data-tone="${tone}"` : ''}>${ic ? icon(ic, 12) : ''}${text}</span>`;
+
+// A person in a page or a table is a mention: the name on the mention highlight, in the link blue
+const mention = (name: string) =>
+  `<span style="padding-inline: 2px; border-radius: 4px; background: var(--m-color-selection-bg); color: var(--m-color-accent-text); white-space: nowrap">@${name}</span>`;
 
 const navLink = (ic: string, text: string, current: string, extra = '', tint = '') =>
   `        <li><a class="m-sidebar-link" href="#"${text === current ? ` aria-current="page" style="${ring}"` : ''}><span style="display: inline-flex; color: ${tint || 'var(--m-color-fg-muted)'}">${icon(ic, 16)}</span> ${text}${extra}</a></li>`;
@@ -267,11 +271,11 @@ ${task('Book the reading-room table', chip('Nov 13.', 'info'), true)}
 );
 
 // The list: a collection table. The detail: the document itself, on its page
-const reviewRow = (n: number, title: string, desk: string, tone: string, initials: string, editor: string, status: string, statusTone: string, due: string) => `              <tr>
+const reviewRow = (n: number, title: string, desk: string, tone: string, editor: string, status: string, statusTone: string, due: string) => `              <tr>
                 <td style="color: var(--m-color-fg-subtle); font-variant-numeric: tabular-nums">${n}</td>
                 <td><span class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><span style="color: var(--m-color-fg-muted); display: inline-flex">${icon(I.file, 14)}</span><a href="#" style="color: inherit; text-decoration: none; font-weight: var(--m-font-weight-medium)">${title}</a></span></td>
                 <td>${chip(desk, tone)}</td>
-                <td><span class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><span class="m-avatar" data-size="sm">${initials}</span>${editor}</span></td>
+                <td>${mention(editor)}</td>
                 <td>${chip(status, statusTone)}</td>
                 <td style="font-variant-numeric: tabular-nums">${due}</td>
               </tr>`;
@@ -300,9 +304,9 @@ const listDetail = shell(
           <table class="m-table">
             <thead><tr><th style="inline-size: 2.5rem">#</th><th>Title</th><th>Desk</th><th>Editor</th><th>Status</th><th>Due</th></tr></thead>
             <tbody>
-${reviewRow(1, 'The quiet return of the river otter', 'Science', 'success', 'RI', 'Rosa Imbert', 'Fact-check', 'warning', 'Nov 14')}
-${reviewRow(2, 'A bakery that never closes its door', 'City', 'info', 'TM', 'Theo Marsh', 'Changes asked', 'danger', 'Nov 11')}
-${reviewRow(3, 'Letters: on reading aloud', 'Letters', 'warning', 'IC', 'Ines Calloway', 'Ready', 'success', 'Nov 26')}
+${reviewRow(1, 'The quiet return of the river otter', 'Science', 'success', 'Rosa Imbert', 'Fact-check', 'warning', 'Nov 14')}
+${reviewRow(2, 'A bakery that never closes its door', 'City', 'info', 'Theo Marsh', 'Changes asked', 'danger', 'Nov 11')}
+${reviewRow(3, 'Letters: on reading aloud', 'Letters', 'warning', 'Ines Calloway', 'Ready', 'success', 'Nov 26')}
             </tbody>
           </table>
         </div>
@@ -321,13 +325,13 @@ ${reviewRow(3, 'Letters: on reading aloud', 'Letters', 'warning', 'IC', 'Ines Ca
           </div>
           <div class="m-stack" data-gap="3" style="padding-block-end: var(--m-space-3); ${hair.replace('block-start', 'block-end').replace('default', 'muted')}">
             <h1 id="qr-doc-title" style="${docTitle}">The quiet return of the river otter</h1>
-            <span class="m-cluster" data-gap="2" style="${label}"><span class="m-avatar" data-size="sm">RI</span>Rosa Imbert · 2,140 words · edited 10 min ago</span>
+            <span style="${label}">${mention('Rosa Imbert')} · 2,140 words · edited 10 min ago</span>
           </div>
           <div class="m-accordion" data-variant="separated"><details class="m-accordion-item"><summary>Editor’s notes</summary><div class="m-accordion-content">Keep the opening scene. Cut the second interview by half and move the counts into a box.</div></details></div>
           <div class="m-prose">
             <p>For three winters the volunteers checked the cameras every Sunday. Most weeks they found herons, a fox, once a very surprised swan. Then, in the second February, a long low shape slid across the frame at 5:12 in the morning.</p>
-            <h3 style="border-inline-start: 3px solid var(--m-color-fg-default); padding-inline-start: var(--m-space-3)">What the cameras saw</h3>
-            <p>Across the Ashby reach the team logged 41 sightings from 18 cameras. Type <code class="m-code-inline">/counts</code> to pull the latest table from the survey page.</p>
+            <h3 style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-semibold); border-inline-start: 3px solid var(--m-color-fg-default); padding-inline-start: var(--m-space-3)">What the cameras saw</h3>
+            <p>Across the Ashby reach the team logged 41 sightings from 18 cameras. Type <code class="m-code-inline" style="font-size: 1em">/counts</code> to pull the latest table from the survey page.</p>
           </div>
           <div class="m-alert" data-tone="success" role="note">
             <div class="m-alert-content"><div class="m-alert-title">Checked</div><div class="m-alert-body">Sighting counts match the survey sheet of Nov 3.</div></div>
@@ -367,7 +371,7 @@ const onboarding = `<main style="min-block-size: 100vh; padding: var(--m-space-1
       <span style="${small}">Step 2 of 3</span>
     </div>
     <div class="m-stack" data-gap="2">
-      <h1 id="qr-onb-title" style="font-family: var(--m-font-family-serif); font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-regular); letter-spacing: -0.02em; line-height: var(--m-font-leading-tight)">Make it feel like yours</h1>
+      <h1 id="qr-onb-title" style="${docTitle}">Make it feel like yours</h1>
       <p class="m-muted">Pick how your pages look. You can change any of this later, page by page.</p>
     </div>
     <div class="m-field">
@@ -384,7 +388,7 @@ const onboarding = `<main style="min-block-size: 100vh; padding: var(--m-space-1
       <div class="m-cluster" data-gap="2">${swatch('--m-color-accent-default', 'Blue', true)}${swatch('--m-color-success-solid', 'Green')}${swatch('--m-color-warning-solid', 'Amber')}${swatch('--m-color-danger-solid', 'Red')}${swatch('--m-color-fg-muted', 'Graphite')}</div>
     </fieldset>
     <div class="m-cluster" data-justify="between">
-      <button type="button" class="m-button" data-variant="ghost">${icon(I.left, 14)} Back</button>
+      <button type="button" class="m-button" data-variant="ghost">${icon(I.left, 16)} Back</button>
       <button type="submit" class="m-button" data-variant="primary" data-size="lg">Continue</button>
     </div>
   </form>
@@ -405,8 +409,9 @@ ${items.map(([ic, l]) => navLink(ic, l, current)).join('\n')}
 
 const groupBox = (rows: string[]) =>
   `<div class="m-card" data-variant="sunken" style="gap: 0; padding: 0 var(--m-space-4); border-radius: 12px">${rows.map((r, i) => `<div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-3)${i ? `; ${hair}` : ''}">${r}</div>`).join('')}</div>`;
-const switchRow = (text: string, on: boolean) =>
-  `<label class="m-cluster" data-justify="between" style="inline-size: 100%; font-size: var(--m-font-size-sm)">${text}<input class="m-switch" type="checkbox" role="switch"${on ? ' checked' : ''}></label>`;
+// A switch row: the setting in 13px, and under it, where it needs one, what it does in muted 12px
+const switchRow = (text: string, on: boolean, hint = '') =>
+  `<label class="m-cluster" data-justify="between" style="inline-size: 100%; flex-wrap: nowrap; font-size: var(--m-font-size-sm)">${hint ? `<span class="m-stack" data-gap="0">${text}<span style="${small}">${hint}</span></span>` : text}<input class="m-switch" type="checkbox" role="switch"${on ? ' checked' : ''}></label>`;
 const section = (id: string, title: string, desc: string, body: string) => `      <section class="m-stack" data-gap="2" aria-labelledby="${id}">
         <div class="m-stack" data-gap="0"><h2 id="${id}" style="${groupTitle}">${title}</h2>${desc ? `<p style="${label}">${desc}</p>` : ''}</div>
         ${body}
@@ -479,9 +484,9 @@ ${section(
   'Pages',
   'How new pages open, and what the editor shows around the text.',
   groupBox([
-    switchRow('Use each page’s style across the app', true),
+    switchRow('Use each page’s style across the app', true, 'Lists and cards take the font of the page they show.'),
     switchRow('Show the word count while writing', true),
-    switchRow('Reduce motion', false),
+    switchRow('Reduce motion', false, 'Pages appear without sliding in.'),
     `<span style="font-size: var(--m-font-size-sm)">Default page style</span><select class="m-select" data-size="sm" aria-label="Default page style" style="inline-size: auto"><option>Sans</option><option selected>Serif</option><option>Mono</option></select>`,
   ]),
 )}
@@ -518,14 +523,16 @@ const emptyState = shell(
 const caps = 'font-size: var(--m-font-size-sm); font-weight: 800; letter-spacing: var(--m-font-tracking-wide); text-transform: uppercase; color: var(--m-color-fg-muted)';
 const serif = (size: string) =>
   `font-family: var(--m-font-family-serif); font-size: ${size}; font-weight: var(--m-font-weight-regular); letter-spacing: -0.02em; line-height: 1.1`;
+// The public pages set text at 16px and narrow their serif headline with the window (54px wide, 38px on a phone)
+const headline = 'clamp(2.375rem, 1.6rem + 2.6vw, var(--m-font-size-4xl))';
 const feature = (text: string, off = false) =>
-  `<li class="m-cluster" data-gap="2" style="flex-wrap: nowrap; font-size: var(--m-font-size-sm)${off ? '; color: var(--m-color-fg-subtle); text-decoration: line-through' : ''}">${icon(off ? I.square : I.squareCheck, 14)}${text}</li>`;
+  `<li class="m-cluster" data-gap="2" style="flex-wrap: nowrap; font-size: var(--m-font-size-md)${off ? '; color: var(--m-color-fg-subtle); text-decoration: line-through' : ''}">${icon(off ? I.square : I.squareCheck, 14)}${text}</li>`;
 const plan = (kicker: string, name: string, price: string, per: string, blurb: string, cta: string, primary: boolean, features: string, tint = '') => `      <section class="m-stack" data-gap="5" style="padding: var(--m-space-8); border-radius: 24px; background: ${tint || 'var(--m-color-bg-surface)'}; box-shadow: var(--m-shadow-md)" aria-label="${name}">
         <span style="${caps}">${kicker}</span>
         <div class="m-stack" data-gap="3">
           <span class="m-cluster" data-gap="2" style="font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-semibold); text-transform: uppercase; letter-spacing: 0.02em">${name}${primary ? ' <span class="m-badge" data-variant="solid">Most chosen</span>' : ''}</span>
-          <span class="m-cluster" data-gap="2" style="align-items: baseline"><span style="${serif('var(--m-font-size-4xl)')}">${price}</span><span style="${serif('var(--m-font-size-xl)')}; color: var(--m-color-fg-muted)">${per}</span></span>
-          <p class="m-muted" style="font-size: var(--m-font-size-sm)">${blurb}</p>
+          <span class="m-cluster" data-gap="2" style="align-items: baseline"><span style="${serif(headline)}">${price}</span><span style="${serif('var(--m-font-size-xl)')}; color: var(--m-color-fg-muted)">${per}</span></span>
+          <p class="m-muted">${blurb}</p>
         </div>
         <button type="button" class="m-button" data-size="lg" style="align-self: start${primary ? '; background: var(--m-color-brand-default); color: var(--m-color-brand-fg)' : ''}">${cta}</button>
         <ul class="m-stack" data-gap="2" style="padding: 0; list-style: none">${features}</ul>
@@ -555,7 +562,7 @@ const pricing = `<div style="min-block-size: 100vh; background: var(--m-color-br
     <div class="m-stack" data-gap="12">
       <div class="m-stack" data-gap="10" style="margin-inline: calc(var(--m-space-6) * -1); padding: var(--m-space-12) var(--m-space-6); border-radius: 24px; background: ${covers.sky}">
       <div class="m-stack" data-gap="6" data-align="center" style="text-align: center">
-        <h1 style="${serif('var(--m-font-size-4xl)')}">Plans for every kind of writer</h1>
+        <h1 style="${serif(headline)}">Plans for every kind of writer</h1>
         <div class="m-tabs" data-variant="pill"><div class="m-tab-list" role="tablist" aria-label="Billing" style="${ring}">
           <button type="button" class="m-tab" role="tab" aria-selected="true">Yearly</button>
           <button type="button" class="m-tab" role="tab" aria-selected="false" tabindex="-1">Monthly</button>
@@ -649,6 +656,108 @@ ${errorPage('403', I.lock, 'This page is private', 'Only the Culture desk can op
   </div>
 </main>`;
 
+// Reading: a published page as a reader sees it. The page's contents in the grey sidebar (a search field, the
+// headings, linked pages with a chevron), a soft colour backdrop, and the page as white sheets with 16px corners on
+// the page shadow, one per part. On a phone the page comes first and the contents follow
+const tocRow = (text: string, opts: { current?: boolean; indent?: boolean; page?: boolean } = {}) =>
+  `        <li><a class="m-sidebar-link" href="#"${opts.current ? ` aria-current="page" style="${ring}"` : opts.indent ? ' style="padding-inline-start: var(--m-space-6)"' : ''}>${opts.page ? `<span style="display: inline-flex; color: var(--m-color-fg-muted)">${icon(I.right, 12)}${icon(I.file, 16)}</span> ` : ''}${text}</a></li>`;
+const sheet = (body: string, label: string) =>
+  `      <article class="m-stack" data-gap="5" style="${page}; padding: var(--m-space-10) clamp(var(--m-space-5), 5vw, var(--m-space-12))" aria-label="${label}">
+${body}
+      </article>`;
+const sheetHead = (text: string) => `<h2 style="${viewTitle}">${text}</h2>`;
+const keyValue = (rows: [string, string][]) =>
+  `<div class="m-table-wrap" style="border-radius: var(--m-radius-sm)"><table class="m-table" style="font-size: var(--m-font-size-md)"><tbody>${rows.map(([k, v]) => `<tr><th scope="row" style="inline-size: 30%; background: var(--m-color-accent-subtle); color: var(--m-color-accent-text); font-weight: var(--m-font-weight-bold); text-transform: none; letter-spacing: 0; font-size: var(--m-font-size-md)">${k}</th><td>${v}</td></tr>`).join('')}</tbody></table></div>`;
+
+const reading = `<div class="m-split" style="--m-layout-split-side: 17.5rem; --m-layout-split-gap: 0; min-block-size: 100vh; background: var(--m-color-bg-canvas); flex-wrap: wrap-reverse">
+  <nav class="m-sidebar" aria-label="On this page">
+    <div class="m-stack" data-gap="3">
+      <div class="m-cluster" data-justify="between" style="padding-inline: var(--m-space-2)">
+        <span class="m-cluster" data-gap="2" style="${groupTitle}"><span style="display: inline-flex; color: var(--m-color-fg-muted)">${icon(I.file, 16)}</span>Field guide to winter light</span>
+        <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Hide contents">${icon(I.panel, 16)}</button>
+      </div>
+      <input class="m-input" data-size="sm" type="search" placeholder="Search" aria-label="Search this page">
+    </div>
+    <div class="m-sidebar-section">
+      <h2 class="m-sidebar-heading" style="${small}; font-weight: var(--m-font-weight-medium)">On this page</h2>
+      <ul>
+${tocRow('Field guide to winter light', { current: true })}
+${tocRow('Before you go')}
+${tocRow('The first hour')}
+${tocRow('What to bring', { indent: true })}
+${tocRow('Where to stand', { indent: true })}
+${tocRow('Rooftop map', { page: true })}
+${tocRow('Kit list', { page: true })}
+      </ul>
+    </div>
+  </nav>
+  <main style="padding: var(--m-space-16) clamp(var(--m-space-3), 4vw, var(--m-space-12)); background: ${covers.mint}">
+    <div class="m-stack" data-gap="8" style="max-inline-size: 48.5rem; margin-inline: auto">
+${sheet(
+  `        <div class="m-stack" data-gap="3" style="padding-block-end: var(--m-space-3); ${hair.replace('block-start', 'block-end').replace('default', 'muted')}">
+          <h1 style="${docTitle}">Field guide to winter light</h1>
+        </div>
+        <div class="m-accordion" data-variant="separated"><details class="m-accordion-item"><summary>How to read this guide</summary><div class="m-accordion-content">Each part is one walk. Open the linked pages for the map and the kit list; tick the boxes as you pack.</div></details></div>
+        ${keyValue([
+          ['Where', 'The roof of the old grain store'],
+          ['Best hour', '7:40 to 8:40, from December to February'],
+        ])}
+        <div class="m-stack" data-gap="2" style="padding: var(--m-space-3) var(--m-space-4); border-radius: var(--m-radius-sm); background: var(--m-color-bg-sunken); border-inline-start: 3px solid var(--m-color-fg-muted)">
+          <span style="font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-semibold); color: var(--m-color-fg-muted)">Before you go</span>
+          <p style="color: var(--m-color-fg-muted)">The stairs open at 7:15. Ask at the front desk for the roof key; it goes back by nine.</p>
+        </div>`,
+  'Field guide to winter light',
+)}
+${sheet(
+  `        ${sheetHead('The first hour')}
+        <div class="m-prose"><p>Low sun comes in sideways across the harbour and lights the brick from below. Face east for the first twenty minutes, then turn and work the long shadows on the yard.</p></div>
+        <div class="m-alert" data-tone="success" role="note">
+          <div class="m-alert-content"><div class="m-alert-title">What to bring</div>
+            <div class="m-alert-body m-stack" data-gap="1">
+              <label class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><input class="m-checkbox" type="checkbox" checked> A short lens and a long one</label>
+              <label class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><input class="m-checkbox" type="checkbox"> Gloves you can work a dial in</label>
+              <label class="m-cluster" data-gap="2" style="flex-wrap: nowrap"><input class="m-checkbox" type="checkbox"> A flask</label>
+            </div>
+          </div>
+        </div>
+        <div class="m-alert" data-tone="warning" role="note">
+          <div class="m-alert-content"><div class="m-alert-title">Where to stand</div><div class="m-alert-body">Keep to the boards by the parapet. The felt in the middle is soft after frost.</div></div>
+        </div>
+        <div style="${dotted}"></div>
+        <div class="m-grid" style="--m-layout-grid-min: 12rem; --m-layout-grid-gap: var(--m-space-3)">
+${pageBlock(covers.sky, 'Rooftop map', '6 spots')}
+${pageBlock(covers.peach, 'Kit list', '14 items')}
+        </div>`,
+  'The first hour',
+)}
+    </div>
+  </main>
+</div>`;
+
+// Sign-in: one white page over a soft colour cover, as onboarding: the space's tile, the page title, two fields and one blue capsule
+const signIn = `<main style="min-block-size: 100vh; display: grid; place-items: center; padding: var(--m-space-12) var(--m-space-4); background: ${covers.sky}">
+  <form class="m-stack" data-gap="5" aria-labelledby="qr-sign-title" style="${page}; inline-size: 100%; max-inline-size: 26rem; padding: var(--m-space-8)">
+    <span class="m-avatar" data-size="lg" style="border-radius: var(--m-radius-md)">${icon(I.tree, 16)}</span>
+    <div class="m-stack" data-gap="2">
+      <h1 id="qr-sign-title" style="${docTitle}">Sign in to Alder Press</h1>
+      <p class="m-muted">Your desks, drafts and issues, on any device.</p>
+    </div>
+    <div class="m-field">
+      <label class="m-field-label" for="qr-sign-email">Email</label>
+      <input class="m-input" id="qr-sign-email" type="email" autocomplete="email" value="rosa@alderpress.example" aria-describedby="qr-sign-email-hint">
+      <p class="m-field-hint" id="qr-sign-email-hint">The address your editor invited.</p>
+    </div>
+    <div class="m-field">
+      <label class="m-field-label" for="qr-sign-pass">Password</label>
+      <input class="m-input" id="qr-sign-pass" type="password" autocomplete="current-password" aria-describedby="qr-sign-pass-hint">
+      <p class="m-field-hint" id="qr-sign-pass-hint"><a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Forgot it?</a></p>
+    </div>
+    <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Continue</button>
+    <button type="button" class="m-button" data-size="lg" style="inline-size: 100%">Use a passkey</button>
+    <p style="${small}; text-align: center">New here? <a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Start writing</a></p>
+  </form>
+</main>`;
+
 export const quireRecipes: ArchetypeRecipe[] = [
   {
     name: 'dashboard',
@@ -697,5 +806,18 @@ export const quireRecipes: ArchetypeRecipe[] = [
     description:
       'A red block decoration above the form that says nothing changed, messages under each field, a toast with Retry, and whole pages for 404, 500 and no access.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A published page: its contents in the grey sidebar, a soft colour backdrop, and the page as white sheets with a toggle block, a key-value table, a focus block, tinted blocks and page cards.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description: 'One white page over a soft colour cover: the space’s tile, a 24px title, two fields, a blue capsule and a white one.',
+    html: signIn,
   },
 ];

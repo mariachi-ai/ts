@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
-import { AuthError } from '@mariachi/core';
+import { AuthError, isReservedTenantId } from '@mariachi/core';
 import type { AuthProvider, AuthProviderWebhookConfig, ResolvedIdentity } from '@mariachi/auth';
 import type { AsymmetricAlgorithm, GoTrueConfig, GoTrueJwtPayload } from './types';
 import { GoTrueWebhookHandler } from './webhooks/handler';
@@ -124,6 +124,10 @@ export class GoTrueAuthProvider implements AuthProvider {
     const roles = [...new Set([...strings(payload.role), ...strings(payload.roles), ...strings(payload[this.orgRoleClaim])])];
     const scopes = [...new Set([...roles, ...(typeof payload.scope === 'string' ? payload.scope.split(/\s+/).filter(Boolean) : [])])];
     const org = payload[this.orgClaim];
+    // Personal tenants are given after verification (withPersonalTenants), never read from a claim.
+    if (isReservedTenantId(typeof org === 'string' ? org : undefined)) {
+      throw new AuthError('auth/invalid-token', 'GoTrue token names a tenant in the reserved personal-tenant namespace');
+    }
     return {
       userId: payload.sub,
       tenantId: typeof org === 'string' ? org : '',

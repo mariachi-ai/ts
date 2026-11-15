@@ -74,9 +74,43 @@ installedKit('src/design');                  // the kit there, with edited / mis
 metadata), `design-kits/unknown-kit`, `design-kits/not-a-kit`, `design-kits/invalid-dir`. A packed file
 that doesn't match its sha256 is `design-kits/corrupt`.
 
+### Reading a kit without writing it
+
+For a server that hands out single files, or a tool that puts a kit into a project in memory:
+
+```ts
+import { hasKit, kitJson, kitJsonBytes, readKitFile } from '@mariachi/design-kits';
+
+hasKit('linen');                             // true
+const manifest = kitJson('linen');           // kit.json: id, label, mode, dataTheme, mariachi.version and .commit, fonts, files with sha256
+kitJsonBytes('linen');                       // the same file's bytes, exactly as built
+readKitFile('linen', 'tokens.css');          // a Buffer, checked against the sha256 in kit.json
+```
+
+`readKitFile` gives only a path `kit.json` lists. Anything else is `design-kits/unknown-file`:
+`kit.json` itself, a path that climbs out of the kit, an absolute path. An id is checked against the
+kit list before it is ever part of a path. Nothing is written anywhere.
+
+`kitJson(id).mariachi.version` is the `@mariachi/design` version the kit was built from, which is this
+package's version: compare it with the version you pin.
+
+### The design catalog
+
+```ts
+import catalog from '@mariachi/design-kits/catalog.json' with { type: 'json' };   // or read catalogPath()
+
+catalog.components;                          // 36 components: anatomy, tokens, accessibility notes, examples
+catalog.archetypes;                          // every language: pitch, swatches, type, recipes
+```
+
+The catalog is what `@mariachi/design`'s build writes as `dist/catalog.json`: components, languages,
+presets, semantic tokens and contrast pairs. It is about 9 MB (1 MB compressed), which is why it is
+here and not in `@mariachi/design`, the package every app installs. Each language's `DESIGN.md` and
+`showcase.json`, and the component CSS, stay in `@mariachi/design`.
+
 ## How the kits are packed
 
-The kits are about 11 MB as built (4.5 MB packed), because every kit has the motion files and many share a font.
+The kits are about 12 MB as built (4.8 MB packed), because every kit has the motion files and many share a font.
 This package stores each such file once (`dist/shared/<sha256>`), keeps a kit's own files in
 `dist/kits/<id>/`, and puts a kit back together from its `kit.json`, checking every file's sha256.
 The build reads every kit back and compares it with `@mariachi/design`'s build, byte for byte, so a
