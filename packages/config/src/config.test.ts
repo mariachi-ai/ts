@@ -42,6 +42,36 @@ describe('loadConfig', () => {
     }
   });
 
+  it('refuses a number, a boolean or an environment name it cannot read, naming the variable', () => {
+    const failure = (env: Record<string, string>) => {
+      try {
+        loadConfig({}, { env });
+      } catch (error) {
+        return [(error as ConfigError).code, (error as ConfigError).message];
+      }
+      return 'loaded';
+    };
+    expect(failure({ PORT: 'eighty' })).toEqual(['config/invalid', 'Invalid configuration: PORT must be a number']);
+    expect(failure({ DATABASE_URL: 'postgres://localhost/app', DATABASE_POOL_MAX: '10 connections' })).toEqual(['config/invalid', 'Invalid configuration: DATABASE_POOL_MAX must be a number']);
+    expect(failure({ TRUST_PROXY: 'maybe' })).toEqual(['config/invalid', 'Invalid configuration: TRUST_PROXY must be true or false']);
+    expect(failure({ NODE_ENV: 'banana' })).toEqual([
+      'config/invalid',
+      'Invalid configuration: NODE_ENV must be development, test or production (set ENV to one of them if NODE_ENV has to stay as it is)',
+    ]);
+    expect(failure({ ENV: 'prod' })).toEqual(['config/invalid', 'Invalid configuration: ENV must be development, test or production']);
+    // The value is never echoed: a mistyped secret pasted into the wrong variable stays out of logs
+    expect(JSON.stringify(failure({ PORT: 'sk_live_not_a_port' }))).not.toContain('sk_live');
+  });
+
+  it('reads the usual spellings of a boolean, leaves an empty variable unset, and lets ENV decide over NODE_ENV', () => {
+    for (const yes of ['true', 'TRUE', '1', 'yes', 'on']) expect(loadConfig({}, { env: { TRUST_PROXY: yes } }).server.trustProxy, yes).toBe(true);
+    for (const no of ['false', '0', 'no', 'Off']) expect(loadConfig({}, { env: { TRUST_PROXY: no } }).server.trustProxy, no).toBe(false);
+    expect(loadConfig({}, { env: { PORT: '', TRUST_PROXY: ' ', NODE_ENV: '' } })).toMatchObject({ env: 'development', server: { port: 3000 } });
+    expect(loadConfig({}, { env: { PORT: ' 8080 ' } }).server.port).toBe(8080);
+    // NODE_ENV=staging is common for tooling; ENV then says which of the three the app runs as
+    expect(loadConfig({}, { env: { NODE_ENV: 'staging', ENV: 'production' } }).env).toBe('production');
+  });
+
   it('defaults observability adapters to noop', () => {
     const config = loadConfig({ observability: { tracing: {}, errors: {} } }, { env: {} });
     expect(config.observability?.tracing?.adapter).toBe('noop');

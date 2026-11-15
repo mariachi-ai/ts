@@ -51,6 +51,11 @@ fail the boot with `ConfigError`.
 | `METRICS_ADAPTER`, `METRICS_PREFIX`, `ERRORS_ADAPTER`, `SENTRY_DSN` | metrics and error tracking | noop |
 | `STORAGE_*`, `EMAIL_*`, `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
 
+A value that can't be read is refused at start (`config/invalid`, naming the variable): a number
+that isn't one, a boolean that isn't `true`/`false` (or `1`/`0`, `yes`/`no`, `on`/`off`), or an
+environment name other than the three. `ENV` decides over `NODE_ENV`, so when other tooling needs
+`NODE_ENV=staging`, set `ENV=production` for the app.
+
 ## Developing the framework
 
 ```bash
