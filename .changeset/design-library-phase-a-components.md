@@ -24,6 +24,10 @@ Library-wide component and base-style fixes, new tokens, and five small componen
   specificity, so any class or inline style wins; a content list built on `m-stack` keeps its markers
   with an inline `list-style`.
 - **`<legend>` inherits its weight** instead of taking 600 from the base styles.
+- **Table cells stay table cells:** `.m-table` `th` and `td` are `display: table-cell` even with a
+  layout class on them. A `<td class="m-cluster">` used to become a flex box outside the table grid,
+  so its divider could sit a pixel off the row's rule; its parts now flow inline. Put the layout
+  inside the cell (`<td><span class="m-cluster">…</span></td>`) to keep the gap.
 - **Tailwind:** `rounded-xl` now follows the theme's new `radius.xl`, which defaults to `radius.lg`,
   instead of Tailwind's own 12px.
 

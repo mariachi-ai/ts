@@ -14,6 +14,7 @@ export const table = defineComponent({
     '[data-density="compact"]': 'Tighter cell padding',
     '[data-sticky]': 'Header stays visible while the wrapper scrolls vertically',
     'td[data-numeric] / th[data-numeric]': 'Right-aligned, tabular figures',
+    'td > .m-cluster': 'A cell with several parts (an avatar and a name): the layout goes inside the cell, which stays a table cell',
   },
   tokens: {
     bg: t.color('Body background', ref('color.bg.surface')),

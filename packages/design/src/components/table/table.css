@@ -25,7 +25,14 @@
     --_py: var(--m-table-compact-padding-y);
   }
 
+  /*
+   * Cells stay table cells even with a layout class on them (`<td class="m-cluster">`). A flex
+   * <td> leaves the table grid: it draws its own divider on its own box, which lands a pixel off
+   * the row's shared rule whenever row edges fall between pixels. Lay out a cell's content inside
+   * it instead.
+   */
   .m-table :is(th, td) {
+    display: table-cell;
     padding-block: var(--_py);
     padding-inline: var(--_px);
     border-block-end: var(--m-table-border-width) solid var(--m-table-border-color);
