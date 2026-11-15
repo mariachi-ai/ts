@@ -21,7 +21,9 @@ export const progress = defineComponent({
     radius: t.length('Bar radius', ref('radius.full')),
     borderWidth: t.length('Track border width', '0px'),
     border: t.color('Track border colour', ref('color.border.strong')),
-    track: t.color('Unfilled track', ref('color.bg.sunken')),
+    // The hairline colour, not the sunken fill: sunken is a step off the canvas and all but vanishes
+    // on a white surface, while hairlines are drawn to show on both.
+    track: t.color('Unfilled track; must show on both the canvas and a surface', ref('color.border.default')),
     fill: t.color('Progress fill', ref('color.accent.text')),
     optimum: t.color('Meter value in the optimum range', ref('color.success.solid')),
     suboptimum: t.color('Meter value in the suboptimal range', ref('color.warning.solid')),

@@ -253,7 +253,7 @@ export const comet = extendTheme(minimal, {
       fg: { light: '#533192', dark: '#e8e0ff' },
       fontWeight: 'var(--m-font-weight-medium)',
       ringWidth: '2px',
-      groupOverlap: '-0.375rem',
+      groupOverlap: '0.375rem',
     },
     // The mail list: no header row, no frame, 44px rows split by nothing but space; hover a warm wash
     table: {

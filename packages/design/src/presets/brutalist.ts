@@ -98,5 +98,7 @@ export const brutalist = defineTheme({
     switch: { radius: '0', border: 'var(--m-color-border-strong)' },
     avatar: { radius: '0' },
     input: { shadow: 'var(--m-shadow-sm)' },
+    // The track stays the sunken fill: the ink hairline would swallow the bar
+    progress: { track: 'var(--m-color-bg-sunken)' },
   },
 });

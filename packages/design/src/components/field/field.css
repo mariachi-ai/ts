@@ -31,10 +31,22 @@
     line-height: var(--m-font-leading-tight);
   }
 
+  /*
+   * Required and optional marking. By default a required field's label ends in a red " *". A language
+   * that keeps colour for status sets the marker's colour, and one that marks the optional fields
+   * instead sets requiredMarker to none and optionalMarker to " (optional)".
+   */
   .m-field:has(:required) > .m-field-label::after,
   .m-field-label[data-required]::after {
     content: var(--m-field-required-marker);
     color: var(--m-field-required-fg);
+  }
+
+  .m-field:has(:is(input, select, textarea)):not(:has(:required)) > .m-field-label:not([data-required])::after,
+  .m-field-label[data-optional]::after {
+    content: var(--m-field-optional-marker);
+    color: var(--m-field-optional-fg);
+    font-weight: var(--m-field-optional-font-weight);
   }
 
   .m-field-hint,

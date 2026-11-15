@@ -2,6 +2,29 @@
   .m-avatar {
     --_size: var(--m-avatar-size-md);
 
+    /*
+     * Initials sit on the language's own type ramp: the step nearest the size times the scale. Each
+     * term adds one step once the target passes the midpoint between two steps (clamp() turns the
+     * difference into 0 or the step), so the result is always a ramp size. Past the top of the ramp
+     * the initials keep the plain share, and avatars under 24px cap them at half their size, so they
+     * still fit.
+     */
+    --_target: calc(var(--_size) * var(--m-avatar-initials-scale));
+    --_initials: min(
+      calc(var(--_size) / 2),
+      calc(
+        var(--m-font-size-xs)
+        + clamp(0px, (var(--_target) - (var(--m-font-size-xs) + var(--m-font-size-sm)) / 2) * 1000, var(--m-font-size-sm) - var(--m-font-size-xs))
+        + clamp(0px, (var(--_target) - (var(--m-font-size-sm) + var(--m-font-size-md)) / 2) * 1000, var(--m-font-size-md) - var(--m-font-size-sm))
+        + clamp(0px, (var(--_target) - (var(--m-font-size-md) + var(--m-font-size-lg)) / 2) * 1000, var(--m-font-size-lg) - var(--m-font-size-md))
+        + clamp(0px, (var(--_target) - (var(--m-font-size-lg) + var(--m-font-size-xl)) / 2) * 1000, var(--m-font-size-xl) - var(--m-font-size-lg))
+        + clamp(0px, (var(--_target) - (var(--m-font-size-xl) + var(--m-font-size-2xl)) / 2) * 1000, var(--m-font-size-2xl) - var(--m-font-size-xl))
+        + clamp(0px, (var(--_target) - (var(--m-font-size-2xl) + var(--m-font-size-3xl)) / 2) * 1000, var(--m-font-size-3xl) - var(--m-font-size-2xl))
+        + clamp(0px, (var(--_target) - (var(--m-font-size-3xl) + var(--m-font-size-4xl)) / 2) * 1000, var(--m-font-size-4xl) - var(--m-font-size-3xl))
+        + clamp(0px, (var(--_target) - var(--m-font-size-4xl)) * 1000, var(--_target) - var(--m-font-size-4xl))
+      )
+    );
+
     display: inline-grid;
     place-items: center;
     flex-shrink: 0;
@@ -12,7 +35,7 @@
     border-radius: var(--m-avatar-radius);
     background: var(--m-avatar-bg);
     color: var(--m-avatar-fg);
-    font-size: calc(var(--_size) * 0.38);
+    font-size: var(--_initials);
     font-weight: var(--m-avatar-font-weight);
     line-height: 1;
     text-transform: uppercase;
@@ -35,16 +58,44 @@
     --_size: var(--m-avatar-size-lg);
   }
 
+  /* A ring around one avatar (a story, a live presence), a gap away from it */
+  .m-avatar[data-ring] {
+    box-shadow:
+      0 0 0 var(--m-ring-offset) var(--m-avatar-ring-color),
+      0 0 0 calc(var(--m-ring-offset) + var(--m-avatar-halo-width)) var(--m-avatar-halo-color);
+  }
+
   .m-avatar-group {
+    /* The overlap is a distance: a negative value (the old convention) means the same overlap */
+    --_overlap: max(var(--m-avatar-group-overlap), calc(var(--m-avatar-group-overlap) * -1));
+
     display: inline-flex;
     align-items: center;
   }
 
   .m-avatar-group > .m-avatar {
+    /*
+     * The overlap an initials avatar can take without covering its letters: two capitals are about
+     * 1.5em wide, so the next avatar stops where they end. Large avatars take the full overlap.
+     */
+    --_fit: max(0px, min(var(--_overlap), var(--_size) - var(--m-avatar-ring-width) - 1.5em));
+
     box-shadow: 0 0 0 var(--m-avatar-ring-width) var(--m-avatar-ring-color);
   }
 
   .m-avatar-group > .m-avatar + .m-avatar {
-    margin-inline-start: var(--m-avatar-group-overlap);
+    margin-inline-start: calc(var(--_overlap) * -1);
+  }
+
+  .m-avatar-group > .m-avatar:not(img, :has(> img)) + .m-avatar {
+    margin-inline-start: calc(var(--_fit) * -1);
+  }
+
+  /*
+   * Each initials avatar but the last is partly covered by the next one, so its letters centre in the
+   * part that stays visible instead of running under the neighbour. Images keep the full box.
+   */
+  .m-avatar-group > .m-avatar:not(:last-child, img, :has(> img)) {
+    padding-inline-end: calc(var(--_fit) + var(--m-avatar-ring-width));
   }
 }

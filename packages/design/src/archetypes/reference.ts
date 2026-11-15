@@ -135,6 +135,7 @@ export function designReference(a: Archetype, theme: Theme): string {
       'radius.sm',
       'radius.md',
       'radius.lg',
+      'radius.xl',
       'radius.control',
       'radius.container',
       'components.button.radius',

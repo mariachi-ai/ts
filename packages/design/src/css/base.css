@@ -47,27 +47,37 @@
   }
 
   h1 {
-    font-size: var(--m-font-size-4xl);
+    font-size: var(--m-font-heading-size-h1);
   }
 
   h2 {
-    font-size: var(--m-font-size-3xl);
+    font-size: var(--m-font-heading-size-h2);
   }
 
   h3 {
-    font-size: var(--m-font-size-2xl);
+    font-size: var(--m-font-heading-size-h3);
   }
 
   h4 {
-    font-size: var(--m-font-size-xl);
+    font-size: var(--m-font-heading-size-h4);
   }
 
   h5 {
-    font-size: var(--m-font-size-lg);
+    font-size: var(--m-font-heading-size-h5);
   }
 
   h6 {
-    font-size: var(--m-font-size-md);
+    font-size: var(--m-font-heading-size-h6);
+  }
+
+  /*
+   * A list used as layout (a stack of rows, a nav) loses its bullets and indent. Zero specificity, so
+   * any class or inline style wins, and never inside prose, where lists keep their markers.
+   */
+  :where(ul, ol):where(.m-stack, .m-cluster, .m-grid, .m-split):not(:where(.m-prose *)),
+  :where(nav) :where(ul, ol):not(:where(.m-prose *)) {
+    padding-inline-start: 0;
+    list-style: none;
   }
 
   a {

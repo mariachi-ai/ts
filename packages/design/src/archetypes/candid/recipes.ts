@@ -111,7 +111,7 @@ const shot = (tone: 'a' | 'b' | 'c' = 'a') => {
 // and the reactions stacked over the bottom-right edge
 const reactionIcons = [I.heart, I.flame, I.thumb, I.zap];
 const reactions = (people: string[], more?: string) =>
-  `<div class="m-avatar-group" aria-label="${people.length + (more ? Number(more) : 0)} reactions" style="position: absolute; inset-block-end: calc(var(--m-space-6) * -1); inset-inline-end: var(--m-space-2); --m-avatar-size-md: 4.25rem; --m-avatar-group-overlap: -0.875rem">
+  `<div class="m-avatar-group" aria-label="${people.length + (more ? Number(more) : 0)} reactions" style="position: absolute; inset-block-end: calc(var(--m-space-6) * -1); inset-inline-end: var(--m-space-2); --m-avatar-size-md: 4.25rem; --m-avatar-group-overlap: 0.875rem">
               ${people
                 .map(
                   (p, i) =>

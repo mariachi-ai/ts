@@ -104,6 +104,16 @@ export const semantic = {
       weight: t.fontWeight('Heading weight', ref('font.weight.semibold')),
       transform: t.keyword('Heading text-transform (none, uppercase)', 'none'),
       tracking: t.length('Heading letter spacing', ref('font.tracking.tight')),
+      // Which step of the ramp each heading level takes in the base styles. A language whose page
+      // titles are smaller than its display sizes points these at its own steps.
+      size: {
+        h1: t.length('<h1> size in the base styles', ref('font.size.4xl')),
+        h2: t.length('<h2> size in the base styles', ref('font.size.3xl')),
+        h3: t.length('<h3> size in the base styles', ref('font.size.2xl')),
+        h4: t.length('<h4> size in the base styles', ref('font.size.xl')),
+        h5: t.length('<h5> size in the base styles', ref('font.size.lg')),
+        h6: t.length('<h6> size in the base styles', ref('font.size.md')),
+      },
     },
   },
   space: {
@@ -140,6 +150,7 @@ export const semantic = {
     sm: t.length('Small radius'),
     md: t.length('Medium radius'),
     lg: t.length('Large radius'),
+    xl: t.length('Extra-large radius, the step above lg (defaults to lg)', ref('radius.lg')),
     full: t.length('Pill / circle', '9999px'),
     control: t.length('Buttons, inputs, selects', ref('radius.md')),
     container: t.length('Cards, dialogs, panels', ref('radius.lg')),
@@ -155,6 +166,12 @@ export const semantic = {
     md: t.shadow('Medium elevation (cards)'),
     lg: t.shadow('Large elevation (popovers, menus)'),
     overlay: t.shadow('Dialogs and toasts'),
+  },
+  // Decorative rings: the canvas-coloured ring between grouped avatars, a halo around a single avatar
+  // or a play button. Focus rings have their own tokens (focus.*).
+  ring: {
+    width: t.length('Decorative ring width (avatar rings, halos)', ref('borderWidth.thick')),
+    offset: t.length('Gap between an element and its halo', ref('borderWidth.thick')),
   },
   focus: {
     width: t.length('Focus ring width', '2px'),

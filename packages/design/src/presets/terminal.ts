@@ -90,6 +90,8 @@ export const terminal = defineTheme({
     badge: { radius: '0', textTransform: 'uppercase', tracking: 'var(--m-font-tracking-wide)' },
     avatar: { radius: '0' },
     switch: { radius: '0' },
+    // The track stays the sunken fill: the phosphor hairline is as bright as the bar
+    progress: { track: 'var(--m-color-bg-sunken)' },
     table: { headerTransform: 'uppercase', headerTracking: 'var(--m-font-tracking-wide)' },
     chat: { radius: '0' },
     composer: { radius: '0' },

@@ -250,7 +250,7 @@ export const flint = extendTheme(minimal, {
       fg: 'var(--m-color-fg-muted)',
       fontWeight: 'var(--m-font-weight-medium)',
       ringWidth: '1.5px',
-      groupOverlap: '-4px',
+      groupOverlap: '4px',
     },
     // Tables sit inside boxes: 12px muted headers in sentence case, hairline rows
     table: {

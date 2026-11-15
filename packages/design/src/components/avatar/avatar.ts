@@ -10,6 +10,7 @@ export const avatar = defineComponent({
   anatomy: {
     '.m-avatar': 'On an <img> (with alt) or a <span> holding initials',
     '[data-size]': 'sm | md (default) | lg',
+    '[data-ring]': 'A ring around one avatar, a gap away from it (a story, a live presence)',
     '.m-avatar-group': 'Row of overlapping avatars; each gets a ring in the canvas colour',
   },
   tokens: {
@@ -22,11 +23,14 @@ export const avatar = defineComponent({
     bg: t.color('Initials background', ref('color.accent.subtle')),
     fg: t.color('Initials colour', ref('color.accent.text')),
     fontWeight: t.fontWeight('Initials weight', ref('font.weight.semibold')),
+    initialsScale: t.number('Initials size as a share of the avatar; snapped to the nearest step of the type ramp', '0.38'),
     border: t.color('Outline around the avatar', 'transparent'),
     borderWidth: t.length('Outline width', ref('borderWidth.thin')),
     ringColor: t.color('Ring separating avatars in a group', ref('color.bg.canvas')),
-    ringWidth: t.length('Ring width in a group', ref('borderWidth.thick')),
-    groupOverlap: t.length('How far grouped avatars overlap', '-0.5rem'),
+    ringWidth: t.length('Ring width in a group', ref('ring.width')),
+    haloColor: t.color('Ring colour around a single avatar ([data-ring])', ref('color.accent.default')),
+    haloWidth: t.length('Ring width around a single avatar ([data-ring])', ref('ring.width')),
+    groupOverlap: t.length('How far grouped avatars overlap, as a positive distance; less after an initials avatar when it would cover the letters', '0.5rem'),
   },
   contrast: [{ fg: 'fg', bg: 'bg', min: 4.5 }],
   a11y: [
