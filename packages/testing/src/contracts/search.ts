@@ -84,6 +84,34 @@ export function searchContract(name: string, create: () => SearchClient | Promis
       await client.deleteIndex(metrics);
     });
 
+    it('keeps tenants apart through forTenant, when the client has it', async () => {
+      const client = await create();
+      await client.connect();
+      if (!client.forTenant) return;
+      const notes = unique('notes');
+      const index = { name: notes, fields: [{ name: 'title', type: 'string' as const }, { name: 'kind', type: 'string' as const, facet: true }] };
+      await client.createIndex(index);
+      const a = client.forTenant('tenant-a');
+      const b = client.forTenant('tenant-b');
+      await a.indexDocuments(notes, [{ id: '1', title: 'alpha plan', kind: 'plan' }, { id: '2', title: 'alpha memo', kind: 'memo' }]);
+      await b.indexDocument(notes, { id: '1', title: 'beta plan', kind: 'plan' });
+      expect((await a.search(notes, { query: 'plan' })).hits.map((h) => h.document.title)).toEqual(['alpha plan']);
+      expect((await b.search(notes, { query: '*', facets: ['kind'] })).facetCounts?.kind).toEqual([{ value: 'plan', count: 1 }]);
+      expect((await b.search(notes, { query: 'alpha' })).total).toBe(0);
+      // The client that isn't tenant-scoped holds its own documents, not everyone's
+      expect((await client.search(notes, { query: '*' })).total).toBe(0);
+      await b.removeDocument(notes, '2');
+      expect((await a.search(notes, { query: '*' })).total).toBe(2);
+      if (b.reindexAlias) {
+        await b.reindexAlias(notes, index, []);
+        expect((await b.search(notes, { query: '*' })).total).toBe(0);
+        expect((await a.search(notes, { query: '*' })).total).toBe(2);
+      }
+      await expect(a.deleteIndex(notes)).rejects.toMatchObject({ code: 'search/invalid-input' });
+      expect(() => client.forTenant?.('')).toThrow();
+      await client.deleteIndex(notes);
+    });
+
     it('swaps an alias to a rebuilt index', async () => {
       const client = await create();
       await client.connect();

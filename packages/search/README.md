@@ -14,7 +14,7 @@ Guide: [search.md](../core/docs/search.md)
 | Import | What |
 | --- | --- |
 | `@mariachi/search` | `createSearch`, `DefaultSearch`, the Typesense and memory adapters, analytics, types |
-| `@mariachi/search/postgres` | `createPostgresSearch(db, options?)`, `PostgresSearchAdapter`, `searchIndexStatements`, `searchTables` |
+| `@mariachi/search/postgres` | `createPostgresSearch(db, options?)`, `PostgresSearchAdapter`, `searchTables` |
 | `@mariachi/search/schema` | `searchIndexesTable`, `searchDocumentsTable` |
 
 The Postgres adapter needs `@mariachi/database-postgres` and `drizzle-orm`, which are optional peers.
@@ -24,9 +24,9 @@ The Postgres adapter needs `@mariachi/database-postgres` and `drizzle-orm`, whic
 | Export | Purpose |
 | --- | --- |
 | `createSearch(config)` | `TypesenseSearchAdapter` or `MemorySearchAdapter` |
-| `createPostgresSearch(db, { language?, manageIndexes? })` | Search in the app's database: no search server, and indexing joins the surrounding transaction |
-| `DefaultSearch` | `search(ctx, index, query)`, `indexDocument`, `removeDocument`, `connect`, `disconnect`, `isHealthy` |
-| `SearchIndexer` | `syncDocument`, `removeDocument`, `reindexAll` (through an alias on Typesense and Postgres) |
+| `createPostgresSearch(db, { language?, maxFacetValues? })` | Search in the app's database: no search server, documents kept apart per tenant, and indexing joins the surrounding transaction |
+| `DefaultSearch` | `search(ctx, index, query)`, `indexDocument`, `removeDocument`, `connect`, `disconnect`, `isHealthy`. `{ tenantScoped: true }` confines every call to `ctx.tenantId`'s documents (Postgres and memory adapters) |
+| `SearchIndexer` | `syncDocument`, `removeDocument`, `reindexAll` (through an alias on Typesense, in one transaction on Postgres) |
 | `SearchAnalytics`, `MemorySearchAnalytics`, `RedisListAnalytics` | Best-effort query analytics |
 | `SearchIndex`, `SearchField`, `SearchFieldType`, `SearchQuery`, `SearchResult` | Types |
 

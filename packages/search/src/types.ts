@@ -76,6 +76,12 @@ export interface SearchClient {
    * using the alias while the previous collection is replaced.
    */
   reindexAlias?(alias: string, index: SearchIndex, documents: SearchDocument[]): Promise<void>;
+  /**
+   * A client that stores, finds, counts, removes and replaces only one tenant's documents, whatever
+   * the query says. Adapters that keep tenants apart themselves have it (Postgres, memory);
+   * `DefaultSearch({ tenantScoped: true })` uses it for every call.
+   */
+  forTenant?(tenantId: string): SearchClient;
   connect(): Promise<void>;
   disconnect(): Promise<void>;
   isHealthy(): Promise<boolean>;

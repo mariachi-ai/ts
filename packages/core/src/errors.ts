@@ -247,6 +247,7 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'storage/path-traversal': 400,
   'storage/invalid-signature': 403,
   'search/missing-query-fields': 400,
+  'search/tenant-required': 500,
   'ai/request-failed': 502,
   'ai/providers-exhausted': 502,
   'integrations/invalid-output': 502,

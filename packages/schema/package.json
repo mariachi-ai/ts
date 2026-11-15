@@ -39,15 +39,14 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@mariachi/ai": "workspace:*",
     "@mariachi/audit": "workspace:*",
     "@mariachi/auth": "workspace:*",
+    "@mariachi/ai": "workspace:*",
     "@mariachi/billing": "workspace:*",
     "@mariachi/config": "workspace:*",
     "@mariachi/database": "workspace:*",
     "@mariachi/events": "workspace:*",
     "@mariachi/notifications": "workspace:*",
-    "@mariachi/search": "workspace:*",
     "@mariachi/webhooks": "workspace:*"
   },
   "devDependencies": {

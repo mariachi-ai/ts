@@ -1,4 +1,4 @@
-import type { ColumnDefinition, ColumnReference, ColumnType, ReferentialAction, TableDefinition } from './schema';
+import type { ColumnDefinition, ColumnReference, ColumnType, IndexMethod, ReferentialAction, TableDefinition } from './schema';
 
 type Mutable<T> = { -readonly [K in keyof T]: T[K] };
 
@@ -100,6 +100,8 @@ export const column = {
   date: (name?: string) => new ColumnBuilder('date' as const, name),
   json: (name?: string) => new ColumnBuilder('json' as const, name),
   numeric: (name?: string) => new ColumnBuilder('numeric' as const, name),
+  /** A full-text search vector. Fill it in SQL (`to_tsvector('simple', ...)`) and index it with `index(...).on(...).using('gin')`. */
+  tsvector: (name?: string) => new ColumnBuilder('tsvector' as const, name),
   /** Postgres enum. `enumName` defaults to `<table>_<column>` when compiled. */
   enum: <const V extends readonly [string, ...string[]]>(values: V, options: { name?: string; enumName?: string } = {}) =>
     new ColumnBuilder<'enum', false, V[number]>('enum' as const, options.name, { enumValues: values, enumName: options.enumName }),
@@ -107,7 +109,7 @@ export const column = {
 
 /** Helper for `TableOptions.indexes`. Pass column keys (camelCase), not SQL names. */
 export function index(name: string) {
-  const def = { name, columns: [] as string[], unique: false, where: undefined as string | undefined };
+  const def = { name, columns: [] as string[], unique: false, where: undefined as string | undefined, using: undefined as IndexMethod | undefined };
   const api = {
     on(...columns: string[]) {
       def.columns = columns;
@@ -119,6 +121,11 @@ export function index(name: string) {
     },
     where(sql: string) {
       def.where = sql;
+      return api;
+    },
+    /** The index method; btree when not given. `gin` for `json` (containment, `@>`) and `tsvector` columns. */
+    using(method: IndexMethod) {
+      def.using = method;
       return api;
     },
     build: () => ({ ...def }),

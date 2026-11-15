@@ -1382,9 +1382,6 @@ importers:
       '@mariachi/notifications':
         specifier: workspace:*
         version: link:../notifications
-      '@mariachi/search':
-        specifier: workspace:*
-        version: link:../search
       '@mariachi/webhooks':
         specifier: workspace:*
         version: link:../webhooks

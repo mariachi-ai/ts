@@ -4,7 +4,7 @@ import type { Context } from '@mariachi/core';
 import { applySchema, createPostgresDatabase, withTransaction, type PostgresDatabase } from '@mariachi/database-postgres';
 import { startPostgres, stopAll } from '../../../../test/setup';
 import type { SearchIndex } from '../types';
-import { createPostgresSearch, PostgresSearchAdapter, searchDocumentsTable, searchIndexesTable, searchIndexStatements } from './index';
+import { createPostgresSearch, PostgresSearchAdapter, searchDocumentsTable, searchIndexesTable } from './index';
 
 let database: PostgresDatabase;
 let search: PostgresSearchAdapter;
@@ -87,9 +87,12 @@ describe('PostgresSearchAdapter', () => {
     expect(await ids(name, { query: 'trumpets', queryBy: ['title'] })).toEqual([]);
     expect((await ids(name, { query: 'trumpets', queryBy: ['body'] })).sort()).toEqual(['1', '2']);
     expect(await ids(name, { query: 'plaza', queryBy: ['title', 'body'] })).toEqual(expect.arrayContaining(['1', '3']));
-    // `index: false` keeps a field out of the default search; naming it searches it
+    // `index: false` keeps a field out of search. Naming it, a number or an unknown field is refused: none is in
+    // the stored vector, so searching it would mean reading every document
     expect(await ids(name, { query: 'zx' })).toEqual([]);
-    expect((await ids(name, { query: 'zx', queryBy: ['code'] })).sort()).toEqual(['1', '2']);
+    for (const queryBy of [['code'], ['views'], ['title', 'nowhere']]) {
+      await expect(search.search(name, { query: 'zx', queryBy }), queryBy.join()).rejects.toMatchObject({ code: 'search/invalid-input' });
+    }
   });
 
   it('filters by equality on text, numbers, booleans and list membership', async () => {
@@ -214,9 +217,9 @@ describe('PostgresSearchAdapter', () => {
     expect(await ids(name, { query: 'saved' })).toEqual(['tx']);
   });
 
-  it('swaps an alias in one transaction, and turns an index of the same name into the alias', async () => {
+  it('replaces an index\'s documents in one transaction, whether or not it was made with createIndex', async () => {
     const name = await seeded();
-    const stored = async () => Number(rows<{ n: string }>(await database.db.execute(sql`select count(*) as n from mariachi_search_documents where collection like ${`${name}%`}`))[0]?.n);
+    const stored = async () => Number(rows<{ n: string }>(await database.db.execute(sql`select count(*) as n from mariachi_search_documents where collection = ${name}`))[0]?.n);
     expect(await stored()).toBe(3);
 
     await search.reindexAlias(name, articles(name), [{ id: 'n1', title: 'Rebuilt index' }]);
@@ -235,8 +238,8 @@ describe('PostgresSearchAdapter', () => {
     expect(await ids(name, { query: '*' })).toEqual(['n1']);
     expect(await stored()).toBe(1);
 
-    // Writes through the alias land in the collection it points at
     await search.indexDocument(name, { id: 'n3', title: 'Added later' });
+    expect((await ids(name, { query: '*' })).sort()).toEqual(['n1', 'n3']);
     await search.reindexAlias(name, articles(name), []);
     expect((await search.search(name, { query: '*' })).total).toBe(0);
     expect(await stored()).toBe(0);
@@ -266,19 +269,91 @@ describe('PostgresSearchAdapter', () => {
     expect(seen.filter((s) => s.total !== 40 || s.generations !== 1)).toEqual([]);
   });
 
-  it('leaves no document behind in a dropped collection when writes race a rebuild', async () => {
+  it('leaves no document behind when writes race a rebuild or the removal of the index', async () => {
     const name = unique('raced');
     const index: SearchIndex = { name, fields: [{ name: 'title', type: 'string' }] };
     await search.reindexAlias(name, index, [{ id: 'seed', title: 'seed' }]);
     const writes = Array.from({ length: 60 }, (_, n) => search.indexDocument(name, { id: `w${n}`, title: `written ${n}` }));
     const rebuilds = Array.from({ length: 6 }, (_, n) => search.reindexAlias(name, index, [{ id: `r${n}`, title: `rebuilt ${n}` }]));
     await Promise.all([...writes, ...rebuilds]);
-    const [{ target }] = rows<{ target: string }>(await database.db.execute(sql`select target from mariachi_search_indexes where name = ${name}`)) as [{ target: string }];
-    const stray = rows(await database.db.execute(sql`select id from mariachi_search_documents where collection like ${`${name}:%`} and collection <> ${target}`));
-    expect(stray).toEqual([]);
-    // Whatever is stored is what a search finds
-    const stored = rows(await database.db.execute(sql`select id from mariachi_search_documents where collection = ${target}`));
-    expect((await search.search(name, { query: '*', pageSize: 250 })).total).toBe(stored.length);
+    const stored = async () => rows(await database.db.execute(sql`select id from mariachi_search_documents where collection = ${name}`)).length;
+    // Whatever is stored is what a search finds, and exactly one rebuild's document survived
+    const found = await search.search(name, { query: '*', pageSize: 250 });
+    expect(found.total).toBe(await stored());
+    expect(found.hits.filter((h) => h.document.id.startsWith('r'))).toHaveLength(1);
+
+    // A write that loses to the removal is refused; one that wins is removed with the index
+    const outcomes = await Promise.allSettled([
+      ...Array.from({ length: 40 }, (_, n) => search.indexDocument(name, { id: `late${n}`, title: 'late' })),
+      search.deleteIndex(name),
+    ]);
+    for (const outcome of outcomes) {
+      if (outcome.status === 'rejected') expect(outcome.reason).toMatchObject({ code: 'search/index-not-found' });
+    }
+    expect(await stored()).toBe(0);
+  });
+
+  it('keeps each tenant\'s documents apart through forTenant', async () => {
+    const name = unique('tenanted');
+    const index: SearchIndex = { name, fields: [{ name: 'title', type: 'string' }, { name: 'kind', type: 'string', facet: true }] };
+    await search.createIndex(index);
+    const [acme, globex] = [search.forTenant('acme'), search.forTenant('globex')];
+    await acme.indexDocuments(name, [{ id: '1', title: 'Acme roadmap', kind: 'plan' }, { id: '2', title: 'Acme budget', kind: 'money' }]);
+    await globex.indexDocuments(name, [{ id: '1', title: 'Globex roadmap', kind: 'plan' }]);
+    await search.indexDocument(name, { id: 'shared', title: 'Unscoped roadmap', kind: 'plan' });
+
+    // The same id in two tenants is two documents; each tenant finds, counts and facets only its own
+    const mine = await acme.search(name, { query: 'roadmap', facets: ['kind'] });
+    expect(mine.hits.map((h) => h.document.title)).toEqual(['Acme roadmap']);
+    expect((await acme.search(name, { query: '*', facets: ['kind'] })).facetCounts?.kind).toEqual([{ value: 'money', count: 1 }, { value: 'plan', count: 1 }]);
+    expect((await globex.search(name, { query: '*' })).total).toBe(1);
+    expect((await search.search(name, { query: '*' })).hits.map((h) => h.document.id)).toEqual(['shared']);
+    // No query or filter reaches across
+    expect((await globex.search(name, { query: 'acme' })).total).toBe(0);
+    expect((await globex.search(name, { query: '*', filters: { title: 'Acme budget' } })).total).toBe(0);
+
+    // Removing and replacing touch only the tenant's own
+    await globex.removeDocument(name, '2');
+    await globex.reindexAlias(name, index, [{ id: '9', title: 'Globex only', kind: 'plan' }]);
+    expect((await acme.search(name, { query: '*' })).total).toBe(2);
+    expect((await globex.search(name, { query: '*' })).hits.map((h) => h.document.id)).toEqual(['9']);
+    await acme.reindexAlias(name, index, []);
+    expect((await acme.search(name, { query: '*' })).total).toBe(0);
+    expect((await search.search(name, { query: '*' })).total).toBe(1);
+
+    // An index is everyone's: a tenant's client can't remove it
+    await expect(acme.deleteIndex(name)).rejects.toMatchObject({ code: 'search/invalid-input' });
+    expect(() => search.forTenant('')).toThrow(/tenant id/);
+    await search.deleteIndex(name);
+    expect(rows(await database.db.execute(sql`select 1 from mariachi_search_documents where collection = ${name}`))).toHaveLength(0);
+  });
+
+  it('returns the most frequent facet values, ten unless told otherwise', async () => {
+    const name = unique('faceted');
+    await search.createIndex({ name, fields: [{ name: 'title', type: 'string' }, { name: 'tag', type: 'string', facet: true }] });
+    // tag-0 once, tag-1 twice, ... tag-24 twenty-five times
+    await search.indexDocuments(name, Array.from({ length: 25 }, (_, t) => Array.from({ length: t + 1 }, (_, n) => ({ id: `${t}-${n}`, title: 'x', tag: `tag-${t}` }))).flat());
+    const ten = (await search.search(name, { query: '*', facets: ['tag'] })).facetCounts?.tag ?? [];
+    expect(ten).toHaveLength(10);
+    expect(ten[0]).toEqual({ value: 'tag-24', count: 25 });
+    expect(ten[9]).toEqual({ value: 'tag-15', count: 16 });
+    const three = createPostgresSearch(database.db, { maxFacetValues: 3 });
+    expect((await three.search(name, { query: '*', facets: ['tag'] })).facetCounts?.tag).toHaveLength(3);
+    expect(() => createPostgresSearch(database.db, { maxFacetValues: 0 })).toThrow(/maxFacetValues/);
+  });
+
+  it('stores large documents in several statements', async () => {
+    const name = unique('bulky');
+    await search.createIndex({ name, fields: [{ name: 'title', type: 'string' }, { name: 'body', type: 'string' }] });
+    // About 12 MB of text: more than one statement's worth, and each body longer than the searchable limit
+    const filler = 'lorem ipsum dolor sit amet '.repeat(15_000);
+    await search.indexDocuments(name, Array.from({ length: 30 }, (_, n) => ({ id: `b${n}`, title: `volume ${n}`, body: `${filler} tailword${n}` })));
+    expect((await search.search(name, { query: 'lorem' })).total).toBe(30);
+    expect((await search.search(name, { query: 'volume 7' })).hits.map((h) => h.document.id)).toEqual(['b7']);
+    // Past the first 250,000 characters a document's text isn't searchable; the document itself is whole
+    expect((await search.search(name, { query: 'tailword7' })).total).toBe(0);
+    const [hit] = (await search.search<{ id: string; body: string }>(name, { query: 'volume 7' })).hits;
+    expect(hit?.document.body.endsWith('tailword7')).toBe(true);
   });
 
   it('removes an index with its documents', async () => {
@@ -299,7 +374,7 @@ describe('PostgresSearchAdapter', () => {
     expect((await other.search(name, { query: 'swap' })).hits.map((h) => h.document.id)).toEqual(['z']);
   });
 
-  it('stems with a language configuration, and adds that configuration\'s index on connect', async () => {
+  it('stems with a language configuration', async () => {
     const english = createPostgresSearch(database.db, { language: 'english' });
     await english.connect();
     const name = unique('english');
@@ -310,10 +385,14 @@ describe('PostgresSearchAdapter', () => {
     // The default configuration does not stem
     expect((await search.search(name, { query: 'bull runs' })).total).toBe(0);
 
-    const names = rows<{ indexname: string }>(await database.db.execute(sql`select indexname from pg_indexes where tablename = 'mariachi_search_documents'`)).map((r) => r.indexname);
-    expect(names).toEqual(expect.arrayContaining(['mariachi_search_documents_fts_simple_idx', 'mariachi_search_documents_fts_english_idx', 'mariachi_search_documents_document_idx']));
     expect(() => createPostgresSearch(database.db, { language: "simple'; drop table x; --" })).toThrow(/text search configuration/);
-    expect(searchIndexStatements('spanish')[0]).toContain("to_tsvector('spanish'::regconfig, text)");
+  });
+
+  it('has its indexes from the schema, so a migration makes them and startup makes nothing', async () => {
+    const names = rows<{ indexname: string; indexdef: string }>(await database.db.execute(sql`select indexname, indexdef from pg_indexes where tablename = 'mariachi_search_documents'`));
+    expect(names.map((r) => r.indexname).sort()).toEqual(['mariachi_search_documents_document_idx', 'mariachi_search_documents_tenant_id_collection_id_pk', 'mariachi_search_documents_tsv_idx']);
+    expect(names.find((r) => r.indexname.endsWith('tsv_idx'))?.indexdef).toMatch(/USING gin \(tsv\)/);
+    await expect(createPostgresSearch(database.db).connect()).resolves.toBeUndefined();
   });
 
   it('uses its GIN indexes for the text match and for filters', async () => {
@@ -324,13 +403,15 @@ describe('PostgresSearchAdapter', () => {
     const plan = async (query: Parameters<PostgresSearchAdapter['search']>[1]): Promise<string> => {
       let text = '';
       await database.db.transaction(async (tx) => {
+        // With the vector stored, reading 30,000 rows in order is cheap and the planner does that at this size.
+        // Turned off, the plan shows the statements can be served by the indexes, which is what a large table needs.
+        await tx.execute(sql`set local enable_seqscan = off`);
         text = (await explained(tx as never, name, query)).join('\n');
       });
       return text;
     };
-    // The statements exactly as the adapter sends them, and the planner's own choice at this size. (On a few
-    // thousand rows it reads the table instead, which is faster there.)
-    expect(await plan({ query: '1234' })).toContain('mariachi_search_documents_fts_simple_idx');
+    // The statements exactly as the adapter sends them
+    expect(await plan({ query: '1234' })).toContain('mariachi_search_documents_tsv_idx');
     expect(await plan({ query: '*', filters: { n: 1234 } })).toContain('mariachi_search_documents_document_idx');
     // "1234" as a prefix: entry 1234 and entries 12340 to 12349
     const found = await search.search(name, { query: '1234', sort: 'n:asc' });
@@ -343,7 +424,7 @@ describe('PostgresSearchAdapter', () => {
 /** The plan of the statement the adapter runs for `query`, by running it inside `tx` under EXPLAIN. */
 async function explained(tx: { execute(query: unknown): Promise<unknown> }, name: string, query: Parameters<PostgresSearchAdapter['search']>[1]): Promise<string[]> {
   const statements: unknown[] = [];
-  const recording = new Proxy(tx, {
+  const recording: object = new Proxy(tx, {
     get(target, key) {
       if (key === 'execute') {
         return (statement: unknown) => {
@@ -351,6 +432,8 @@ async function explained(tx: { execute(query: unknown): Promise<unknown> }, name
           return target.execute(statement);
         };
       }
+      // The adapter opens its own read transaction; here it runs in the one being inspected
+      if (key === 'transaction') return (fn: (inner: unknown) => unknown) => fn(recording);
       const value = Reflect.get(target, key);
       return typeof value === 'function' ? value.bind(target) : value;
     },

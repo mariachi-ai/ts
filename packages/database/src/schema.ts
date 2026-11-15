@@ -10,7 +10,9 @@ export type ColumnType =
   | 'json'
   | 'numeric'
   | 'double'
-  | 'enum';
+  | 'enum'
+  /** Postgres full-text search vector. Written with `to_tsvector(...)` in SQL; reads back as its text form. */
+  | 'tsvector';
 
 export interface ColumnDefault {
   kind: 'value' | 'random' | 'now' | 'sql';
@@ -60,7 +62,11 @@ export interface IndexDefinition {
   unique: boolean;
   /** Raw SQL predicate for partial indexes, e.g. `deleted_at IS NULL`. */
   where?: string;
+  /** The index method. Default: btree. `gin` is the one for `json` and `tsvector` columns. */
+  using?: IndexMethod;
 }
+
+export type IndexMethod = 'btree' | 'gin' | 'gist' | 'brin' | 'hash';
 
 export interface CheckDefinition {
   name: string;
@@ -91,7 +97,7 @@ export interface TableDefinition<
 }
 
 type ColumnTsType<C extends ColumnDefinition> = unknown extends C['_data']
-  ? C['type'] extends 'uuid' | 'text' | 'varchar' | 'numeric' | 'date' | 'enum'
+  ? C['type'] extends 'uuid' | 'text' | 'varchar' | 'numeric' | 'date' | 'enum' | 'tsvector'
     ? string
     : C['type'] extends 'integer' | 'double' | 'bigint'
       ? number

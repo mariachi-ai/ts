@@ -6,7 +6,7 @@ API is the same for all three.
 
 | Adapter | Needs | Matching | Choose it when |
 | --- | --- | --- | --- |
-| Postgres (`@mariachi/search/postgres`) | the database you already have | whole words, the last word as a prefix; stemming with a language | you want search without another server, or indexing in the same transaction as the write |
+| Postgres (`@mariachi/search/postgres`) | the database you already have | whole words, the last word as a prefix; stemming with a language | you want search without another server, tenants kept apart for you, or indexing in the same transaction as the write |
 | Typesense | a Typesense server | prefixes and typo tolerance | you need typo tolerance, or search load off the database |
 | memory | nothing | substring | tests |
 
@@ -26,12 +26,13 @@ On Postgres the client is built from the database handle, and the rest is the sa
 import { createPostgresSearch } from '@mariachi/search/postgres';
 
 const client = createPostgresSearch(database.db);                 // or { language: 'english' } to stem
-const search = new DefaultSearch({ client }, instrumentation);
-lifecycle.manage('search', search);   // connect adds the two GIN indexes if they are missing
+const search = new DefaultSearch({ client, tenantScoped: true }, instrumentation);
+lifecycle.manage('search', search);
 ```
 
-Add `searchIndexesTable` and `searchDocumentsTable` (from `@mariachi/search/schema`, or
-`@mariachi/schema`) to your schema file and migrate. See [Postgres](#postgres) below.
+Add `searchIndexesTable` and `searchDocumentsTable` from `@mariachi/search/schema` to your schema
+file and migrate; the migration creates the tables and their indexes. See [Postgres](#postgres)
+below.
 
 ## Define an index
 
@@ -71,8 +72,13 @@ const result = await search.search<Product>(ctx, 'products', {
 - Filters are equality filters joined with `&&`. On an array field, a filter matches when the
   array contains the value. String values are quoted, so a value containing `&&` or `,` stays one
   value; a value containing a backtick is rejected (`search/invalid-input`).
-- Search isn't tenant-scoped by itself. Put `tenantId` in your documents and filter on it (or use
-  one index per tenant).
+- **Tenants.** With `new DefaultSearch({ client, tenantScoped: true })`, every call reads and writes
+  only the documents of `ctx.tenantId`, and a call without a tenant is refused
+  (`search/tenant-required`). No query or filter reaches another tenant's documents. It needs a
+  client that keeps tenants apart (`client.forTenant(id)`): the Postgres and memory adapters.
+  Without `tenantScoped`, and always on Typesense, search is **not** tenant-scoped: put `tenantId`
+  in your documents and filter on it in every query, or use one index per tenant. One forgotten
+  filter there returns another tenant's documents.
 - Schemas come from Typesense (or the database), so a process that never created an index can
   still query it or its alias.
 
@@ -87,9 +93,10 @@ With Typesense, `reindexAll` builds a new collection (`products_<timestamp>`), f
 alias throughout. An existing *collection* named `products` blocks this (`search/alias-conflict`):
 delete or rename it once, then reindex.
 
-On Postgres the swap is one transaction: readers see the old documents until it commits and the new
-ones after, and an index created with `createIndex` under the same name simply becomes the alias
-(no `search/alias-conflict`).
+On Postgres there is no second collection: `reindexAll` replaces the index's documents (the
+tenant's, when tenant-scoped) in one transaction. Readers see the old documents until it commits and
+the new ones after, and an index made with `createIndex` is reindexed the same way (no
+`search/alias-conflict`).
 
 ## Postgres
 
@@ -98,30 +105,42 @@ ones after, and an index created with `createIndex` under the same name simply b
   is no typo tolerance: "mariachi" does not find "mariaci".
 - **Language.** The default configuration, `simple`, compares words as written, in any language.
   `createPostgresSearch(db, { language: 'english' })` stems ("runs" finds "running") and drops stop
-  words; any configuration your Postgres has works. One configuration per client.
+  words; any configuration your Postgres has works. A document is stored under the configuration
+  in use when it was indexed, so reindex after changing it.
 - **In the transaction.** Inside `withTransaction`, `indexDocument` and `removeDocument` commit or
   roll back with your write, so the index can't disagree with the table it describes:
 
   ```ts
   await withTransaction(db, ctx, async () => {
     const product = await products.create(ctx, input);
-    await search.indexDocument(ctx, 'products', { id: product.id, title: product.title, tenantId: product.tenantId });
+    await search.indexDocument(ctx, 'products', { id: product.id, title: product.title });
   });
   ```
 
+- **One snapshot per search.** The page, the total and the facet counts of a search are read
+  together, so a reindex that commits meanwhile can't give you hits from before it and counts
+  from after.
+- **Tenants.** Index definitions are shared; documents belong to a tenant. `client.forTenant(id)`
+  is a client for one tenant, which is what `tenantScoped` uses. Clearing one tenant's documents is a
+  reindex with none; `deleteIndex` removes the index for everyone and is refused on a tenant's client.
 - **Documents are checked.** A declared field must hold its declared type or be absent
   (`search/invalid-input`). Fields you don't declare are stored and can be filtered on, including
   nested ones (`filters: { 'owner.team': 'red' }`).
+- **`queryBy`** takes the index's string fields. A field declared `index: false`, a number or an
+  undeclared field is refused (`search/invalid-input`): it isn't in the stored search vector, so
+  searching it would read every document.
 - **Order.** Relevance first, then `defaultSortingField` (highest first), then id. `sort` takes any
   declared field that isn't a list.
+- **Facets** return the ten most frequent values of a field; `createPostgresSearch(db, {
+  maxFacetValues })` changes that.
 - **Highlights.** `hit.highlights[field]` wraps the matched words of each searched string field in
   `<mark>`. The rest of the text is your document's, unescaped: escape it before putting it in a page.
 - **Limits.** `pageSize` up to 250. The first 250,000 characters of a document's string fields are
-  searchable. Past a few million documents, or when search traffic competes with your writes, move
-  that index to Typesense: the calls don't change.
-- **Indexes.** `connect()` runs `searchIndexStatements(language)`: a GIN index on the text for that
-  language and one on the document for filters. If the app's role can't create indexes, pass
-  `manageIndexes: false` and put those statements in a migration.
+  searchable (the document itself is stored whole). Past a few million documents, or when search
+  traffic competes with your writes, move that index to Typesense: the calls don't change.
+- **Indexes.** Two GIN indexes, on the search vector and on the document (for filters), are part of
+  the table definition, so your migration creates them and nothing is created at startup. On a
+  table that already holds many documents, edit the migration to `create index concurrently`.
 
 ## Analytics
 
@@ -132,5 +151,5 @@ analytics failure is logged and the search still returns.
 ## Errors
 
 `SearchError`: `search/invalid-field-type`, `search/invalid-input` (400),
-`search/missing-query-fields` (400), `search/index-not-found` (404), `search/index-exists` and
+`search/missing-query-fields` (400), `search/tenant-required`, `search/index-not-found` (404), `search/index-exists` and
 `search/alias-conflict` (409), `search/query-failed` and `search/request-failed`.

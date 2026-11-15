@@ -107,7 +107,7 @@ throw new ValidationError('Invalid date range', [{ path: ['to'], message: 'must 
     `ctx.request.rawBody` or the webhooks package, never `JSON.stringify(body)`.
 15. **Email template values are escaped; `{{{raw}}}` is not.** Never put user input in a triple-brace
     placeholder.
-16. **Search isn't tenant-scoped.** Index `tenantId` and filter on it in every query.
+16. **Search isn't tenant-scoped unless you ask.** Pass `tenantScoped: true` to `DefaultSearch` (Postgres and memory adapters); otherwise index `tenantId` and filter on it in every query.
 17. **Doubles must pass the contract suites.** When you change a real adapter's behavior, update the
     suite in `packages/testing/src/contracts/` so the double is forced to match.
 18. **Use design-catalog markup; never invent classes.** `m-` classes and data attributes are the
