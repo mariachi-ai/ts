@@ -54,7 +54,10 @@ export class PinoLoggerAdapter implements Logger {
       if (options?.pretty) {
         // In-process and synchronous (no worker thread), so lines come out in order and nothing is lost at exit
         const pretty = loadOptionalPeer<(options: Record<string, unknown>) => pino.DestinationStream>('pino-pretty', 'PinoLoggerAdapter({ pretty: true })', import.meta.url);
-        this.#instance = pino(settings, pretty({ sync: true, ...(options.destination ? { destination: options.destination } : {}) }));
+        // Colour is for a terminal. Given somewhere else to write (a file, a test's stream), the lines are plain text;
+        // on stdout pino-pretty decides, which honours NO_COLOR and FORCE_COLOR.
+        const destination = options.destination as (NodeJS.WritableStream & { isTTY?: boolean }) | undefined;
+        this.#instance = pino(settings, pretty({ sync: true, ...(destination ? { destination, colorize: destination.isTTY === true } : {}) }));
       } else {
         this.#instance = options?.destination ? pino(settings, options.destination as pino.DestinationStream) : pino(settings);
       }
