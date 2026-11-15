@@ -33,7 +33,8 @@ export function formatSearch(found: DocSearchResult): string[] {
     const hidden = doc.total - doc.matches.length;
     if (hidden > 0) lines.push(`${DIM}  +${hidden} more in ${doc.name}: mariachi docs ${doc.name} --search ${found.words.join(' ')}${RESET}`);
   }
-  lines.push(`${DIM}${found.total} line(s) in ${found.docs.length} doc(s). Read one with: mariachi docs <the part before the colon>${RESET}`);
+  const count = (n: number, one: string) => `${n} ${one}${n === 1 ? '' : 's'}`;
+  lines.push(`${DIM}${count(found.total, 'line')} in ${count(found.docs.length, 'doc')}. Read one with: mariachi docs <the part before the colon>${RESET}`);
   return lines;
 }
 

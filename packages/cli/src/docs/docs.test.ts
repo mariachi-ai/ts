@@ -217,7 +217,7 @@ describe('mariachi docs', () => {
   it('searches every doc, or the one named before --search, and each line says what to read', async () => {
     await docs('--search', 'tables missing');
     expect(out.join('\n')).toMatch(/jobs#[a-z0-9-]+.*:\d+ {2}.*tables-missing/);
-    expect(out.at(-1)).toMatch(/\d+ line\(s\) in \d+ doc\(s\)/);
+    expect(out.at(-1)).toMatch(/\d+ lines? in \d+ docs?\./);
     out.length = 0;
     await docs('jobs', '--search', 'retry');
     const lines = out.filter((line) => /:\d+ {2}/.test(line));
