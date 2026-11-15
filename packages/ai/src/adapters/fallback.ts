@@ -28,6 +28,14 @@ export class FallbackAdapter implements Adapter {
     if (providers.length === 0) throw new AIError('ai/config', 'FallbackAdapter requires at least one provider');
   }
 
+  /**
+   * True only when every provider would report tool calls in a stream: it says so itself, or it has
+   * no `stream`, in which case its reply is generated whole and its tool calls passed on.
+   */
+  get streamsToolCalls(): boolean {
+    return this.providers.every((provider) => !provider.adapter.stream || provider.adapter.streamsToolCalls === true);
+  }
+
   private attempts(config: CallConfig): Array<{ provider: FallbackProvider; model: string | undefined }> {
     return this.providers.flatMap((provider, index) => {
       const own = provider.models ?? [];

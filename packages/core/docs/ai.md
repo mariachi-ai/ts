@@ -108,6 +108,9 @@ this.post('/chat', { schema: { body: chatInput } }, async (ctx, body) => {
   tools, and a closing `done` event with the usage and the model.
 - The last chunk of `ai.stream` has `done: true`, the `usage`, the `model`, and `toolCalls` when the
   model asked for any. They are in the session's history, as they are after `send`.
+- Calling an adapter directly? `adapter.streamsToolCalls` is true when its stream ends that way. The
+  built-in adapters do, and a `FallbackAdapter` does when every provider in it does. Stream when it
+  is true, and use `generate` when it isn't.
 - **Cancelling.** When the client goes away the transport stops reading, and a stream nobody reads
   cancels its provider call: you stop paying for a reply no one will see. Nothing needs wiring for
   that. To cancel for a reason of your own, pass `{ signal }` to `send`, `stream` or `runAgent`; a

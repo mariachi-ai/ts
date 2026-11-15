@@ -86,6 +86,9 @@ export type ModelFactory = (modelId: string) => LanguageModel | Promise<Language
  * subclasses; pass another provider's model factory to support it without a new adapter.
  */
 export class AISdkAdapter {
+  /** `stream` ends with a chunk that has the model's tool calls, the usage and the model. */
+  readonly streamsToolCalls = true;
+
   constructor(
     readonly name: string,
     private readonly model: ModelFactory,

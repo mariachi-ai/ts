@@ -27,6 +27,12 @@ export interface AdapterCallConfig {
 export interface Adapter {
   generate(messages: AIMessage[], config: AdapterCallConfig): Promise<AIResponse>;
   stream?(messages: AIMessage[], config: AdapterCallConfig): AsyncIterable<StreamChunk>;
+  /**
+   * True when `stream` reports the tools the model asked for, as `toolCalls` on its last chunk. The
+   * built-in adapters do. A caller that needs tool calls can stream when this is true and use
+   * `generate` when it isn't, so an adapter of your own that streams text only loses nothing.
+   */
+  readonly streamsToolCalls?: boolean;
 }
 
 export interface SessionState {
