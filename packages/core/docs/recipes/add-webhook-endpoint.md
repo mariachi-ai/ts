@@ -134,7 +134,10 @@ export const githubPushJob = defineJob({
 
 Register it in `src/jobs/index.ts` (`mariachi generate job github-push` does this). The job id is
 derived from the provider's delivery id, so a redelivery that slips past the idempotency store still
-doesn't enqueue twice.
+doesn't enqueue twice. That holds only while the first job is still in the queue. Without
+`idempotency`, a redelivery of an event whose job has completed is dropped at enqueue on BullMQ
+(while the completed job is kept) but processed on the Postgres queue. Configure `idempotency` for
+at-most-once on both.
 
 ## 4. Server: in `src/app.ts`
 
