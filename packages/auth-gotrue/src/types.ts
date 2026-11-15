@@ -14,7 +14,7 @@ export interface GoTrueConfig {
   /**
    * Learn the issuer from GoTrue's discovery document (`<url>/.well-known/openid-configuration`)
    * instead of assuming `url`: for an app that reaches GoTrue on an internal address and doesn't
-   * know its own public origin (in an Ensemble preview, `url: 'http://127.0.0.1:9999'`). The
+   * know its own public origin (a sidecar, say: `url: 'http://127.0.0.1:9999'`). The
    * document is re-read after `jwksCacheMaxAgeMs`, like the JWKS, so a fork that changes the host
    * (and with it GoTrue's issuer) is picked up. Only use it with a `url` you trust as much as the
    * JWKS (the same GoTrue). Not with `issuer`.

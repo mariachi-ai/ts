@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
-import { AuthError } from '@mariachi/core';
+import { AuthError, isReservedTenantId } from '@mariachi/core';
 import type { AuthProvider, AuthProviderWebhookConfig, ResolvedIdentity } from '@mariachi/auth';
 import type { AsymmetricAlgorithm, WorkOSConfig, WorkOSJwtPayload } from './types';
 import { WorkOSWebhookHandler } from './webhooks/handler';
@@ -84,6 +84,10 @@ export class WorkOSAuthProvider implements AuthProvider {
         ...(typeof payload.scope === 'string' ? payload.scope.split(/\s+/).filter(Boolean) : []),
       ]),
     ];
+    // Personal tenants are given after verification (withPersonalTenants), never read from a claim.
+    if (isReservedTenantId(typeof payload.org_id === 'string' ? payload.org_id : undefined)) {
+      throw new AuthError('auth/invalid-token', 'WorkOS token names a tenant in the reserved personal-tenant namespace');
+    }
     return {
       userId: payload.sub,
       tenantId: typeof payload.org_id === 'string' ? payload.org_id : '',

@@ -1,5 +1,5 @@
 import type { Context, IdempotencyStore, Logger, MetricsAdapter } from '@mariachi/core';
-import { createContext, runOnce } from '@mariachi/core';
+import { AuthError, createContext, isReservedTenantId, runOnce } from '@mariachi/core';
 import type { CommunicationLayer } from '@mariachi/communication';
 import type { AuthWebhookHandler, AuthWebhookEvent } from './types';
 
@@ -95,6 +95,10 @@ export function createAuthWebhookDispatcher(config: AuthWebhookDispatcherConfig)
       headers: Record<string, string | string[] | undefined>,
     ): Promise<AuthWebhookDispatchResult> {
       const event = await handler.verify(rawBody, headers);
+      // An organization id that looks like a personal tenant would run the procedure inside that user's tenant.
+      if (isReservedTenantId(event.tenantId)) {
+        throw new AuthError('auth/webhook-invalid-payload', 'Webhook names a tenant in the reserved personal-tenant namespace');
+      }
       const procedure = `${prefix}.${event.type}`;
 
       if (!idempotency) {

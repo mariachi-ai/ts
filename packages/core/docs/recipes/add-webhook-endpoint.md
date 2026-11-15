@@ -136,7 +136,7 @@ Register it in `src/jobs/index.ts` (`mariachi generate job github-push` does thi
 derived from the provider's delivery id, so a redelivery that slips past the idempotency store still
 doesn't enqueue twice.
 
-## 4. Server: in `src/main.ts`
+## 4. Server: in `src/app.ts`
 
 ```ts
 import { RedisIdempotencyStore, createRedisClient } from '@mariachi/cache';
@@ -147,7 +147,7 @@ const githubSecret = await createSecrets().getOrThrow('GITHUB_WEBHOOK_SECRET'); 
 
 // The generated main.ts builds the queue inline; lift it into a variable so the webhook server shares it.
 const jobBackend = createJobQueue({ adapter: 'bullmq', redisUrl: config.redis.url, prefix: config.serviceName }, logger);
-const jobs = new DefaultJobs({ queue: jobBackend }, instrumentation);
+const jobs = new DefaultJobs({ queue: jobBackend }, instrumentation);   // the generated app.ts already has this
 
 const webhooks = new WebhookServer(
   { name: 'webhooks', prefix: '/webhooks', logger },

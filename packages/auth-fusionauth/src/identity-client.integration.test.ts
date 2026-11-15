@@ -93,8 +93,8 @@ const PASSWORD = 'a-long-password-1';
 describe('FusionAuthIdentityClient against FusionAuth', () => {
   it('signs in, refreshes, and signs out (the refresh token stops working)', async () => {
     const addr = email('pw');
-    const user = await client.createUser({ email: addr, emailVerified: true, password: PASSWORD, name: 'Pat Word', externalId: 'ensemble-uuid-it' });
-    expect(user).toMatchObject({ email: addr, emailVerified: true, name: 'Pat Word', externalId: 'ensemble-uuid-it' });
+    const user = await client.createUser({ email: addr, emailVerified: true, password: PASSWORD, name: 'Pat Word', externalId: 'app-uuid-it' });
+    expect(user).toMatchObject({ email: addr, emailVerified: true, name: 'Pat Word', externalId: 'app-uuid-it' });
 
     const out = await client.signInWithPassword({ email: addr, password: PASSWORD });
     if (out.status !== 'signed-in') throw new Error(`expected signed-in, got ${out.status}`);

@@ -770,6 +770,9 @@ importers:
       '@mariachi/tenancy':
         specifier: workspace:*
         version: link:../tenancy
+      '@mariachi/testing':
+        specifier: workspace:*
+        version: link:../testing
       '@types/node':
         specifier: ^22
         version: 22.19.11
@@ -1516,6 +1519,9 @@ importers:
       '@mariachi/storage':
         specifier: workspace:*
         version: link:../storage
+      testcontainers:
+        specifier: '>=10'
+        version: 10.28.0
       zod:
         specifier: ^3
         version: 3.25.76

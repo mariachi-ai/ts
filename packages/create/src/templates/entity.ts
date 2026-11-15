@@ -11,6 +11,7 @@ export function entityFiles(n: Names): Record<string, string> {
     [`${dir}/${n.pluralKebab}.handler.ts`]: handler(n),
     [`${dir}/${n.pluralKebab}.service.test.ts`]: serviceTest(n),
     [`src/api/controllers/${n.pluralKebab}.controller.ts`]: controller(n),
+    [`src/api/controllers/${n.pluralKebab}.e2e.test.ts`]: e2eTest(n),
   };
 }
 
@@ -232,4 +233,66 @@ export class ${n.pluralPascal}Controller extends BaseController {
     });
   }
 }
+`;
+
+const e2eTest = (n: Names) => `import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { startApp, type RunningApp } from '../../testing/e2e';
+
+// Two people in two tenants
+const ada = { userId: 'user-ada', tenantId: 'tenant-a' };
+const lin = { userId: 'user-lin', tenantId: 'tenant-b' };
+const path = '/api/${n.pluralKebab}';
+
+let running: RunningApp;
+beforeAll(async () => {
+  running = await startApp();
+});
+afterAll(() => running?.stop());
+
+describe('${n.pluralKebab.replace(/-/g, ' ')} over HTTP', () => {
+  it('creates, reads, lists, updates and deletes', async () => {
+    const created = await running.request(path, { as: ada, json: { name: 'First' } });
+    expect(created.status).toBe(201);
+    const ${n.camel} = (await created.json()) as { id: string; name: string };
+    expect(${n.camel}).toMatchObject({ name: 'First' });
+
+    const read = await running.request(\`\${path}/\${${n.camel}.id}\`, { as: ada });
+    expect(await read.json()).toMatchObject({ id: ${n.camel}.id, name: 'First' });
+
+    const listed = (await (await running.request(path, { as: ada })).json()) as { data: Array<{ id: string }> };
+    expect(listed.data.map((row) => row.id)).toContain(${n.camel}.id);
+
+    const updated = await running.request(\`\${path}/\${${n.camel}.id}\`, { as: ada, method: 'PATCH', json: { name: 'Renamed' } });
+    expect(await updated.json()).toMatchObject({ id: ${n.camel}.id, name: 'Renamed' });
+
+    expect((await running.request(\`\${path}/\${${n.camel}.id}\`, { as: ada, method: 'DELETE' })).status).toBe(204);
+    expect((await running.request(\`\${path}/\${${n.camel}.id}\`, { as: ada })).status).toBe(404);
+  });
+
+  it("keeps one tenant's rows from another", async () => {
+    const created = await running.request(path, { as: ada, json: { name: 'Private' } });
+    const { id } = (await created.json()) as { id: string };
+
+    expect((await running.request(\`\${path}/\${id}\`, { as: lin })).status).toBe(404);
+    expect((await running.request(\`\${path}/\${id}\`, { as: lin, method: 'PATCH', json: { name: 'Taken' } })).status).toBe(404);
+    expect((await running.request(\`\${path}/\${id}\`, { as: lin, method: 'DELETE' })).status).toBe(404);
+    const theirs = (await (await running.request(path, { as: lin })).json()) as { data: Array<{ id: string }> };
+    expect(theirs.data.map((row) => row.id)).not.toContain(id);
+    expect(await (await running.request(\`\${path}/\${id}\`, { as: ada })).json()).toMatchObject({ name: 'Private' });
+  });
+
+  it('asks for a token, and refuses one it does not know', async () => {
+    expect((await running.request(path)).status).toBe(401);
+    expect((await running.request(path, { headers: { authorization: 'Bearer made-up' } })).status).toBe(401);
+    const token = running.auth.tokenFor(ada);
+    running.auth.revoke(token);
+    expect((await running.request(path, { headers: { authorization: \`Bearer \${token}\` } })).status).toBe(401);
+  });
+
+  it('refuses a body the contract rules out', async () => {
+    const res = await running.request(path, { as: ada, json: { name: '' } });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ error: { code: expect.any(String) } });
+  });
+});
 `;

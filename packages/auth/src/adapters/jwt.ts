@@ -1,6 +1,6 @@
 import jwt, { type Algorithm, type SignOptions, type VerifyOptions } from 'jsonwebtoken';
 import { z } from 'zod';
-import { AuthError, ConfigError } from '@mariachi/core';
+import { AuthError, ConfigError, isReservedTenantId } from '@mariachi/core';
 import type { AuthenticationAdapter, IdentityPayload, IdentityType, ResolvedIdentity } from '../types';
 
 export interface JWTAdapterOptions {
@@ -14,6 +14,12 @@ export interface JWTAdapterOptions {
   expiresIn?: string | number;
   clockToleranceSeconds?: number;
   identityType?: IdentityType;
+  /**
+   * Refuse a token that names no tenant. Default true. Set false for an app whose users can have
+   * no organization, and wrap the adapter in `withPersonalTenants` so they get a personal tenant;
+   * on its own, false yields an identity with an empty tenant, which the API facade refuses.
+   */
+  requireTenant?: boolean;
 }
 
 const HMAC: Algorithm[] = ['HS256', 'HS384', 'HS512'];
@@ -83,10 +89,13 @@ export class JWTAdapter implements AuthenticationAdapter {
     const c = parsed.data;
     const userId = c.userId ?? c.sub;
     const tenantId = c.tenantId ?? c.tid;
-    if (!userId || !tenantId) throw new AuthError('auth/invalid-token', 'Token missing subject or tenant');
+    if (!userId) throw new AuthError('auth/invalid-token', 'Token missing subject or tenant');
+    if (!tenantId && this.options.requireTenant !== false) throw new AuthError('auth/invalid-token', 'Token missing subject or tenant');
+    // Personal tenants are given after verification (withPersonalTenants), never read from a claim.
+    if (isReservedTenantId(tenantId)) throw new AuthError('auth/invalid-token', 'Token names a tenant in the reserved personal-tenant namespace');
     return {
       userId,
-      tenantId,
+      tenantId: tenantId ?? '',
       scopes: c.scopes ?? (c.scope ? c.scope.split(' ').filter(Boolean) : []),
       roles: c.roles,
       identityType: this.options.identityType ?? 'session',
@@ -105,10 +114,13 @@ export class JWTAdapter implements AuthenticationAdapter {
       ...(this.options.issuer ? { issuer: this.options.issuer } : {}),
       ...(this.options.audience ? { audience: this.options.audience } : {}),
     };
+    if (isReservedTenantId(payload.tenantId)) {
+      throw new ConfigError('auth/reserved-tenant', 'A token never carries a personal tenant: sign it with no tenant and verify through withPersonalTenants');
+    }
     return jwt.sign(
       {
         userId: payload.userId,
-        tenantId: payload.tenantId,
+        ...(payload.tenantId ? { tenantId: payload.tenantId } : {}),
         scopes: payload.scopes,
         roles: payload.roles,
         apiKeyId: payload.apiKeyId,

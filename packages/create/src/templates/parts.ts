@@ -140,7 +140,7 @@ const integrationClient = (n: Names) => `import { IntegrationError, retry, type 
 
 export interface ${n.pascal}ClientOptions {
   baseUrl: string;
-  /** Load from secrets/config in main.ts; never read process.env here. */
+  /** Load from secrets/config in app.ts; never read process.env here. */
   apiKey: string;
   timeoutMs?: number;
   attempts?: number;

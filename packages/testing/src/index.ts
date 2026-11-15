@@ -15,6 +15,8 @@ export { createTestContext } from './factories/context.factory';
 export { TestLogger, createTestSetup, type LogEntry, type TestSetup } from './setup';
 
 export { createTestHarness, TestHarnessLogger, type TestHarness } from './harness';
+export { createTestAuth, type TestAuth, type TestAuthOptions, type TestIdentity, type TestIdentityType, type VerifiedTestIdentity } from './auth';
+export { startPostgres, startRedis, stopContainers, type ContainerOptions } from './containers';
 export { TestTracer, TestMetrics, type RecordedSpan, type RecordedMetric } from './adapters/observability';
 
 export type {

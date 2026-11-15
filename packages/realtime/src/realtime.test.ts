@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createContext, type Logger } from '@mariachi/core';
+import { createContext, markPersonalTenant, type Logger } from '@mariachi/core';
 import {
   CLOSE_CODES,
   DefaultRealtime,
@@ -116,6 +116,18 @@ describe('channel names', () => {
 });
 
 describe('Realtime', () => {
+  it('refuses a connection whose personal tenant was not given by withPersonalTenants', async () => {
+    const { a } = cluster();
+    await a.connect();
+    const forged = new FakeSocket();
+    expect(await a.handleConnect({ userId: 'mallory', tenantId: 'user.main.alice' }, forged)).toBeNull();
+    expect(forged.closed?.code).toBe(4001);
+    expect(forged.sent[0]).toMatchObject({ type: 'error', code: 'realtime/unauthorized' });
+    const given = new FakeSocket();
+    expect(await a.handleConnect(markPersonalTenant({ userId: 'alice', tenantId: 'user.main.alice' }), given)).not.toBeNull();
+    await a.disconnect();
+  });
+
   it("refuses a tenant-channel broadcast from a tenant whose id holds a colon", async () => {
     const { a } = cluster();
     await a.connect();

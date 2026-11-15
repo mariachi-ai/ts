@@ -1,6 +1,7 @@
 # Recipe: wiring and bootstrap
 
-`mariachi init` generates `src/main.ts`, a working composition root. This recipe explains its order and
+`mariachi init` generates `src/app.ts`, a working composition root (`createApp()`), and a
+`src/main.ts` that starts it. This recipe explains its order and
 shows how to add resources and split processes.
 
 ## Order
@@ -21,7 +22,10 @@ Shutdown (SIGTERM/SIGINT) runs the hooks in reverse: transports stop accepting w
 drain, then connections close. Readiness (`/api/health/ready`) reports unhealthy while starting and
 while draining, so load balancers stop routing before connections close.
 
-## The generated main.ts, annotated
+## The generated createApp(), annotated
+
+`src/app.ts` exports `createApp(options)`. It returns the app with `start()` and `stop()`, so
+`src/main.ts` is three lines and a test can start the same app (see [testing.md](../testing.md#end-to-end-tests)).
 
 ```ts
 const { config, logger, tracer, metrics, container, lifecycle } = bootstrap();
@@ -50,7 +54,7 @@ for (const controller of createControllers(communication)) api.registerControlle
 lifecycle.startup.register({ name: 'api', priority: 100, fn: () => api.listen(config.server.port, config.server.host) });
 lifecycle.shutdown.register({ name: 'api', priority: 100, fn: () => api.close() });
 
-await lifecycle.start();
+return { api, communication, database, jobs, start: () => lifecycle.start(), stop: () => lifecycle.stop() };
 ```
 
 Handlers are registered before any transport starts, so no request can reach an unregistered
@@ -58,7 +62,7 @@ procedure. A controller calling a name nobody registered fails with `communicati
 
 ## Adding resources
 
-Add each resource to `ServiceDeps` in `src/services/index.ts` and pass it in from `main.ts`.
+Add each resource to `ServiceDeps` in `src/services/index.ts` and pass it in from `createApp()`.
 
 ```ts
 const cacheConfig = { adapter: 'redis', url: config.redis.url, prefix: config.serviceName };
