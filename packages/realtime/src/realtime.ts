@@ -226,7 +226,12 @@ export abstract class Realtime implements Instrumentable, Disposable {
   }
 
   /** Sends to every subscriber of `channel` on every instance. */
-  async broadcast(_ctx: Context, channel: string, data: unknown, options: { excludeConnectionId?: string } = {}): Promise<void> {
+  async broadcast(ctx: Context, channel: string, data: unknown, options: { excludeConnectionId?: string } = {}): Promise<void> {
+    // A tenant whose id holds a colon can't subscribe to any tenant channel, so a tenant channel
+    // built from that id can only reach another tenant's subscribers.
+    if ((channel === 'tenant' || channel.startsWith('tenant:')) && ctx.tenantId?.includes(':')) {
+      throw new RealtimeError('realtime/invalid-channel', 'A tenant id containing ":" can\'t broadcast to a tenant channel: the name could be read as another tenant\'s channel');
+    }
     return withSpan(this.tracer, 'realtime.broadcast', { channel }, () =>
       this.fanout({ kind: 'channel', channel, excludeConnectionId: options.excludeConnectionId }, { type: 'message', channel, data }),
     );
