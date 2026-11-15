@@ -890,13 +890,13 @@ const reading = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh"
           ${photo(1, 'calendar-days', 'A calendar on a kitchen table', '', '3 / 2', 'var(--m-radius-md)')}
           <p>You can ask to move a stay to new dates as long as it hasn't started. Your host sees the request with the new price and has 24 hours to answer. Until they do, your original dates stay booked.</p>
           <h2 style="${h2Public}">Before you ask</h2>
-          <ul class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-6)">
+          <ul class="m-stack" data-gap="2" style="list-style: disc; padding-inline-start: var(--m-space-6)">
             <li>Check the place is free on the new dates. Dates in grey on its calendar are taken.</li>
             <li>See whether the <a href="#" style="${link}">price for the new dates</a> is higher. If it is, you pay the difference when the host says yes.</li>
             <li>Read the <a href="#" style="${link}">cancelling rules</a>. A change counts from the day you ask, not the day it's accepted.</li>
           </ul>
           <h2 style="${h2Public}">Asking for new dates</h2>
-          <ol class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-6)">
+          <ol class="m-stack" data-gap="2" style="list-style: decimal; padding-inline-start: var(--m-space-6)">
             <li>Open <a href="#" style="${link}">Trips</a> and choose the stay.</li>
             <li>Choose Change dates, pick the new ones, and check the new total.</li>
             <li>Send the request. We'll message you as soon as your host answers.</li>
