@@ -46,6 +46,8 @@ export class MemoryJobAdapter implements JobQueue, JobWorker, JobScheduler {
   private readonly completedListeners: JobCompletedListener[] = [];
   private readonly schedules = new Map<string, ScheduleDefinition>();
   private readonly scheduleTimers = new Map<string, NodeJS.Timeout>();
+  /** The last time each schedule ran, kept across stop and start so that time is not run again. */
+  private readonly lastTicks = new Map<string, Date>();
   private running = false;
   private readonly inflight = new Set<Promise<void>>();
   private readonly abort = new AbortController();
@@ -109,19 +111,23 @@ export class MemoryJobAdapter implements JobQueue, JobWorker, JobScheduler {
   register(schedule: ScheduleDefinition): void {
     // Read now, so a cron expression that can't be read fails where it is written
     nextRun(schedule, new Date());
+    const before = this.schedules.get(schedule.name);
+    // New timing is a new schedule: what the old one last ran says nothing about it
+    if (before && (before.cron !== schedule.cron || before.timezone !== schedule.timezone)) this.lastTicks.delete(schedule.name);
     this.schedules.set(schedule.name, schedule);
-    if (this.running) this.arm(schedule);
+    if (this.running) this.arm(schedule, this.armFrom(schedule.name));
   }
 
   async unregister(name: string): Promise<void> {
     this.schedules.delete(name);
+    this.lastTicks.delete(name);
     this.disarm(name);
   }
 
   async start(): Promise<void> {
     this.running = true;
     for (const job of this.pending.values()) if (!job.timer) this.schedule(job, 0);
-    for (const schedule of this.schedules.values()) this.arm(schedule);
+    for (const schedule of this.schedules.values()) this.arm(schedule, this.armFrom(schedule.name));
   }
 
   async stop(): Promise<void> {
@@ -129,6 +135,11 @@ export class MemoryJobAdapter implements JobQueue, JobWorker, JobScheduler {
     for (const job of this.pending.values()) if (job.timer) clearTimeout(job.timer);
     for (const name of [...this.scheduleTimers.keys()]) this.disarm(name);
     await Promise.allSettled([...this.inflight]);
+  }
+
+  /** Where to count a schedule's next time from: now, or its last run if the clock reads earlier than that. */
+  private armFrom(name: string): Date {
+    return new Date(Math.max(this.lastTicks.get(name)?.getTime() ?? 0, Date.now()));
   }
 
   private disarm(name: string): void {
@@ -160,7 +171,8 @@ export class MemoryJobAdapter implements JobQueue, JobWorker, JobScheduler {
       void this.enqueue(schedule.jobName, schedule.data ?? {}, { jobId: `schedule:${schedule.name}:${due.toISOString()}` }).catch((error: unknown) =>
         this.logger.error({ schedule: schedule.name, err: error }, 'could not enqueue a scheduled job'),
       );
-      this.arm(schedule, new Date(Math.max(due.getTime(), Date.now())));
+      this.lastTicks.set(schedule.name, due);
+      this.arm(schedule, this.armFrom(schedule.name));
     }, Math.max(0, wait));
     // A schedule alone doesn't keep the process alive
     timer.unref?.();
