@@ -74,12 +74,6 @@
   }
 
   .m-avatar-group > .m-avatar {
-    /*
-     * The overlap an initials avatar can take without covering its letters: two capitals are about
-     * 1.5em wide, so the next avatar stops where they end. Large avatars take the full overlap.
-     */
-    --_fit: max(0px, min(var(--_overlap), var(--_size) - var(--m-avatar-ring-width) - 1.5em));
-
     box-shadow: 0 0 0 var(--m-avatar-ring-width) var(--m-avatar-ring-color);
   }
 
@@ -87,15 +81,11 @@
     margin-inline-start: calc(var(--_overlap) * -1);
   }
 
-  .m-avatar-group > .m-avatar:not(img, :has(> img)) + .m-avatar {
-    margin-inline-start: calc(var(--_fit) * -1);
-  }
-
   /*
    * Each initials avatar but the last is partly covered by the next one, so its letters centre in the
    * part that stays visible instead of running under the neighbour. Images keep the full box.
    */
   .m-avatar-group > .m-avatar:not(:last-child, img, :has(> img)) {
-    padding-inline-end: calc(var(--_fit) + var(--m-avatar-ring-width));
+    padding-inline-end: calc(var(--_overlap) + var(--m-avatar-ring-width));
   }
 }

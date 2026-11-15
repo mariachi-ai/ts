@@ -94,7 +94,7 @@ the source does something else, and say how you know.
 | **The select indicator.** A solid triangle or an open chevron | `components.select.chevronStroke` (`50%` solid; a length such as `1.5px` draws a chevron) | Solid |
 | **A fourth radius step,** for a scale that needs one (a 12px between 8 and 16) | `radius.xl` | Equal to `radius.lg` |
 | **Rings and halos** around avatars or a play button | `ring.width`, `ring.offset`, `components.avatar.haloColor` | 2px, 2px away |
-| **Avatars.** Initials take the ramp step nearest `initialsScale` × the size; the group overlap is a positive distance | `components.avatar.initialsScale`, `.groupOverlap` | `0.38`, `0.5rem` |
+| **Avatars.** Initials take the ramp step nearest `initialsScale` × the size; the group overlap is a positive distance, applied exactly. A heavy overlap on small initials avatars covers part of the letters, so pick it knowing that (stacked groups in most sources are photos) | `components.avatar.initialsScale`, `.groupOverlap` | `0.38`, `0.5rem` |
 | **Money figures.** The currency sign and the cents (`.m-amount-currency`, `.m-amount-cents`), smaller or raised | `components.amount.*` | Plain, tabular digits |
 | **A neutral notice on a surface,** when the neutral alert takes the surface colour (`data-tone="notice"`) | `components.alert.notice.*` | The sunken fill and a hairline |
 | **Menu group labels** | `components.popover.labelWeight` | Semibold |

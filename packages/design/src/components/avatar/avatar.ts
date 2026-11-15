@@ -30,12 +30,13 @@ export const avatar = defineComponent({
     ringWidth: t.length('Ring width in a group', ref('ring.width')),
     haloColor: t.color('Ring colour around a single avatar ([data-ring])', ref('color.accent.default')),
     haloWidth: t.length('Ring width around a single avatar ([data-ring])', ref('ring.width')),
-    groupOverlap: t.length('How far grouped avatars overlap, as a positive distance; less after an initials avatar when it would cover the letters', '0.5rem'),
+    groupOverlap: t.length('How far grouped avatars overlap, as a positive distance', '0.5rem'),
   },
   contrast: [{ fg: 'fg', bg: 'bg', min: 4.5 }],
   a11y: [
     'Image avatars need alt text with the person\'s name; use alt="" when the name is printed right next to it.',
     'Initials avatars are text: add aria-label (or .m-sr-only text) with the full name, and aria-hidden on the initials when the name is visible nearby.',
     'In a group with a "+3" overflow avatar, say what the number means ("3 more members").',
+    'A heavy overlap on small initials avatars covers part of the letters (the initials centre in the visible part, but two letters need about 1.5em): pick the group overlap knowing that, or use photos in stacked groups.',
   ],
 });
