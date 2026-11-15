@@ -1,0 +1,59 @@
+@layer mariachi.components {
+  .m-dropzone {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--m-dropzone-gap);
+    min-block-size: var(--m-dropzone-min-height);
+    padding: var(--m-dropzone-padding);
+    border: var(--m-dropzone-border-width) var(--m-dropzone-border-style) var(--m-dropzone-border);
+    border-radius: var(--m-dropzone-radius);
+    background: var(--m-dropzone-bg);
+    color: var(--m-dropzone-fg);
+    font-size: var(--m-dropzone-font-size);
+    text-align: center;
+    cursor: pointer;
+    transition:
+      background-color var(--m-motion-duration-fast) var(--m-motion-easing-standard),
+      border-color var(--m-motion-duration-fast) var(--m-motion-easing-standard);
+  }
+
+  /* The input covers the whole area: a click opens the picker, a drop anywhere lands on it */
+  .m-dropzone > input[type="file"] {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    opacity: 0;
+    cursor: pointer;
+  }
+
+  .m-dropzone:hover:not(:has(> input:disabled)) {
+    background: var(--m-dropzone-hover-bg);
+  }
+
+  .m-dropzone:has(> input:focus-visible) {
+    outline: var(--m-focus-width) var(--m-focus-style) var(--m-focus-color);
+    outline-offset: var(--m-focus-offset);
+  }
+
+  .m-dropzone[data-dragover] {
+    border-color: var(--m-dropzone-drag-border);
+    background: var(--m-dropzone-drag-bg);
+  }
+
+  .m-dropzone:has(> input:disabled) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .m-dropzone-title {
+    font-weight: var(--m-dropzone-title-weight);
+  }
+
+  .m-dropzone-hint {
+    color: var(--m-dropzone-hint-fg);
+  }
+}

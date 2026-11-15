@@ -1,0 +1,17 @@
+@layer mariachi.components {
+  .m-amount {
+    font-variant-numeric: var(--m-amount-numeric);
+    white-space: nowrap;
+  }
+
+  .m-amount-currency {
+    margin-inline-end: var(--m-amount-currency-gap);
+    font-size: var(--m-amount-currency-size);
+    vertical-align: var(--m-amount-currency-raise);
+  }
+
+  .m-amount-cents {
+    font-size: var(--m-amount-cents-size);
+    vertical-align: var(--m-amount-cents-raise);
+  }
+}

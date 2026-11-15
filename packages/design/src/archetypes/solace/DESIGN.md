@@ -138,7 +138,7 @@ Use tokens, never colour literals: `var(--m-color-accent-default)`, `var(--m-col
 
 ## Components
 
-All 36 of the library's components, as Solace draws them. Every one is in `gallery.html`.
+The library's components, as Solace draws them; the five newest, at the end of this section, are not drawn for Solace yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 72.5rem, or 60rem for settings, 30rem for flows;
@@ -247,6 +247,10 @@ Sections are 40–64px apart.
 - **Tool call.** A 2px-bordered row with 12px corners, a 16px icon, the name and a 4px status label.
 - **Citation.** A small warm off-white pill with a number; the source in a popover on hover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Solace's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

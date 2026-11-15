@@ -139,7 +139,7 @@ stays dark in both modes and its pills turn white. Stand in for the photo with a
 
 ## Components
 
-All 36 of the library's components, as Sprint draws them. Every one is in `gallery.html`.
+The library's components, as Sprint draws them; the five newest, at the end of this section, are not drawn for Sprint yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: up to 90rem, 48rem for settings and 30rem for forms;
@@ -239,6 +239,10 @@ Full-bleed media sections sit outside the container. Sections are 48px apart.
 - **Citation.** A small pill on the 12% shade with a number; it turns black on hover, and the source
   opens in the white popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Sprint's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

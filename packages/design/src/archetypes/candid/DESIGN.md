@@ -136,7 +136,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Candid draws them. Every one is in `gallery.html`.
+The library's components, as Candid draws them; the five newest, at the end of this section, are not drawn for Candid yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - a flex row that wraps for the three columns (nav, feed, side panel), centred;
@@ -237,6 +237,10 @@ All 36 of the library's components, as Candid draws them. Every one is in `galle
 - the caption at 15px, two comments (name at 600 in a fixed column, then the text), and "View all
   N comments" between hairlines.
 Photos are always token shapes or the person's own images; never stock faces.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Candid's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

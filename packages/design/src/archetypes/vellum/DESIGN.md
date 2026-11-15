@@ -146,7 +146,7 @@ scales are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Vellum draws them. Every one is in `gallery.html`.
+The library's components, as Vellum draws them; the five newest, at the end of this section, are not drawn for Vellum yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, for panes: the 15rem journal column, then a 24rem timeline beside the entry;
@@ -240,6 +240,10 @@ All 36 of the library's components, as Vellum draws them. Every one is in `galle
   icon, the tool's name and its status.
 - **Citation.** A small grey pill with a number; the source in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Vellum's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

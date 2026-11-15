@@ -130,7 +130,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Anthracite draws them. Every one is in `gallery.html`.
+The library's components, as Anthracite draws them; the five newest, at the end of this section, are not drawn for Anthracite yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`: 50rem for the palette, 46rem for settings and forms, 75.25rem for marketing;
@@ -223,6 +223,10 @@ All 36 of the library's components, as Anthracite draws them. Every one is in `g
 - **Tool call.** A hairline row, 8px radius, the tool's name in mono and a status tag.
 - **Citation.** Small numbered chips on the selected fill; the source in a menu on hover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Anthracite's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

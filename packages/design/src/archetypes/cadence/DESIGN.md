@@ -137,7 +137,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Cadence draws them. Every one is in `gallery.html`.
+The library's components, as Cadence draws them; the five newest, at the end of this section, are not drawn for Cadence yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - the app frame: a column the window's height (top bar, panels, now-playing bar), the panels in a
@@ -252,6 +252,10 @@ All 36 of the library's components, as Cadence draws them. Every one is in `gall
   corners, a 16px icon, the tool name and a round status tag.
 - **Citation.** A small pill on the tint with a number; the source shows in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Cadence's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

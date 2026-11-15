@@ -128,7 +128,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Harbor draws them. Every one is in `gallery.html`.
+The library's components, as Harbor draws them; the five newest, at the end of this section, are not drawn for Harbor yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, nested for the window: a 64px rail beside a split of the 26.5rem list column and the
@@ -226,6 +226,10 @@ All 36 of the library's components, as Harbor draws them. Every one is in `galle
 - **Tool call.** A bordered row with 12px corners, the name and a status badge.
 - **Citation.** A small round grey pill with a number; the source in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Harbor's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

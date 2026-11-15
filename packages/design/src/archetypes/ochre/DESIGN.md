@@ -126,7 +126,7 @@ Use tokens, never colour literals: `var(--m-color-accent-default)`, `var(--m-col
 
 ## Components
 
-All 36 of the library's components, as Ochre draws them. Every one is in `gallery.html`.
+The library's components, as Ochre draws them; the five newest, at the end of this section, are not drawn for Ochre yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 42rem for reading, 48rem for settings and lists, 30rem for
@@ -226,6 +226,10 @@ All 36 of the library's components, as Ochre draws them. Every one is in `galler
 - **Citation.** A small numbered chip on the warm fill with 4px corners; the source in a 12px-corner
   card on hover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Ochre's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

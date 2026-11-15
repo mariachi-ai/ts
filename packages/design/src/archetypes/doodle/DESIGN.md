@@ -144,7 +144,7 @@ scales are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Doodle draws them. Every one is in `gallery.html`.
+The library's components, as Doodle draws them; the five newest, at the end of this section, are not drawn for Doodle yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, the 240px sidebar beside the content, and the detail panel (17rem) beside a list;
@@ -235,6 +235,10 @@ All 36 of the library's components, as Doodle draws them. Every one is in `galle
 - **Tool call.** A row with 5px corners: the tool name, a status tag with 5px corners.
 - **Citation.** A small grey tag with a number; the source opens in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Doodle's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

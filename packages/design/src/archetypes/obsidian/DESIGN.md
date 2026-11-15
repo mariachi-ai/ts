@@ -258,7 +258,7 @@ scales are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Obsidian draws them. Every one is in `gallery.html`.
+The library's components, as Obsidian draws them; the five newest, at the end of this section, are not drawn for Obsidian yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, the 232px sidebar beside the inset panel (no gap: the panel has its own margin);
@@ -383,6 +383,10 @@ All 36 of the library's components, as Obsidian draws them. Every one is in `gal
   result (files, branch) in 12px below.
 - **Citation.** A small grey key-like chip with a number; the source in a raised popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Obsidian's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

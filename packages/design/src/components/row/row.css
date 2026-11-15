@@ -1,0 +1,78 @@
+@layer mariachi.components {
+  .m-row {
+    display: flex;
+    align-items: center;
+    gap: var(--m-row-gap);
+    inline-size: 100%;
+    min-block-size: max(var(--m-row-min-height), var(--m-control-min-target));
+    padding: var(--m-row-padding-y) var(--m-row-padding-x);
+    border: 0;
+    border-radius: var(--m-row-radius);
+    background: var(--m-row-bg);
+    color: var(--m-row-fg);
+    font: inherit;
+    font-size: var(--m-row-font-size);
+    text-align: start;
+    text-decoration: none;
+    transition: background-color var(--m-motion-duration-fast) var(--m-motion-easing-standard);
+  }
+
+  :is(a, button, label).m-row:not(:disabled, [aria-disabled="true"]) {
+    cursor: pointer;
+  }
+
+  :is(a, button, label).m-row:hover:not(:disabled, [aria-disabled="true"]) {
+    background: var(--m-row-hover-bg);
+  }
+
+  :is(a, button, label).m-row:active:not(:disabled, [aria-disabled="true"]) {
+    background: var(--m-row-active-bg);
+  }
+
+  .m-row:focus-visible {
+    outline-offset: calc(var(--m-focus-width) * -1);
+  }
+
+  .m-row:is([aria-current]:not([aria-current="false"]), [aria-selected="true"]) {
+    background: var(--m-row-selected-bg);
+    color: var(--m-row-selected-fg);
+  }
+
+  .m-row:is(:disabled, [aria-disabled="true"]) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .m-row-lead,
+  .m-row-trail {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--m-space-2);
+  }
+
+  .m-row-body {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-inline-size: 0;
+  }
+
+  .m-row-title {
+    overflow: hidden;
+    font-weight: var(--m-row-title-weight);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .m-row-meta {
+    color: var(--m-row-meta-fg);
+    font-size: var(--m-row-meta-font-size);
+  }
+
+  .m-row-trail {
+    margin-inline-start: auto;
+    color: var(--m-row-trail-fg);
+    font-size: var(--m-row-meta-font-size);
+  }
+}

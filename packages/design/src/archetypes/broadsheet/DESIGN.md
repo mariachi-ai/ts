@@ -128,7 +128,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Broadsheet draws them. Every one is in `gallery.html`.
+The library's components, as Broadsheet draws them; the five newest, at the end of this section, are not drawn for Broadsheet yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 64rem in the workspace, 45.5rem for reading, 30rem for forms;
@@ -231,6 +231,10 @@ All 36 of the library's components, as Broadsheet draws them. Every one is in `g
   icon, the tool name and a status tag.
 - **Citation.** A small grey pill with a number; the source in a popover on hover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Broadsheet's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

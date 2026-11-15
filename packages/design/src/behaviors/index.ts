@@ -85,6 +85,7 @@ function autogrow(el: HTMLTextAreaElement): void {
  * - `[data-m-copy="text or #id"]`: copies to the clipboard and sets `data-copied` for 1.5s
  * - `[data-m-toast-close]`: removes its toast
  * - `textarea[data-m-autogrow]` and `.m-composer-input`: grow with content where `field-sizing` isn't supported
+ * - `.m-dropzone`: sets `data-dragover` while files are dragged over it (the native input takes the drop)
  *
  * Returns a function that removes the listeners.
  */
@@ -123,9 +124,28 @@ export function enhance(root: Root = document): () => void {
       autogrow(target);
     }
   };
+  // Drop zones: the drag-over state. The native file input under the pointer takes the drop itself.
+  const zoneOf = (event: Event) => (event.target as HTMLElement | null)?.closest?.<HTMLElement>('.m-dropzone') ?? null;
+  const onDragOver = (event: Event) => {
+    const zone = zoneOf(event);
+    if (zone && (event as DragEvent).dataTransfer?.types.includes('Files')) zone.setAttribute('data-dragover', '');
+  };
+  const onDragLeave = (event: Event) => {
+    const zone = zoneOf(event);
+    const to = (event as DragEvent).relatedTarget as Node | null;
+    if (zone && !(to && zone.contains(to))) zone.removeAttribute('data-dragover');
+  };
+  const onDrop = (event: Event) => zoneOf(event)?.removeAttribute('data-dragover');
+  const drags: [string, (event: Event) => void][] = [
+    ['dragenter', onDragOver],
+    ['dragover', onDragOver],
+    ['dragleave', onDragLeave],
+    ['drop', onDrop],
+  ];
   root.addEventListener('click', onClick);
   root.addEventListener('keydown', onKey);
   root.addEventListener('input', onInput);
+  for (const [type, listener] of drags) root.addEventListener(type, listener);
   // Roving tabindex for tablists already in the DOM.
   for (const list of root.querySelectorAll('[role="tablist"]')) {
     const tabs = tabsOf(list);
@@ -136,6 +156,7 @@ export function enhance(root: Root = document): () => void {
     root.removeEventListener('click', onClick);
     root.removeEventListener('keydown', onKey);
     root.removeEventListener('input', onInput);
+    for (const [type, listener] of drags) root.removeEventListener(type, listener);
   };
 }
 

@@ -3,14 +3,19 @@ import { card } from './card/card';
 import { divider } from './divider/divider';
 import { layout } from './layout/layout';
 import { button } from './button/button';
+import { chip } from './chip/chip';
 import { checkbox } from './checkbox/checkbox';
+import { dropzone } from './dropzone/dropzone';
 import { field } from './field/field';
 import { input } from './input/input';
 import { radio } from './radio/radio';
 import { select } from './select/select';
 import { switchComponent } from './switch/switch';
+import { amount } from './amount/amount';
 import { avatar } from './avatar/avatar';
+import { row } from './row/row';
 import { table } from './table/table';
+import { tile } from './tile/tile';
 import { breadcrumb } from './breadcrumb/breadcrumb';
 import { navbar } from './navbar/navbar';
 import { pagination } from './pagination/pagination';
@@ -37,7 +42,7 @@ import { toolCall } from './tool-call/tool-call';
 import { usage } from './usage/usage';
 
 /** Every component, in catalog order (by category, then name). */
-export const componentList = [card, divider, layout, button, checkbox, field, input, radio, select, switchComponent, avatar, table, breadcrumb, navbar, pagination, sidebar, tabs, alert, badge, progress, skeleton, spinner, toast, dialog, popover, tooltip, accordion, code, kbd, prose, chat, citation, composer, thinking, toolCall, usage] as const;
+export const componentList = [card, divider, layout, button, chip, checkbox, dropzone, field, input, radio, select, switchComponent, amount, avatar, row, table, tile, breadcrumb, navbar, pagination, sidebar, tabs, alert, badge, progress, skeleton, spinner, toast, dialog, popover, tooltip, accordion, code, kbd, prose, chat, citation, composer, thinking, toolCall, usage] as const;
 
 /** Component tokens keyed by camel-cased component name (`tool-call` → `toolCall`). */
 export const componentTokens = {
@@ -45,14 +50,19 @@ export const componentTokens = {
   divider: divider.tokens,
   layout: layout.tokens,
   button: button.tokens,
+  chip: chip.tokens,
   checkbox: checkbox.tokens,
+  dropzone: dropzone.tokens,
   field: field.tokens,
   input: input.tokens,
   radio: radio.tokens,
   select: select.tokens,
   switch: switchComponent.tokens,
+  amount: amount.tokens,
   avatar: avatar.tokens,
+  row: row.tokens,
   table: table.tokens,
+  tile: tile.tokens,
   breadcrumb: breadcrumb.tokens,
   navbar: navbar.tokens,
   pagination: pagination.tokens,

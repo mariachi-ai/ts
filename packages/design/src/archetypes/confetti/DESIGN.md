@@ -149,7 +149,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Confetti draws them. Every one is in `gallery.html`.
+The library's components, as Confetti draws them; the five newest, at the end of this section, are not drawn for Confetti yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, the 215px navigation column beside the scene, and side panels of 18–22rem beside the
@@ -252,6 +252,10 @@ All 36 of the library's components, as Confetti draws them. Every one is in `gal
 - **Tool call.** A bordered row with 6px corners: the tool name in mono, a status tag with 4px corners.
 - **Citation.** A small tag with a number; the source opens in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Confetti's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

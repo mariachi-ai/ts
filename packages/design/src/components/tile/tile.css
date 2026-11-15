@@ -1,0 +1,58 @@
+@layer mariachi.components {
+  .m-tile {
+    --_size: var(--m-tile-size-md);
+    --_bg: var(--m-tile-bg);
+    --_fg: var(--m-tile-fg);
+
+    display: inline-grid;
+    flex-shrink: 0;
+    place-items: center;
+    inline-size: var(--_size);
+    block-size: var(--_size);
+    overflow: hidden;
+    border-radius: var(--m-tile-radius);
+    background: var(--_bg);
+    color: var(--_fg);
+    font-size: var(--m-tile-font-size);
+    font-weight: var(--m-tile-font-weight);
+    line-height: 1;
+  }
+
+  .m-tile > svg {
+    inline-size: var(--m-tile-icon-size);
+    block-size: var(--m-tile-icon-size);
+  }
+
+  .m-tile[data-size="sm"] {
+    --_size: var(--m-tile-size-sm);
+  }
+
+  .m-tile[data-size="lg"] {
+    --_size: var(--m-tile-size-lg);
+  }
+
+  .m-tile[data-tone="neutral"] {
+    --_bg: var(--m-tile-neutral-bg);
+    --_fg: var(--m-tile-neutral-fg);
+  }
+
+  .m-tile[data-tone="success"] {
+    --_bg: var(--m-color-success-bg);
+    --_fg: var(--m-color-success-fg);
+  }
+
+  .m-tile[data-tone="warning"] {
+    --_bg: var(--m-color-warning-bg);
+    --_fg: var(--m-color-warning-fg);
+  }
+
+  .m-tile[data-tone="danger"] {
+    --_bg: var(--m-color-danger-bg);
+    --_fg: var(--m-color-danger-fg);
+  }
+
+  .m-tile[data-tone="info"] {
+    --_bg: var(--m-color-info-bg);
+    --_fg: var(--m-color-info-fg);
+  }
+}

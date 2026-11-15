@@ -134,7 +134,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Reel draws them. Every one is in `gallery.html`.
+The library's components, as Reel draws them; the five newest, at the end of this section, are not drawn for Reel yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the 950px column (or `md`, 760px, for forms and steps);
@@ -228,6 +228,10 @@ Sections are 30px apart, each opened by a section heading: 11px tracked capitals
   icon, the tool's name and a capital status tag.
 - **Citation.** A small surface-slate tag with a number; the source in a popover on hover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Reel's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

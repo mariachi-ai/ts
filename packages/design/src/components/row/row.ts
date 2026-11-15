@@ -1,0 +1,50 @@
+import { defineComponent } from '../../contract/component';
+import { ref, t } from '../../contract/tokens';
+
+export const row = defineComponent({
+  name: 'row',
+  title: 'Row',
+  category: 'data',
+  description: 'A tappable list row: a leading icon, tile or avatar, a title with a line of detail, and a trailing value or chevron, with hover, pressed, focus and selected states.',
+  useWhen: 'Lists people tap through: settings, accounts, transactions, files, search results. Use a table when columns must line up.',
+  anatomy: {
+    '.m-row': 'On an <a> or <button> (or a <div> when the row is not interactive), usually inside an <li>',
+    '.m-row-lead': 'Optional leading icon, .m-tile or .m-avatar',
+    '.m-row-body': 'Title and detail, stacked; takes the free width',
+    '.m-row-title': 'The main line',
+    '.m-row-meta': 'Optional muted detail under the title',
+    '.m-row-trail': 'Optional value, badge or chevron at the end',
+    '[aria-current] / [aria-selected="true"]': 'The selected row',
+    ':disabled / [aria-disabled="true"]': 'Disabled',
+  },
+  tokens: {
+    gap: t.length('Space between lead, body and trail', ref('space.3')),
+    paddingX: t.length('Horizontal padding', ref('space.3')),
+    paddingY: t.length('Vertical padding', ref('space.2')),
+    minHeight: t.length('Smallest row height (never under the pointer target size)', ref('control.height.lg')),
+    radius: t.length('Corner radius (0 for full-bleed rows)', ref('radius.md')),
+    bg: t.color('Background at rest', 'transparent'),
+    fg: t.color('Title text', ref('color.fg.default')),
+    hoverBg: t.color('Background on hover', ref('color.bg.sunken')),
+    activeBg: t.color('Background when pressed', ref('color.border.muted')),
+    selectedBg: t.color('Selected row background', ref('color.accent.subtle')),
+    selectedFg: t.color('Selected row title', ref('color.fg.default')),
+    fontSize: t.length('Title size', ref('font.size.md')),
+    titleWeight: t.fontWeight('Title weight', ref('font.weight.medium')),
+    metaFg: t.color('Detail text', ref('color.fg.muted')),
+    metaFontSize: t.length('Detail size', ref('font.size.sm')),
+    trailFg: t.color('Trailing value text', ref('color.fg.muted')),
+  },
+  contrast: [
+    { fg: 'fg', bg: 'color.bg.canvas', min: 4.5 },
+    { fg: 'fg', bg: 'color.bg.surface', min: 4.5 },
+    { fg: 'fg', bg: 'hoverBg', min: 4.5 },
+    { fg: 'selectedFg', bg: 'selectedBg', min: 4.5 },
+    { fg: 'metaFg', bg: 'color.bg.surface', min: 4.5 },
+  ],
+  a11y: [
+    'Make the whole row one <a> (it navigates) or <button> (it acts); never nest another link or button inside it.',
+    'Mark the selected row with aria-current="page" (navigation) or aria-selected="true" (inside a listbox), not with colour alone.',
+    'A chevron or icon in the row is decorative: aria-hidden="true".',
+  ],
+});

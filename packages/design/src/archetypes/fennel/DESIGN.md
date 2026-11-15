@@ -167,7 +167,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Fennel draws them. Every one is in `gallery.html`.
+The library's components, as Fennel draws them; the five newest, at the end of this section, are not drawn for Fennel yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: about 65rem, or 30rem for forms and sign-in;
@@ -290,6 +290,10 @@ Sections are 40px apart.
   with a 16px icon, the tool name and its status badge.
 - **Citation.** A small neutral pill with a number, and the source on hover in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Fennel's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

@@ -135,7 +135,7 @@ Use tokens, never colour literals: `var(--m-color-accent-default)`, `var(--m-spa
 
 ## Components
 
-All 36 of the library's components, as Garnet draws them. Every one is in `gallery.html`.
+The library's components, as Garnet draws them; the five newest, at the end of this section, are not drawn for Garnet yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives: `m-container` (61.25rem text, 75rem frames, 40rem prose),
 `m-split` (the 240px nav beside the sheet; a 20–22rem panel beside a table), `m-grid` (12px gaps between
@@ -218,6 +218,10 @@ product panels), `m-stack` and `m-cluster` inside. A public section is 48–64px
   line ("6 companies picked") and one pill to run it ("Find people").
 - **Citation.** A small round chip with the source's initial; the source opens in a popover.
 - **Usage**, as above: the team's credits as a bar with the figure in tabular numbers.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Garnet's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

@@ -127,7 +127,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Mosaic draws them. Every one is in `gallery.html`.
+The library's components, as Mosaic draws them; the five newest, at the end of this section, are not drawn for Mosaic yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: up to 84rem, or 50rem and 30.5rem (488px) for forms;
@@ -228,6 +228,10 @@ The masonry itself is CSS columns (`columns: 6 10rem; column-gap: var(--m-space-
 - **Citation.** A small grey pill with a number; it turns black on hover and shows the source in a
   menu.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Mosaic's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

@@ -159,7 +159,7 @@ scales are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Summit draws them. Every one is in `gallery.html`.
+The library's components, as Summit draws them; the five newest, at the end of this section, are not drawn for Summit yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 78rem, or 48rem for single-purpose pages and 30rem for forms;
@@ -275,6 +275,10 @@ All 36 of the library's components, as Summit draws them. Every one is in `galle
 - **Tool call.** A row in a 4px-cornered box with a 16px icon, the name and a small 4px status badge.
 - **Citation.** A small 4px chip on the quiet fill with a number; the source opens in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Summit's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

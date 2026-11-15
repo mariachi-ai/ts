@@ -129,7 +129,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Tinker draws them. Every one is in `gallery.html`.
+The library's components, as Tinker draws them; the five newest, at the end of this section, are not drawn for Tinker yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 82rem, 60rem for settings, 45rem for forms;
@@ -224,6 +224,10 @@ Sections are 40–60px apart.
 - **Tool call.** A square row with a hairline border, the tool name in mono, the status as a 2px tag.
 - **Citation.** A small grey numbered tag with 2px corners; the source in a popover on hover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Tinker's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 
