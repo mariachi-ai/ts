@@ -347,6 +347,9 @@ This is a Mariachi backend. Before writing code, read the framework docs shipped
 - \`node_modules/@mariachi/core/docs/README.md\` (start here: layers, conventions, package catalog)
 - \`node_modules/@mariachi/core/docs/recipes/\` (step-by-step: entity, job, webhook, integration)
 
+\`pnpm mariachi docs\` lists them all; \`pnpm mariachi docs <name>\` prints one, and
+\`pnpm mariachi docs --search <words>\` finds the line you need.
+
 ## Layout
 
 | Path | Layer |

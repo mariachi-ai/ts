@@ -5,7 +5,8 @@ behind adapters chosen by config, plus a framework-agnostic design library and a
 it. The opinions exist so that people and coding agents write the same code the same way.
 
 These docs ship inside `@mariachi/core` (`node_modules/@mariachi/core/docs/`) and are the single
-source of truth. Files elsewhere (`CLAUDE.md`, `.cursor/rules`, a generated project's `AGENTS.md`)
+source of truth. `mariachi docs` lists them, prints one or one section, and searches them;
+[`llms.txt`](./llms.txt) is the same index for tools. Files elsewhere (`CLAUDE.md`, `.cursor/rules`, a generated project's `AGENTS.md`)
 only point here.
 
 ## Read first
@@ -17,7 +18,7 @@ only point here.
 
 ## Guides
 
-- [cli.md](./cli.md): `mariachi init`, `generate`, `validate`, `db`, `design`, `explore`
+- [cli.md](./cli.md): `mariachi init`, `generate`, `dev`, `token`, `docs`, `validate`, `db`, `design`, `explore`
 - [http.md](./http.md): `server` vs `api-facade` vs `webhooks`, routes, auth strategies, rate limits, OpenAPI
 - [events.md](./events.md): envelopes, consumer groups, delivery guarantees, dead letters, outbox
 - [jobs.md](./jobs.md): `defineJob`, retries, dedup, scheduling, hooks, dead-letter queue
@@ -34,6 +35,8 @@ only point here.
 - [runbook.md](./runbook.md)
 - [design.md](./design.md): the design library: presets, markup contract, overriding at any granularity, tokens
 - [design-catalog.md](./design-catalog.md): generated list of every component and preset
+- [design-playbook.md](./design-playbook.md): how a design language is made, measured and tested
+- [design-fingerprint.md](./design-fingerprint.md): the measures behind a design language's fingerprint and checks
 - [explorer.md](./explorer.md): browse every package, doc, API, error code and component; how it's built
 - [ai-guide.md](./ai-guide.md): decision trees and gotchas for coding agents
 
