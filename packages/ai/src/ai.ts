@@ -71,7 +71,7 @@ export abstract class AI implements Instrumentable {
    * What every model call ends with, however it was made: its cost worked out, a telemetry entry
    * recorded, metrics counted and a log line written.
    */
-  private account(ctx: Context, session: AISession, call: { model: string; inputTokens: number; outputTokens: number; latencyMs: number; kind: 'send' | 'stream' | 'agent'; cancelled?: boolean }): number {
+  private account(ctx: Context, session: AISession, call: { model: string; inputTokens: number; outputTokens: number; latencyMs: number; kind: 'send' | 'stream' | 'agent'; cancelled?: boolean; estimated?: boolean }): number {
     const cost = estimateCost(call.model, call.inputTokens, call.outputTokens, this.costTable);
     if (!resolveRates(call.model, this.costTable) && !this.unpricedModels.has(call.model)) {
       this.unpricedModels.add(call.model);
@@ -87,6 +87,7 @@ export abstract class AI implements Instrumentable {
       createdAt: new Date(),
       tenantId: ctx.tenantId,
       userId: ctx.userId,
+      ...(call.estimated ? { estimated: true } : {}),
     };
     this.telemetry.record(entry);
 
@@ -107,6 +108,7 @@ export abstract class AI implements Instrumentable {
         latencyMs: call.latencyMs,
         costUsd: cost,
         ...(call.cancelled ? { cancelled: true } : {}),
+        ...(call.estimated ? { estimated: true } : {}),
       },
       call.cancelled ? 'AI response cancelled' : 'AI response received',
     );
@@ -162,9 +164,9 @@ export abstract class AI implements Instrumentable {
 
   /**
    * The reply as it is written, costed and recorded like `send`. The last chunk has `done: true`
-   * with the usage, the model and any tool calls. Pass the request's signal, or just stop reading:
-   * either cancels the provider call, and the part already written is still recorded and costed
-   * with whatever usage the provider reported.
+   * with the usage, the model and any tool calls. Pass a signal, or just stop reading: either cancels
+   * the provider call. The part already written is kept, marked interrupted, and costed: with the
+   * provider's usage if it reported any, else with an estimate, so cancelling isn't a way past a budget.
    */
   async *stream(ctx: Context, session: AISession, message: string, options?: CallOptions): AsyncIterable<StreamChunk> {
     if (!session.stream) throw new AIError('ai/not-supported', 'This session cannot stream');
@@ -191,16 +193,19 @@ export abstract class AI implements Instrumentable {
       failure = error;
       throw await this.failed(ctx, session, error);
     } finally {
-      // Also when the reader stopped early, which ends this generator without an error
-      if (finished || usage || content) {
-        const cancelled = !finished && (failure === undefined || (failure instanceof AIError && failure.code === 'ai/aborted'));
+      // Also when the reader stopped early, which ends this generator without an error. What the session
+      // counted for the call is what is costed: the provider's usage, or its estimate for a reply cut short.
+      const counted = session.lastCall?.() ?? (finished || usage ? { model: last?.model ?? 'default', inputTokens: usage?.inputTokens ?? 0, outputTokens: usage?.outputTokens ?? 0, estimated: false, interrupted: !finished } : undefined);
+      if (counted) {
+        const cancelled = counted.interrupted && (failure === undefined || (failure instanceof AIError && failure.code === 'ai/aborted'));
         this.account(ctx, session, {
-          model: last?.model ?? 'default',
-          inputTokens: usage?.inputTokens ?? 0,
-          outputTokens: usage?.outputTokens ?? 0,
+          model: counted.model,
+          inputTokens: counted.inputTokens,
+          outputTokens: counted.outputTokens,
           latencyMs: performance.now() - start,
           kind: 'stream',
           cancelled,
+          estimated: counted.estimated,
         });
       }
     }

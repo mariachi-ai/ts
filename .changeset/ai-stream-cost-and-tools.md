@@ -13,13 +13,15 @@ survive a saved session.
 - **Streams carry tool calls.** The last chunk has `done: true` with the usage, the `model` and
   `toolCalls`, and they are in the session's history. Before, a streamed reply dropped them.
 - **Cancelling.** `signal` on `send`, `stream` and `runAgent`; a stream nobody reads any more
-  cancels its provider call. A cancelled call ends with `ai/aborted` (HTTP 499), and what the model
-  had written is kept and recorded.
+  cancels its provider call. A cancelled call ends with `ai/aborted` (HTTP 499). What the model had
+  written is kept in the history, marked `interrupted`, and counted: with the provider's usage when
+  it reported any, else with an estimate that counts toward the budget and is marked `estimated`
+  in telemetry.
 - **`toSse(chunks)`** turns `ai.stream(...)` into what `sseResponse` takes: `delta` events, a
   `tool-calls` event, and the closing event's usage and model.
-- **Registered tools are used.** A session offers the model every tool registered with
-  `ai.registerTool`, or the ones it names with the new `toolNames`, or its own `tools`. Before,
-  registering a tool had no effect.
+- **Registered tools are used.** A session offers the model the registered tools it names with the
+  new `toolNames` (`'*'` for all of them), or its own `tools`. A session that names none offers
+  none. Before, registering a tool had no effect at all.
 - **Saved sessions get working tools back.** A session's tools are saved by name and found in the
   registry when it is opened. Before, tools were saved as JSON and came back without their
   handlers. Rows saved that way are read correctly. A named tool that isn't registered is
@@ -32,6 +34,9 @@ survive a saved session.
   not an unhandled rejection.
 - A tool's handler gets the context as its second argument, and a tool with a typed input can be
   registered without a cast.
+
+**Schema:** `ai_messages` gains `interrupted` and `ai_telemetry` gains `estimated` (default
+false). Run `mariachi db generate` and migrate.
 
 **Changed:**
 - A call that fails before the model answers no longer leaves the message in the session's history,

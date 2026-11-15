@@ -5,6 +5,7 @@ import type {
   AISession,
   AITelemetryEntry,
   CallOptions,
+  CallRecord,
   SessionConfig,
   StreamChunk,
   ToolDefinition,
@@ -33,7 +34,14 @@ export interface SessionState {
   config: SessionConfig;
   totalInputTokens: number;
   totalOutputTokens: number;
+  /** What the latest call counted. Kept in memory only. */
+  lastCall?: CallRecord;
 }
+
+/** Tokens in a text when the provider didn't say: about four characters each. */
+const estimateTokens = (text: string): number => Math.ceil(text.length / 4);
+const promptText = (messages: AIMessage[]): string => messages.map((m) => `${m.content}${m.toolCalls?.length ? JSON.stringify(m.toolCalls) : ''}`).join('\n');
+const cancelledError = (): AIError => new AIError('ai/aborted', 'The request was cancelled');
 
 /** Optional persistence for sessions, messages and running token totals. */
 export interface AISessionStore {
@@ -132,6 +140,7 @@ export class SessionManager {
         const current = state();
         return current ? (this.toolsFor(current) ?? []) : [];
       },
+      lastCall: () => state()?.lastCall,
     };
   }
 
@@ -142,11 +151,16 @@ export class SessionManager {
   }
 
   /**
-   * The tools the model is offered: the session's own, else the registered ones it names, else every
-   * registered tool. A name with no registered tool fails here, before a call is paid for.
+   * The tools the model is offered: the session's own, else the registered ones it names (`'*'` for
+   * all of them), else none. A registered tool is available; only a session that names it puts it in
+   * front of a model. A name with no registered tool fails here, before a call is paid for.
    */
   private toolsFor(state: SessionState): ToolDefinition[] | undefined {
     if (state.config.tools) return state.config.tools.length ? state.config.tools : undefined;
+    if (state.config.toolNames === '*') {
+      const all = this.registry?.getAll() ?? [];
+      return all.length ? all : undefined;
+    }
     if (state.config.toolNames) {
       const tools = state.config.toolNames.map((name) => {
         const tool = this.registry?.get(name);
@@ -157,8 +171,7 @@ export class SessionManager {
       });
       return tools.length ? tools : undefined;
     }
-    const all = this.registry?.getAll() ?? [];
-    return all.length ? all : undefined;
+    return undefined;
   }
 
   private assertBudget(state: SessionState): void {
@@ -206,6 +219,8 @@ export class SessionManager {
   private async doSend(id: string, message: string, toolResults?: ToolResult[], options?: CallOptions): Promise<AIResponse> {
     const state = this.require(id);
     this.assertBudget(state);
+    if (options?.signal?.aborted) throw cancelledError();
+    state.lastCall = undefined;
     const before = state.messages.length;
     this.appendInput(state, message, toolResults);
 
@@ -215,6 +230,7 @@ export class SessionManager {
         try {
           const response = await this.adapter.generate(state.messages, this.callConfig(state, model, options));
           this.record(state, response);
+          state.lastCall = { model: response.model, inputTokens: response.usage.inputTokens, outputTokens: response.usage.outputTokens, estimated: false, interrupted: false };
           await this.store?.save(id, state);
           return response;
         } catch (error) {
@@ -235,6 +251,8 @@ export class SessionManager {
   private async *doStream(id: string, message: string, options?: CallOptions): AsyncIterable<StreamChunk> {
     const state = this.require(id);
     this.assertBudget(state);
+    if (options?.signal?.aborted) throw cancelledError();
+    state.lastCall = undefined;
     const before = state.messages.length;
     this.appendInput(state, message);
     const requested = this.modelsFor(state)[0];
@@ -242,16 +260,18 @@ export class SessionManager {
     // Our own signal, so that a reader who stops early cancels the provider call as the caller's signal would
     const controller = new AbortController();
     const cancel = (): void => controller.abort(options?.signal?.reason);
-    if (options?.signal?.aborted) cancel();
-    else options?.signal?.addEventListener('abort', cancel, { once: true });
+    options?.signal?.addEventListener('abort', cancel, { once: true });
 
     let text = '';
     let usage: StreamChunk['usage'];
     let toolCalls: StreamChunk['toolCalls'];
     let model = requested;
     let finished = false;
+    let failure: unknown;
+    let prompt = '';
     try {
       const config = this.callConfig(state, requested, { signal: controller.signal });
+      prompt = promptText(state.messages);
       if (!this.adapter.stream) {
         const response = await this.adapter.generate(state.messages, config);
         text = response.content;
@@ -272,19 +292,28 @@ export class SessionManager {
         yield chunk.done ? { ...chunk, model: model ?? 'default', ...(toolCalls?.length ? { toolCalls } : {}) } : chunk;
       }
       finished = true;
+    } catch (error) {
+      failure = error;
+      throw error;
     } finally {
       options?.signal?.removeEventListener('abort', cancel);
       // The reader stopped, or the stream broke: stop paying for it
       if (!finished) controller.abort();
-      if (finished || text) {
-        // A reply that was cut short is still what the model said: it stays in the history, with whatever usage was reported
-        this.record(state, {
-          content: text,
-          toolCalls: finished ? toolCalls : undefined,
-          usage: { inputTokens: usage?.inputTokens ?? 0, outputTokens: usage?.outputTokens ?? 0, totalTokens: (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0) },
-          model: model ?? 'default',
-          latencyMs: 0,
-        });
+      // Cancelled: by the reader stopping (this generator was ended, nothing threw) or by the signal
+      const cancelled = !finished && (failure === undefined || (failure instanceof AIError && failure.code === 'ai/aborted'));
+      if (finished || text || cancelled) {
+        // The provider charges for the prompt once it has it, and for what it wrote, whether or not it got to
+        // say so. Unreported usage is estimated, so that cancelling isn't a way past the budget.
+        const counted = usage ?? { inputTokens: prompt ? estimateTokens(prompt) : 0, outputTokens: estimateTokens(text) };
+        state.lastCall = { model: model ?? 'default', inputTokens: counted.inputTokens, outputTokens: counted.outputTokens, estimated: !usage, interrupted: !finished };
+        state.totalInputTokens += counted.inputTokens;
+        state.totalOutputTokens += counted.outputTokens;
+        if (finished || text) {
+          // A reply that was cut short is still what the model said: it stays in the history, marked
+          state.messages.push({ role: 'assistant', content: text, toolCalls: finished ? toolCalls : undefined, ...(finished ? {} : { interrupted: true }) });
+        } else {
+          state.messages.length = before;
+        }
         // Not thrown from here: an error in a `finally` would hide the one that ended the stream
         await this.store?.save(id, state).catch((error: unknown) => {
           this.onPersistError?.(error instanceof Error ? error : new Error(String(error)), id);

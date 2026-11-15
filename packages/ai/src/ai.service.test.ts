@@ -97,14 +97,14 @@ describe('every model call is costed and recorded, however it is made', () => {
   it('runAgent: each model call in the run is an entry, and the tool gets the context', async () => {
     const { ai, calls } = build([reply('', { toolCalls: [{ id: 'c1', name: 'weather', arguments: { city: 'Oaxaca' } }] }), reply('Clear skies in Oaxaca.')]);
     ai.registerTool(weather);
-    const session = await ai.createSession(ctx, 's-agent', { model: 'm1' });
+    const session = await ai.createSession(ctx, 's-agent', { model: 'm1', toolNames: ['weather'] });
     const asked: string[] = [];
     const answer = await ai.runAgent(ctx, session, 'What is the weather in Oaxaca?', { onToolCall: (call) => asked.push(call.name) });
     expect(answer.content).toBe('Clear skies in Oaxaca.');
     expect(asked).toEqual(['weather']);
     expect(ai.telemetry.getEntries('s-agent')).toHaveLength(2);
     expect(ai.telemetry.getEntries('s-agent').reduce((sum, e) => sum + e.costUsd, 0)).toBeCloseTo(0.4);
-    // The registered tool was offered to the model without being named anywhere
+    // The registered tool the session names is what the model was offered
     expect(calls[0].config.tools?.map((t) => t.name)).toEqual(['weather']);
     // And its result, made with the caller's context, went back to the model
     const result = JSON.parse(calls[1].messages.at(-1)?.content ?? '{}');
@@ -136,9 +136,12 @@ describe('cancelling', () => {
       if (chunk.content === 'two ') break;
     }
     expect(signal?.aborted).toBe(true);
-    expect(session.getHistory().map((m) => [m.role, m.content])).toEqual([['user', 'count'], ['assistant', 'one two ']]);
-    // No usage was reported before the stop, so the entry has none; it is still an entry
-    expect(ai.telemetry.getEntries('s-stop')).toMatchObject([{ inputTokens: 0, outputTokens: 0 }]);
+    // What was written stays, marked as cut short
+    expect(session.getHistory()).toEqual([{ role: 'user', content: 'count' }, { role: 'assistant', content: 'one two ', toolCalls: undefined, interrupted: true }]);
+    // The provider had reported no usage yet, so it is estimated (four characters a token) and says so
+    expect(ai.telemetry.getEntries('s-stop')).toMatchObject([{ inputTokens: 2, outputTokens: 2, estimated: true, costUsd: 0.006 }]);
+    expect(session.usage?.()).toEqual({ inputTokens: 2, outputTokens: 2, totalTokens: 4 });
+    expect(session.lastCall?.()).toEqual({ model: 'm1', inputTokens: 2, outputTokens: 2, estimated: true, interrupted: true });
   });
 
   it("the caller's signal cancels a stream in flight, and the error says so", async () => {
@@ -167,9 +170,50 @@ describe('cancelling', () => {
     };
     await expect(read()).rejects.toMatchObject({ code: 'ai/aborted' });
     expect(script.calls[0].config.signal?.aborted).toBe(true);
-    expect(session.getHistory().at(-1)).toMatchObject({ role: 'assistant', content: 'partial' });
+    expect(session.getHistory().at(-1)).toMatchObject({ role: 'assistant', content: 'partial', interrupted: true });
+    expect(ai.telemetry.getEntries('s-signal')).toMatchObject([{ estimated: true, outputTokens: 2 }]);
     // A cancelled call is not a failed one
     expect(failures).toBe(0);
+  });
+
+  it('counts toward the budget, so starting and cancelling streams is not a way past it', async () => {
+    const endless = async function* (): AsyncIterable<StreamChunk> {
+      for (let i = 0; i < 1000; i++) yield { content: 'a paragraph of forty characters, give or take', done: false };
+    };
+    const { ai, calls } = build(Array.from({ length: 50 }, () => endless));
+    const session = await ai.createSession(ctx, 's-evade', { model: 'm1', budget: { maxTotalTokens: 400 } });
+    const startAndCancel = async () => {
+      let read = 0;
+      for await (const _ of ai.stream(ctx, session, 'Write me a very long essay about the history of everything.')) {
+        if (++read === 10) break;
+      }
+    };
+    let refused: unknown;
+    for (let attempt = 0; attempt < 50 && !refused; attempt++) {
+      try {
+        await startAndCancel();
+      } catch (error) {
+        refused = error;
+      }
+    }
+    expect(refused).toMatchObject({ code: 'ai/token-budget-exceeded' });
+    // A handful of cancelled streams spent the budget; it did not take fifty
+    expect(calls.length).toBeLessThan(6);
+    expect(ai.telemetry.getEntries('s-evade').every((entry) => entry.estimated && entry.costUsd > 0)).toBe(true);
+  });
+
+  it('a call whose signal is already cancelled never reaches the provider', async () => {
+    const { ai, calls } = build([reply('never'), reply('never')]);
+    const session = await ai.createSession(ctx, 's-pre-cancelled', { model: 'm1' });
+    const gone = AbortSignal.abort();
+    await expect(ai.send(ctx, session, 'hi', { signal: gone })).rejects.toMatchObject({ code: 'ai/aborted' });
+    const read = async () => {
+      for await (const _ of ai.stream(ctx, session, 'hi', { signal: gone })) void _;
+    };
+    await expect(read()).rejects.toMatchObject({ code: 'ai/aborted' });
+    expect(calls).toHaveLength(0);
+    expect(session.getHistory()).toEqual([]);
+    expect(ai.telemetry.getEntries('s-pre-cancelled')).toEqual([]);
   });
 
   it('send and runAgent pass the signal on, and a cancelled run runs no further tool', async () => {
@@ -186,7 +230,7 @@ describe('cancelling', () => {
         return 'done';
       },
     });
-    const session = await ai.createSession(ctx, 's-agent-cancel', { model: 'm1' });
+    const session = await ai.createSession(ctx, 's-agent-cancel', { model: 'm1', toolNames: ['slow'] });
     await expect(ai.runAgent(ctx, session, 'go', { signal: controller.signal })).rejects.toMatchObject({ code: 'ai/aborted' });
     expect(calls[0].config.signal).toBe(controller.signal);
     expect(ran).toBe(1);
@@ -247,7 +291,7 @@ describe('budgets and iterations', () => {
     const again = { toolCalls: [{ id: 'c', name: 'weather', arguments: { city: 'x' } }] };
     const { ai, calls } = build([reply('', again), reply('', again), reply('never')]);
     ai.registerTool(weather);
-    const session = await ai.createSession(ctx, 's-agent-budget', { model: 'm1', budget: { maxTotalTokens: 300 } });
+    const session = await ai.createSession(ctx, 's-agent-budget', { model: 'm1', toolNames: '*', budget: { maxTotalTokens: 300 } });
     await expect(ai.runAgent(ctx, session, 'go')).rejects.toMatchObject({ code: 'ai/token-budget-exceeded' });
     expect(calls).toHaveLength(2);
   });
@@ -257,16 +301,16 @@ describe('budgets and iterations', () => {
     const forever = () => Array.from({ length: 20 }, () => reply('', again));
     const limited = build(forever());
     limited.ai.registerTool(weather);
-    const two = await limited.ai.createSession(ctx, 's-two', { model: 'm1', maxIterations: 2 });
+    const two = await limited.ai.createSession(ctx, 's-two', { model: 'm1', toolNames: '*', maxIterations: 2 });
     await expect(limited.ai.runAgent(ctx, two, 'go')).rejects.toMatchObject({ code: 'ai/max-iterations-exceeded' });
     expect(limited.calls).toHaveLength(2);
-    const overridden = await limited.ai.createSession(ctx, 's-four', { model: 'm1', maxIterations: 2 });
+    const overridden = await limited.ai.createSession(ctx, 's-four', { model: 'm1', toolNames: '*', maxIterations: 2 });
     await expect(limited.ai.runAgent(ctx, overridden, 'go', { maxIterations: 4 })).rejects.toMatchObject({ code: 'ai/max-iterations-exceeded' });
     expect(limited.calls).toHaveLength(6);
 
     const byDefault = build(forever());
     byDefault.ai.registerTool(weather);
-    const plain = await byDefault.ai.createSession(ctx, 's-ten', { model: 'm1' });
+    const plain = await byDefault.ai.createSession(ctx, 's-ten', { model: 'm1', toolNames: '*' });
     await expect(byDefault.ai.runAgent(ctx, plain, 'go')).rejects.toMatchObject({ code: 'ai/max-iterations-exceeded' });
     expect(byDefault.calls).toHaveLength(10);
     await expect(byDefault.ai.runAgent(ctx, plain, 'go', { maxIterations: 0 })).rejects.toMatchObject({ code: 'ai/config' });
@@ -276,8 +320,8 @@ describe('budgets and iterations', () => {
 describe('tools', () => {
   const other: ToolDefinition = { name: 'other', description: 'another tool', schema: z.object({}), handler: async () => 'other' };
 
-  it('a session offers its own tools, else the registered ones it names, else every registered tool', async () => {
-    const { ai, calls } = build([reply('a'), reply('b'), reply('c'), reply('d')]);
+  it('a session offers the model no tool it does not name: registering one makes it available, no more', async () => {
+    const { ai, calls } = build([reply('a'), reply('b'), reply('c'), reply('d'), reply('e')]);
     ai.registerTool(weather);
     ai.registerTool(other);
     const offered = async (id: string, config: Parameters<typeof ai.createSession>[2]) => {
@@ -286,8 +330,11 @@ describe('tools', () => {
       expect(session.tools?.().map((t) => t.name)).toEqual(calls.at(-1)?.config.tools?.map((t) => t.name) ?? []);
       return calls.at(-1)?.config.tools?.map((t) => t.name);
     };
-    expect(await offered('t-all', {})).toEqual(['weather', 'other']);
+    // A plain chat session, in an app that registered an admin tool for some other flow, is offered nothing
+    expect(await offered('t-default', {})).toBeUndefined();
     expect(await offered('t-named', { toolNames: ['other'] })).toEqual(['other']);
+    // Every registered tool, when the session says so
+    expect(await offered('t-all', { toolNames: '*' })).toEqual(['weather', 'other']);
     const inline: ToolDefinition = { name: 'inline', description: 'only here', schema: z.object({}), handler: async () => 'inline' };
     expect(await offered('t-own', { tools: [inline] })).toEqual(['inline']);
     // An empty list is a choice: this session has no tools
@@ -414,7 +461,12 @@ describe('AISdkAdapter with a provider model', () => {
     const mock = model();
     const adapter = new AISdkAdapter('mock', () => mock, 'mock-model');
     const chunks: StreamChunk[] = [];
-    for await (const chunk of adapter.stream([{ role: 'user', content: 'weather?' }], { tools: [weather as ToolDefinition], maxOutputTokens: 256 })) chunks.push(chunk);
+    // The reader cancels as the last chunk arrives: the reply had finished, so it is a finished reply, with its usage
+    const late = new AbortController();
+    for await (const chunk of adapter.stream([{ role: 'user', content: 'weather?' }], { tools: [weather as ToolDefinition], maxOutputTokens: 256, signal: late.signal })) {
+      chunks.push(chunk);
+      if (chunk.done) late.abort();
+    }
     expect(chunks.map((c) => c.content).join('')).toBe('Checking');
     expect(chunks.at(-1)).toEqual({
       content: '',

@@ -9,5 +9,7 @@ export const aiTelemetryTable = defineTable('ai_telemetry', {
   outputTokens: column.integer().notNull(),
   latencyMs:    column.integer().notNull(),
   costUsd:      column.numeric().notNull().precision(10, 6),
+  /** True when the provider reported no usage (the call was cut short) and the tokens are an estimate. */
+  estimated:    column.boolean().notNull().default(false),
   createdAt:    column.timestamp().notNull().defaultNow(),
 });

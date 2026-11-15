@@ -94,10 +94,33 @@ describe('DrizzleAISessionStore', () => {
     expect(loaded?.config.maxIterations).toBe(3);
   });
 
+  it('keeps the mark on a reply that was cut short', async () => {
+    const id = `cut-${run}`;
+    const adapter = {
+      generate: async () => reply(1),
+      async *stream() {
+        yield { content: 'half an ans', done: false };
+        yield { content: 'wer', done: false };
+      },
+    };
+    const first = new SessionManager(adapter, store);
+    const session = await first.createPersisted(id, { model: 'test', tenantId: 't1', userId: 'u1' });
+    for await (const chunk of session.stream?.('a question') ?? []) {
+      if (chunk.content) break;
+    }
+    const reopened = await new SessionManager(adapter, store).open(id);
+    expect(reopened?.getHistory()).toEqual([{ role: 'user', content: 'a question' }, { role: 'assistant', content: 'half an ans', interrupted: true }]);
+    // The estimate was saved with the session, so the budget holds across processes
+    expect(reopened?.usage?.()).toEqual({ inputTokens: 3, outputTokens: 3, totalTokens: 6 });
+  });
+
   it('records telemetry', async () => {
     await store.recordTelemetry({ sessionId: `chat-${run}`, tenantId: 't1', model: 'test', inputTokens: 1, outputTokens: 2, latencyMs: 3.4, costUsd: 0.000123, createdAt: new Date() });
-    const rows = await database.db.execute(sql`select cost_usd from ai_telemetry where session_id = ${`chat-${run}`}`);
+    const rows = await database.db.execute(sql`select cost_usd, estimated from ai_telemetry where session_id = ${`chat-${run}`}`);
     expect(Number([...rows][0]?.cost_usd)).toBeCloseTo(0.000123);
+    expect([...rows][0]?.estimated).toBe(false);
+    await store.recordTelemetry({ sessionId: `est-${run}`, tenantId: 't1', model: 'test', inputTokens: 1, outputTokens: 2, latencyMs: 3, costUsd: 0.1, createdAt: new Date(), estimated: true });
+    expect([...(await database.db.execute(sql`select estimated from ai_telemetry where session_id = ${`est-${run}`}`))][0]?.estimated).toBe(true);
   });
 
   it('writes a row for every model call when it is the session store given to createAI', async () => {

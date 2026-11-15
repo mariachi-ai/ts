@@ -30,6 +30,8 @@ export interface AIMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
   toolCalls?: ToolCall[];
+  /** An assistant message that was cut short: the call was cancelled, or failed, after this much was written. */
+  interrupted?: boolean;
 }
 
 export interface ToolCall {
@@ -67,6 +69,19 @@ export interface AISession {
   tools?(): ToolDefinition[];
   /** The session's `maxIterations`, which an agent run uses unless told otherwise. */
   maxIterations?: number;
+  /** What the session counted for its latest call, or undefined when that call counted nothing. */
+  lastCall?(): CallRecord | undefined;
+}
+
+/** What one model call used, as the session counted it. */
+export interface CallRecord {
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  /** The provider reported no usage (the call was cut short), so the tokens are an estimate from the text: four characters each. */
+  estimated: boolean;
+  /** The reply was cut short. */
+  interrupted: boolean;
 }
 
 export interface AIResponse {
@@ -106,6 +121,8 @@ export interface AITelemetryEntry {
   /** From the context of the call. */
   tenantId?: string | null;
   userId?: string | null;
+  /** The provider reported no usage for this call (it was cut short): the tokens and the cost are estimates. */
+  estimated?: boolean;
 }
 
 export interface StreamChunk {
@@ -136,11 +153,12 @@ export interface SessionConfig {
   /** Tools for this session only. Their handlers live in memory: a session loaded in another process gets them by name. */
   tools?: ToolDefinition[];
   /**
-   * Registered tools (`ai.registerTool`) this session offers, by name. This is what is saved with the
-   * session, so a session opened later, or in another process, gets working tools back. Without
-   * `tools` or `toolNames`, a session offers every registered tool.
+   * Registered tools (`ai.registerTool`) this session offers, by name, or `'*'` for every registered
+   * tool. This is what is saved with the session, so a session opened later, or in another process,
+   * gets working tools back. A session with neither `tools` nor `toolNames` offers none: registering
+   * a tool makes it available, and only naming it puts it in front of a model.
    */
-  toolNames?: string[];
+  toolNames?: string[] | '*';
   /** How many model calls one agent run may make. Default 10. */
   maxIterations?: number;
   budget?: TokenBudget;

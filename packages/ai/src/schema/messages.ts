@@ -10,6 +10,8 @@ export const aiMessagesTable = defineTable(
   role:         column.text().notNull(),
   content:      column.text().notNull(),
   toolCalls:    column.json(),
+  /** True for an assistant message that was cut short. */
+  interrupted:  column.boolean(),
   inputTokens:  column.integer(),
   outputTokens: column.integer(),
   model:        column.text(),

@@ -111,11 +111,16 @@ this.post('/chat', { schema: { body: chatInput } }, async (ctx, body) => {
 - **Cancelling.** When the client goes away the transport stops reading, and a stream nobody reads
   cancels its provider call: you stop paying for a reply no one will see. Nothing needs wiring for
   that. To cancel for a reason of your own, pass `{ signal }` to `send`, `stream` or `runAgent`; a
-  call cancelled that way ends with `ai/aborted`. What the model had written
-  stays in the history and is recorded, with whatever usage the provider had reported by then (often
-  none: most providers report usage at the end).
+  call cancelled that way ends with `ai/aborted`.
+- **A reply that was cut short still counts.** What the model had written stays in the history,
+  marked `interrupted: true`, so a UI can tell it from a finished answer. The provider charges for
+  the prompt and for what it wrote, but reports usage only at the end, so the session estimates
+  (four characters a token), counts the estimate toward the budget, and marks the telemetry entry
+  `estimated`. Starting and cancelling streams is not a way past a budget.
 - A call that fails before the model answers leaves no trace in the history, so sending the message
   again doesn't say it twice.
+- One call at a time per session: a session's history is one conversation, and two calls at once
+  would interleave it. Use a session per conversation.
 
 ## Budgets and cost
 
@@ -153,13 +158,14 @@ ai.registerTool({
   handler: async ({ orderId }, ctx) => orders.status(ctx!, orderId),   // ctx: the caller's, so the lookup is tenant-scoped
 });
 
-const session = await ai.createSession(ctx, id, { tenantId: ctx.tenantId, userId: ctx.userId });
+const session = await ai.createSession(ctx, id, { tenantId: ctx.tenantId, userId: ctx.userId, toolNames: ['order_status'] });
 const answer = await ai.runAgent(ctx, session, 'Where is order A-1?');
 ```
 
-- **Register tools once, at startup.** A session offers the model every registered tool, or the ones
-  it names (`toolNames: ['order_status']`), or tools of its own (`tools: [...]`, which may be `[]`
-  for none).
+- **Register tools once, at startup; name them per session.** Registering a tool makes it available.
+  A session offers the model only the tools it names: `toolNames: ['order_status']`, `toolNames: '*'`
+  for every registered tool, or tools of its own (`tools: [...]`). A session that names none offers
+  none, so a tool registered for an admin flow is never in front of an end user's chat by accident.
 - **Tools are saved by name.** A tool is a function, which a database can't hold. A session opened
   later, or in another process, gets the registered tool of each saved name back, working. If one
   isn't registered there, the call fails with `ai/tool-not-found` naming it, before anything is paid
@@ -175,8 +181,9 @@ const answer = await ai.runAgent(ctx, session, 'Where is order A-1?');
 
 ## Telemetry
 
-Every model call made through `ai` is an entry: session, model, tokens, latency, cost, and the
-tenant and user of the context. With the Postgres session store, `createAI` writes each entry to
+Every model call made through `ai` is an entry: session, model, tokens, latency, cost, the tenant
+and user of the context, and `estimated` when the tokens are the session's estimate for a reply cut
+short. With the Postgres session store, `createAI` writes each entry to
 `ai_telemetry`; pass `persistTelemetry` to send them elsewhere. An entry is written without holding
 the call up, and one that can't be written is a warning in the log and an
 `ai.telemetry.persist_error` count, never a failed call.

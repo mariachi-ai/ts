@@ -65,6 +65,7 @@ export class DrizzleAISessionStore implements AISessionStore {
         role: message.role,
         content: message.content,
         toolCalls: message.toolCalls ?? null,
+        interrupted: message.interrupted ? true : null,
       })));
     });
   }
@@ -78,6 +79,7 @@ export class DrizzleAISessionStore implements AISessionStore {
       outputTokens: entry.outputTokens,
       latencyMs: Math.round(entry.latencyMs),
       costUsd: entry.costUsd.toFixed(6),
+      estimated: entry.estimated ?? false,
     });
   }
 }
@@ -97,10 +99,10 @@ function restored(config: unknown): Partial<SessionConfig> {
   if (!config || typeof config !== 'object') return {};
   const { tools, ...rest } = config as Record<string, unknown>;
   const fromOldRow = Array.isArray(tools) ? tools.map((tool) => (tool as { name?: unknown } | null)?.name).filter((name): name is string => typeof name === 'string') : undefined;
-  const toolNames = Array.isArray(rest.toolNames) ? (rest.toolNames as string[]) : fromOldRow;
+  const toolNames = rest.toolNames === '*' || Array.isArray(rest.toolNames) ? (rest.toolNames as string[] | '*') : fromOldRow;
   return { ...(rest as Partial<SessionConfig>), ...(toolNames ? { toolNames } : {}) };
 }
 
 function toMessage(row: Record<string, any>): AIMessage {
-  return { role: row.role, content: row.content, toolCalls: row.toolCalls ?? undefined };
+  return { role: row.role, content: row.content, toolCalls: row.toolCalls ?? undefined, ...(row.interrupted ? { interrupted: true } : {}) };
 }
