@@ -54,6 +54,15 @@ function withSchemaOptions(cmd: Command): Command {
     .option('-o, --out <dir>', 'migrations folder', 'drizzle');
 }
 
+/**
+ * The environment seeds run as: `--env`, else NODE_ENV, else development. It used to be
+ * development unless `--env` said otherwise, so `db seed` against a production database ran every
+ * seed that didn't name its environments, demo data included.
+ */
+export function seedEnvironment(flag: string | undefined, nodeEnv: string | undefined): string {
+  return flag?.trim() || nodeEnv?.trim() || 'development';
+}
+
 export function registerDbCommand(program: Command): void {
   const db = program.command('db').description('Schema migrations and seeds (Postgres)');
 
@@ -126,13 +135,14 @@ export function registerDbCommand(program: Command): void {
     });
 
   db.command('seed')
-    .description('Run seeds exported from a module (defineSeed). Each seed runs once per environment unless --force')
+    .description('Run seeds exported from a module (defineSeed). Each seed runs once per database unless --force')
     .option('-f, --file <path>', 'module exporting seeds', 'src/seeds/index.ts')
-    .option('-e, --env <environment>', 'environment name', 'development')
+    .option('-e, --env <environment>', 'the environment the seeds run as, which decides which may run (default: NODE_ENV, else development)')
     .option('--force', 're-run seeds that already ran')
     .option('--url <url>', 'database URL (default: DATABASE_URL)')
-    .action(async (options: DbOptions & { file: string; env: string; force?: boolean }) => {
+    .action(async (options: DbOptions & { file: string; env?: string; force?: boolean }) => {
       try {
+        const environment = seedEnvironment(options.env, readEnv('NODE_ENV'));
         const mod = await importModule(options.file);
         const seeds = (Array.isArray(mod.seeds) ? mod.seeds : Array.isArray(mod.default) ? mod.default : Object.values(mod)).filter(
           (s): s is SeedDefinition<DrizzleDb> => !!s && typeof s === 'object' && 'name' in s && 'run' in s,
@@ -140,13 +150,13 @@ export function registerDbCommand(program: Command): void {
         if (seeds.length === 0) throw new ConfigError('cli/no-seeds', `${options.file} exports no seeds (use defineSeed)`);
         await withAdapter(options, (adapter) =>
           runSeeds(adapter.getClient<DrizzleDb>(), seeds, {
-            environment: options.env,
+            environment,
             force: options.force,
             logger: consoleLogger,
             ctx: createContext({ logger: consoleLogger, identityType: 'system' }),
           }),
         );
-        console.log(`${GREEN}Seeds complete.${RESET}`);
+        console.log(`${GREEN}Seeds complete${RESET} ${DIM}(as ${environment})${RESET}`);
       } catch (err) {
         fail(err);
       }

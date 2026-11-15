@@ -77,7 +77,7 @@ mariachi generate integration acme
 | `controller` | `api/controllers/<name>.controller.ts`; reuses `contracts/<name>.ts` if it exists | `api/controllers/index.ts` |
 | `job` | `jobs/<name>.job.ts` (`defineJob` with schema, retry, timeout) | `jobs/index.ts` |
 | `integration` | `integrations/<name>/client.ts` (timeouts, retries on transient status codes, `IntegrationError`) and a test | none; construct it in `app.ts` |
-| `seed` | `seeds/<name>.seed.ts` (`defineSeed`, run once per environment by `mariachi db seed`) | `seeds/index.ts` |
+| `seed` | `seeds/<name>.seed.ts` (`defineSeed`, run once per database by `mariachi db seed`) | `seeds/index.ts` |
 | `page` | `api/pages/<name>.ts` (the page, as `html` in the project's layout) and a test. Needs a project made with `--ui` | `api/controllers/pages.controller.ts` (its route at `/<name>`) and `api/pages/layout.ts` (its link in the bar) |
 
 Names can be kebab, camel or Pascal case (`invoice-item`, `invoiceItem`, `InvoiceItem`). Generators
@@ -246,7 +246,7 @@ All `db` commands take `--schema <path>` (default `src/schema/index.ts`) and `--
 | `db check` | Exits 1 if the schema has changes that aren't in a migration. Use it in CI. |
 | `db sql` | Prints the full DDL for the schema, without a database. |
 | `db migrate` | Applies pending migrations inside a Postgres advisory lock, so concurrent deploys don't race. |
-| `db seed --env <env>` | Runs `defineSeed` seeds from `src/seeds/index.ts` (`--file`). Each seed runs once per environment and is recorded; `--force` re-runs. |
+| `db seed` | Runs `defineSeed` seeds from `src/seeds/index.ts` (`--file`), each in a transaction. A seed runs once per database and is recorded there; `--force` re-runs. The environment it runs as is `--env`, else `NODE_ENV`, else `development`: a seed with no `environments` runs as anything but `production`. |
 
 The schema module exports every table: your own `defineTable`s, plus framework tables you use
 (`export { usersTable, tenantsTable } from '@mariachi/database'`, `eventOutboxTable` from

@@ -136,7 +136,7 @@ export async function generateJob(config: GenerateJobConfig): Promise<GenerateRe
 export async function generateSeed(config: GenerateSeedConfig): Promise<GenerateResult> {
   assertProject(config.projectRoot);
   const n = names(config.name);
-  return writeFiles(
+  const result = await writeFiles(
     config.projectRoot,
     { [`${LAYOUT.seedsDir}/${n.kebab}.seed.ts`]: seedFile(n) },
     [
@@ -145,6 +145,8 @@ export async function generateSeed(config: GenerateSeedConfig): Promise<Generate
     ],
     config,
   );
+  result.notes.push('Run it with: pnpm mariachi db seed (--force runs it again; pnpm dev does not run seeds).');
+  return result;
 }
 
 /** Paths a page can't have: they are the API's and the static files'. */
