@@ -62,9 +62,38 @@ new GitHubWebhookAuth({
 Always verify over `rawBody`, never over re-serialized JSON: key order and whitespace change the bytes.
 The same checks are plain functions in `@mariachi/webhooks/verify` (`verifyGitHubWebhook`,
 `verifyStripeWebhook`, `verifyStandardWebhook`, `verifyHmacSignature`), with no HTTP server behind
-them, for use anywhere else. For a scheme none of them covers, extend `SignatureAuthController` and
-implement `verifySignature` with `crypto.timingSafeEqual`; the two rules above then become yours to
-keep. Provider packages ship ready-made
+them, for use anywhere else. For a scheme none of them covers, extend `SignatureAuthController`:
+
+```ts
+import { SignatureAuthController, verifyHmacSignature } from '@mariachi/webhooks';
+
+class AcmeWebhookAuth extends SignatureAuthController {
+  readonly provider = 'acme';
+  readonly signatureHeader = 'x-acme-signature';
+  constructor(private readonly signingSecret: string) {
+    super();
+  }
+  protected signingSecrets() {
+    return this.signingSecret;                       // or several, during a rotation
+  }
+  protected verifySignature(signature: string, rawBody: Buffer, secret: string) {
+    try {
+      verifyHmacSignature(rawBody, signature, secret, { encoding: 'base64' });   // constant-time
+      return true;
+    } catch {
+      return false;
+    }
+  }
+  protected tenantFromPayload(payload: unknown) {
+    return (payload as { account?: string } | undefined)?.account;
+  }
+}
+```
+
+The base class keeps both rules for you: it deduplicates on a digest of the raw body (override
+`dedupKey` only to return an id the signature covers), and it takes a tenant from the verified body,
+or from the request only when you also implement `tenantSigningSecrets(tenantId)` so the delivery verifies
+under that tenant's own secret. Provider packages ship ready-made
 controllers (`ClerkWebhookController`, `FusionAuthWebhookHandler`), and billing verifies Stripe's
 billing events itself.
 
