@@ -90,6 +90,9 @@ Each package's status is listed in the [catalog](packages/core/docs/packages.md)
 
 ## Next
 
+The working list, with what is planned for the next release and what is waiting, is in
+[`TODO.md`](TODO.md). The items below are the larger directions.
+
 - **Reference app.** `apps/` and `examples/` predate the current APIs. They're excluded from build,
   typecheck and lint, and shouldn't be copied from. Replace them with one app built on `mariachi init`
   that exercises sign-up, a job, a webhook and a notification. Run that app as an end-to-end test in CI,

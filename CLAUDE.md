@@ -17,7 +17,7 @@ All docs live in [`packages/core/docs/`](packages/core/docs/README.md) (they shi
 - [`design.md`](packages/core/docs/design.md) and [`explorer.md`](packages/core/docs/explorer.md): the design library and the explorer
 - [`recipes/`](packages/core/docs/recipes/): entity, job, webhook, integration, wiring
 
-Status and planned work: [`ROADMAP.md`](ROADMAP.md).
+Status: [`ROADMAP.md`](ROADMAP.md). Planned work: [`TODO.md`](TODO.md).
 
 ## Commands
 
