@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createContext, type Context } from '@mariachi/core';
-import { DefaultOrganizations } from './organizations';
-import { hashInvitationSecret, parseInvitationToken } from './tokens';
-import type { OrganizationAudit, OrganizationChange, OrganizationStore, OrganizationsConfig } from './types';
+import { DefaultOrganizations } from '../organizations';
+import { hashInvitationSecret, parseInvitationToken } from '../tokens';
+import type { OrganizationAudit, OrganizationChange, OrganizationStore, OrganizationsConfig } from '../types';
 
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child: () => silent };
 /** A signed-in person, or nobody. */

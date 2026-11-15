@@ -4,7 +4,7 @@ import { createContext } from '@mariachi/core';
 import { tenantsTable } from '@mariachi/database/schema';
 import { applySchema, createPostgresDatabase, type PostgresDatabase } from '@mariachi/database-postgres';
 import { startPostgres, stopAll } from '../../../../test/setup';
-import { organizationsContract } from '../contract';
+import { organizationsContract } from '../test/contract';
 import { DefaultOrganizations } from '../organizations';
 import { organizationInvitationsTable, organizationMembershipsTable } from '../schema/index';
 import { DrizzleOrganizationStore } from './store';

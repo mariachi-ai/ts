@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { organizationsContract } from './contract';
+import { organizationsContract } from './test/contract';
 import { MemoryOrganizationStore } from './memory';
 import { roleAtLeast } from './organizations';
 import { hashInvitationSecret, invitationToken, isUuid, newInvitationSecret, normalizeEmail, parseInvitationToken, secretMatches, slugify } from './tokens';
