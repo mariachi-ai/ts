@@ -108,7 +108,7 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
   the language's real screen patterns. The catalog holds the HTML, and the build writes each one
   as a page to `dist/archetypes/<id>/recipes/<name>.html` (in the repo and the explorer, not the package);
 - **`DESIGN.md`**, the language in words: principles, foundations, type, icons, charts, the states of
-  every control, all 36 components, error handling, page shapes, and do and don't. A **reference**
+  every control, every component, error handling, page shapes, and do and don't. A **reference**
   generated from the preset is appended: the actual type and spacing scales, layout and density,
   radius, shadows, motion, every colour in light and dark, and the icon map. It ships at
   `@mariachi/design/archetypes/<id>/DESIGN.md`, and a project copies it to `docs/design.md`;
@@ -116,7 +116,7 @@ copied assets or proprietary fonts (the closest open font stands in). `archetype
   - the foundations and the icons;
   - every control in every state (default, hover, focus, pressed, disabled, error, loading);
   - errors, loading and empty patterns;
-  - all 36 components with every example.
+  - every component with every example.
 
   Add `data-mode="dark"` on the root for dark. Hover, focus and pressed are drawn with the
   components' own rules, through `archetypes/gallery.css`, which only the galleries load.

@@ -81,6 +81,24 @@ Each step lists its inputs, its outputs, its tool and its check. **Script** mean
 - **Tool:** agent.
 - **Check:** `checkTheme` passes every contrast pair in both modes.
 
+**Switches every language sets, or consciously leaves at the default.** These carry habits that recipes
+otherwise hand-build with inline styles. Each default keeps the library's own look; set the token when
+the source does something else, and say how you know.
+
+| Habit | Tokens | Default |
+| --- | --- | --- |
+| **Required and optional fields.** Mark the required ones, or the optional ones, never both. A language that keeps colour for status gives the mark a neutral colour, or sets `requiredMarker: 'none'` and `optionalMarker: '" (optional)"'` | `components.field.requiredMarker`, `.requiredFg`, `.optionalMarker`, `.optionalFg`, `.optionalFontWeight` | A red `" *"` on required labels; no optional mark |
+| **Heading sizes.** Which ramp step each heading level takes, so recipes stop overriding `h1` and `h2` inline | `font.heading.size.h1` … `.h6` | `4xl`, `3xl`, `2xl`, `xl`, `lg`, `md` |
+| **Breadcrumbs.** The separator (a glyph, or an icon drawn in the separator colour), links underlined or not, and which stands out: the parents (`fg`) or the current page (`currentFg`, `currentWeight`). Every link keeps a 24px hit area | `components.breadcrumb.separator`, `.separatorIcon`, `.separatorIconSize`, `.linkDecoration`, `.fg`, `.currentFg`, `.currentWeight`, `.targetSize` | `"/"`, no underline, the current page stronger |
+| **The rule under prose `h2`** | `components.prose.h2RuleWidth` (`0px` turns it and its gap off) | A hairline |
+| **The select indicator.** A solid triangle or an open chevron | `components.select.chevronStroke` (`50%` solid; a length such as `1.5px` draws a chevron) | Solid |
+| **A fourth radius step,** for a scale that needs one (a 12px between 8 and 16) | `radius.xl` | Equal to `radius.lg` |
+| **Rings and halos** around avatars or a play button | `ring.width`, `ring.offset`, `components.avatar.haloColor` | 2px, 2px away |
+| **Avatars.** Initials take the ramp step nearest `initialsScale` × the size; the group overlap is a positive distance | `components.avatar.initialsScale`, `.groupOverlap` | `0.38`, `0.5rem` |
+| **Money figures.** The currency sign and the cents (`.m-amount-currency`, `.m-amount-cents`), smaller or raised | `components.amount.*` | Plain, tabular digits |
+| **A neutral notice on a surface,** when the neutral alert takes the surface colour (`data-tone="notice"`) | `components.alert.notice.*` | The sunken fill and a hairline |
+| **Menu group labels** | `components.popover.labelWeight` | Semibold |
+
 ### 4. The language's metadata
 
 - **In:** steps 2 and 3.
@@ -101,7 +119,7 @@ Each step lists its inputs, its outputs, its tool and its check. **Script** mean
   - **The seven required page shapes:** `dashboard`, `list-detail`, `onboarding`, `settings`, `empty-state`, `pricing`, `errors`.
   - **Two more, added as each language is re-run:** `reading` (a public reading page, such as a help article or a post) and `sign-in`. They give a second screen of the detail and form kinds, and cover the public pages that the pilot's rebuild test found missing.
   - **More kinds where the source has them:** detail, form, dialog, loading.
-  - **Built from:** the library's classes and tokens only, following the source's real screen patterns, with all content invented.
+  - **Built from:** the library's classes and tokens only, following the source's real screen patterns, with all content invented. Tappable rows, chips, icon tiles, money figures and file drops use `m-row`, `m-chip`, `m-tile`, `m-amount` and `m-dropzone`, themed by the language's tokens, not hand-built spans with inline styles.
 - **Tool:** agent.
 - **Check:**
   - side-by-sides (reference left, recipe right) in the private notes;

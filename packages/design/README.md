@@ -1,6 +1,6 @@
 # @mariachi/design
 
-Framework-agnostic design library: one token contract, six interchangeable presets, 36 components as
+Framework-agnostic design library: one token contract, six interchangeable presets, 41 components as
 plain HTML + CSS, and overrides at any granularity: one token, one component, one area, a replaced
 component, or a whole preset.
 
