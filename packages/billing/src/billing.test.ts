@@ -260,13 +260,13 @@ describe('Billing service', () => {
       // Recorded here, not there
       expect((await billing.getUsage(t1, 'tokens', range)).totalQuantity).toBe(10);
       expect(adapter.usage).toHaveLength(0);
-      expect((await store.findUsageRecord('t1', 'u-retry'))?.forwardedAt).toBeNull();
+      expect(await store.findUsageRecord('t1', 'u-retry')).toMatchObject({ forwardPending: true, forwardedAt: null });
 
       // The retry isn't fresh usage, but it does reach the provider now
       expect(await billing.reportUsage(t1, { metricName: 'tokens', quantity: 10, idempotencyKey: 'u-retry' })).toBe(false);
       expect(adapter.usage).toHaveLength(1);
       expect(adapter.usage[0]).toMatchObject({ metricName: 'tokens', quantity: 10, idempotencyKey: 'u-retry' });
-      expect((await store.findUsageRecord('t1', 'u-retry'))?.forwardedAt).toBeInstanceOf(Date);
+      expect(await store.findUsageRecord('t1', 'u-retry')).toMatchObject({ forwardPending: false, forwardedAt: expect.any(Date) });
 
       // And a further repeat is the plain duplicate it always was: nothing sent
       expect(await billing.reportUsage(t1, { metricName: 'tokens', quantity: 10, idempotencyKey: 'u-retry' })).toBe(false);
@@ -292,13 +292,13 @@ describe('Billing service', () => {
       const system = createContext({ logger: silent, identityType: 'system' });
 
       // Within the default minute a report may still be in flight: left alone
-      expect(await billing.forwardPendingUsage(system)).toEqual({ forwarded: 0, failed: 0 });
+      expect(await billing.forwardPendingUsage(system)).toEqual({ forwarded: 0, failed: 0, stale: 0 });
 
       await new Promise((r) => setTimeout(r, 10));
       failing(1);
-      expect(await billing.forwardPendingUsage(system, { olderThanMs: 1 })).toEqual({ forwarded: 1, failed: 1 });
-      expect(await billing.forwardPendingUsage(system, { olderThanMs: 1 })).toEqual({ forwarded: 1, failed: 0 });
-      expect(await billing.forwardPendingUsage(system, { olderThanMs: 1 })).toEqual({ forwarded: 0, failed: 0 });
+      expect(await billing.forwardPendingUsage(system, { olderThanMs: 1 })).toEqual({ forwarded: 1, failed: 1, stale: 0 });
+      expect(await billing.forwardPendingUsage(system, { olderThanMs: 1 })).toEqual({ forwarded: 1, failed: 0, stale: 0 });
+      expect(await billing.forwardPendingUsage(system, { olderThanMs: 1 })).toEqual({ forwarded: 0, failed: 0, stale: 0 });
       expect(adapter.usage.map((u) => u.idempotencyKey).sort()).toEqual(['ok', 'p1', 'p2']);
       expect(await store.listPendingUsage({ after: new Date(0), before: new Date(Date.now() + 1000), limit: 10 })).toEqual([]);
     });
@@ -307,11 +307,11 @@ describe('Billing service', () => {
       await billing.ensureCustomer(t1, { email: 'a@t1' });
       failing(1);
       await billing.reportUsage(t1, { metricName: 'tokens', quantity: 7, idempotencyKey: 'old-one' }).catch(() => undefined);
-      // As after upgrading: rows recorded long ago, with no confirmation on them
       vi.useFakeTimers({ now: Date.now() + 25 * 60 * 60 * 1000 });
       try {
         const system = createContext({ logger: silent, identityType: 'system' });
-        expect(await billing.forwardPendingUsage(system, { olderThanMs: 1 })).toEqual({ forwarded: 0, failed: 0 });
+        // Counted, so someone sees it, and left alone
+        expect(await billing.forwardPendingUsage(system, { olderThanMs: 1 })).toEqual({ forwarded: 0, failed: 0, stale: 1 });
         expect(await billing.reportUsage(t1, { metricName: 'tokens', quantity: 7, idempotencyKey: 'old-one' })).toBe(false);
         expect(adapter.usage).toHaveLength(0);
       } finally {
@@ -319,16 +319,27 @@ describe('Billing service', () => {
       }
     });
 
+    it('never resends a row it did not mark as pending: what was there before the upgrade, or written by something else', async () => {
+      await billing.ensureCustomer(t1, { email: 'a@t1' });
+      // A row as the previous version wrote it minutes ago: no pending mark, no confirmation time
+      await store.recordUsage({ tenantId: 't1', customerId: 'cus_legacy', metricName: 'tokens', quantity: 50, timestamp: new Date(), idempotencyKey: 'legacy' });
+      await new Promise((r) => setTimeout(r, 10));
+      const system = createContext({ logger: silent, identityType: 'system' });
+      expect(await billing.forwardPendingUsage(system, { olderThanMs: 1 })).toEqual({ forwarded: 0, failed: 0, stale: 0 });
+      expect(await billing.reportUsage(t1, { metricName: 'tokens', quantity: 50, idempotencyKey: 'legacy' })).toBe(false);
+      expect(adapter.usage).toHaveLength(0);
+    });
+
     it('keeps the older behaviour with a store that cannot say what was forwarded', async () => {
       const plain = new MemoryBillingStore();
-      Object.assign(plain, { findUsageRecord: undefined, markUsageForwarded: undefined, listPendingUsage: undefined });
+      Object.assign(plain, { findUsageRecord: undefined, markUsageForwarded: undefined, listPendingUsage: undefined, countPendingUsage: undefined });
       const older = new DefaultBilling({ adapter, store: plain }, deps);
       await older.ensureCustomer(t1, { email: 'a@t1' });
       failing(1);
       await older.reportUsage(t1, { metricName: 'tokens', quantity: 1, idempotencyKey: 'old' }).catch(() => undefined);
       expect(await older.reportUsage(t1, { metricName: 'tokens', quantity: 1, idempotencyKey: 'old' })).toBe(false);
       expect(adapter.usage).toHaveLength(0);
-      expect(await older.forwardPendingUsage(createContext({ logger: silent, identityType: 'system' }))).toEqual({ forwarded: 0, failed: 0 });
+      expect(await older.forwardPendingUsage(createContext({ logger: silent, identityType: 'system' }))).toEqual({ forwarded: 0, failed: 0, stale: 0 });
     });
   });
 });

@@ -228,18 +228,15 @@ describe('StripeAdapter usage', () => {
   }
   const report = { customerId: 'cus_1', metricName: 'api_calls', quantity: 3, timestamp: new Date(1_700_000_000_000), idempotencyKey: 'req-1' };
 
-  it('sends the key as the event identifier and as the request idempotency key, so a retry is the same event', async () => {
+  it('sends the key as the event identifier, so a resend is the same event, and no request idempotency key', async () => {
     const { adapter, calls } = meterStub();
     await adapter.reportUsage(report);
+    await adapter.reportUsage(report);
+    // Stripe replays the first response saved under a request key, a 500 included: a resend must be a new request
     expect(calls).toEqual([
-      {
-        params: { event_name: 'api_calls', identifier: 'req-1', timestamp: 1_700_000_000, payload: { stripe_customer_id: 'cus_1', value: '3' } },
-        opts: { idempotencyKey: 'usage:req-1' },
-      },
+      { params: { event_name: 'api_calls', identifier: 'req-1', timestamp: 1_700_000_000, payload: { stripe_customer_id: 'cus_1', value: '3' } }, opts: undefined },
+      { params: { event_name: 'api_calls', identifier: 'req-1', timestamp: 1_700_000_000, payload: { stripe_customer_id: 'cus_1', value: '3' } }, opts: undefined },
     ]);
-    const noKey = meterStub();
-    await noKey.adapter.reportUsage({ ...report, idempotencyKey: undefined });
-    expect(noKey.calls[0]?.opts).toBeUndefined();
   });
 
   it('takes "an event with this identifier exists" as success, and any other refusal as a failure', async () => {

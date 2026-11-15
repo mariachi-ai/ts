@@ -420,12 +420,14 @@ export abstract class Billing implements Instrumentable {
       timestamp,
       idempotencyKey,
       dimensions,
+      // Until the provider confirms it. If the call below fails, this is what marks the record for a resend.
+      forwardPending: true,
     });
     if (!fresh) {
       // Recorded before under this key. If the provider never confirmed it (the call failed, or the
       // process died in between), send what was recorded again: the provider dedups on the key.
       const recorded = await this.store.findUsageRecord?.(tenantId, idempotencyKey);
-      if (recorded && !recorded.forwardedAt && resendable(recorded)) await this.forwardUsage(recorded);
+      if (recorded?.forwardPending && resendable(recorded)) await this.forwardUsage(recorded);
       return false;
     }
     await this.forwardUsage({ tenantId, customerId: customer.id, metricName: input.metricName, quantity: input.quantity, timestamp, idempotencyKey });
@@ -451,11 +453,13 @@ export abstract class Billing implements Instrumentable {
    * Records younger than `olderThanMs` (default one minute) are left alone, since their report may
    * still be in flight. A record that fails again stays pending for the next run. Records older
    * than a day are never resent: by then the provider may no longer recognise the key, and a
-   * resend could be counted twice.
+   * resend could be counted twice. `stale` is how many of those there are (also the gauge
+   * `billing.usage.stale`): each is usage counted here that the provider may not have, for a
+   * person to settle.
    */
-  async forwardPendingUsage(ctx: Context, options: { limit?: number; olderThanMs?: number } = {}): Promise<{ forwarded: number; failed: number }> {
+  async forwardPendingUsage(ctx: Context, options: { limit?: number; olderThanMs?: number } = {}): Promise<{ forwarded: number; failed: number; stale: number }> {
     const list = this.store.listPendingUsage?.bind(this.store);
-    if (!list) return { forwarded: 0, failed: 0 };
+    if (!list) return { forwarded: 0, failed: 0, stale: 0 };
     const now = Date.now();
     const pending = await list({ after: new Date(now - RESEND_WINDOW_MS), before: new Date(now - (options.olderThanMs ?? 60_000)), limit: options.limit ?? 100 });
     let forwarded = 0;
@@ -470,7 +474,10 @@ export abstract class Billing implements Instrumentable {
       }
     }
     if (forwarded) this.metrics?.increment('billing.usage.forwarded_late', forwarded);
-    return { forwarded, failed };
+    const stale = (await this.store.countPendingUsage?.({ before: new Date(now - RESEND_WINDOW_MS) })) ?? 0;
+    this.metrics?.gauge('billing.usage.stale', stale);
+    if (stale) ctx.logger.warn({ stale }, 'usage recorded here was never confirmed by the provider and is now too old to resend');
+    return { forwarded, failed, stale };
   }
 
   async getUsage(ctx: Context, metricName: string, range: DateRange): Promise<UsageSummary> {

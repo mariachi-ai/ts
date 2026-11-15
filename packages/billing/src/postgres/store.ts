@@ -107,6 +107,7 @@ function toUsageRecord(r: typeof usage.$inferSelect): UsageRecord {
     timestamp: r.timestamp,
     idempotencyKey: r.idempotencyKey ?? undefined,
     dimensions: r.dimensions ?? null,
+    forwardPending: r.forwardPending,
     forwardedAt: r.forwardedAt ?? null,
     recordedAt: r.createdAt,
   };
@@ -422,7 +423,7 @@ export class DrizzleBillingStore implements BillingStore {
 
   async markUsageForwarded(tenantId: string, idempotencyKey: string, at: Date): Promise<void> {
     await this.run('markUsageForwarded', () =>
-      this.db.update(usage).set({ forwardedAt: at }).where(and(eq(usage.tenantId, tenantId), eq(usage.idempotencyKey, idempotencyKey))),
+      this.db.update(usage).set({ forwardedAt: at, forwardPending: false }).where(and(eq(usage.tenantId, tenantId), eq(usage.idempotencyKey, idempotencyKey))),
     );
   }
 
@@ -431,11 +432,21 @@ export class DrizzleBillingStore implements BillingStore {
       this.db
         .select()
         .from(usage)
-        .where(and(isNull(usage.forwardedAt), isNotNull(usage.idempotencyKey), gte(usage.createdAt, options.after), lt(usage.createdAt, options.before)))
+        .where(and(eq(usage.forwardPending, true), isNotNull(usage.idempotencyKey), gte(usage.createdAt, options.after), lt(usage.createdAt, options.before)))
         .orderBy(asc(usage.createdAt))
         .limit(options.limit),
     );
     return rows.map(toUsageRecord);
+  }
+
+  async countPendingUsage(options: { before: Date }): Promise<number> {
+    const rows = await this.run('countPendingUsage', () =>
+      this.db
+        .select({ n: sql<number>`count(*)::int` })
+        .from(usage)
+        .where(and(eq(usage.forwardPending, true), isNotNull(usage.idempotencyKey), lt(usage.createdAt, options.before))),
+    );
+    return Number(rows[0]?.n ?? 0);
   }
 
   async summarizeUsage(tenantId: string, metricName: string, range: DateRange): Promise<UsageSummary> {
