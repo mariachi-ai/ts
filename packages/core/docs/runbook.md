@@ -49,7 +49,7 @@ fail the boot with `ConfigError`.
 | `LOG_ADAPTER`, `LOG_LEVEL` | logging (`pino` or `console`) | `pino`, `info` |
 | `TRACING_ADAPTER`, `OTEL_EXPORTER_OTLP_ENDPOINT` / `..._TRACES_ENDPOINT` | OpenTelemetry tracing | off |
 | `METRICS_ADAPTER`, `METRICS_PREFIX`, `ERRORS_ADAPTER`, `SENTRY_DSN` | metrics and error tracking | noop |
-| `STORAGE_*`, `EMAIL_*`, `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
+| `STORAGE_*`, `EMAIL_*` (`EMAIL_ADAPTER`, `EMAIL_API_KEY`, `EMAIL_FROM`, `EMAIL_API_URL`), `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
 
 ## Developing the framework
 

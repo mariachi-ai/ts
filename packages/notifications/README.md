@@ -21,8 +21,10 @@ Guide: [notifications.md](../core/docs/notifications.md)
 | Export | Purpose |
 | --- | --- |
 | `DefaultNotifications` | `notify(ctx, intent)`, `deliverJob(ctx, job)` (worker), `sendEmail`, `sendSMS`, `sendPush`, `sendInApp`, `sendTemplatedEmail` |
-| `createEmailAdapter(config)` | `ResendEmailAdapter` or `SmtpEmailAdapter` from `config.email` |
-| `TwilioSmsAdapter`, `FcmPushAdapter`, `ResendEmailAdapter`, `SmtpEmailAdapter` | Channel adapters |
+| `createEmailAdapter(config)` | The email adapter `config.email.adapter` names: `resend`, `smtp`, `postmark`, `sendgrid`, or `custom` with `instance` |
+| `ResendEmailAdapter`, `SmtpEmailAdapter`, `PostmarkEmailAdapter`, `SendGridEmailAdapter` | Email adapters. SMTP uses the optional peer `nodemailer`; Postmark and SendGrid use `fetch` |
+| `TwilioSmsAdapter`, `FcmPushAdapter` | SMS and push adapters |
+| `parseSmtpUrl`, `parseAddress` | What an `SMTP_URL` resolves to; `Name <address>` parsing |
 | `DrizzleNotificationStore`, `MemoryInAppStore`, `MemoryPreferenceStore`, `MemoryDeliveryStore` | Stores |
 | `NOTIFICATION_DISPATCH_JOB`, `notificationJobSchema` | Name and Zod schema for the per-channel job |
 | `renderTemplate` | `{{var}}` (HTML-escaped for email) and `{{{raw}}}` placeholders |
@@ -31,7 +33,7 @@ Guide: [notifications.md](../core/docs/notifications.md)
 
 | Setting | Notes |
 | --- | --- |
-| `email` | Required. `config.email.adapter`: `'resend'` (`apiKey`, `from`) or `'smtp'` (`host`, `port`, `from`) |
+| `email` | Required. `config.email.adapter`: `'resend'`, `'postmark'` or `'sendgrid'` (`apiKey`, `from`), `'smtp'` (`smtpUrl` as `smtp://user:pass@host:587` or `smtps://…`, `from`), or `'custom'` (`instance`). See the [guide](../core/docs/notifications.md#email-providers) |
 | `sms`, `push` | Optional adapters; a channel without one fails with `notifications/*-not-configured` |
 | `inApp`, `preferences`, `deliveries` | Stores; pass `DrizzleNotificationStore` for all three |
 | `queue` | A `DefaultJobs`. Omit to send inline |

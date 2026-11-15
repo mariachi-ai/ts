@@ -65,7 +65,7 @@
 | [`@mariachi/audit`](../../audit/README.md) | beta | Append-only audit log enforced by a database trigger, with per-tenant hash chaining, tenant-scoped queries, retention and export. | Recording who did what, for compliance or support | `DefaultAudit`, `DrizzleAuditLog`, `installAuditAppendOnly` |
 | [`@mariachi/billing`](../../billing/README.md) | beta | Stripe billing with a local Postgres mirror: customers, subscriptions, plans, charges, refunds, a credit ledger, usage and replayable webhooks. | Taking payments, metering usage or checking entitlements | `DefaultBilling`, `createBillingAdapter`, `createBillingWebhookHandler`, `DrizzleBillingStore` |
 | [`@mariachi/integrations`](../../integrations/README.md) | beta | Third-party API integrations: validated functions with retries, per-tenant encrypted credentials, a callable registry and webhook signature checks. | Wrapping an external API | `defineIntegrationFn`, `IntegrationRegistry`, `resolveTenantCredential` |
-| [`@mariachi/notifications`](../../notifications/README.md) | beta | Email (Resend, SMTP), SMS (Twilio), push (FCM) and in-app notifications with preferences, per-channel queued delivery and delivery tracking. | Sending messages to users | `DefaultNotifications`, `createEmailAdapter`, `DrizzleNotificationStore` |
+| [`@mariachi/notifications`](../../notifications/README.md) | beta | Email (Resend, SMTP, Postmark, SendGrid), SMS (Twilio), push (FCM) and in-app notifications with preferences, per-channel queued delivery and delivery tracking. | Sending messages to users | `DefaultNotifications`, `createEmailAdapter`, `DrizzleNotificationStore` |
 
 ## Design
 

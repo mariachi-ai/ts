@@ -67,7 +67,10 @@ export const AppConfigSchema = z.object({
       adapter: z.string().default('resend'),
       apiKey: z.string().optional(),
       from: z.string().optional(),
+      /** `smtp://user:pass@host:587` or `smtps://…`, for `adapter: 'smtp'`. */
       smtpUrl: z.string().optional(),
+      /** The base URL of an HTTP email API, when it isn't the provider's own (also for custom adapters). */
+      apiUrl: z.string().url().optional(),
     })
     .optional(),
   search: z
