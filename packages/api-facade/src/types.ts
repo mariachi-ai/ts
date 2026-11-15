@@ -1,5 +1,5 @@
 import type { Context } from '@mariachi/core';
-import type { IncomingRequest, ServerConfig } from '@mariachi/server';
+import type { CookieOptions, IncomingRequest, MultipartLimits, ServerConfig, UploadedFile } from '@mariachi/server';
 import type { RateLimiter, RateLimitRule } from '@mariachi/rate-limit';
 import type { z } from 'zod';
 
@@ -38,9 +38,22 @@ export interface HttpContext extends Context {
     headers: IncomingRequest['headers'];
     /** Exact request bytes, for signature checks and binary uploads (the parsed body may differ). */
     rawBody?: Buffer;
+    /** The request's cookies, by name. */
+    cookies: Readonly<Record<string, string>>;
+    /** The files of a multipart upload, on a route with `upload` set; empty otherwise. */
+    files: UploadedFile[];
+    /** Aborts when the client goes away before the response is finished: pass it to slow upstream calls. */
+    signal: AbortSignal;
   };
   /** Headers added to the response. */
   responseHeaders: Record<string, string>;
+  /**
+   * Adds a `Set-Cookie` to the response (also when the handler then throws). Defaults:
+   * `Path=/; HttpOnly; Secure; SameSite=Lax`. The value is percent-encoded.
+   */
+  setCookie(name: string, value: string, options?: CookieOptions): void;
+  /** Removes a cookie. `path` and `domain` must be the ones it was set with. */
+  clearCookie(name: string, options?: Pick<CookieOptions, 'path' | 'domain' | 'secure' | 'httpOnly' | 'sameSite' | 'partitioned'>): void;
 }
 
 export type HttpMiddleware = (ctx: HttpContext, next: () => Promise<void>) => Promise<void>;
@@ -59,7 +72,13 @@ export type RouteHandler<S extends RouteSchemas = RouteSchemas> = (
   body: Out<S['body'], unknown>,
   params: Out<S['params'], Record<string, string>>,
   query: Out<S['query'], Record<string, string | string[]>>,
-) => Promise<Out<S['response'], unknown> | import('@mariachi/server').HttpResponse | undefined>;
+) => Promise<
+  | Out<S['response'], unknown>
+  | import('@mariachi/server').HttpResponse
+  | import('@mariachi/server').StreamResponse
+  | import('@mariachi/server').SseResponse
+  | undefined
+>;
 
 export interface RouteOpts<S extends RouteSchemas = RouteSchemas> {
   /** Strategies accepted by this route, or `false` for public. Default: server `withAuth` list. */
@@ -75,6 +94,12 @@ export interface RouteOpts<S extends RouteSchemas = RouteSchemas> {
   tags?: string[];
   deprecated?: boolean;
   bodyLimitBytes?: number;
+  /**
+   * Take a `multipart/form-data` body: the files arrive in `ctx.request.files` and the text fields
+   * as the handler's `body` (checked by `schema.body`). Files are held in memory, so raise
+   * `bodyLimitBytes` only as far as this route needs. `true` uses the default limits.
+   */
+  upload?: MultipartLimits | true;
 }
 
 export interface RouteDefinition<S extends RouteSchemas = RouteSchemas> extends RouteOpts<S> {

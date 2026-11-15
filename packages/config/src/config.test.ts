@@ -29,11 +29,32 @@ describe('loadConfig', () => {
 
   it('reads AI fallbacks and cost table from env', () => {
     const config = loadConfig({}, {
-      env: { AI_FALLBACK_MODELS: 'gpt-4o, gpt-4o-mini', AI_COST_TABLE: '{"claude-sonnet-5":{"input":0.003,"output":0.015}}' },
+      env: { AI_FALLBACK_MODELS: 'gpt-4o, gpt-4o-mini', AI_COST_TABLE: '{"claude-sonnet-5":{"input":0.003,"output":0.015}}', AI_BASE_URL: 'https://ai.example.com' },
     });
+    expect(config.ai?.baseUrl).toBe('https://ai.example.com');
+    expect(() => loadConfig({}, { env: { AI_BASE_URL: 'not a url' } })).toThrow(ConfigError);
     expect(config.ai?.fallbackModels).toEqual(['gpt-4o', 'gpt-4o-mini']);
     expect(config.ai?.costTable?.['claude-sonnet-5']).toEqual({ input: 0.003, output: 0.015 });
     expect(() => loadConfig({}, { env: { AI_COST_TABLE: '{nope' } })).toThrow(ConfigError);
+  });
+
+  it('reads email settings from env', () => {
+    const config = loadConfig({}, {
+      env: { EMAIL_ADAPTER: 'smtp', SMTP_URL: 'smtps://user:pass@smtp.example.com', EMAIL_FROM: 'App <app@example.com>', EMAIL_API_KEY: 'key-1', RESEND_API_KEY: 'key-2', EMAIL_API_URL: 'https://mail.example.com/api' },
+    });
+    expect(config.email).toEqual({ adapter: 'smtp', apiKey: 'key-1', from: 'App <app@example.com>', smtpUrl: 'smtps://user:pass@smtp.example.com', apiUrl: 'https://mail.example.com/api' });
+    expect(loadConfig({}, { env: { RESEND_API_KEY: 'key-2' } }).email?.apiKey).toBe('key-2');
+  });
+
+  it("never gives one email provider another's key", () => {
+    // The adapter defaults to Resend, so a generic key with no adapter named would go there.
+    expect(() => loadConfig({}, { env: { EMAIL_API_KEY: 'someone-elses-key' } })).toThrow(expect.objectContaining({ code: 'config/email-adapter-required' }));
+    expect(() => loadConfig({}, { env: { EMAIL_API_KEY: 'someone-elses-key', RESEND_API_KEY: 'resend-key' } })).toThrow(ConfigError);
+    // Resend's key stays with Resend.
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'postmark', RESEND_API_KEY: 'resend-key' } }).email).toEqual({ adapter: 'postmark' });
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'custom', EMAIL_API_KEY: 'platform-key', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('platform-key');
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'resend', EMAIL_API_KEY: 'explicit', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('explicit');
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'resend', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('resend-key');
   });
 
   it('throws ConfigError with readable issues on invalid input', () => {

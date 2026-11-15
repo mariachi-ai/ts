@@ -37,6 +37,11 @@ context into their envelope and rebuild it on the consumer side.
   `code` like `billing/card-declined`. **(validate: `no-raw-error`, lint)**
 - The code decides the HTTP status (`errorToHttpStatus`): `*/not-found` → 404, `*/conflict` → 409,
   `validation/*` → 400, `auth/*` → 401/403, `rate-limit/*` → 429, anything unknown → 500.
+- `NotFoundError(resource, id?)`, `ConflictError(message, metadata?)` and `ValidationError(message, details?)`
+  have fixed codes (`not-found`, `conflict`, `validation/invalid-input`); put the specifics in the
+  message and metadata. For a code of your own, subclass `MariachiError` and end the code in
+  `/not-found`, `/conflict`, `/duplicate`, `/exists` or `/invalid-input` to get that status, or give
+  the error a numeric `statusCode` property (400–599).
 - Every HTTP server returns the same envelope, `{ error: { code, message, traceId, details? } }`. For
   5xx errors the message is replaced with a generic one so internals never leak.
 - Zod errors are converted with `fromZodError` into `ValidationError` with `details` listing the issues.

@@ -365,14 +365,24 @@ export class StripeAdapter implements BillingAdapter {
   }
 
   async reportUsage(input: { customerId: string; metricName: string; quantity: number; timestamp: Date; idempotencyKey?: string }): Promise<void> {
-    await this.call('reportUsage', () =>
-      this.stripe.billing.meterEvents.create({
-        event_name: input.metricName,
-        identifier: input.idempotencyKey,
-        timestamp: Math.floor(input.timestamp.getTime() / 1000),
-        payload: { stripe_customer_id: input.customerId, value: String(input.quantity) },
-      }),
-    );
+    await this.call('reportUsage', async () => {
+      try {
+        // The event's identifier is what makes a resend safe: Stripe counts one event per identifier
+        // within a day. No request idempotency key on purpose: Stripe replays the first response
+        // saved under such a key, a 500 included, so a resend after a failed first attempt would
+        // get that failure back for 24 hours and never go through.
+        await this.stripe.billing.meterEvents.create({
+          event_name: input.metricName,
+          identifier: input.idempotencyKey,
+          timestamp: Math.floor(input.timestamp.getTime() / 1000),
+          payload: { stripe_customer_id: input.customerId, value: String(input.quantity) },
+        });
+      } catch (error) {
+        // Stripe already has an event with this identifier: the earlier attempt did arrive
+        if ((error as { code?: string }).code === 'duplicate_meter_event') return;
+        throw error;
+      }
+    });
   }
 
   async getCreditBalance(customerId: string, currency?: string): Promise<CreditBalance> {

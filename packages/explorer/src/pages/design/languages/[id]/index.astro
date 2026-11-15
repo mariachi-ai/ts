@@ -45,7 +45,7 @@ const toc: Heading[] = [
 ---
 
 <Base title={`${language.label} design language`} description={language.pitch} sidebar={designSidebar(catalog)} toc={toc} fonts={fonts}>
-  <nav class="m-breadcrumb" aria-label="Breadcrumb">
+  <nav class="m-breadcrumb x-crumbs" aria-label="Breadcrumb">
     <ol>
       <li><a href={href('design')}>Design</a></li>
       <li><a href={index}>Languages</a></li>
@@ -320,7 +320,7 @@ const toc: Heading[] = [
               <Fragment set:html={lucideSvg(language.icons.actions[action], 20, language.icons.stroke)} />
               <span class="m-stack" data-gap="0">
                 <span>{action}</span>
-                <span class="m-subtle x-mono">{language.icons.actions[action]}</span>
+                <span class="m-muted x-mono">{language.icons.actions[action]}</span>
               </span>
             </div>
           ))

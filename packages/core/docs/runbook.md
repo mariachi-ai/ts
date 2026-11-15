@@ -54,7 +54,7 @@ fail the boot with `ConfigError`.
 | `STORAGE_SIGNING_SECRET`, `STORAGE_PUBLIC_BASE_URL` | the local adapter's URL-signing secret (32+ characters) and where public objects are served from | none |
 | `TRACING_ADAPTER`, `OTEL_EXPORTER_OTLP_ENDPOINT` / `..._TRACES_ENDPOINT` | OpenTelemetry tracing | off |
 | `METRICS_ADAPTER`, `METRICS_PREFIX`, `ERRORS_ADAPTER`, `SENTRY_DSN` | metrics and error tracking | noop |
-| `EMAIL_*`, `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
+| `EMAIL_*` (`EMAIL_ADAPTER`, `EMAIL_API_KEY`, `EMAIL_FROM`, `EMAIL_API_URL`), `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
 
 A value that can't be read is refused at start (`config/invalid`, naming the variable): a number
 that isn't one, a boolean that isn't `true`/`false` (or `1`/`0`, `yes`/`no`, `on`/`off`), or an
