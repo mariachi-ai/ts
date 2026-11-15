@@ -27,8 +27,9 @@ expect(email.getSentEmails()[0]?.subject).toBe('Invoice 42 is ready');
 | `TestSearchClient` | `SearchClient` | The memory search adapter. |
 | `TestInAppStore` | `InAppNotificationStore` | The memory inbox. |
 | `TestEmailAdapter`, `TestSMSAdapter`, `TestPushAdapter` | notification channels | Record what was sent. |
-| `TestJobQueue` | `JobQueue` + worker | `drain()` runs queued jobs through their registered handlers. |
-| `TestEventBus`, `TestRepository`, `TestAISession`, `TestTracer`, `TestMetrics` | events, repositories, AI, observability | Record calls for assertions. |
+| `TestJobQueue` | The whole job backend (`new DefaultJobs({ queue })`) | `drain()` runs queued jobs through their registered handlers. Schedules are recorded (`getSchedules()`) and never fire on a clock; `runSchedule(name)` enqueues one as its cron tick would. |
+| `TestRepository` | `Repository` (Postgres) | With `{ tenantColumn: 'tenantId' }` it is tenant-scoped like the real one: an operation without `ctx.tenantId` throws `database/tenant-required`, a row for another tenant is `database/tenant-mismatch`, `crossTenant()` is the only way across. Every filter operator works as in SQL; an unknown one throws. |
+| `TestEventBus`, `TestAISession`, `TestTracer`, `TestMetrics` | events, AI, observability | Record calls for assertions. |
 
 Types come from the real packages, so a double that drifts from its interface fails to compile.
 
@@ -105,6 +106,7 @@ implementation:
 | `inboxContract` | memory, `TestInAppStore` | Postgres (`DrizzleNotificationStore`) |
 | `cacheContract` | memory, `TestCacheClient` | Redis |
 | `lockContract` | `TestLock` | Redis |
+| `repositoryContract` | `TestRepository` | Postgres (`DrizzleRepository`) |
 
 When you change an adapter's behavior, change the suite first; whichever side you didn't update
 then fails. When you add an adapter, add a line that runs the suite against it.
