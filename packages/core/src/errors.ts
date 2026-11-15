@@ -212,6 +212,8 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'auth/jwt-config': 500,
   'auth/jwt-weak-secret': 500,
   'auth/unknown-role': 400,
+  'auth/user-lookup-failed': 502,
+  'auth/verified-email-unavailable': 500,
   'auth': 401,
   'http/invalid-json': 400,
   'http/payload-too-large': 413,

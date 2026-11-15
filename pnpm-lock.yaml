@@ -767,6 +767,15 @@ importers:
       '@mariachi/lifecycle':
         specifier: workspace:*
         version: link:../lifecycle
+      '@mariachi/notifications':
+        specifier: workspace:*
+        version: link:../notifications
+      '@mariachi/organizations':
+        specifier: workspace:*
+        version: link:../organizations
+      '@mariachi/rate-limit':
+        specifier: workspace:*
+        version: link:../rate-limit
       '@mariachi/tenancy':
         specifier: workspace:*
         version: link:../tenancy

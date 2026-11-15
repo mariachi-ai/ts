@@ -20,6 +20,13 @@ export interface ProjectConfig {
    * example sign-in page and `GET /api/me`.
    */
   auth?: ProjectAuth;
+  /**
+   * Organizations, memberships and invitations in the app's own database (`@mariachi/organizations`):
+   * the tables, the `/api/organizations` routes, the check that puts a request in the organization
+   * it names, and invitation emails. For apps whose identity provider doesn't keep organizations
+   * itself. Works with either `auth`. Default false.
+   */
+  organizations?: boolean;
 }
 
 export const PROJECT_AUTH = ['jwt', 'gotrue'] as const;

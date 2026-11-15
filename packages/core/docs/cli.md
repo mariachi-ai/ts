@@ -6,7 +6,7 @@ in the environment win.
 ## init
 
 ```bash
-npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue
+npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue, --orgs
 ```
 
 Creates the [project layout](./architecture.md#project-layout): `src/app.ts` (`createApp()`: config, lifecycle,
@@ -28,6 +28,18 @@ with a plain Supabase project; `AUTH_PERSONAL_TENANTS=false` requires an organiz
 adds `GET /api/me`, `MIGRATE_ON_START`, and an example sign-in page at `/api/sign-in` (password,
 sign-up, magic link; emailed links use PKCE, so a link works once and only in the browser that
 asked for it).
+
+`--orgs` adds organizations, memberships and invitations kept in the app's own database
+(`@mariachi/organizations`, see [organizations.md](./organizations.md)), for apps whose identity
+provider keeps none. It works with either `--auth`. The project gets the tables
+(`src/schema/organizations.ts`), the wiring in one file (`src/organizations.ts`), the routes under
+`/api/organizations`, the check that puts a request in the organization its `x-organization-id`
+header names once the user's membership is confirmed, rate limits on creating, inviting and
+accepting, and end-to-end tests for all of it. Invitations are emailed once `INVITATION_URL` (your
+accept page) and an email adapter (`EMAIL_ADAPTER`) are set; until then the invite's response
+carries the token. With `--auth gotrue`, whether an invitee's address is verified is read from the
+user's record (`AUTH_SERVICE_KEY`) or a claim your own token hook adds, never from what the user can
+edit. The page that accepts an invitation is yours to build.
 
 ## generate
 

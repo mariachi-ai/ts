@@ -11,6 +11,7 @@ export {
   type OrganizationLimiter,
   type OrganizationProcedureOptions,
 } from './procedures';
+export { invitationEmail, type InvitationDelivery, type InvitationEmailOptions, type InvitationMailer, type InvitationMessage } from './email';
 export { ORGANIZATION_ROLES } from './types';
 export type {
   Invitation,

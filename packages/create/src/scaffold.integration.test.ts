@@ -240,3 +240,69 @@ describe('generated project with --auth gotrue', () => {
     expect(result.violations).toEqual([]);
   });
 });
+
+describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth %s)', (auth) => {
+  const app = join(workDir, `${auth}-orgs-app`);
+
+  beforeAll(async () => {
+    await rm(app, { recursive: true, force: true });
+    await createProject({ name: `${auth}-orgs-app`, outputDir: app, auth, organizations: true });
+    await generateEntity({ name: 'invoice-item', projectRoot: app });
+  }, 30_000);
+
+  afterAll(async () => {
+    await rm(workDir, { recursive: true, force: true });
+    await stopAll();
+  });
+
+  it('registers the organizations routes and tables beside the generated ones', async () => {
+    const controllers = await readFile(join(app, 'src/api/controllers/index.ts'), 'utf-8');
+    expect(controllers).toMatch(/new OrganizationsController\(communication\),\n\s+new NotesController\(communication\),\n\s+new InvoiceItemsController\(communication\),/);
+    const schema = await readFile(join(app, 'src/schema/index.ts'), 'utf-8');
+    expect(schema).toContain("export * from './organizations';");
+    expect(schema).toContain("export * from './invoice-items';");
+  });
+
+  it('typechecks against the current framework packages', async () => {
+    await sh('typescript/bin/tsc', ['-p', 'tsconfig.json'], app);
+  }, 120_000);
+
+  it('passes its own generated tests', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app], app);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 120_000);
+
+  it('passes its own end-to-end tests: organizations, invitations by email, and the generated entities inside an organization', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app, '--config', join(app, 'vitest.e2e.config.ts')], app);
+    expect(stdout).toMatch(/src\/organizations\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/src\/app\.e2e\.test\.ts/);
+    // Written by `generate entity`, unchanged: its users are put in organizations by the harness
+    expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/invoice-items\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    // Vitest's own count: the app logs "request failed" for a refusal a test provokes on purpose
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 300_000);
+
+  it('boots its main.ts, and answers the organization routes only to someone signed in', async () => {
+    const { status, output, probed } = await bootReady(
+      app,
+      {
+        SERVICE_NAME: `${auth}-orgs-app`,
+        NODE_ENV: 'development',
+        DATABASE_URL: await startPostgres(),
+        REDIS_URL: await startRedis(),
+        ...(auth === 'gotrue' ? { AUTH_URL: 'https://auth.example.test/auth/v1' } : { JWT_SECRET: 'scaffold-test-secret-at-least-32-characters' }),
+      },
+      async (base) => ({ organizations: (await fetch(`${base}/api/organizations`)).status }),
+    );
+    expect({ status, output }).toMatchObject({ status: 200 });
+    expect(probed).toEqual({ organizations: 401 });
+  }, 180_000);
+
+  it('passes mariachi validate with no findings', async () => {
+    const result = await validate(app);
+    expect(result.violations).toEqual([]);
+  });
+});
