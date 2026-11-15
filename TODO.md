@@ -49,9 +49,6 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
      limits without Redis.
    - `mariachi doctor`'s hint for an unreachable Redis says `docker compose up -d` even when the
      Compose file has no Redis service.
-5. **Vendor SDKs as optional peers (breaking).** ioredis, nats, bullmq, typesense, the S3 SDK, stripe,
-   resend, the AI SDK providers and `@clerk/backend` install with every app today. The rule is that an
-   app installs the SDKs of the adapters it uses.
 
 ## Later
 

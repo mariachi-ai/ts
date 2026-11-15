@@ -48,7 +48,7 @@ const ENV_EXAMPLE = (name: string, db: string) => `SERVICE_NAME=${name}
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/${db}
-# Jobs run in Postgres. Set REDIS_URL to run them on Redis (BullMQ) instead.
+# Jobs run in Postgres. To run them on Redis (BullMQ) instead: pnpm add bullmq, then set REDIS_URL.
 # REDIS_URL=redis://localhost:6379
 # Apply the committed migrations (drizzle/) at start. Handy where nothing else runs them.
 MIGRATE_ON_START=false
@@ -1419,7 +1419,7 @@ pnpm dev
 
 \`pnpm dev\` (\`mariachi dev\`) starts Postgres with Docker Compose, writes and applies the first
 migration, and runs the app, reloading on changes. Postgres is the only service the app itself
-needs: jobs and search run in it (set \`REDIS_URL\` to run jobs on Redis instead).
+needs: jobs and search run in it (\`pnpm add bullmq\` and set \`REDIS_URL\` to run jobs on Redis instead).
 
 The API listens on \`PORT\` (default 3000) under \`/api\`. Health checks: \`/api/health/live\`,
 \`/api/health/ready\`, \`/api/health/startup\`. OpenAPI: \`/api/openapi.json\`.
