@@ -481,6 +481,10 @@ export interface ResetOnSignalOptions {
  * machines and can tell each copied process so (see `PostgresJobAdapter.reset`). Opt-in. A second
  * signal while a reset is under way waits for it and resets again, which finds nothing to return.
  * Returns a function that removes the handler.
+ *
+ * Once this is installed the process no longer exits on that signal. `nodemon` restarts a process
+ * with `SIGUSR2` by default, so under it name another signal (or don't install this in development),
+ * or restarts will hang.
  */
 export function resetOnSignal(queue: Pick<PostgresJobAdapter, 'reset'>, options: ResetOnSignalOptions = {}): () => void {
   const signal = options.signal ?? 'SIGUSR2';
