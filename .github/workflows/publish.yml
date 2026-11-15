@@ -139,7 +139,11 @@ jobs:
           name: package-dists
           path: packages
       # No NPM_TOKEN and no NODE_AUTH_TOKEN here: with either set, npm uses it and skips the OIDC exchange
+      # No package's own publish-time script (prepack, prepublishOnly) runs either: the build job made
+      # everything that ships. A package that needs one must do that work in its build script instead.
       - run: pnpm exec changeset publish
+        env:
+          npm_config_ignore_scripts: "true"
       - name: Push the release tags
         # The only step that is given the repository token
         env:
