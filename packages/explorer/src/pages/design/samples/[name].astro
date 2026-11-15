@@ -1,7 +1,7 @@
 ---
 import Base from '../../../layouts/Base.astro';
 import { href } from '../../../lib/url';
-import { loadDesign } from '../../../loaders/design';
+import { loadDesign, loadLanguages } from '../../../loaders/design';
 import { samples } from '../../../samples';
 
 export function getStaticPaths() {
@@ -9,7 +9,13 @@ export function getStaticPaths() {
 }
 
 const sample = samples.find((s) => s.name === Astro.params.name)!;
-const presets = loadDesign().presets;
+// Compared against Minimal: the other presets first, then the design languages.
+const languageIds = new Set(loadLanguages().map((l) => l.id));
+const others = loadDesign().presets.filter((p) => p.name !== 'minimal');
+const groups = [
+  { label: 'Presets', presets: others.filter((p) => !languageIds.has(p.name)) },
+  { label: 'Design languages', presets: others.filter((p) => languageIds.has(p.name)) },
+].filter((g) => g.presets.length > 0);
 ---
 
 <Base title={`${sample.title} sample`} description={sample.description} wide>
@@ -24,12 +30,20 @@ const presets = loadDesign().presets;
     <h1>{sample.title}</h1>
     <p class="x-lede">{sample.description}</p>
   </header>
-  <div class="m-cluster x-sample-bar" data-justify="between">
-    <span class="m-muted">Compare this page:</span>
-    <div class="m-cluster" data-gap="2">
-      {presets.map((p) => <a class="m-button" data-size="sm" href={`${href('design/compare')}?item=sample:${sample.name}&presets=minimal,${p.name === 'minimal' ? 'brutalist' : p.name}`}>vs {p.label}</a>)}
-    </div>
-  </div>
+  <form class="m-cluster x-sample-bar" data-gap="2" action={href('design/compare')} method="get">
+    <input type="hidden" name="item" value={`sample:${sample.name}`} />
+    <label class="m-muted" for="x-sample-compare">Compare Minimal with</label>
+    <select class="m-select" data-size="sm" id="x-sample-compare" name="presets">
+      {
+        groups.map((g) => (
+          <optgroup label={g.label}>
+            {g.presets.map((p) => <option value={`minimal,${p.name}`}>{p.label}</option>)}
+          </optgroup>
+        ))
+      }
+    </select>
+    <button type="submit" class="m-button" data-size="sm">Compare</button>
+  </form>
   <div class="x-sample-stage" data-pagefind-ignore>
     <Fragment set:html={sample.html} />
   </div>

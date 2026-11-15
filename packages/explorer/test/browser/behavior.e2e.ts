@@ -73,6 +73,20 @@ test.describe('compare', () => {
     await expect(page.locator('input[name="preset"][value="minimal"]')).toBeDisabled();
     expect(page.url()).toContain('presets=brutalist%2Ceditorial%2Csoft%2Cterminal');
   });
+
+  test('a sample page opens its comparison from the keyboard', async ({ page }) => {
+    await page.goto('/design/samples/sign-in/');
+    const select = page.getByLabel('Compare Minimal with');
+    await select.focus();
+    await select.selectOption({ label: 'Terminal' });
+    await page.keyboard.press('Tab');
+    await expect(page.getByRole('button', { name: 'Compare', exact: true })).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page).toHaveURL(/\/design\/compare\//);
+    await expect(page.locator('#x-compare-item')).toHaveValue('sample:sign-in');
+    await expect(page.locator('.x-compare-panel')).toHaveCount(2);
+    await expect(page.locator('.x-compare-panel').nth(1)).toHaveAttribute('data-theme', 'terminal');
+  });
 });
 
 test.describe('playground', () => {
