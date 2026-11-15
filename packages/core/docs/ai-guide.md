@@ -70,7 +70,7 @@ await lock.withLock(`invoice:${id}`, 30_000, async () => { /* one instance at a 
 
 // Errors
 throw new NotFoundError('order', id);
-throw new ConflictError('orders/already-paid', 'Paid orders cannot be cancelled');
+throw new ConflictError('Paid orders cannot be cancelled', { orderId: id });   // code `conflict`, HTTP 409
 throw new ValidationError('Invalid date range', [{ path: ['to'], message: 'must be after from' }]);
 ```
 
