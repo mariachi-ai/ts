@@ -177,7 +177,41 @@ export interface UsageRecord {
   forwardedAt?: Date | null;
   /** When the store recorded it. Set by the store on records it returns. */
   recordedAt?: Date;
+  /** How a person settled it, when the provider never confirmed it and it was too old to resend. */
+  settlement?: UsageSettlement | null;
+  settledAt?: Date | null;
+  settledBy?: string | null;
+  settlementNote?: string | null;
 }
+
+/**
+ * What a person decided about a usage record the provider never confirmed:
+ * - `provider-has-it`: they checked, and the provider did count it. It is billed.
+ * - `written-off`: the provider doesn't have it and it won't be charged. The usage still happened,
+ *   so it stays in the usage totals.
+ */
+export type UsageSettlement = 'provider-has-it' | 'written-off';
+
+/** Which records a usage total counts. Default: all of them. */
+export interface UsageSummaryOptions {
+  /**
+   * `billed`: only what the provider has (it confirmed the record, or a person settled it as
+   * `provider-has-it`). `written-off`: only what was settled as written off.
+   */
+  only?: 'billed' | 'written-off';
+}
+
+/** Why `settleStaleUsage` left a record alone. */
+export type UsageSettleSkip =
+  | 'not-found'
+  /** The provider confirmed it, or it was never waiting. */
+  | 'not-pending'
+  /** Still inside the resend window: it can yet be sent, so settling it could bill it twice or not at all. */
+  | 'not-stale'
+  /** Settled with this same outcome before. */
+  | 'already-settled'
+  /** Settled with the other outcome: a settlement is not changed. */
+  | 'settled-differently';
 
 export interface UsageSummary {
   metricName: string;
@@ -465,11 +499,16 @@ export interface BillingStore {
   findUsageRecord?(tenantId: string, idempotencyKey: string): Promise<UsageRecord | null>;
   /** Marks the record as confirmed by the provider. */
   markUsageForwarded?(tenantId: string, idempotencyKey: string, at: Date): Promise<void>;
-  /** Records waiting for the provider's confirmation, oldest first, recorded after `after` and before `before`. */
-  listPendingUsage?(options: { after: Date; before: Date; limit: number }): Promise<UsageRecord[]>;
+  /** Records waiting for the provider's confirmation, oldest first, recorded after `after` and before `before`; one tenant's with `tenantId`. */
+  listPendingUsage?(options: { after: Date; before: Date; limit: number; tenantId?: string }): Promise<UsageRecord[]>;
   /** How many records recorded before `before` still wait for confirmation. */
   countPendingUsage?(options: { before: Date }): Promise<number>;
-  summarizeUsage(tenantId: string, metricName: string, range: DateRange): Promise<UsageSummary>;
+  /**
+   * Records a person's settlement of a record and stops it waiting. Leaves `forwardedAt` alone:
+   * that is the provider's own confirmation. Does nothing to a record that isn't waiting.
+   */
+  settleUsage?(tenantId: string, idempotencyKey: string, settlement: { outcome: UsageSettlement; at: Date; by: string; note?: string }): Promise<void>;
+  summarizeUsage(tenantId: string, metricName: string, range: DateRange, options?: UsageSummaryOptions): Promise<UsageSummary>;
   /** Sums usage per value of `dimensions[groupBy]` (`null` for records without it). */
   summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string): Promise<UsageBreakdown['groups']>;
 

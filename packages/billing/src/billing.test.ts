@@ -319,6 +319,75 @@ describe('Billing service', () => {
       }
     });
 
+    it('lists stale usage, for every tenant or one, and settles it by what a person found', async () => {
+      await billing.ensureCustomer(t1, { email: 'a@t1' });
+      await billing.ensureCustomer(t2, { email: 'a@t2' });
+      failing(3);
+      await billing.reportUsage(t1, { metricName: 'tokens', quantity: 7, idempotencyKey: 'lost-1' }).catch(() => undefined);
+      await billing.reportUsage(t1, { metricName: 'tokens', quantity: 5, idempotencyKey: 'lost-2' }).catch(() => undefined);
+      await billing.reportUsage(t2, { metricName: 'tokens', quantity: 2, idempotencyKey: 'lost-3' }).catch(() => undefined);
+      await billing.reportUsage(t1, { metricName: 'tokens', quantity: 1, idempotencyKey: 'fine' });
+      const staff = createContext({ logger: silent, userId: 'staff-ada', identityType: 'session' });
+
+      // Inside the resend window nothing is stale, and nothing can be settled: it may still be sent
+      expect(await billing.listStaleUsage(staff)).toEqual([]);
+      expect(await billing.settleStaleUsage(staff, { tenantId: 't1', idempotencyKeys: ['lost-1'], outcome: 'provider-has-it' })).toEqual({
+        settled: [],
+        skipped: [{ key: 'lost-1', reason: 'not-stale' }],
+      });
+
+      vi.useFakeTimers({ now: Date.now() + 25 * 60 * 60 * 1000 });
+      try {
+        const keys = async (tenantId?: string) => (await billing.listStaleUsage(staff, { tenantId })).map((u) => `${u.tenantId}:${u.idempotencyKey}`).sort();
+        expect(await keys()).toEqual(['t1:lost-1', 't1:lost-2', 't2:lost-3']);
+        expect(await keys('t1')).toEqual(['t1:lost-1', 't1:lost-2']);
+
+        // Writing off says why
+        await expect(billing.settleStaleUsage(staff, { tenantId: 't1', idempotencyKeys: ['lost-2'], outcome: 'written-off' })).rejects.toMatchObject({ code: 'billing/invalid-input' });
+        await expect(billing.settleStaleUsage(staff, { tenantId: 't1', idempotencyKeys: ['lost-2'], outcome: 'written-off', note: '  ' })).rejects.toMatchObject({ code: 'billing/invalid-input' });
+
+        // The provider did count this one; the confirmed one, an unknown one and a repeat are left alone
+        expect(await billing.settleStaleUsage(staff, { tenantId: 't1', idempotencyKeys: ['lost-1', 'fine', 'nope', 'lost-1'], outcome: 'provider-has-it' })).toEqual({
+          settled: ['lost-1'],
+          skipped: [
+            { key: 'fine', reason: 'not-pending' },
+            { key: 'nope', reason: 'not-found' },
+          ],
+        });
+        expect(await billing.settleStaleUsage(staff, { tenantId: 't1', idempotencyKeys: ['lost-2'], outcome: 'written-off', note: 'Stripe has no event for it; under a cent' })).toEqual({
+          settled: ['lost-2'],
+          skipped: [],
+        });
+
+        // Who, when and why are kept. forwardedAt is not set: the provider itself never answered.
+        expect(await store.findUsageRecord('t1', 'lost-1')).toMatchObject({ forwardPending: false, forwardedAt: null, settlement: 'provider-has-it', settledBy: 'staff-ada', settledAt: expect.any(Date), settlementNote: null });
+        expect(await store.findUsageRecord('t1', 'lost-2')).toMatchObject({ forwardPending: false, forwardedAt: null, settlement: 'written-off', settlementNote: 'Stripe has no event for it; under a cent' });
+
+        // The same outcome again does nothing; the other outcome is not accepted
+        expect(await billing.settleStaleUsage(staff, { tenantId: 't1', idempotencyKeys: ['lost-1'], outcome: 'provider-has-it' })).toEqual({ settled: [], skipped: [{ key: 'lost-1', reason: 'already-settled' }] });
+        expect(await billing.settleStaleUsage(staff, { tenantId: 't1', idempotencyKeys: ['lost-1'], outcome: 'written-off', note: 'changed my mind' })).toEqual({
+          settled: [],
+          skipped: [{ key: 'lost-1', reason: 'settled-differently' }],
+        });
+        expect((await store.findUsageRecord('t1', 'lost-1'))?.settlement).toBe('provider-has-it');
+        // Another tenant's record under a key is not this tenant's to settle
+        expect(await billing.settleStaleUsage(staff, { tenantId: 't1', idempotencyKeys: ['lost-3'], outcome: 'provider-has-it' })).toEqual({ settled: [], skipped: [{ key: 'lost-3', reason: 'not-found' }] });
+
+        // The usage happened, so it all stays in the total; billed and written off can be told apart
+        const far = { from: new Date(0), to: new Date(Date.now() + 60_000) };
+        expect((await billing.getUsage(t1, 'tokens', far)).totalQuantity).toBe(13);
+        expect((await billing.getUsage(t1, 'tokens', far, { only: 'billed' })).totalQuantity).toBe(8);
+        expect((await billing.getUsage(t1, 'tokens', far, { only: 'written-off' })).totalQuantity).toBe(5);
+
+        // Settling sent nothing to the provider, and only the other tenant's record is still unsettled
+        expect(adapter.usage.map((u) => u.idempotencyKey)).toEqual(['fine']);
+        expect(await keys()).toEqual(['t2:lost-3']);
+        expect(await billing.forwardPendingUsage(createContext({ logger: silent, identityType: 'system' }), { olderThanMs: 1 })).toEqual({ forwarded: 0, failed: 0, stale: 1 });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
     it('never resends a row it did not mark as pending: what was there before the upgrade, or written by something else', async () => {
       await billing.ensureCustomer(t1, { email: 'a@t1' });
       // A row as the previous version wrote it minutes ago: no pending mark, no confirmation time

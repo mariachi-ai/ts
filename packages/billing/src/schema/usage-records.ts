@@ -17,8 +17,18 @@ export const billingUsageRecordsTable = defineTable(
      * taken for unsent and resent.
      */
     forwardPending: column.boolean().notNull().default(false),
-    /** When the provider confirmed it. */
+    /** When the provider confirmed it. Only the provider's own answer sets this. */
     forwardedAt:    column.timestamp(),
+    /**
+     * How a person settled a record the provider never confirmed and that is too old to resend:
+     * `provider-has-it` or `written-off`. Null for every other record.
+     */
+    settlement:     column.text(),
+    settledAt:      column.timestamp(),
+    /** Who settled it: the user or API key of the request. */
+    settledBy:      column.text(),
+    /** Their reason. Required to write a record off. */
+    settlementNote: column.text(),
     createdAt:      column.timestamp().notNull().defaultNow(),
   },
   {

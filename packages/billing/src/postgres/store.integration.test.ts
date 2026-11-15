@@ -89,13 +89,51 @@ describe('DrizzleBillingStore', () => {
     expect(s.totalQuantity).toBe(5);
   });
 
+  it('settles a waiting record with who, when and why, and tells billed usage from written off', async () => {
+    const at = new Date();
+    const rec = (key: string, quantity: number, tenantId = 't_settle') => ({ tenantId, customerId: 'cus_settle', metricName: 'tokens', quantity, timestamp: at, idempotencyKey: key, forwardPending: true });
+    await store.recordUsage(rec('has-it', 7));
+    await store.recordUsage(rec('lost', 5));
+    await store.recordUsage(rec('confirmed', 1));
+    await store.recordUsage(rec('waiting', 2));
+    await store.recordUsage(rec('has-it', 100, 't_settle_other'));
+    const confirmedAt = new Date();
+    await store.markUsageForwarded('t_settle', 'confirmed', confirmedAt);
+
+    const settledAt = new Date();
+    await store.settleUsage('t_settle', 'has-it', { outcome: 'provider-has-it', at: settledAt, by: 'staff-ada' });
+    await store.settleUsage('t_settle', 'lost', { outcome: 'written-off', at: settledAt, by: 'key:k_1', note: 'no event at the provider' });
+    // A record the provider confirmed is not rewritten
+    await store.settleUsage('t_settle', 'confirmed', { outcome: 'written-off', at: settledAt, by: 'staff-ada', note: 'too late' });
+
+    expect(await store.findUsageRecord('t_settle', 'has-it')).toMatchObject({ forwardPending: false, forwardedAt: null, settlement: 'provider-has-it', settledBy: 'staff-ada', settlementNote: null });
+    expect((await store.findUsageRecord('t_settle', 'has-it'))?.settledAt?.getTime()).toBe(settledAt.getTime());
+    expect(await store.findUsageRecord('t_settle', 'lost')).toMatchObject({ forwardPending: false, forwardedAt: null, settlement: 'written-off', settledBy: 'key:k_1', settlementNote: 'no event at the provider' });
+    expect(await store.findUsageRecord('t_settle', 'confirmed')).toMatchObject({ settlement: null, settledBy: null });
+    expect((await store.findUsageRecord('t_settle', 'confirmed'))?.forwardedAt?.getTime()).toBe(confirmedAt.getTime());
+    // The other tenant's record under the same key is untouched
+    expect(await store.findUsageRecord('t_settle_other', 'has-it')).toMatchObject({ forwardPending: true, settlement: null });
+
+    const range = { from: new Date(0), to: new Date(Date.now() + 60_000) };
+    expect((await store.summarizeUsage('t_settle', 'tokens', range)).totalQuantity).toBe(15);
+    // Billed: the provider confirmed it, or a person found that it has it
+    expect((await store.summarizeUsage('t_settle', 'tokens', range, { only: 'billed' })).totalQuantity).toBe(8);
+    expect((await store.summarizeUsage('t_settle', 'tokens', range, { only: 'written-off' })).totalQuantity).toBe(5);
+
+    // Still waiting: only what nobody settled, and one tenant's when asked
+    const waiting = async (tenantId?: string) =>
+      (await store.listPendingUsage({ after: new Date(0), before: new Date(Date.now() + 1000), limit: 100, tenantId })).filter((u) => u.tenantId.startsWith('t_settle')).map((u) => `${u.tenantId}:${u.idempotencyKey}`);
+    expect(await waiting()).toEqual(['t_settle:waiting', 't_settle_other:has-it']);
+    expect(await waiting('t_settle')).toEqual(['t_settle:waiting']);
+  });
+
   it('knows which usage the provider has confirmed, and lists the rest oldest first', async () => {
     const at = new Date();
     const rec = (key: string, tenantId = 't_fwd') => ({ tenantId, customerId: 'cus_fwd', metricName: 'tokens', quantity: 2, timestamp: at, idempotencyKey: key, dimensions: { project: 'p1' }, forwardPending: true });
     await store.recordUsage(rec('f1'));
     await store.recordUsage(rec('f2'));
     await store.recordUsage(rec('f1', 't_fwd_other'));
-    expect(await store.findUsageRecord('t_fwd', 'f1')).toEqual({ ...rec('f1'), forwardedAt: null, recordedAt: expect.any(Date) });
+    expect(await store.findUsageRecord('t_fwd', 'f1')).toEqual({ ...rec('f1'), forwardedAt: null, recordedAt: expect.any(Date), settlement: null, settledAt: null, settledBy: null, settlementNote: null });
     expect(await store.findUsageRecord('t_fwd', 'nope')).toBeNull();
 
     const mine = async () => (await store.listPendingUsage({ after: new Date(0), before: new Date(Date.now() + 1000), limit: 100 })).filter((u) => u.tenantId.startsWith('t_fwd')).map((u) => `${u.tenantId}:${u.idempotencyKey}`);

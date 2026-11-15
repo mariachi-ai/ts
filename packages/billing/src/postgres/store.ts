@@ -28,7 +28,9 @@ import type {
   SubscriptionStatus,
   UsageBreakdown,
   UsageRecord,
+  UsageSettlement,
   UsageSummary,
+  UsageSummaryOptions,
   StoredWebhookEvent,
   WebhookEventStatus,
 } from '../types';
@@ -110,6 +112,10 @@ function toUsageRecord(r: typeof usage.$inferSelect): UsageRecord {
     forwardPending: r.forwardPending,
     forwardedAt: r.forwardedAt ?? null,
     recordedAt: r.createdAt,
+    settlement: (r.settlement as UsageSettlement | null) ?? null,
+    settledAt: r.settledAt ?? null,
+    settledBy: r.settledBy ?? null,
+    settlementNote: r.settlementNote ?? null,
   };
 }
 
@@ -427,12 +433,20 @@ export class DrizzleBillingStore implements BillingStore {
     );
   }
 
-  async listPendingUsage(options: { after: Date; before: Date; limit: number }): Promise<UsageRecord[]> {
+  async listPendingUsage(options: { after: Date; before: Date; limit: number; tenantId?: string }): Promise<UsageRecord[]> {
     const rows = await this.run('listPendingUsage', () =>
       this.db
         .select()
         .from(usage)
-        .where(and(eq(usage.forwardPending, true), isNotNull(usage.idempotencyKey), gte(usage.createdAt, options.after), lt(usage.createdAt, options.before)))
+        .where(
+          and(
+            eq(usage.forwardPending, true),
+            isNotNull(usage.idempotencyKey),
+            gte(usage.createdAt, options.after),
+            lt(usage.createdAt, options.before),
+            options.tenantId ? eq(usage.tenantId, options.tenantId) : undefined,
+          ),
+        )
         .orderBy(asc(usage.createdAt))
         .limit(options.limit),
     );
@@ -449,12 +463,28 @@ export class DrizzleBillingStore implements BillingStore {
     return Number(rows[0]?.n ?? 0);
   }
 
-  async summarizeUsage(tenantId: string, metricName: string, range: DateRange): Promise<UsageSummary> {
+  async settleUsage(tenantId: string, idempotencyKey: string, settlement: { outcome: UsageSettlement; at: Date; by: string; note?: string }): Promise<void> {
+    await this.run('settleUsage', () =>
+      this.db
+        .update(usage)
+        .set({ forwardPending: false, settlement: settlement.outcome, settledAt: settlement.at, settledBy: settlement.by, settlementNote: settlement.note ?? null })
+        // Only a record still waiting: one the provider confirmed meanwhile is not rewritten
+        .where(and(eq(usage.tenantId, tenantId), eq(usage.idempotencyKey, idempotencyKey), eq(usage.forwardPending, true))),
+    );
+  }
+
+  async summarizeUsage(tenantId: string, metricName: string, range: DateRange, options: UsageSummaryOptions = {}): Promise<UsageSummary> {
+    const only =
+      options.only === 'billed'
+        ? sql`(${usage.forwardedAt} is not null or ${usage.settlement} = 'provider-has-it')`
+        : options.only === 'written-off'
+          ? eq(usage.settlement, 'written-off')
+          : undefined;
     const rows = await this.run('summarizeUsage', () =>
       this.db
         .select({ total: sql<string>`coalesce(sum(${usage.quantity}), 0)` })
         .from(usage)
-        .where(and(eq(usage.tenantId, tenantId), eq(usage.metricName, metricName), gte(usage.timestamp, range.from), lt(usage.timestamp, range.to))),
+        .where(and(eq(usage.tenantId, tenantId), eq(usage.metricName, metricName), gte(usage.timestamp, range.from), lt(usage.timestamp, range.to), only)),
     );
     return { metricName, totalQuantity: Number(rows[0]?.total ?? 0), periodStart: range.from, periodEnd: range.to };
   }
