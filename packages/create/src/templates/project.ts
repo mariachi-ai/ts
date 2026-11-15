@@ -22,7 +22,7 @@ import {
   organizationsEnv,
   organizationsReadme,
 } from './organizations';
-import { UI_AGENTS, UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_DEPS, UI_README, uiFiles } from './ui';
+import { UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_DEPS, UI_README, uiAgents, uiFiles } from './ui';
 
 const MARIACHI_DEPS = [
   'api-facade',
@@ -121,7 +121,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     '.env.example': ENV_EXAMPLE(name) + (orgs ? organizationsEnv('jwt') : ''),
     'docker-compose.yml': DOCKER_COMPOSE(databaseName(name)),
     'vitest.config.ts': VITEST_CONFIG,
-    'AGENTS.md': AGENTS_MD(e2e) + (orgs ? organizationsAgents('jwt') : '') + (ui ? UI_AGENTS : ''),
+    'AGENTS.md': AGENTS_MD(e2e) + (orgs ? organizationsAgents('jwt') : '') + (ui ? uiAgents('jwt') : ''),
     'CLAUDE.md': 'See [AGENTS.md](./AGENTS.md).\n',
     'README.md': README(name, e2e) + (orgs ? organizationsReadme('jwt') : '') + (ui ? UI_README : ''),
     [LAYOUT.main]: MAIN_TS,

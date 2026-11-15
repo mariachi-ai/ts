@@ -154,7 +154,8 @@ try {
 const APP_CSS = `/*
  * This app's own styles, loaded after the design library's.
  *
- * Change how the app looks by changing design tokens, not by writing selectors or colour values:
+ * Change how the app looks by setting design tokens, not by writing selectors of your own. A colour
+ * belongs in a token too, never in a page's markup:
  *
  *   [data-theme] { --m-radius-md: 0.75rem; }
  *
@@ -238,22 +239,25 @@ export function uiFiles(name: string, auth: ProjectAuth, e2e: boolean): Record<s
 /** Imports `app.ts` gains. */
 export const UI_APP_IMPORTS = `import { createRequire } from 'node:module';
 import { dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 `;
 
 /** Where the design library's CSS is, wherever the package manager put it. Goes above `createApp()`. */
 export const UI_APP_CONSTANTS = `
 /** The design library's stylesheets, served under /assets/design. */
 const DESIGN_CSS = dirname(createRequire(import.meta.url).resolve('@mariachi/design/mariachi.css'));
+/** This app's own files, served under /assets: public/ beside src/ (and beside dist/ once built), wherever the app is started from. */
+const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url));
 `;
 
 /** Chained onto the API server: the files pages load. */
 export const UI_APP_STATIC = `    // What pages load: the design library's styles, then this app's own files in public/
     .withStatic('/assets/design', DESIGN_CSS)
-    .withStatic('/assets', 'public')
+    .withStatic('/assets', PUBLIC_DIR)
 `;
 
 /** A section for AGENTS.md. */
-export const UI_AGENTS = `
+export const uiAgents = (auth: ProjectAuth): string => `
 ## Pages
 
 - The app has pages, sent by the same server as the API: \`src/api/pages/<name>.ts\` returns the
@@ -273,7 +277,11 @@ export const UI_AGENTS = `
 - **Pages are public unless you say otherwise.** A browser opening a page sends no \`Authorization\`
   header, so a page shows nothing private by itself: its script fetches the user's data from
   \`/api\` with the user's token. Never render another user's data, a secret or a token into a page.
-- \`public/\` is served to everyone, as it is. Nothing private goes in it.
+${
+  auth === 'gotrue'
+    ? "- **The user's token comes from the session the sign-in page keeps** (\`src/api/pages/sign-in.ts\`: \`sessionStorage\`, key \`session\`). A page's script reads it from there. Don't keep a second copy anywhere, and never put a token in a URL, a page or a log.\n"
+    : "- **There is no sign-in in the browser yet.** This project checks tokens signed with \`JWT_SECRET\`, and nothing here gives a browser one. Until you add a sign-in, pages show public content and call public routes. Never put a token in a URL or a page, and never ship \`JWT_SECRET\` or a token made with \`mariachi token\` to a browser.\n"
+}- \`public/\` is served to everyone, as it is. Nothing private goes in it.
 `;
 
 /** A section for README.md. */

@@ -44,7 +44,9 @@ describe('a project with --ui', () => {
       const app = ui[auth]['src/app.ts'] as string;
       expect(app).toContain("const DESIGN_CSS = dirname(createRequire(import.meta.url).resolve('@mariachi/design/mariachi.css'));");
       expect(app).toContain(".withStatic('/assets/design', DESIGN_CSS)");
-      expect(app).toContain(".withStatic('/assets', 'public')");
+      // public/ is found from the file, not from wherever the app happens to be started
+      expect(app).toContain("const PUBLIC_DIR = fileURLToPath(new URL('../public', import.meta.url));");
+      expect(app).toContain(".withStatic('/assets', PUBLIC_DIR)");
       // Never the project's own directory, nor node_modules as a whole
       expect(app).not.toMatch(/withStatic\('[^']*', '(\.|node_modules)'\)/);
     }
@@ -65,9 +67,12 @@ describe('a project with --ui', () => {
     }
   });
 
-  it('links to the sign-in page only where there is one', () => {
+  it('links to the sign-in page only where there is one, and tells agents where a page gets the token', () => {
     expect(ui.gotrue['src/api/pages/layout.ts']).toContain("{ href: '/api/sign-in', label: 'Sign in' },");
     expect(ui.jwt['src/api/pages/layout.ts']).not.toContain('sign-in');
+    expect(ui.gotrue['AGENTS.md']).toContain("The user's token comes from the session the sign-in page keeps");
+    expect(ui.jwt['AGENTS.md']).toContain('There is no sign-in in the browser yet.');
+    for (const auth of AUTHS) expect(ui[auth]['AGENTS.md']).toMatch(/never put a token in a URL/i);
   });
 
   it('uses only the design library for looks: no colour values, no selectors of its own', () => {

@@ -11,7 +11,7 @@ import {
   organizationsEnv,
   organizationsReadme,
 } from './organizations';
-import { UI_AGENTS, UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_README } from './ui';
+import { UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_README, uiAgents } from './ui';
 
 /**
  * `mariachi init --auth gotrue`: sign-in by GoTrue (Supabase Auth, hosted or your own), verified
@@ -27,7 +27,7 @@ export function gotrueFiles(name: string, e2e = true, orgs = false, ui = false):
   return {
     '.env.example': ENV_EXAMPLE(name, databaseName(name)) + (orgs ? organizationsEnv('gotrue') : ''),
     'README.md': README(name) + (orgs ? organizationsReadme('gotrue') : '') + (ui ? UI_README : ''),
-    'AGENTS.md': AGENTS_AUTH(e2e) + (orgs ? organizationsAgents('gotrue') : '') + (ui ? UI_AGENTS : ''),
+    'AGENTS.md': AGENTS_AUTH(e2e) + (orgs ? organizationsAgents('gotrue') : '') + (ui ? uiAgents('gotrue') : ''),
     'src/config.ts': CONFIG_TS(orgs),
     'src/auth.ts': AUTH_TS,
     'src/auth.test.ts': AUTH_TEST(orgs),
