@@ -14,12 +14,17 @@ export const breadcrumb = defineComponent({
     '[aria-current="page"]': 'The current page (last item, not a link)',
   },
   tokens: {
-    separator: t.keyword('Separator glyph, as a CSS string (e.g. "/" or "›")', '"/"'),
-    separatorFg: t.color('Separator colour', ref('color.fg.subtle')),
+    separator: t.keyword('Separator glyph, as a CSS string (e.g. "/" or "›"); "" when an icon is set', '"/"'),
+    separatorFg: t.color('Separator colour (glyph or icon)', ref('color.fg.subtle')),
+    separatorIcon: t.keyword('Separator icon: an image (url() of an SVG) drawn in the separator colour, or none', 'none'),
+    separatorIconSize: t.length('Separator icon size; 0px draws no icon', '0px'),
     gap: t.length('Space around separators', ref('space.2')),
     fontSize: t.length('Text size', ref('font.size.sm')),
     fg: t.color('Link text', ref('color.fg.muted')),
+    linkDecoration: t.keyword('Link text-decoration-line at rest (none or underline)', 'none'),
+    targetSize: t.length('Smallest pointer target around each link (an invisible hit area; the layout keeps its size)', ref('control.minTarget')),
     hoverFg: t.color('Link text on hover', ref('color.fg.default')),
+    // The current page's emphasis against its parents: these two and fg set which one stands out
     currentFg: t.color('Current page text', ref('color.fg.default')),
     currentWeight: t.fontWeight('Current page weight', ref('font.weight.medium')),
   },
@@ -31,5 +36,6 @@ export const breadcrumb = defineComponent({
     'Wrap it in <nav aria-label="Breadcrumb"> with an ordered list, so it is a named landmark with a position for each item.',
     'Mark the last item aria-current="page"; it does not need to be a link.',
     'Separators are CSS generated content with empty alt text, so screen readers skip them.',
+    'Each link gets a hit area of at least targetSize (24px by default, WCAG 2.5.8) without changing the layout.',
   ],
 });

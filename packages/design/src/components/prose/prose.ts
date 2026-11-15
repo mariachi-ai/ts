@@ -27,6 +27,8 @@ export const prose = defineComponent({
     h3Size: t.length('h3 size', ref('font.size.xl')),
     h4Size: t.length('h4 size', ref('font.size.lg')),
     h2Border: t.color('Rule under h2', ref('color.border.muted')),
+    h2RuleWidth: t.length('Width of the rule under h2; 0px turns the rule and its gap off', ref('borderWidth.thin')),
+    h2RuleGap: t.length('Space between an h2 and its rule (none when the rule is off)', ref('space.2')),
     scrollMargin: t.length('Space kept above a heading when linked to', ref('space.16')),
     linkFg: t.color('Link text', ref('color.accent.text')),
     linkDecoration: t.keyword('Link text-decoration-line', 'underline'),

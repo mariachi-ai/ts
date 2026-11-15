@@ -133,7 +133,7 @@
     padding: var(--m-space-2) var(--m-popover-item-padding-x) var(--m-space-1);
     color: var(--m-popover-label-fg);
     font-size: var(--m-popover-label-size);
-    font-weight: var(--m-font-weight-semibold);
+    font-weight: var(--m-popover-label-weight);
   }
 
   .m-menu-separator {

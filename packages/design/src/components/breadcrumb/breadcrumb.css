@@ -20,19 +20,37 @@
     min-inline-size: 0;
   }
 
+  /*
+   * The separator: a glyph (the separator token), or an icon drawn in the separator colour when the
+   * icon token holds an image and its size is above 0. Set the glyph to "" with an icon.
+   */
   .m-breadcrumb li + li::before {
     content: var(--m-breadcrumb-separator) / "";
+    flex-shrink: 0;
+    min-inline-size: var(--m-breadcrumb-separator-icon-size);
+    min-block-size: var(--m-breadcrumb-separator-icon-size);
+    background: linear-gradient(var(--m-breadcrumb-separator-fg) 0 0) center / var(--m-breadcrumb-separator-icon-size) no-repeat;
     color: var(--m-breadcrumb-separator-fg);
+    mask: var(--m-breadcrumb-separator-icon) center / var(--m-breadcrumb-separator-icon-size) no-repeat;
   }
 
   .m-breadcrumb a {
+    position: relative;
     color: var(--m-breadcrumb-fg);
-    text-decoration: none;
+    text-decoration-line: var(--m-breadcrumb-link-decoration);
+  }
+
+  /* An invisible hit area of at least the target size around each link; the layout doesn't move. */
+  .m-breadcrumb a::after {
+    content: "";
+    position: absolute;
+    inset-block: min(0px, (100% - var(--m-breadcrumb-target-size)) / 2);
+    inset-inline: min(0px, (100% - var(--m-breadcrumb-target-size)) / 2);
   }
 
   .m-breadcrumb a:hover {
     color: var(--m-breadcrumb-hover-fg);
-    text-decoration: underline;
+    text-decoration-line: underline;
   }
 
   .m-breadcrumb [aria-current="page"] {

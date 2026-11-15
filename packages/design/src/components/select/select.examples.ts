@@ -27,4 +27,9 @@ export default defineExamples('select', [
   <select class="m-select" disabled aria-label="Disabled">${options}</select>
 </div>`,
   },
+  {
+    name: 'Open chevron',
+    description: 'One token turns the solid triangle into a line chevron. Set in the theme; here inline.',
+    html: `<select class="m-select" aria-label="Region" style="--m-select-chevron-stroke: 1.5px; --m-select-chevron-size: 0.375rem">${options}</select>`,
+  },
 ]);

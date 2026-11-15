@@ -42,6 +42,7 @@ export const popover = defineComponent({
     },
     labelFg: t.color('Menu group label text', ref('color.fg.muted')),
     labelSize: t.length('Menu group label size', ref('font.size.xs')),
+    labelWeight: t.fontWeight('Menu group label weight', ref('font.weight.semibold')),
     shortcutFg: t.color('Shortcut hint text', ref('color.fg.muted')),
     separator: t.color('Separator colour', ref('color.border.muted')),
   },

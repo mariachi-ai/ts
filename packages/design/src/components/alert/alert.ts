@@ -14,7 +14,7 @@ export const alert = defineComponent({
     '.m-alert-title': 'Short summary',
     '.m-alert-body': 'Details',
     '.m-alert-actions': 'Optional buttons or links',
-    '[data-tone]': 'neutral (default) | accent | success | warning | danger | info',
+    '[data-tone]': 'neutral (default) | notice (neutral, visible on a surface) | accent | success | warning | danger | info',
   },
   tokens: {
     bg: t.color('Neutral background', ref('color.bg.sunken')),
@@ -28,8 +28,18 @@ export const alert = defineComponent({
     gap: t.length('Space between icon and content', ref('space.3')),
     fontSize: t.length('Text size', ref('font.size.sm')),
     titleWeight: t.fontWeight('Title weight', ref('font.weight.semibold')),
+    // The notice tone ignores bg, fg and border, so a language that sets the neutral alert to the
+    // surface colour still has a neutral message that shows on a card
+    notice: {
+      bg: t.color('Notice background: a step off the surface', ref('color.bg.sunken')),
+      fg: t.color('Notice text', ref('color.fg.default')),
+      border: t.color('Notice border', ref('color.border.default')),
+    },
   },
-  contrast: [{ fg: 'fg', bg: 'bg', min: 4.5 }],
+  contrast: [
+    { fg: 'fg', bg: 'bg', min: 4.5 },
+    { fg: 'notice.fg', bg: 'notice.bg', min: 4.5 },
+  ],
   a11y: [
     'role="alert" interrupts screen readers: use it only for errors that need immediate attention; use role="status" otherwise.',
     'Alerts present on page load are not announced; insert the element (or its text) dynamically when it should be.',

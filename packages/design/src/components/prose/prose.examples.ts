@@ -29,4 +29,14 @@ export default defineExamples('prose', [
   <p>See <a href="#">the AI guide</a> for fallbacks and cost tracking.</p>
 </article>`,
   },
+  {
+    name: 'No rule under h2',
+    description: 'For languages that set section headings without a line: one token turns the rule and its gap off.',
+    html: `<article class="m-prose" style="--m-prose-h2-rule-width: 0px">
+  <h2>Before you start</h2>
+  <p>Invite your team first, so reviewers can be picked when the first change opens.</p>
+  <h2>Connecting a repository</h2>
+  <p>Choose the repository and the branch to watch. You can add more later.</p>
+</article>`,
+  },
 ]);
