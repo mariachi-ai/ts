@@ -98,6 +98,17 @@ The Postgres and in-memory adapters need none of these. An adapter whose SDK is 
 `dependency/missing-peer` when it is first made or used, with the package to add. The accepted
 version ranges are each package's `peerDependencies`.
 
+- **Types.** A package's type declarations still name its SDK's types where you can pass one in (a
+  Redis client, a Stripe client). With `skipLibCheck: true`, which generated projects have, a
+  missing SDK is not a type error. With it off, importing the package without its SDK installed
+  reports that the SDK's module can't be found: install the SDK, or turn `skipLibCheck` on.
+- **Monorepos on pnpm.** pnpm keeps one copy of a package for each set of peers it is installed
+  with. If one workspace package imports `@mariachi/billing` with `stripe` and another without,
+  there are two copies of billing. Add the SDK to every workspace package that imports the
+  adapter's package.
+- **A client of your own.** An adapter that takes a client you made recognises the SDK's errors by
+  their shape, not their class, so it doesn't matter which build of the SDK your client came from.
+
 ## Idempotency
 
 External inputs arrive more than once: webhooks are retried, jobs are redelivered, events are
