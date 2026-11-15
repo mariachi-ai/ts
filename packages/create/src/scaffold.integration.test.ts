@@ -208,11 +208,12 @@ describe('generated project with --auth gotrue', () => {
     await sh('typescript/bin/tsc', ['-p', 'tsconfig.json'], app);
   }, 120_000);
 
-  it('passes its own generated tests (config, /api/me with an organization and a personal tenant, the sign-in page)', async () => {
+  it('passes its own generated tests (config, /api/me with an organization and a personal tenant, the sign-in page and its PKCE flow)', async () => {
     const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app], app);
     expect(stdout).toMatch(/src\/auth\.test\.ts/);
     expect(stdout).toMatch(/me\.controller\.test\.ts/);
     expect(stdout).toMatch(/sign-in\.controller\.test\.ts/);
+    expect(stdout).toMatch(/pages\/sign-in\.test\.ts/);
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
     expect(stdout).not.toMatch(/failed/);
   }, 120_000);

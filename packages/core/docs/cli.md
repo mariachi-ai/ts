@@ -22,7 +22,8 @@ JWTs. `@mariachi/auth-gotrue` verifies its tokens (configured from `AUTH_URL`, `
 default). A user whose token names no organization gets a personal tenant, so the project works
 with a plain Supabase project; `AUTH_PERSONAL_TENANTS=false` requires an organization instead. It
 adds `GET /api/me`, `MIGRATE_ON_START`, and an example sign-in page at `/api/sign-in` (password,
-sign-up, magic link).
+sign-up, magic link; emailed links use PKCE, so a link works once and only in the browser that
+asked for it).
 
 ## generate
 

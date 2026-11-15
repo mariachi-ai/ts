@@ -37,6 +37,8 @@ describe('mariachi init --auth gotrue', () => {
       'src/api/controllers/me.controller.ts',
       'src/api/controllers/sign-in.controller.test.ts',
       'src/api/controllers/sign-in.controller.ts',
+      'src/api/pages/fake-browser.ts',
+      'src/api/pages/sign-in.test.ts',
       'src/api/pages/sign-in.ts',
       'src/auth.test.ts',
       'src/auth.ts',
@@ -65,10 +67,17 @@ describe('mariachi init --auth gotrue', () => {
     const page = files['src/api/pages/sign-in.ts'];
     const js = constant(page, 'SIGN_IN_JS');
     // The served script starts with the two settings signInScript writes in.
-    expect(() => new Script(`const AUTH = ${JSON.stringify(AUTH_PATH)};\nconst ANON_KEY = null;\n${js}`)).not.toThrow();
-    for (const endpoint of ['/token?grant_type=password', '/signup?redirect_to=', '/otp?redirect_to=', '/token?grant_type=refresh_token', '/logout']) {
+    expect(() => new Script(`const AUTH = ${JSON.stringify(AUTH_PATH)};\nconst ANON_KEY = null;\nconst LINK_SESSIONS = false;\n${js}`)).not.toThrow();
+    for (const endpoint of ['/token?grant_type=password', '/signup?redirect_to=', '/otp?redirect_to=', '/token?grant_type=pkce', '/token?grant_type=refresh_token', '/logout']) {
       expect(js).toContain(endpoint);
     }
+    // Emailed links use PKCE, and a session is saved only from a response body, never from the address bar
+    expect(js).toContain("code_challenge_method: 's256'");
+    const saved = [...js.matchAll(/\bsave\((.*)$/gm)].map((m) => m[1] as string).filter((arg) => !arg.startsWith('session) {'));
+    // From a GoTrue response, or (only with AUTH_LINK_SESSIONS, after the user's click) the session a link offered
+    expect(saved).toHaveLength(5);
+    for (const arg of saved) expect(arg === 'result);' || arg === 'session);' || arg.startsWith("await gotrue('"), arg).toBe(true);
+    expect(js).toContain('if (!LINK_SESSIONS) return show(');
     expect(js).toContain('if (ANON_KEY) headers.apikey = ANON_KEY;');
     expect(page).toContain('export function signInScript(');
     expect(constant(page, 'SIGN_IN_HTML')).toContain('<script type="module" src="/api/sign-in/client.js"></script>');
