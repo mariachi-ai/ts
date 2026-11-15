@@ -40,8 +40,9 @@ function render(value: unknown): string {
  *
  * The escaping is right for text between tags and for a quoted attribute value (`title="${name}"`).
  * It is not enough anywhere else, so don't put values there: not in an unquoted attribute, not inside
- * `<script>` or `<style>`, and not as a whole `href` or `src` unless you have checked it is a link
- * you mean (`safeHref`). Data for a script goes in a `data-` attribute, which the script reads.
+ * `<script>` or `<style>`, never in a `style="…"` attribute (escaped text is still CSS there, and can
+ * hide or cover parts of the page), and not as a whole `href` or `src` unless you have checked it is
+ * a link you mean (`safeHref`). Data for a script goes in a `data-` attribute, which the script reads.
  */
 export function html(strings: TemplateStringsArray, ...values: unknown[]): Html {
   let out = strings[0] as string;

@@ -222,8 +222,9 @@ api.withStatic('/assets', 'public');     // GET /assets/app.css → public/app.c
   anything a user wrote. `htmlResponse` takes only `html` output, so a plain string can't reach a
   page unescaped.
 - **Where the escaping holds:** text between tags, and a quoted attribute value. Don't put values
-  anywhere else: not in an unquoted attribute, not inside `<script>` or `<style>`. Pass data to a
-  script in a `data-` attribute. A link from data goes through `safeHref(url)`, which keeps paths
+  anywhere else: not in an unquoted attribute, not inside `<script>` or `<style>`, and never in a
+  `style="…"` attribute (escaped text is still CSS there). Pass data to a script in a `data-`
+  attribute. A link from data goes through `safeHref(url)`, which keeps paths
   on this site and `http:`, `https:` and `mailto:` addresses and turns the rest (`javascript:`) into `#`.
 - **`htmlResponse` sends a Content-Security-Policy** under which the page loads scripts, styles,
   fonts and images from its own origin only, and inline script does not run (inline `style="…"`

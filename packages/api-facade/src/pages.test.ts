@@ -206,6 +206,16 @@ describe('pages beside the API', () => {
     expect(() => api().withStatic('/assets', 'public')).not.toThrow();
   });
 
+  it('refuses it through a link too: a directory that is really the app, under another name', async () => {
+    const alias = join(outside, 'app');
+    await symlink(process.cwd(), alias);
+    const api = createApiServer({ name: 'pages-test', prefix: '/api', logger: silent as never }).withStatic('/assets', alias);
+    const res = await api.inject({ method: 'GET', url: '/assets/package.json' });
+    expect(res.statusCode).toBe(500);
+    expect(res.body).not.toContain('@mariachi/api-facade');
+    await api.close();
+  });
+
   it('lets a browser keep files that never change under their name', async () => {
     const api = createApiServer({ name: 'pages-test', prefix: '/api', logger: silent as never }).withStatic('/static/', dir, { maxAgeSeconds: 31536000, immutable: true });
     expect((await api.inject({ method: 'GET', url: '/static/app.js' })).headers['cache-control']).toBe('public, max-age=31536000, immutable');

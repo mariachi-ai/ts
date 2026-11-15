@@ -66,11 +66,11 @@ export function staticFiles(directory: string, options: StaticOptions = {}): (ct
   const maxAge = Math.max(0, Math.floor(options.maxAgeSeconds ?? 0));
   const cacheControl = maxAge > 0 ? `public, max-age=${maxAge}${options.immutable ? ', immutable' : ''}` : 'no-cache';
   let root: Promise<string> | undefined;
-  const served = resolve(directory);
-  const running = process.cwd();
-  if (running === served || running.startsWith(served.endsWith(sep) ? served : served + sep)) {
-    throw new ConfigError('api/static-directory', `withStatic: ${directory} is the directory the app runs in, or one above it. Serve a directory of its own, such as public/`);
-  }
+  const holdsTheApp = (served: string, running: string): boolean => running === served || running.startsWith(served.endsWith(sep) ? served : served + sep);
+  const refuse = (): ConfigError =>
+    new ConfigError('api/static-directory', `withStatic: ${directory} is the directory the app runs in, or one above it. Serve a directory of its own, such as public/`);
+  // Caught when the app is built, as written; and again below with links followed (public -> .)
+  if (holdsTheApp(resolve(directory), process.cwd())) throw refuse();
 
   return async (ctx, _body, params) => {
     const requested = params['*'] ?? '';
@@ -80,14 +80,18 @@ export function staticFiles(directory: string, options: StaticOptions = {}): (ct
       throw notFound();
     }
     // Resolved once, links followed: the directory itself may be a link (node_modules under pnpm is)
-    root ??= realpath(directory);
+    root ??= realpath(directory).then(async (served) => {
+      if (holdsTheApp(served, await realpath(process.cwd()))) throw refuse();
+      return served;
+    });
     let base: string;
     let file: string;
     try {
       base = await root;
       // Links followed here too, so a link inside the directory that points out of it is caught below
       file = await realpath(join(base, ...segments));
-    } catch {
+    } catch (error) {
+      if (error instanceof ConfigError) throw error;
       root = undefined;
       throw notFound();
     }
