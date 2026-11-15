@@ -226,7 +226,8 @@ api.withStatic('/assets', 'public');     // GET /assets/app.css → public/app.c
   script in a `data-` attribute. A link from data goes through `safeHref(url)`, which keeps paths
   on this site and `http:`, `https:` and `mailto:` addresses and turns the rest (`javascript:`) into `#`.
 - **`htmlResponse` sends a Content-Security-Policy** under which the page loads scripts, styles,
-  fonts and images from its own origin only, and inline script does not run. So a page's script is a
+  fonts and images from its own origin only, and inline script does not run (inline `style="…"`
+  does, since that is how design-token layout is written). So a page's script is a
   file (`<script type="module" src="/assets/app.js">`), not a `<script>` block. `csp` takes your
   own policy to allow a named origin.
 - **A page route is a route:** it wants sign-in unless it says `auth: false`, and it gets `ctx`. A
@@ -237,8 +238,11 @@ api.withStatic('/assets', 'public');     // GET /assets/app.css → public/app.c
   to anyone, for the app's own styles, scripts, fonts and images. It sends only regular files inside
   the directory: nothing reached through `..` or a symbolic link that leaves it, no directory
   listings, no name starting with a dot. Each goes with its type by extension (an unknown one is a
-  download, never guessed), `nosniff` and an `ETag`. It is not for files users upload: those belong
-  in [storage](./storage.md). `staticFiles(directory, options)` is the handler alone, for a route of
+  download, never guessed), `nosniff` and an `ETag`. Everything in the directory is public, source
+  maps (`.map`) included, and the directory can't be the one the app runs in or one above it
+  (`api/static-directory`). It is not for files users upload: those belong in
+  [storage](./storage.md), and are best served from another origin (a storage or CDN host), so a
+  file someone uploaded can never run as a page of your site. `staticFiles(directory, options)` is the handler alone, for a route of
   your own ending in `*`.
 
 ## Rate limits

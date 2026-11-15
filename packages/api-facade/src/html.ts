@@ -57,11 +57,12 @@ export function raw(markup: string): Html {
 /**
  * A link target that is safe to put in `href` or `src`: a path on this site (`/notes/1`, `?page=2`,
  * `#top`) or an `http:`, `https:` or `mailto:` address. Anything else (`javascript:`, `data:`, an
- * address with a control character) becomes `#`.
+ * address with a control character or a backslash) becomes `#`.
  */
 export function safeHref(target: string): string {
-  // Control characters and whitespace are skipped by browsers when they read a scheme
-  if (/\p{Cc}/u.test(target)) return '#';
+  // Control characters and whitespace are skipped by browsers when they read a scheme. A backslash is
+  // read as a slash in a web address, so `/\\evil.example` would be another site.
+  if (/[\p{Cc}\\]/u.test(target)) return '#';
   const trimmed = target.trim();
   if (/^(\/(?!\/)|\?|#)/.test(trimmed) || trimmed === '') return trimmed || '#';
   if (/^(https?:\/\/|mailto:)/i.test(trimmed)) return trimmed;
@@ -74,7 +75,9 @@ export interface HtmlResponseOptions {
   /**
    * The page's Content-Security-Policy. By default the page may load scripts, styles, fonts and
    * images from its own origin only (plus `data:` images), talk only to its own origin, be framed by
-   * nobody and post forms only to itself: inline scripts and styles don't run. Give your own policy
+   * nobody and post forms only to itself. Inline script does not run. Inline styles do, because
+   * laying out with `style="…"` and design tokens is how `@mariachi/design` markup is written; an
+   * injected style can change how a page looks, not what it does. Give your own policy
    * to widen it for a named origin. `false` sets none here, which leaves the server's own header for
    * API responses (`default-src 'none'`, under which a page loads nothing).
    */
@@ -83,7 +86,7 @@ export interface HtmlResponseOptions {
 }
 
 export const DEFAULT_PAGE_CSP =
-  "default-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
+  "default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'";
 
 /**
  * Sends a page. Takes only `html` output, so nothing unescaped gets here by mistake:

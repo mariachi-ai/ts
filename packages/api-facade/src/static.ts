@@ -1,7 +1,7 @@
 import { createReadStream } from 'node:fs';
 import { realpath, stat } from 'node:fs/promises';
-import { extname, join, sep } from 'node:path';
-import { MariachiError } from '@mariachi/core';
+import { extname, join, resolve, sep } from 'node:path';
+import { ConfigError, MariachiError } from '@mariachi/core';
 import { HttpResponse, StreamResponse } from '@mariachi/server';
 import type { HttpContext } from './types';
 
@@ -57,11 +57,20 @@ const notFound = (): MariachiError => new MariachiError('http/not-found', 'Not f
  *   sent as a download, never guessed;
  * - an SVG with a policy that stops scripts in it from running when it is opened on its own;
  * - with an `ETag`, so an unchanged file is answered with 304 and no body.
+ *
+ * Everything in the directory is public, source maps (`.map`) included: keep out of it what isn't
+ * meant to be read. The directory can't be the one the app runs in, or one above it, which would
+ * publish the app's own source and settings.
  */
 export function staticFiles(directory: string, options: StaticOptions = {}): (ctx: HttpContext, body: unknown, params: Record<string, string>) => Promise<HttpResponse | StreamResponse> {
   const maxAge = Math.max(0, Math.floor(options.maxAgeSeconds ?? 0));
   const cacheControl = maxAge > 0 ? `public, max-age=${maxAge}${options.immutable ? ', immutable' : ''}` : 'no-cache';
   let root: Promise<string> | undefined;
+  const served = resolve(directory);
+  const running = process.cwd();
+  if (running === served || running.startsWith(served.endsWith(sep) ? served : served + sep)) {
+    throw new ConfigError('api/static-directory', `withStatic: ${directory} is the directory the app runs in, or one above it. Serve a directory of its own, such as public/`);
+  }
 
   return async (ctx, _body, params) => {
     const requested = params['*'] ?? '';

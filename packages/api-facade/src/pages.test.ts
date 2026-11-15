@@ -44,7 +44,7 @@ describe('safeHref', () => {
   });
 
   it('turns anything that could run or leave by a side door into #', () => {
-    for (const bad of ['javascript:alert(1)', ' JaVaScRiPt:alert(1)', 'java\tscript:alert(1)', 'data:text/html,<script>', 'vbscript:x', '//evil.example/path', 'notes/1', '', 'ftp://example.com']) {
+    for (const bad of ['javascript:alert(1)', ' JaVaScRiPt:alert(1)', 'java\tscript:alert(1)', 'data:text/html,<script>', 'vbscript:x', '//evil.example/path', '/\\evil.example', '\\\\evil.example', 'https:\\\\evil.example', '/notes\\1', 'notes/1', '', 'ftp://example.com']) {
       expect(safeHref(bad), bad).toBe('#');
     }
   });
@@ -106,7 +106,9 @@ describe('pages beside the API', () => {
       'referrer-policy': 'same-origin',
       'cache-control': 'no-cache',
     });
-    expect(DEFAULT_PAGE_CSP).not.toMatch(/unsafe-inline|unsafe-eval/);
+    // No inline script, ever; inline styles are allowed, for design-token layout
+    expect(DEFAULT_PAGE_CSP).not.toMatch(/unsafe-eval|script-src/);
+    expect(DEFAULT_PAGE_CSP).toContain("default-src 'self'; style-src 'self' 'unsafe-inline';");
     // It is at the root and nowhere else
     expect((await api.inject({ method: 'GET', url: '/api/' })).statusCode).toBe(404);
     await api.close();
@@ -193,6 +195,15 @@ describe('pages beside the API', () => {
     const svg = await api.inject({ method: 'GET', url: '/assets/logo.svg' });
     expect(svg.headers).toMatchObject({ 'content-type': 'image/svg+xml', 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox" });
     await api.close();
+  });
+
+  it('refuses to serve the directory the app runs in, or one above it', () => {
+    const api = () => createApiServer({ name: 'pages-test', prefix: '/api', logger: silent as never });
+    for (const directory of ['.', process.cwd(), '..', '/']) {
+      expect(() => api().withStatic('/assets', directory), directory).toThrowError(expect.objectContaining({ code: 'api/static-directory' }));
+    }
+    // A directory inside it is what this is for
+    expect(() => api().withStatic('/assets', 'public')).not.toThrow();
   });
 
   it('lets a browser keep files that never change under their name', async () => {
