@@ -6,6 +6,9 @@ name: Explorer Pages
 on:
   workflow_dispatch:
 
+# Nothing by default; the one job asks for what Pages needs
+permissions: {}
+
 jobs:
   explorer-pages:
     if: github.ref == 'refs/heads/main'
