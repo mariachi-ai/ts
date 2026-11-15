@@ -91,12 +91,15 @@ export function buildConfigFromEnv(env: Env = process.env): AppConfigInput {
       adapter: env.ENCRYPTION_ADAPTER as 'local' | 'aws-kms' | 'gcp-kms' | undefined,
       key: env.ENCRYPTION_KEY,
       keyVersion: num(env.ENCRYPTION_KEY_VERSION, 'ENCRYPTION_KEY_VERSION'),
+      kmsKeyId: env.ENCRYPTION_KMS_KEY_ID,
     }),
     storage: compact({
       adapter: env.STORAGE_ADAPTER,
       bucket: env.STORAGE_BUCKET ?? env.S3_BUCKET,
       region: env.STORAGE_REGION ?? env.AWS_REGION,
       basePath: env.STORAGE_BASE_PATH,
+      signingSecret: env.STORAGE_SIGNING_SECRET,
+      publicBaseUrl: env.STORAGE_PUBLIC_BASE_URL,
     }),
     billing: compact({
       adapter: env.BILLING_ADAPTER,
@@ -126,6 +129,7 @@ export function buildConfigFromEnv(env: Env = process.env): AppConfigInput {
       logging: compact({
         adapter: env.LOG_ADAPTER as 'pino' | 'console' | undefined,
         level: env.LOG_LEVEL as 'debug' | 'info' | 'warn' | 'error' | undefined,
+        pretty: bool(env.LOG_PRETTY, 'LOG_PRETTY'),
       }),
       tracing: compact({
         adapter: env.TRACING_ADAPTER as 'noop' | 'otel' | undefined,

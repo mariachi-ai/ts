@@ -42,14 +42,19 @@ fail the boot with `ConfigError`.
 | `SERVICE_NAME` | service name in logs, traces and prefixes | `mariachi` |
 | `HOST`, `PORT`, `ADMIN_PORT`, `WEBHOOK_PORT` | bind address and ports | `0.0.0.0`, 3000, 3001, 3002 |
 | `TRUST_PROXY`, `CORS_ORIGINS`, `BODY_LIMIT_BYTES`, `SHUTDOWN_TIMEOUT_MS` | HTTP server | off, none, 1 MiB, 15000 |
-| `DATABASE_URL`, `DATABASE_POOL_MIN`, `DATABASE_POOL_MAX` | Postgres | none, 2, 10 |
+| `DATABASE_URL`, `DATABASE_POOL_MAX` | Postgres, and the most connections the pool opens | none, 10 |
+| `DATABASE_POOL_MIN` | Not used: the driver opens connections on demand and closes idle ones. Kept so existing environments still load | 2 |
 | `REDIS_URL` | Redis for cache, jobs, events, rate limits, realtime | none |
 | `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_EXPIRES_IN`, `SESSION_SECRET` | auth (secrets are at least 32 chars) | none, `1h` for expiry |
-| `ENCRYPTION_ADAPTER`, `ENCRYPTION_KEY`, `ENCRYPTION_KEY_VERSION` | encryption | `local`, none, 1 |
+| `ENCRYPTION_ADAPTER`, `ENCRYPTION_KEY`, `ENCRYPTION_KEY_VERSION` | encryption: the local key and which generation it is (its key id) | `local`, none, 1 |
+| `ENCRYPTION_KMS_KEY_ID` | the KMS key that wraps data keys, for `aws-kms` or `gcp-kms` | none |
 | `LOG_ADAPTER`, `LOG_LEVEL` | logging (`pino` or `console`) | `pino`, `info` |
+| `LOG_PRETTY` | human-readable log lines for a terminal; needs `pino-pretty` installed. Not for production | off |
+| `STORAGE_ADAPTER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_BASE_PATH` | file storage | `local`, none, none, none |
+| `STORAGE_SIGNING_SECRET`, `STORAGE_PUBLIC_BASE_URL` | the local adapter's URL-signing secret (32+ characters) and where public objects are served from | none |
 | `TRACING_ADAPTER`, `OTEL_EXPORTER_OTLP_ENDPOINT` / `..._TRACES_ENDPOINT` | OpenTelemetry tracing | off |
 | `METRICS_ADAPTER`, `METRICS_PREFIX`, `ERRORS_ADAPTER`, `SENTRY_DSN` | metrics and error tracking | noop |
-| `STORAGE_*`, `EMAIL_*`, `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
+| `EMAIL_*`, `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
 
 A value that can't be read is refused at start (`config/invalid`, naming the variable): a number
 that isn't one, a boolean that isn't `true`/`false` (or `1`/`0`, `yes`/`no`, `on`/`off`), or an
