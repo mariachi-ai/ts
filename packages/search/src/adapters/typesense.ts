@@ -1,5 +1,13 @@
-import Typesense from 'typesense';
-import { SearchError } from '@mariachi/core';
+import type Typesense from 'typesense';
+import { SearchError, loadOptionalPeer } from '@mariachi/core';
+
+type TypesenseModule = typeof import('typesense').default;
+
+/** typesense, loaded when the adapter is first made: an app that searches with Typesense has it installed (`pnpm add typesense`). */
+function typesense(): TypesenseModule {
+  const loaded = loadOptionalPeer<TypesenseModule & { default?: TypesenseModule }>('typesense', 'The Typesense search adapter', import.meta.url);
+  return loaded.default ?? loaded;
+}
 import { isText, mapFieldType } from '../field-types';
 import type {
   SearchClient,
@@ -46,7 +54,7 @@ export class TypesenseSearchAdapter implements SearchClient {
     const parsed = new URL(config.url);
     const protocol = parsed.protocol.replace(':', '') as 'http' | 'https';
     const port = Number.parseInt(parsed.port || (protocol === 'https' ? '443' : '80'), 10);
-    this.client = new Typesense.Client({
+    this.client = new (typesense().Client)({
       nodes: [{ host: parsed.hostname, port, protocol }],
       apiKey: config.apiKey,
     });

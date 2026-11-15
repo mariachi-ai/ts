@@ -1,5 +1,5 @@
-import { Resend } from 'resend';
-import { NotificationError } from '@mariachi/core';
+import type { Resend } from 'resend';
+import { NotificationError, loadOptionalPeer } from '@mariachi/core';
 import type { EmailAdapter, EmailMessage } from '../../types';
 import { addressList, recipients } from './address';
 import { providerFailure } from './failure';
@@ -17,7 +17,9 @@ export class ResendEmailAdapter implements EmailAdapter {
   private readonly defaultFrom?: string;
 
   constructor(options: ResendEmailAdapterOptions) {
-    this.resend = new Resend(options.apiKey);
+    // Loaded here, when the adapter is made: an app that sends through Resend has it installed (`pnpm add resend`)
+    const { Resend: ResendClient } = loadOptionalPeer<typeof import('resend')>('resend', 'ResendEmailAdapter', import.meta.url);
+    this.resend = new ResendClient(options.apiKey);
     this.defaultFrom = options.from;
   }
 

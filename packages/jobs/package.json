@@ -53,16 +53,19 @@
   "dependencies": {
     "@mariachi/core": "workspace:*",
     "@mariachi/database": "workspace:*",
-    "bullmq": "^5",
     "cron-parser": "^4.9.0",
     "zod": "^3.24"
   },
   "peerDependencies": {
     "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
+    "bullmq": "^5",
     "drizzle-orm": "^0.38"
   },
   "peerDependenciesMeta": {
     "@mariachi/database-postgres": {
+      "optional": true
+    },
+    "bullmq": {
       "optional": true
     },
     "drizzle-orm": {
@@ -74,6 +77,7 @@
     "tsup": "^8",
     "vitest": "^3",
     "@mariachi/database-postgres": "workspace:*",
-    "drizzle-orm": "^0.38"
+    "drizzle-orm": "^0.38",
+    "bullmq": "^5"
   }
 }

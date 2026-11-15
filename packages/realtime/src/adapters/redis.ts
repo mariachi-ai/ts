@@ -1,4 +1,5 @@
-import Redis from 'ioredis';
+import { loadOptionalPeer } from '@mariachi/core';
+import type Redis from 'ioredis';
 import type { Logger } from '@mariachi/core';
 import type { Backplane, BackplaneMessage, PresenceEntry, PresenceStore } from '../types';
 
@@ -10,9 +11,17 @@ export interface RedisRealtimeOptions {
   logger?: Logger;
 }
 
+type RedisConstructor = typeof import('ioredis').default;
+
+/** ioredis, loaded when a client is first made: an app that uses Redis has it installed (`pnpm add ioredis`). */
+function redisConstructor(feature: string): RedisConstructor {
+  const loaded = loadOptionalPeer<RedisConstructor & { default?: RedisConstructor }>('ioredis', feature, import.meta.url);
+  return loaded.default ?? loaded;
+}
+
 function open(options: RedisRealtimeOptions): { client: Redis; owned: boolean } {
   if (options.client) return { client: options.client, owned: false };
-  return { client: new Redis(options.url ?? 'redis://localhost:6379', { lazyConnect: true }), owned: true };
+  return { client: new (redisConstructor('Realtime over Redis'))(options.url ?? 'redis://localhost:6379', { lazyConnect: true }), owned: true };
 }
 
 async function ensure(client: Redis): Promise<void> {

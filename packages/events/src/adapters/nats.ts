@@ -1,4 +1,8 @@
-import { connect, StringCodec, type NatsConnection, type Subscription } from 'nats';
+import { loadOptionalPeer } from '@mariachi/core';
+import type { Codec, NatsConnection, Subscription } from 'nats';
+
+/** nats, loaded when the bus is first made: an app that uses NATS has it installed (`pnpm add nats`). */
+const nats = (): typeof import('nats') => loadOptionalPeer<typeof import('nats')>('nats', 'The NATS event bus', import.meta.url);
 import { EventsError, type Logger } from '@mariachi/core';
 import { decodeEnvelope, encodeEnvelope } from '../envelope';
 import type { BusSubscribeOptions, BusSubscription, EnvelopeHandler, EventBus, EventEnvelope } from '../types';
@@ -25,7 +29,7 @@ export class NATSEventBusAdapter implements EventBus {
   readonly name = 'nats';
   readonly guarantee = 'at-most-once' as const;
   private connection: NatsConnection | null = null;
-  private readonly sc = StringCodec();
+  private readonly sc: Codec<string> = nats().StringCodec();
   private readonly registrations = new Set<Registration>();
   private readonly prefix: string;
   private readonly logger?: Logger;
@@ -41,7 +45,7 @@ export class NATSEventBusAdapter implements EventBus {
 
   async connect(): Promise<void> {
     if (this.connection) return;
-    this.connection = await connect({ servers: this.options.servers });
+    this.connection = await nats().connect({ servers: this.options.servers });
     for (const r of this.registrations) this.activate(r);
   }
 

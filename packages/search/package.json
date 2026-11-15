@@ -53,18 +53,21 @@
   },
   "dependencies": {
     "@mariachi/core": "workspace:*",
-    "@mariachi/database": "workspace:*",
-    "typesense": "^1.8"
+    "@mariachi/database": "workspace:*"
   },
   "peerDependencies": {
     "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
-    "drizzle-orm": "^0.38"
+    "drizzle-orm": "^0.38",
+    "typesense": "^1.8"
   },
   "peerDependenciesMeta": {
     "@mariachi/database-postgres": {
       "optional": true
     },
     "drizzle-orm": {
+      "optional": true
+    },
+    "typesense": {
       "optional": true
     }
   },
@@ -73,6 +76,7 @@
     "tsup": "^8",
     "vitest": "^3",
     "@mariachi/database-postgres": "workspace:*",
-    "drizzle-orm": "^0.38"
+    "drizzle-orm": "^0.38",
+    "typesense": "^1.8"
   }
 }

@@ -53,14 +53,14 @@
   },
   "dependencies": {
     "@mariachi/core": "workspace:*",
-    "ioredis": "^5",
-    "nats": "^2",
     "zod": "^3.24"
   },
   "peerDependencies": {
     "@mariachi/database": "workspace:>=0.0.5 <1",
     "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
-    "drizzle-orm": "^0.38"
+    "drizzle-orm": "^0.38",
+    "ioredis": "^5",
+    "nats": "^2"
   },
   "peerDependenciesMeta": {
     "@mariachi/database": {
@@ -71,6 +71,12 @@
     },
     "drizzle-orm": {
       "optional": true
+    },
+    "ioredis": {
+      "optional": true
+    },
+    "nats": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -80,6 +86,8 @@
     "postgres": "^3.4",
     "typescript": "^5.7",
     "tsup": "^8",
-    "vitest": "^3"
+    "vitest": "^3",
+    "ioredis": "^5",
+    "nats": "^2"
   }
 }
