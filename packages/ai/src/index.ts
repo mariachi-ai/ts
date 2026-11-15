@@ -20,6 +20,7 @@ export function createAI(config: AIConfig & {
   instance?: AIAdapter;
   fallbackProviders?: FallbackProvider[];
   sessions?: AISessionStore;
+  /** Where each model call's telemetry entry is written. Default: the session store, when it keeps telemetry (the Postgres one does). */
   persistTelemetry?: (entry: AITelemetryEntry) => void | Promise<void>;
   onPersistError?: (error: Error, sessionId: string) => void;
 }) {
@@ -52,10 +53,12 @@ export function createAI(config: AIConfig & {
   chain.push(...(config.fallbackProviders ?? []));
   const adapter: AIAdapter = chain.length ? new FallbackAdapter(chain) : primary;
 
-  const sessions = new SessionManager(adapter, config.sessions, config.onPersistError);
   const tools = new ToolRegistry();
+  // The registry is where a session finds its tools, so `ai.registerTool` is all a tool needs
+  const sessions = new SessionManager(adapter, config.sessions, config.onPersistError, tools);
   const prompts = new PromptRegistry();
-  const telemetry = new AITelemetryTracker(config.persistTelemetry);
+  const store = config.sessions;
+  const telemetry = new AITelemetryTracker(config.persistTelemetry ?? (store?.recordTelemetry ? (entry) => store.recordTelemetry?.(entry) : undefined));
 
   return {
     sessions,
@@ -78,6 +81,7 @@ export type {
   AITelemetryEntry,
   SessionConfig,
   StreamChunk,
+  CallOptions,
   TokenBudget,
   CostTable,
   AIProvider,
@@ -88,12 +92,13 @@ export { AnthropicAdapter, anthropicBaseUrl, DEFAULT_ANTHROPIC_MODEL, type Anthr
 export { GoogleAdapter, type GoogleAdapterConfig } from './adapters/google';
 export { AISdkAdapter, type AISdkAdapterOptions, type ModelFactory } from './adapters/ai-sdk';
 export { FallbackAdapter, type FallbackProvider } from './adapters/fallback';
-export { SessionManager, type AISessionStore, type SessionState, type Adapter as AIAdapter, type AdapterCallConfig } from './session/manager';
+export { SessionManager, type AISessionStore, type SessionState, type Adapter as AIAdapter, type AdapterCallConfig, type ToolSource } from './session/manager';
 export { ToolRegistry } from './tools/registry';
 export { PromptRegistry } from './prompts/registry';
 export { AITelemetryTracker } from './telemetry';
-export { runAgent } from './patterns/agent';
+export { runAgent, type RunAgentConfig } from './patterns/agent';
+export { toSse, type AIStreamEvents } from './patterns/sse';
 export { createRAGPipeline } from './patterns/rag';
 export { estimateCost, resolveRates, DEFAULT_COST_TABLE } from './cost';
-export { AI, DefaultAI } from './ai';
+export { AI, DefaultAI, type AgentRunOptions } from './ai';
 export * from './schema/index';
