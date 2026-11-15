@@ -1,5 +1,6 @@
 import { generateText, streamText, type JSONValue, type LanguageModel, type ModelMessage } from 'ai';
 import { AIError } from '@mariachi/core';
+import type { AdapterCallConfig } from '../session/manager';
 import type { AIMessage, AIResponse, StreamChunk, ToolDefinition } from '../types';
 
 function toModelMessages(messages: AIMessage[]): { instructions?: string; messages: ModelMessage[] } {
@@ -59,30 +60,46 @@ function usageOf(usage: { inputTokens?: number; outputTokens?: number } | undefi
   return { inputTokens, outputTokens, totalTokens: inputTokens + outputTokens };
 }
 
+type ProviderOptions = Record<string, Record<string, JSONValue>>;
+
+export interface AISdkAdapterOptions {
+  /** Provider-specific options for a call (the AI SDK's `providerOptions`), e.g. to pass the caller's user id. */
+  providerOptions?: (call: AdapterCallConfig) => ProviderOptions | undefined;
+}
+
+/** A model factory may be async, so a provider package can be imported on first use. */
+export type ModelFactory = (modelId: string) => LanguageModel | Promise<LanguageModel>;
+
 /**
- * Adapter over any AI SDK provider. `OpenAIAdapter` and `AnthropicAdapter` are thin subclasses;
- * pass another provider's model factory to support it without a new adapter.
+ * Adapter over any AI SDK provider. `OpenAIAdapter`, `AnthropicAdapter` and `GoogleAdapter` are thin
+ * subclasses; pass another provider's model factory to support it without a new adapter.
  */
 export class AISdkAdapter {
   constructor(
     readonly name: string,
-    private readonly model: (modelId: string) => LanguageModel,
+    private readonly model: ModelFactory,
     protected readonly defaultModel: string,
+    private readonly options: AISdkAdapterOptions = {},
   ) {}
 
-  async generate(
-    messages: AIMessage[],
-    config: { model?: string; tools?: ToolDefinition[] } = {},
-  ): Promise<AIResponse> {
+  /** The model to call. A missing provider package is the caller's to fix, so its error passes through. */
+  private async resolve(modelId: string): Promise<LanguageModel> {
+    if (!modelId) throw new AIError('ai/config', `${this.name} adapter has no model: set defaultModel or the session's model`);
+    return this.model(modelId);
+  }
+
+  async generate(messages: AIMessage[], config: AdapterCallConfig = {}): Promise<AIResponse> {
     const modelId = config.model ?? this.defaultModel;
+    const model = await this.resolve(modelId);
     const prompt = toModelMessages(messages);
     const start = performance.now();
     try {
       const result = await generateText({
-        model: this.model(modelId),
+        model,
         instructions: prompt.instructions,
         messages: prompt.messages,
         tools: toTools(config.tools),
+        providerOptions: this.options.providerOptions?.(config),
       });
       return {
         content: result.text ?? '',
@@ -103,18 +120,17 @@ export class AISdkAdapter {
     }
   }
 
-  async *stream(
-    messages: AIMessage[],
-    config: { model?: string; tools?: ToolDefinition[] } = {},
-  ): AsyncIterable<StreamChunk> {
+  async *stream(messages: AIMessage[], config: AdapterCallConfig = {}): AsyncIterable<StreamChunk> {
     const modelId = config.model ?? this.defaultModel;
+    const model = await this.resolve(modelId);
     const prompt = toModelMessages(messages);
     try {
       const result = streamText({
-        model: this.model(modelId),
+        model,
         instructions: prompt.instructions,
         messages: prompt.messages,
         tools: toTools(config.tools),
+        providerOptions: this.options.providerOptions?.(config),
       });
       for await (const part of result.textStream) {
         yield { content: part, done: false };

@@ -21,7 +21,7 @@ export type {
   PresenceEntry,
 } from './types';
 export { clientMessageSchema } from './types';
-export { defaultChannelAuthorizer } from './authorize';
+export { defaultChannelAuthorizer, tenantChannel, userChannel, tenantUserChannel } from './authorize';
 export { Realtime, DefaultRealtime, CLOSE_CODES, type RealtimeDeps } from './realtime';
 export { MemoryBackplane, MemoryBackplaneHub, MemoryPresenceStore } from './adapters/memory';
 export { RedisBackplane, RedisPresenceStore, type RedisRealtimeOptions } from './adapters/redis';

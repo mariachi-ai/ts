@@ -9,7 +9,19 @@ import {
   type Logger,
 } from '@mariachi/core';
 import { createLogger } from '@mariachi/observability';
-import { FastifyServerAdapter, HttpResponse, contextFromRequest, httpResponse } from '@mariachi/server';
+import {
+  FastifyServerAdapter,
+  HttpResponse,
+  SseResponse,
+  StreamResponse,
+  contextFromRequest,
+  httpResponse,
+  isMultipart,
+  parseCookies,
+  parseMultipart,
+  serializeClearedCookie,
+  serializeCookie,
+} from '@mariachi/server';
 import type { IncomingRequest, InjectOptions, InjectResponse, RequestContext } from '@mariachi/server';
 import type { RateLimitRule } from '@mariachi/rate-limit';
 import type { z } from 'zod';
@@ -69,9 +81,10 @@ export class FastifyAdapter {
 
   /**
    * Direct access to the Fastify instance before it starts, for what controllers don't model:
-   * hooks that run before authentication, and routes that set cookies or redirect (an OAuth
-   * callback). Prefer controllers; routes added here bypass the facade's auth, validation and
-   * rate limits.
+   * hooks that run before authentication, and Fastify plugins. Prefer controllers, which cover
+   * cookies (`ctx.setCookie`), redirects (`httpResponse(302, …)`), streams (`streamResponse`,
+   * `sseResponse`) and uploads (`upload`); routes added here bypass the facade's auth, validation
+   * and rate limits.
    */
   configure(fn: Parameters<FastifyServerAdapter['configure']>[0]): this {
     this.server.configure(fn);
@@ -207,12 +220,36 @@ export class FastifyAdapter {
         ...base,
         identity,
         locals: {},
-        request: { ip: req.ip, method: req.method, url: req.url, routePath: req.routePath, headers: req.headers, rawBody: req.rawBody },
+        request: {
+          ip: req.ip,
+          method: req.method,
+          url: req.url,
+          routePath: req.routePath,
+          headers: req.headers,
+          rawBody: req.rawBody,
+          cookies: parseCookies(req.headers.cookie),
+          files: [],
+          signal: serverCtx.signal,
+        },
         responseHeaders: serverCtx.responseHeaders,
+        setCookie: (name, value, options) => void serverCtx.responseCookies.push(serializeCookie(name, value, options)),
+        clearCookie: (name, options) => void serverCtx.responseCookies.push(serializeClearedCookie(name, options)),
       };
 
       return runWithContext(ctx, async () => {
         await this.enforceRateLimit(ctx, route);
+
+        // After authentication and the rate limit, so only an allowed caller makes the server parse an upload
+        let input: unknown = req.body;
+        if (route.upload) {
+          const contentType = header(req, 'content-type');
+          if (!isMultipart(contentType) || !req.rawBody) {
+            throw new MariachiError('http/unsupported-media-type', 'This route takes multipart/form-data');
+          }
+          const parsed = await parseMultipart(contentType as string, req.rawBody, route.upload === true ? {} : route.upload);
+          ctx.request.files = parsed.files;
+          input = parsed.fields;
+        }
 
         let result: unknown;
         const run = async (index: number): Promise<void> => {
@@ -220,14 +257,14 @@ export class FastifyAdapter {
             await this.middlewares[index](ctx, () => run(index + 1));
             return;
           }
-          const body = parse(route.schema?.body, req.body, 'request body');
+          const body = parse(route.schema?.body, input, 'request body');
           const params = parse<Record<string, string>>(route.schema?.params, req.params, 'path parameters');
           const query = parse<Record<string, string | string[]>>(route.schema?.query, req.query, 'query parameters');
           result = await route.handler(ctx, body, params, query);
         };
         await run(0);
 
-        if (result instanceof HttpResponse || result === undefined) return result;
+        if (result instanceof HttpResponse || result instanceof StreamResponse || result instanceof SseResponse || result === undefined) return result;
         if (route.schema?.response && validateResponses) {
           const checked = route.schema.response.safeParse(result);
           if (!checked.success) {

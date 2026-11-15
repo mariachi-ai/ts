@@ -7,6 +7,19 @@ export const DEFAULT_COST_TABLE: CostTable = {
   'gpt-4-turbo': { input: 0.01, output: 0.03 },
   'gpt-4': { input: 0.03, output: 0.06 },
   'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 },
+  // Anthropic's first-party API rates as of 2026-11. Cache reads and writes aren't priced separately here.
+  'claude-fable-5-2': { input: 0.008, output: 0.04 },
+  'claude-fable-5-1': { input: 0.01, output: 0.05 },
+  'claude-opus-5-5': { input: 0.004, output: 0.02 },
+  'claude-opus-5': { input: 0.005, output: 0.025 },
+  'claude-opus-4-8': { input: 0.005, output: 0.025 },
+  'claude-opus-4-7': { input: 0.005, output: 0.025 },
+  'claude-opus-4-6': { input: 0.005, output: 0.025 },
+  'claude-sonnet-5-5': { input: 0.002, output: 0.01 },
+  'claude-sonnet-5': { input: 0.002, output: 0.01 },
+  'claude-sonnet-4-6': { input: 0.003, output: 0.015 },
+  'claude-haiku-5-5': { input: 0.0001, output: 0.0005 },
+  'claude-haiku-4-5': { input: 0.001, output: 0.005 },
 };
 
 /**

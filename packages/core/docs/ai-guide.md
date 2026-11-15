@@ -70,7 +70,7 @@ await lock.withLock(`invoice:${id}`, 30_000, async () => { /* one instance at a 
 
 // Errors
 throw new NotFoundError('order', id);
-throw new ConflictError('orders/already-paid', 'Paid orders cannot be cancelled');
+throw new ConflictError('Paid orders cannot be cancelled', { orderId: id });   // code `conflict`, HTTP 409
 throw new ValidationError('Invalid date range', [{ path: ['to'], message: 'must be after from' }]);
 ```
 
@@ -118,3 +118,9 @@ throw new ValidationError('Invalid date range', [{ path: ['to'], message: 'must 
     layers and breaks presets. Run `mariachi design check` after changing colours.
 20. **`data-mode` goes on the element with `data-theme`.** A bare `data-mode` on a descendant does
     nothing; nest `data-theme="<preset>" data-mode="dark"` to switch a region.
+21. **Don't reach for `configure()` to set a cookie, stream or take a file.** Controllers do all three
+    (`ctx.setCookie`, `sseResponse` / `streamResponse`, the `upload` route option), and a route added
+    on the raw Fastify instance skips authentication, validation and rate limits. See
+    [http.md](./http.md#cookies-redirects-streams-and-uploads).
+22. **A cookie session needs `cookieStrategy`, not a hand-read cookie.** It refuses state-changing
+    requests from other sites. Keep `GET` routes free of side effects; they aren't checked.

@@ -95,6 +95,7 @@ it), so the mark comes with it.
 | **`@mariachi/auth-fusionauth`** | Implements `AuthProvider`: verifies FusionAuth JWTs via JWKS, maps `applicationId` → `tenantId`, `roles` → scopes; provides `createFusionAuthAuth()`, `FusionAuthWebhookHandler` (sync verify with HMAC or PEM). Implements `IdentityClient` (`createFusionAuthIdentityClient()`) on the Login, OAuth and User APIs, with `fusionAuthEmailVouched()` deciding `emailVerified`. |
 | **`@mariachi/auth-gotrue`** | Implements `AuthProvider` for GoTrue (Supabase Auth, hosted or your own): verifies access tokens against GoTrue's JWKS (ES256 by default, never HMAC) with issuer and audience (`authenticated`), maps `sub` → `userId`, `session_id` → `sessionId`, the org claim → `tenantId`, `role`/`roles`/`org_role` → `roles` and `scopes`, and keeps the whole payload (`aal`, `amr`, `act`, `is_anonymous`, …) in `claims`; a short JWKS cache (60 s) so a rotated-out key stops verifying. Provides `createGoTrueAuth()` and `GoTrueWebhookHandler` for GoTrue's HTTP hooks (Standard Webhooks: `webhook-id`, `webhook-timestamp`, `webhook-signature`, secret `v1,whsec_…`), normalized to `AUTH_EVENT_TYPES`. Set `GOTRUE_JWT_ISSUER` on GoTrue: it omits `iss` otherwise. An app that reaches GoTrue on an internal address (a sidecar, say: `http://127.0.0.1:9999`) passes `discoverIssuer: true` to read the issuer from GoTrue's `/.well-known/openid-configuration`, re-read with the JWKS. |
 | **`@mariachi/auth-workos`** | Implements `AuthProvider`: verifies WorkOS AuthKit JWTs via JWKS (issuer and `client_id` checked; `audience` for tokens AuthKit issues as an OAuth server, e.g. MCP), maps `org_id` → `tenantId`, `permissions` → scopes; `WorkOSWebhookHandler` verifies `WorkOS-Signature`. Implements `IdentityClient` (`createWorkOSIdentityClient()`) on `@workos-inc/node`, an optional peer loaded on first use. |
+| **`@mariachi/auth-oidc`** | Implements `AuthProvider` for any standard OpenID Connect issuer (Auth0, Cognito, Keycloak, Entra ID, Okta, Firebase, your own): finds the keys through discovery, verifies signature, issuer and a required audience, never HMAC, over HTTPS only, and maps tenant, roles and scopes from configurable claims (`org_id`, `roles`, `scope`/`scp`/`permissions` by default; roles are not scopes unless `rolesAsScopes`); `validate` for provider-specific checks; provides `createOidcAuth()`. No webhooks and no `IdentityClient`: the provider's own page signs users in. See its [README](../../auth-oidc/README.md). |
 
 ## Headless sign-in: `IdentityClient`
 
@@ -168,6 +169,53 @@ await rbac.can(identity, 'update', 'posts');            // checks identity.tenan
 After `defineRole`, call `rbac.refreshPermissions()` to apply it in this process right away; other
 processes reload after `permissionTtlMs`. Granting a role that doesn't exist throws
 `auth/unknown-role`.
+
+## Sessions
+
+`SessionManager` issues opaque server-side sessions: a random 256-bit token the client holds, and a
+row in `sessions` (via `DrizzleSessionStore`) that holds only the token's sha256. Unlike a JWT, a
+session can be revoked at once, listed ("your devices") and signed out everywhere.
+
+```ts
+import { SessionManager } from '@mariachi/auth';
+import { DrizzleSessionStore } from '@mariachi/auth/postgres';
+import { bearerStrategy } from '@mariachi/api-facade';
+
+const sessions = new SessionManager(new DrizzleSessionStore(database.db), {
+  ttlSeconds: 30 * 24 * 3600,            // ends after 30 days without use
+  maxLifetimeSeconds: 90 * 24 * 3600,    // and 90 days after sign-in, however often it's used
+});
+
+// After you've checked who the user is (an IdentityClient sign-in, an OAuth callback, ...):
+const { token, session } = await sessions.create({ userId, tenantId, scopes, userAgent, ipAddress });
+
+// Verify it on requests: `Authorization: Bearer <token>`, or the named cookie.
+api.withAuthStrategy('session', bearerStrategy(sessions, { cookie: 'session' }));
+
+await sessions.revoke(session.id);                              // sign out this session (the id from ctx.sessionId)
+await sessions.revoke(idFromRequest, { userId: ctx.userId! });  // "sign out that device": not-found unless it's this user's
+await sessions.revokeAllForUser(userId, tenantId);              // sign out everywhere in this tenant
+const devices = await sessions.list(userId, tenantId);          // live sessions, newest activity first
+```
+
+`revokeAllForUser` and `list` without a `tenantId` cover the user's sessions in **every** tenant.
+When a session id arrives in a request, always revoke with the owner, so one user can't end
+another's session.
+
+`verify` fails with `auth/invalid-session` (unknown or revoked) or `auth/session-expired`. Expiry
+slides: each use at least `touchIntervalSeconds` (default 60) after the last pushes it `ttlSeconds`
+ahead, but never past `maxLifetimeSeconds` from sign-in (default 90 days; `null` for no limit).
+Pass `sliding: false` to make `ttlSeconds` the whole lifetime. Add `sessionsTable` from `@mariachi/auth/schema`
+to your schema, and delete old rows on a schedule:
+
+```ts
+defineJob({ name: 'purge-sessions', schema: z.object({}), handler: async () => void (await sessions.purgeExpired()) });
+jobs.schedule({ name: 'purge-sessions', cron: '0 4 * * *', jobName: 'purge-sessions', data: {} });
+```
+
+`InMemorySessionStore` is for tests and a single process. A cookie session in a browser also needs
+CSRF protection for state-changing requests, which the framework doesn't provide yet: set the
+cookie `HttpOnly`, `Secure` and `SameSite=Lax` or `Strict`, and don't change state on `GET`.
 
 ## API keys
 

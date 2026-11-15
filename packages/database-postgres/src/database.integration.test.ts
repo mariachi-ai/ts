@@ -56,6 +56,32 @@ describe('DrizzleRepository against Postgres', () => {
     expect(await repo.findById(t1, n.id, { withDeleted: true })).toBeNull();
   });
 
+  it('refuses a bulk update with an empty filter and leaves every row alone', async () => {
+    const mine = await repo.create(t1, { title: 'bulk-mine' });
+    const theirs = await repo.create(t2, { title: 'bulk-theirs' });
+    for (const empty of [{}, [], { title: undefined }]) {
+      await expect(repo.updateWhere(t1, empty, { title: 'overwritten' })).rejects.toMatchObject({ code: 'database/unsafe-operation' });
+    }
+    expect((await repo.findById(t1, mine.id))?.title).toBe('bulk-mine');
+
+    expect(await repo.updateWhere(t1, { title: 'bulk-mine' }, { title: 'bulk-renamed' })).toBe(1);
+    expect((await repo.findById(t1, mine.id))?.title).toBe('bulk-renamed');
+    expect((await repo.findById(t2, theirs.id))?.title).toBe('bulk-theirs');
+
+    // Without the tenant condition the soft-delete condition is still there, so the old check passed
+    // and an empty filter reached every tenant's rows.
+    const everyTenant = repo.crossTenant();
+    const noTenant = createContext({ logger: silent });
+    for (const empty of [{}, []]) {
+      await expect(everyTenant.updateWhere(noTenant, empty, { title: 'overwritten' })).rejects.toMatchObject({ code: 'database/unsafe-operation' });
+    }
+    expect((await repo.findById(t1, mine.id))?.title).toBe('bulk-renamed');
+    expect((await repo.findById(t2, theirs.id))?.title).toBe('bulk-theirs');
+
+    await repo.hardDelete(t1, mine.id);
+    await repo.hardDelete(t2, theirs.id);
+  });
+
   it('maps unique violations to ConflictError', async () => {
     await repo.create(t1, { title: 'dup' });
     await expect(repo.create(t1, { title: 'dup' })).rejects.toMatchObject({ code: 'conflict' });

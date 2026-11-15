@@ -39,6 +39,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@fastify/busboy": "^3.2.5",
     "@mariachi/core": "workspace:*",
     "@mariachi/observability": "workspace:*",
     "fastify": "^5"

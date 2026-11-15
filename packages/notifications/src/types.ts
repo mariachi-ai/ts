@@ -7,13 +7,32 @@ export interface NotificationsConfig {
   };
 }
 
+export interface EmailAttachment {
+  filename: string;
+  content: string | Uint8Array;
+  contentType?: string;
+}
+
 export interface EmailMessage {
   to: string | string[];
+  cc?: string | string[];
+  bcc?: string | string[];
   subject: string;
   html?: string;
   text?: string;
+  /** `ada@example.com` or `Ada <ada@example.com>`. Default: the adapter's configured sender. */
   from?: string;
   replyTo?: string;
+  /** Extra message headers. */
+  headers?: Record<string, string>;
+  /**
+   * The provider's sending stream for this message (`transactional`, a newsletter stream, ...), for
+   * providers that separate them. Postmark sends it as `MessageStream`; adapters whose provider has
+   * no such thing ignore it.
+   */
+  stream?: string;
+  attachments?: EmailAttachment[];
+  /** Not read by the built-in adapters; for a custom adapter whose provider renders templates. */
   templateId?: string;
   templateData?: Record<string, unknown>;
 }

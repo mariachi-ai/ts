@@ -88,6 +88,13 @@ doesn't enqueue twice.
 ## 4. Server: in `src/app.ts`
 
 ```ts
+import { RedisIdempotencyStore, createRedisClient } from '@mariachi/cache';
+import { createSecrets } from '@mariachi/config';
+
+const redis = createRedisClient(config.redis.url);                                // connects on first use
+const githubSecret = await createSecrets().getOrThrow('GITHUB_WEBHOOK_SECRET');   // secrets are read by key, asynchronously
+
+// The generated main.ts builds the queue inline; lift it into a variable so the webhook server shares it.
 const jobBackend = createJobQueue({ adapter: 'bullmq', redisUrl: config.redis.url, prefix: config.serviceName }, logger);
 const jobs = new DefaultJobs({ queue: jobBackend }, instrumentation);   // the generated app.ts already has this
 
@@ -98,10 +105,17 @@ const webhooks = new WebhookServer(
     communication,                                      // direct mode
     idempotency: new RedisIdempotencyStore(redis),      // dedup by provider + delivery id
   },
-).registerController(new GitHubWebhookController(new GitHubWebhookAuth(secrets.GITHUB_WEBHOOK_SECRET)));
+).registerController(new GitHubWebhookController(new GitHubWebhookAuth(githubSecret)));
 
 lifecycle.startup.register({ name: 'webhooks', priority: 100, fn: async () => void (await webhooks.listen(config.server.webhookPort)) });
-lifecycle.shutdown.register({ name: 'webhooks', priority: 100, fn: () => webhooks.close() });
+lifecycle.shutdown.register({
+  name: 'webhooks',
+  priority: 100,
+  fn: async () => {
+    await webhooks.close();
+    await redis.quit();
+  },
+});
 ```
 
 Run webhooks on their own port (`WEBHOOK_PORT`, default 3002) so API auth and rate limits don't apply to
