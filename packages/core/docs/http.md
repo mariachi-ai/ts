@@ -59,6 +59,10 @@ export class NotesController extends BaseController {
   for full control.
 - Route options: `auth` (strategy, list, or `false`), `scopes` (all required), `rateLimit` (rule or
   `false`), `status`, `summary`, `description`, `tags`, `deprecated`, `bodyLimitBytes`, `upload`.
+- `tenant: 'optional'` lets a signed-in user who is in no tenant onto a route (`ctx.tenantId` is
+  null there). The default refuses them with `tenancy/missing-tenant`. Use it only for what a user
+  does before they are in a tenant, such as creating or joining an organization, and never touch
+  tenant-scoped data in such a handler.
 - Duplicate `method + path` throws `api/duplicate-route` at registration.
 
 ## Cookies, redirects, streams and uploads

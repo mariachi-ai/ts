@@ -7,9 +7,8 @@ Supabase Auth, a generic OIDC provider, the built-in JWT adapter.
 You don't need it when the provider puts an organization in every token (WorkOS, Clerk, a custom
 claim): that organization is already the tenant.
 
-**This page covers the package: the tables, the service and its rules.** Turning a request's named
-organization into its tenant, the HTTP endpoints and the invitation email arrive in the next
-releases; until then you call the service from your own procedures.
+Sending the invitation email, and `mariachi init --orgs`, arrive in the next release; until then you
+send the link yourself (see [Invitations](#invitations)).
 
 ## The model
 
@@ -18,8 +17,8 @@ releases; until then you call the service from your own procedures.
 - **A membership** joins a user to an organization with a role. A user can be in many organizations.
   The user's id is the one in the verified token; the module keeps no users table. That id is the
   key of every membership, so it must be unique across everything your app accepts sign-ins from:
-  with one identity provider it is, and with several, give each provider's ids a prefix before they
-  reach `ctx.userId`.
+  with one identity provider it is, and with several, give each provider's verifier a namespace
+  (`withUserNamespace`, below).
 - **An invitation** is a single-use link for one email address, good for seven days.
 
 Three roles, highest first:
@@ -50,6 +49,87 @@ Add `tenantsTable` (from `@mariachi/database/schema`) and `organizationMembershi
 migrate. `MemoryOrganizationStore` is the same store in memory, for tests; both pass one contract
 suite.
 
+## Put a request in its organization
+
+A token proves who the user is. It doesn't say which of their organizations they are working in. So
+the client names one on each request, in the `x-organization-id` header, and the server checks the
+membership before that organization becomes the tenant.
+
+```ts
+import { createOrganizationAccess, registerOrganizationProcedures } from '@mariachi/organizations';
+import { OrganizationsController, organizationStrategy } from '@mariachi/organizations/http';
+
+const access = createOrganizationAccess({ organizations });
+registerOrganizationProcedures(communication, organizations, { limiter });
+
+api
+  .withAuthStrategy('session', organizationStrategy(bearerStrategy(verifier), access))
+  .withAuth('session')
+  .registerController(new OrganizationsController(communication));
+```
+
+The check sits where the API turns a request into an identity, so every route gets it without doing
+anything:
+
+| The request | Runs as |
+| --- | --- |
+| names an organization the user is in | that organization as `ctx.tenantId`, with the member's role among the identity's roles |
+| names one the user isn't in, or that doesn't exist, or anything that isn't an organization's id | refused: `organizations/not-found` (404), the same for all three |
+| names a suspended organization | refused: `tenancy/suspended` (403) |
+| names none | the identity's own tenant: the user's personal tenant, as its `owner`, when [personal tenants](./auth-and-providers.md#users-with-no-organization-personal-tenants) are on; otherwise none, and routes that need a tenant answer `tenancy/missing-tenant` |
+| names one organization while the token names another | refused: `tenancy/mismatch` (403) |
+
+- **It never chooses.** A user in three organizations who names none is placed in none of them.
+- **Only the membership gives an organization role.** An `admin` or `owner` among the token's own
+  roles is dropped: it says nothing about this organization.
+- **Only people are resolved.** An API key or a service stays in the tenant its credential was
+  issued for.
+- **A removed member is out on their next request,** though their token is still valid. A lookup is
+  trusted for five seconds (`cacheTtlMs`), and a change made in the same process clears it at once.
+  With several processes, another one sees a removal within those five seconds; to make it
+  immediate, publish from `organizations.onChange` and call `access.forget(organizationId)` where
+  it arrives.
+- Read the organization from somewhere else with `organizationStrategy(strategy, access, {
+  organizationFrom: (req) => … })`: a subdomain, a path segment. For realtime, call
+  `access.resolve(identity, organizationId)` on the identity before `handleConnect`.
+
+**When the identity provider keeps the memberships** (WorkOS, Clerk, a token hook of your own) and
+puts the organization in the token, say so: `createOrganizationAccess({ organizations, source:
+'token' })`. The token's organization is then the tenant and this module's tables are never read.
+An app has one source of memberships, not both.
+
+### The endpoints
+
+`OrganizationsController` serves these under `/organizations`. Each names its organization in the
+path and is decided by the caller's membership of it, so they work from any tenant or none
+(`tenant: 'optional'`): that is how a user with no organization creates or joins one, and how an
+owner reaches an organization that is suspended.
+
+| Route | Does |
+| --- | --- |
+| `GET /organizations` | the caller's organizations, with their role in each |
+| `POST /organizations` | create one; the caller becomes its owner |
+| `GET`, `PATCH`, `DELETE /organizations/:id` | read, rename, delete |
+| `POST /organizations/:id/suspend`, `/reactivate`, `/leave` | |
+| `GET /organizations/:id/members` | `?page=&pageSize=` |
+| `PATCH`, `DELETE /organizations/:id/members/:userId` | change a role, remove |
+| `GET`, `POST /organizations/:id/invitations` | list, invite |
+| `POST /organizations/:id/invitations/:invitationId/resend`, `DELETE …/:invitationId` | |
+| `POST /organizations/invitations/accept` | the signed-in user accepts `{ token }` |
+
+The controller calls procedures (`organizations.create`, `organizations.members.list`, …; the names
+are in `ORGANIZATION_PROCEDURES`), so a controller of your own can call them too.
+
+**Limits.** Give `registerOrganizationProcedures` the rate limiter your API uses, and creating,
+inviting and accepting are limited: 10 organizations an hour per user; 30 invitations an hour per
+user and 200 per organization; 10 accept attempts in ten minutes per user and 30 per address.
+`limits` changes the numbers. Without a limiter there are none.
+
+**Several identity providers.** A user's id is the key of their memberships, so two providers must
+not be able to issue the same one. Give each verifier a namespace before it reaches the API:
+`withUserNamespace(workosProvider, 'workos')` from `@mariachi/auth` makes the id
+`workos.<subject>`. With one provider, nothing is needed.
+
 ## Use it
 
 `ctx` comes first, as everywhere. Every method works out for itself whether the caller may do what
@@ -70,9 +150,9 @@ await organizations.suspend(ctx, organization.id);                  // reactivat
 await organizations.delete(ctx, organization.id);
 ```
 
-`organizations.access(ctx, organizationId)` answers the one question a request check asks: the
+`organizations.access(ctx, organizationId)` answers the one question the request check asks: the
 organization and the caller's active membership, or `null`. A suspended organization comes back as
-it is, for you to refuse.
+it is, to be refused.
 
 ## Invitations
 
@@ -80,6 +160,12 @@ it is, for you to refuse.
 // 1. An owner or admin invites an address. The token is returned this once: put it in the link you send.
 const { invitation, token } = await organizations.invite(ctx, organization.id, { email: 'ivy@example.com', role: 'member' });
 await sendEmail(invitation.email, `${appUrl}/invitations/accept?token=${token}`);
+
+// Or, with the procedures: say how an invitation is delivered, and the token goes only to the invited address
+registerOrganizationProcedures(communication, organizations, {
+  deliverInvitation: (ctx, { organization, invitation, token }) =>
+    sendEmail(invitation.email, `${appUrl}/invitations/accept?token=${token}`, { organization: organization.name }),
+});
 
 // 2. The invitee opens the link, signs in or signs up, and your page calls this as them.
 await organizations.acceptInvitation(ctx, { token });

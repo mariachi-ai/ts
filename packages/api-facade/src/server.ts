@@ -202,7 +202,7 @@ export class FastifyAdapter {
       if (strategies.length > 0) {
         identity = await this.resolveIdentity(req, strategies);
         if (!identity) throw new AuthError('auth/unauthorized', 'Authentication required');
-        if (!identity.tenantId) throw new TenancyError('tenancy/missing-tenant', 'Identity has no tenant');
+        if (!identity.tenantId && route.tenant !== 'optional') throw new TenancyError('tenancy/missing-tenant', 'Identity has no tenant');
         // A `user.` tenant is only ever given by withPersonalTenants; one that came from a token's own claim is forged.
         if (claimsReservedTenant(identity)) throw new TenancyError('tenancy/reserved-tenant', 'Identity names a reserved personal tenant');
         const requested = header(req, tenantHeader);
@@ -216,6 +216,8 @@ export class FastifyAdapter {
       }
 
       const base = contextFromRequest(serverCtx, identity ?? undefined);
+      // On a route where the tenant is optional, an identity in no tenant has none: null, not an empty string
+      if (identity && !identity.tenantId) base.tenantId = null;
       const ctx: HttpContext = {
         ...base,
         identity,
