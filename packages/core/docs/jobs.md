@@ -38,6 +38,25 @@ mid-job, the claim lapses after `lockMs` and another worker runs the job again, 
 attempt; a job that dies on every allowed attempt is dead-lettered as `jobs/stalled`. So handlers
 must be safe to repeat: wrap side effects that must happen once with `runOnce`.
 
+What to know when you run it:
+
+- **Size the connection pool for both.** Claiming is one statement and holds no connection while
+  handlers run, but handlers use the same pool as requests. `poolMax` should cover the worker's
+  `concurrency` plus the request load.
+- **A paused process is safe.** A machine that sleeps, or a process frozen and thawed, wakes to find
+  its own claims lapsed. A worker never claims a job it is still running, so it doesn't start a
+  second copy beside itself, and its next renewal re-asserts the claim. Every lock time is the
+  database's `now()`, one clock for all workers. If another worker took the job over meanwhile, the
+  job runs twice (at-least-once) and only the worker that holds the claim records the outcome.
+- **A copied process needs telling.** If a running machine is cloned with its memory and its
+  database (a fork, a snapshot restored beside the original), the copy has the same worker id and
+  is mid-way through the same jobs. Call `queue.reset()` in the copy before it does anything else:
+  it aborts the handlers running there (`ctx.signal`), returns their jobs to the copy's queue with
+  the attempt uncharged, and takes a new worker id. Mariachi can't know a copy exists, so anything
+  waiting in a copied database, and every schedule, runs in both: side effects that leave the
+  machine (email, webhooks, payments) happen twice unless the copy's queue is emptied or its
+  handlers check where they are.
+
 ## Define and register
 
 ```ts

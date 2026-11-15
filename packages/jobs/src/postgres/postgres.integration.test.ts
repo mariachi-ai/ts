@@ -277,6 +277,83 @@ describe('Postgres job queue', () => {
     expect(otherJobs.completed).toEqual([]);
   });
 
+  it('never starts a job a second time beside itself when its own claim looks lapsed (the process was paused)', async () => {
+    // lockMs is long, so nothing renews the claim during the test: the lapse stays visible to the worker's own polling
+    const { jobs, queue } = make({ lockMs: 60_000 });
+    let runs = 0;
+    jobs.registerJob(
+      defineJob({
+        name: 'long',
+        schema: z.object({}),
+        handler: async () => {
+          runs++;
+          await sleep(500);
+        },
+      }),
+    );
+    await jobs.start();
+    await jobs.enqueue(ctx, 'long', {});
+    await waitFor(() => runs === 1);
+    // What a frozen-and-thawed process sees: the clock has moved on past its own claim
+    await database.db.update(jobTables.jobs).set({ lockedUntil: new Date(Date.now() - 3_600_000) }).where(eq(jobTables.jobs.queue, queue));
+    await waitFor(() => jobs.completed.length === 1);
+    expect(runs).toBe(1);
+    expect(jobs.completed[0]?.e.attempts).toBe(1);
+    expect(await stored(queue)).toEqual([]);
+  });
+
+  it('lets another worker take a paused worker\'s job, and then does not count the paused one\'s result', async () => {
+    const { jobs, queue } = make({ lockMs: 60_000 });
+    let finish: () => void = () => {};
+    const held = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    jobs.registerJob(defineJob({ name: 'long', schema: z.object({}), handler: () => held }));
+    await jobs.start();
+    await jobs.enqueue(ctx, 'long', {});
+    await waitFor(async () => (await stored(queue))[0]?.status === 'active');
+    // Another worker took the job over while this one was away
+    await database.db.update(jobTables.jobs).set({ lockedBy: 'another-worker', attempts: 2 }).where(eq(jobTables.jobs.queue, queue));
+    finish();
+    await sleep(150);
+    expect(jobs.completed).toEqual([]);
+    expect(jobs.failed).toEqual([]);
+    expect((await stored(queue))[0]).toMatchObject({ status: 'active', lockedBy: 'another-worker', attempts: 2 });
+  });
+
+  it('reset() abandons what is running here, hands it back uncharged under a new worker id, and keeps working', async () => {
+    const { jobs, backend, queue } = make({ lockMs: 60_000 });
+    const signals: AbortSignal[] = [];
+    jobs.registerJob(
+      defineJob({
+        name: 'long',
+        schema: z.object({}),
+        handler: async (c) => {
+          signals.push(c.signal);
+          // The first run is the one a copied process inherits mid-way; it never finishes by itself
+          if (signals.length === 1) await new Promise<void>((resolve) => c.signal.addEventListener('abort', () => resolve()));
+        },
+      }),
+    );
+    await jobs.start();
+    await jobs.enqueue(ctx, 'long', {});
+    await waitFor(() => signals.length === 1);
+    const before = (await stored(queue))[0]?.lockedBy;
+
+    await backend.reset();
+    expect(signals[0]?.aborted).toBe(true);
+    await waitFor(() => jobs.completed.length === 1);
+    expect(signals).toHaveLength(2);
+    // The second run was attempt 1 again, under another worker id, and the abandoned run reported nothing
+    expect(jobs.completed[0]?.e.attempts).toBe(1);
+    expect(jobs.failed).toEqual([]);
+    expect(await stored(queue)).toEqual([]);
+
+    await jobs.enqueue(ctx, 'long', {});
+    await waitFor(async () => jobs.completed.length === 2);
+    expect(before).toBeTruthy();
+  });
+
   it('fails an attempt that runs past its timeout, and tells the handler through its signal', async () => {
     const { jobs } = make();
     let aborted = false;

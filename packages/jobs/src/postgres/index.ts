@@ -67,7 +67,9 @@ function nextRun(cron: string, timezone: string | undefined, after: Date): Date 
  */
 export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
   readonly queueName: string;
-  private readonly worker = randomUUID();
+  private worker = randomUUID();
+  /** Ids of the jobs whose handlers are running in this process right now. */
+  private readonly live = new Set<string>();
   private readonly definitions = new Map<string, JobDefinition>();
   private readonly failedListeners: JobFailureListener[] = [];
   private readonly completedListeners: JobCompletedListener[] = [];
@@ -99,10 +101,6 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
   private own(id: string) {
     return and(eq(jobs.queue, this.queueName), eq(jobs.id, id));
   }
-  private mine(id: string) {
-    return and(this.own(id), eq(jobs.lockedBy, this.worker));
-  }
-
   async connect(): Promise<void> {}
 
   async disconnect(): Promise<void> {
@@ -238,6 +236,28 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
     }
   }
 
+  /**
+   * For a process that has been copied while running (a forked or cloned machine, with its memory
+   * and its database): the copy holds the original's worker id and is mid-way through the same
+   * jobs. Call this in the copy before it does anything else. It aborts the handlers running here
+   * (`ctx.signal`), returns their jobs to the queue with the attempt uncharged, and takes a new
+   * worker id. The worker keeps running. Jobs waiting in a copied database run in both copies:
+   * nothing here can know the other exists.
+   */
+  async reset(): Promise<void> {
+    const previous = this.worker;
+    const abandoned = this.abort;
+    this.worker = randomUUID();
+    this.abort = new AbortController();
+    abandoned.abort();
+    await this.db
+      .update(jobs)
+      .set({ status: 'waiting', lockedBy: null, lockedUntil: null, runAt: sql`now()`, attempts: sql`greatest(${jobs.attempts} - 1, 0)` })
+      .where(and(eq(jobs.queue, this.queueName), eq(jobs.lockedBy, previous), eq(jobs.status, 'active')));
+    this.live.clear();
+    this.wakeUp?.();
+  }
+
   /** Writes this process's schedules and removes the queue's others, as `JobScheduler.start` promises. */
   private async syncSchedules(): Promise<void> {
     const names = [...this.localSchedules.keys()];
@@ -288,15 +308,21 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
     });
   }
 
-  /** Takes up to `limit` jobs that are due, or whose worker's claim ran out, and marks them as this worker's. */
+  /**
+   * Takes up to `limit` jobs that are due, or whose worker's claim ran out, and marks them as this
+   * worker's. Never a job this process is still running: after a pause (the machine slept, the
+   * process was frozen and thawed) its own claims look lapsed, and the handler is still here.
+   */
   private async claim(limit: number): Promise<ClaimedRow[]> {
+    const running = [...this.live];
+    const notRunningHere = running.length ? sql`and id not in (${sql.join(running.map((id) => sql`${id}`), sql`, `)})` : sql``;
     const result = await this.db.execute(sql`
       update ${jobs} set status = 'active', attempts = attempts + 1, locked_by = ${this.worker},
         locked_until = now() + ${this.lockMs} * interval '1 millisecond'
       where queue = ${this.queueName} and id in (
         select id from ${jobs}
         where queue = ${this.queueName}
-          and ((status = 'waiting' and run_at <= now()) or (status = 'active' and locked_until < now()))
+          and ((status = 'waiting' and run_at <= now()) or (status = 'active' and locked_until < now() ${notRunningHere}))
         order by priority, run_at
         limit ${limit}
         for update skip locked
@@ -332,7 +358,9 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
           const claimed = await this.claim(free);
           took = claimed.length;
           for (const row of claimed) {
+            this.live.add(row.id);
             const run = this.run(row).finally(() => {
+              this.live.delete(row.id);
               this.inflight.delete(run);
               this.wakeUp?.();
             });
@@ -348,6 +376,10 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
   }
 
   private async run(row: ClaimedRow): Promise<void> {
+    // The claim this run was started under: after reset() these are no longer the adapter's, and the run is abandoned
+    const worker = this.worker;
+    const stopped = this.abort.signal;
+    const mine = and(this.own(row.id), eq(jobs.lockedBy, worker));
     const definition = this.definitions.get(row.name);
     const retry = definition?.retry ?? this.config.defaultRetry ?? DEFAULT_RETRY;
     const { payload, context } = unwrap(row.data as WireJob);
@@ -357,7 +389,7 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
       this.db
         .update(jobs)
         .set({ lockedUntil: sql`now() + ${this.lockMs} * interval '1 millisecond'` })
-        .where(this.mine(row.id))
+        .where(mine)
         .catch((err: unknown) => this.logger.warn({ err, jobId: row.id }, 'could not renew a job claim'));
     }, Math.max(250, Math.floor(this.lockMs / 3)));
     renew.unref?.();
@@ -379,38 +411,50 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
               maxAttempts: retry.attempts,
               signal,
               updateProgress: async (progress) => {
-                await this.db.update(jobs).set({ progress: progress as object }).where(this.mine(row.id));
+                await this.db.update(jobs).set({ progress: progress as object }).where(mine);
               },
             }),
             parsed.data,
           ),
         definition.timeoutMs,
-        this.abort.signal,
+        stopped,
       );
       clearInterval(renew);
-      await this.db.delete(jobs).where(this.mine(row.id));
+      // Stopped or reset while it ran: the job has been handed back and will run again, so this run's end doesn't count
+      if (stopped.aborted) return;
+      const removed = await this.db.delete(jobs).where(mine).returning({ id: jobs.id });
+      // The claim was no longer this run's (taken over after a long pause, or handed back): whoever holds it reports the outcome
+      if (!removed.length) return;
       for (const l of this.completedListeners) {
         l({ jobId: row.id, jobName: row.name, attempts: row.attempts, durationMs: Date.now() - startedAt, context });
       }
     } catch (error) {
       clearInterval(renew);
-      // Stopped mid-job: stop() hands the job back, so this isn't a failure of the job
-      if (this.abort.signal.aborted) return;
+      // Stopped or reset mid-job: the job was handed back, so this isn't a failure of the job
+      if (stopped.aborted) return;
       const code = (error as { code?: string }).code;
       const final = !definition || isNonRetryable(definition, error) || code === 'jobs/unknown-job' || code === 'jobs/stalled' || row.attempts >= retry.attempts;
       const lastError = { message: (error as Error).message, code };
       try {
+        let recorded: unknown[];
         if (!final) {
           const delay = Math.max(0, Math.floor(retryDelay(retry, row.attempts)));
-          await this.db
+          recorded = await this.db
             .update(jobs)
             .set({ status: 'waiting', lockedBy: null, lockedUntil: null, lastError, runAt: sql`now() + ${delay} * interval '1 millisecond'` })
-            .where(this.mine(row.id));
+            .where(mine)
+            .returning({ id: jobs.id });
         } else if (this.config.deadLetter !== false) {
-          await this.db.update(jobs).set({ status: 'dead', lockedBy: null, lockedUntil: null, lastError, failedAt: sql`now()` }).where(this.mine(row.id));
+          recorded = await this.db
+            .update(jobs)
+            .set({ status: 'dead', lockedBy: null, lockedUntil: null, lastError, failedAt: sql`now()` })
+            .where(mine)
+            .returning({ id: jobs.id });
         } else {
-          await this.db.delete(jobs).where(this.mine(row.id));
+          recorded = await this.db.delete(jobs).where(mine).returning({ id: jobs.id });
         }
+        // The claim was no longer this run's: whoever holds it now reports the outcome
+        if (!recorded.length) return;
       } catch (err) {
         // The claim lapses by itself, and the job is then taken again
         this.logger.error({ err, jobId: row.id }, 'could not record a job failure');

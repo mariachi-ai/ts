@@ -11,7 +11,9 @@ with timezones, progress, timeouts and hooks. Workers claim jobs with `FOR UPDAT
 any number of processes share a queue; a worker renews its claim while a handler runs, and a job
 whose worker died is taken over after `lockMs` (at-least-once delivery; one that never finishes is
 dead-lettered as `jobs/stalled`). A job enqueued inside `withTransaction` commits or rolls back
-with the business write. A schedule's tick is enqueued once however many workers are running.
+with the business write. A schedule's tick is enqueued once however many workers are running. A
+worker never claims a job it is still running (so a paused and resumed process doesn't run one
+twice beside itself), and `reset()` lets a process copied while running abandon its inherited jobs.
 
 Its tables, `jobsTable` and `jobSchedulesTable`, are in `@mariachi/jobs/schema` and `@mariachi/schema`.
 `@mariachi/database-postgres` and `drizzle-orm` are optional peers of `@mariachi/jobs`, needed only for
