@@ -204,18 +204,18 @@ export function checkMessage(check: Check, value: number, kinds: string[] = []):
  * `pnpm --filter @mariachi/design fingerprint --print-scales`, and paste its table here.
  */
 export const MEASURE_SCALE: Readonly<Record<string, number>> = {
-  'colour.accentArea': 0.0812,
+  'colour.accentArea': 0.0209,
   'colour.accentHue': 247.5,
   'colour.ground': 0.8099,
   'colour.hues': 2,
   'colour.meaning': 0.1814,
   'density.elements': 33.1,
-  'density.rowHeight': 29.0356,
-  'density.rowsVisible': 2.525,
+  'density.rowHeight': 46.8,
+  'density.rowsVisible': 3.775,
   'density.targets': 10.1,
   'emphasis.primaries': 1,
   'emphasis.primariesPage': 2,
-  'emphasis.primaryWidth': 0.4962,
+  'emphasis.primaryWidth': 0.5241,
   'icons.labelled': 0.5212,
   'icons.size': 6,
   'media.area': 0.0044,

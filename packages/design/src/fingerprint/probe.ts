@@ -280,18 +280,20 @@ const out: number[] = []; for (let i = 1; i < k.length; i++) { const d = k[i].to
   // Density
   m['density.elements'] = vis.filter((e) => inWin(rectOf(e)) && ![...e.children].some((c) => visSet.has(c))).length;
   m['density.targets'] = controls.filter((e) => inWin(rectOf(e))).length;
-  const listy = colls.filter((c) => c.kind === 'list' || c.kind === 'table');
-  m['density.rowsVisible'] = listy.length ? med(listy.map((c) => c.items.filter((i) => inWin(rectOf(i))).length)) : null;
   // Spec 1.2: rows are the innermost repeated group of similar items (cards that hold rows give the rows, not the
   // cards), the one with the most items when several qualify (the median over those tied). Similar: two thirds of the
   // items within a quarter of the group's median height. When no group is that even, the innermost of all of them.
+  // Lists in navigation (a sidebar's links) aren't rows of content. Rows visible counts the same group's items.
+  const NAVIGATION = 'nav, aside, [role="navigation"]';
+  const listy = colls.filter((c) => (c.kind === 'list' || c.kind === 'table') && !c.parent.closest(NAVIGATION));
   const heightsOf = (c: Coll) => c.items.map((i) => rectOf(i).height);
   const even = (c: Coll) => { const hs = heightsOf(c); const mh = med(hs)!; return hs.filter((h) => Math.abs(h - mh) <= 0.25 * mh).length >= (2 / 3) * hs.length; };
   const innermost = (pool: Coll[]) => pool.filter((c) => !pool.some((o) => o !== c && c.items.some((i) => i.contains(o.parent))));
   const rowGroups = innermost(listy.some(even) ? listy.filter(even) : listy);
   const mostItems = Math.max(0, ...rowGroups.map((c) => c.items.length));
-  const rowHeights = rowGroups.filter((c) => c.items.length === mostItems).map((c) => med(heightsOf(c))!);
-  m['density.rowHeight'] = med(rowHeights);
+  const rowGroup = rowGroups.filter((c) => c.items.length === mostItems);
+  m['density.rowHeight'] = med(rowGroup.map((c) => med(heightsOf(c))!));
+  m['density.rowsVisible'] = med(rowGroup.map((c) => c.items.filter((i) => inWin(rectOf(i))).length));
 
   // Structure
   let depth = 0;
@@ -326,32 +328,47 @@ const out: number[] = []; for (let i = 1; i < k.length; i++) { const d = k[i].to
   const DESTRUCTIVE = /\b(delete|remove|discard|cancel subscription|close account)\b/i;
   const near = (c: [number, number, number, number] | null, ref: [number, number, number, number] | null, d: number) => !!c && !!ref && c[3] > 0.5 && deltaE2000(lab(c), lab(ref)) <= d;
   // The action colour as drawn. Spec 1.2 finds it by role and shape, not chroma, so a black primary is still the
-  // primary: the declared primary's fill; else, among filled button-shaped controls, the fill that differs most from
-  // the ground (of the fills within ΔE 10 of the most, the most common), whatever its colour; else the token.
+  // primary: the declared primary's fill; else, among filled button-shaped controls outside navigation, the fill that
+  // differs most from the ground (of the fills within ΔE 10 of the most, the most common), whatever its colour; else
+  // the token. A fill repeated as a set (one control in each of three or more matching sibling containers, such as a
+  // button per card) gives way to another candidate fill when there is one.
   const declaredPrimary = vis.find((e) => e.matches('.m-button[data-variant="primary"]'));
   let accent = declaredPrimary ? ownBg(declaredPrimary) : null;
   if (!accent) {
     const BUTTONISH = 'button, [role="button"], input[type="submit"], input[type="button"], .m-button, a[href]';
     const CHOSEN = '[aria-selected="true"], [aria-current]:not([aria-current="false"]), [aria-pressed="true"], :checked';
-    const fills = new Map<string, { c: [number, number, number, number]; n: number; d: number }>();
+    const fills = new Map<string, { c: [number, number, number, number]; n: number; d: number; els: Element[] }>();
     for (const e of controls) {
       // A button, or a link drawn as one, of a button's size. Not a selected tab or the current page (a state, not an
       // action), and not a destructive control (its danger colour stands out by design: labelled as one, declared as
       // one, or drawn in the danger colour itself)
       const r = rectOf(e);
-      if (!e.matches(BUTTONISH) || e.matches(CHOSEN) || r.height < 24 || r.height > 72 || r.width < 24) continue;
+      if (!e.matches(BUTTONISH) || e.matches(CHOSEN) || e.closest(NAVIGATION) || r.height < 24 || r.height > 72 || r.width < 24) continue;
       const c = ownBg(e);
       // Filled: a face of its own, set apart from what it sits on, that stands out from the ground
       if (!c || deltaE2000(lab(c), lab(behind(e))) < 10) continue;
       const d = deltaE2000(lab(c), lab(ground));
       if (d < 15 || DESTRUCTIVE.test(e.textContent ?? '') || e.matches('[data-variant="danger"]') || near(c, danger, 5)) continue;
       const k = c.slice(0, 3).join(',');
-      const f = fills.get(k) ?? { c, n: 0, d };
+      const f = fills.get(k) ?? { c, n: 0, d, els: [] };
       f.n++;
+      f.els.push(e);
       fills.set(k, f);
     }
-    const most = Math.max(0, ...[...fills.values()].map((f) => f.d));
-    const best = [...fills.values()].filter((f) => f.d >= most - 10).sort((a, b) => b.n - a.n || b.d - a.d)[0];
+    // A set: each control in its own child of their nearest common ancestor, those children sharing a tag and first class
+    const sigOf = (e: Element) => `${e.tagName}.${(e.getAttribute('class') ?? '').split(/\s+/)[0]}`;
+    const isSet = (els: Element[]) => {
+      if (els.length < 3) return false;
+      let lca = els[0].parentElement;
+      while (lca && !els.every((e) => lca!.contains(e))) lca = lca.parentElement;
+      if (!lca) return false;
+      const holders = els.map((e) => [...lca!.children].find((k) => k.contains(e)));
+      return holders.every((h, i) => h && h !== els[i] && sigOf(h) === sigOf(holders[0]!)) && new Set(holders).size === els.length;
+    };
+    const found = [...fills.values()];
+    const pool = found.some((f) => !isSet(f.els)) ? found.filter((f) => !isSet(f.els)) : found;
+    const most = Math.max(0, ...pool.map((f) => f.d));
+    const best = pool.filter((f) => f.d >= most - 10).sort((a, b) => b.n - a.n || b.d - a.d)[0];
     accent = best ? [best.c[0], best.c[1], best.c[2], 1] : parseCssColor(rootCs.getPropertyValue('--m-color-accent-default').trim());
   }
   const isPrimary = (e: Element) => isControl(e) && (e.matches('.m-button[data-variant="primary"]') || near(ownBg(e), accent, 5));
@@ -370,7 +387,10 @@ const out: number[] = []; for (let i = 1; i < k.length; i++) { const d = k[i].to
     }
     if (e.tagName.toLowerCase() === 'svg' && near(parseCssColor(cs(e).color), accent, 5)) tag(e, 'icon');
   }
-  for (const r of winRuns) if (near(r.color, accent, 5)) { for (const lr of r.rects) accentArea += clipArea(lr); if (r.el.closest('a[href]') && !isPrimary(r.el.closest('a[href]')!)) tag(r.el, 'link'); }
+  // Spec 1.2: text in the accent counts, unless the accent has no colour (chroma under 0.04): a black or white accent
+  // is also the body text's colour, so only its filled controls and surfaces count
+  const accentChroma = accent ? rgbToOklch([accent[0], accent[1], accent[2]])[1] : 0;
+  if (accentChroma >= 0.04) for (const r of winRuns) if (near(r.color, accent, 5)) { for (const lr of r.rects) accentArea += clipArea(lr); if (r.el.closest('a[href]') && !isPrimary(r.el.closest('a[href]')!)) tag(r.el, 'link'); }
   m['colour.accentArea'] = accent ? round(Math.min(1, accentArea / (W * H)), 3) : null;
   m['colour.accentOn'] = shares(accentOn);
   const hueArea = new Map<number, number>();

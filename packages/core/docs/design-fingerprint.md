@@ -8,12 +8,18 @@ A design library's fingerprint is a product's habits, measured on its rendered s
 
 **Version 1.1 (2026-11-14)** adds five measures, marked *1.1*: the page's ground, the action colour's hue, control corners, and how panels are set apart (raised, tinted). Version 1 counted habits but couldn't see colour or shape, so languages that look nothing alike could measure close. It also stops words being a check on a language. `specVersion` stays 1; a reader of 1 ignores the new measures.
 
-**Version 1.2 (2026-11-15)** changes three definitions and how distance is scaled, each marked *1.2*. `specVersion` is 1.2, and fingerprints of 1.2 aren't compared with earlier ones.
+**Version 1.2 (2026-11-15)** changes four definitions and how distance is scaled, each marked *1.2*. `specVersion` is 1.2, and fingerprints of 1.2 aren't compared with earlier ones.
 
-- **The primary by role, not chroma.** Without a declared primary, the accent was the most common saturated control fill, so a black or near-black primary read as no accent and its screens as having no main action. The accent is now the fill of the button-shaped control that stands out most from the ground, whatever its colour. A colourless one still has no hue.
-- **Rows are the innermost repeated group.** A page of cards that hold rows, or of sections, read its cards or sections as rows. Row height now comes from the innermost group of similar items.
+- **The primary by role, not chroma.** Without a declared primary, the accent was the most common saturated control fill, so a black or near-black primary read as no accent and its screens as having no main action. The accent is now the fill of the button-shaped control that stands out most from the ground, whatever its colour, outside navigation. A colourless one still has no hue.
+- **A colourless accent isn't counted in text.** A black or white accent is also the body text's colour, so its accent area counts only its filled controls and surfaces.
+- **Rows are the innermost repeated group.** A page of cards that hold rows, or of sections, read its cards or sections as rows. Row height and rows visible now come from the innermost group of similar items, outside navigation.
 - **Inline SVG pictures are media.** A language that draws its pictures as inline SVG read no media. An SVG big enough to be a picture now counts; an icon never does.
 - **A fixed scale per measure.** Distance divided by each measure's spread across the languages as measured that day, so one language's change moved every other language's distances. The scale is now a table frozen at 1.2.
+
+Known limits of 1.2:
+
+- **Charts drawn as inline SVG count as media.** The probe can't tell a chart from a drawing, so a dashboard's SVG charts add to `media.area` and fill `space.empty` like a picture.
+- **Sections can still read as rows.** A page of sections with nothing repeated inside them (several states stacked on one page, say) reads its sections as the innermost group, so its rows can be hundreds of pixels tall.
 
 The playbook that uses it is [design-playbook.md](./design-playbook.md).
 
@@ -56,9 +62,10 @@ These definitions are used by the measures below.
 - **Main column:** the element containing the largest share of the window's text characters that has at least three block children, excluding `nav`, `aside`, `header` and `footer`.
 - **Ground colour:** the fill under the nine ground points of `colour.ground` (below) whose OKLCH lightness is the median.
 - **Accent:** the product's action colour as drawn: the fill of its declared primary button (`.m-button[data-variant="primary"]`) when one is on the screen; otherwise *(1.2)* the fill of the filled button-shaped control that differs most from the ground colour, whatever its colour; otherwise `--m-color-accent-default`.
-  - *Button-shaped:* a `button`, `[role=button]`, submit or button `input`, `.m-button` or `a[href]`, 24 to 72 px tall and at least 24 px wide. Not a selected or current one (`aria-selected`, `aria-current`, `aria-pressed`, `:checked`), and not a destructive one (labelled as in `emphasis.destructive`, `data-variant="danger"`, or a fill within ΔE2000 5 of the danger colour).
+  - *Button-shaped:* a `button`, `[role=button]`, submit or button `input`, `.m-button` or `a[href]`, 24 to 72 px tall and at least 24 px wide, not inside `nav`, `aside` or `[role=navigation]`. Not a selected or current one (`aria-selected`, `aria-current`, `aria-pressed`, `:checked`), and not a destructive one (labelled as in `emphasis.destructive`, `data-variant="danger"`, or a fill within ΔE2000 5 of the danger colour).
   - *Filled:* its fill differs from what it sits on (ΔE2000 ≥ 10) and from the ground colour (ΔE2000 ≥ 15).
   - *Differs most:* of the fills within ΔE2000 10 of the largest difference from the ground colour, the one on the most controls (then the larger difference).
+  - *A set gives way:* a fill on three or more controls, each in its own child of their nearest common ancestor, those children sharing a tag and first class name (a button in each of a row of cards), is a repeated set, not the primary, when another candidate fill exists.
   - Before 1.2 this step was the most common control fill with OKLCH chroma > 0.1, so a black primary read as none.
 - **Fill:** an element's background colour; when that's transparent, the first colour stop of its background gradient; for a control, failing both, the background of an absolutely positioned `::before` that draws its face.
 - **Primary action:** a control whose fill is within ΔE2000 5 of the accent, or the product's declared primary (`.m-button[data-variant="primary"]`).
@@ -94,8 +101,8 @@ Each measure has an id, its unit, and how it's computed. A value is recorded per
 | --- | --- | --- |
 | `density.elements` | count | Visible leaf elements (no visible element children) intersecting the window |
 | `density.targets` | count | Controls intersecting the window |
-| `density.rowsVisible` | count | Per `list` or `table` collection: items intersecting the window. Median over collections |
-| `density.rowHeight` | px | *1.2.* The median item height of the innermost `list` or `table` collection of similar items: one with no other such collection inside its items. Similar: at least two thirds of the items within 25% of its median item height (when none is, all `list` and `table` collections are used). When several qualify, the one with the most items; the median over those tied. Cards that hold rows give the rows' height, not the cards' |
+| `density.rowsVisible` | count | *1.2.* Items intersecting the window, of the collection (or the median over the collections) that `density.rowHeight` uses |
+| `density.rowHeight` | px | *1.2.* The median item height of the innermost `list` or `table` collection of similar items, not inside `nav`, `aside` or `[role=navigation]`: one with no other such collection inside its items. Similar: at least two thirds of the items within 25% of its median item height (when none is, all `list` and `table` collections are used). When several qualify, the one with the most items; the median over those tied. Cards that hold rows give the rows' height, not the cards' |
 
 ### Structure
 
@@ -110,8 +117,8 @@ Each measure has an id, its unit, and how it's computed. A value is recorded per
 
 | Id | Unit | Computed |
 | --- | --- | --- |
-| `colour.accentArea` | share | Area of elements whose background is the accent, plus text boxes whose colour is the accent, ÷ the window area |
-| `colour.accentOn` | shares | The accent's elements by kind: `primary`, `link`, `badge`, `icon`, `selection`, `other` |
+| `colour.accentArea` | share | Area of elements whose background is the accent, plus text boxes whose colour is the accent, ÷ the window area. *1.2:* when the accent's OKLCH chroma is under 0.04, text boxes don't count |
+| `colour.accentOn` | shares | The accent's elements by kind: `primary`, `link`, `badge`, `icon`, `selection`, `other`. *1.2:* no `link` when the accent's chroma is under 0.04 (its text isn't counted) |
 | `colour.hues` | count | Distinct hues (12 bins of 30° of OKLCH hue) among saturated colours (OKLCH chroma > 0.08) covering at least 0.2% of the window |
 | `colour.meaning` | share | The share of saturated area (OKLCH chroma > 0.08) that's on status elements (`[role=status]`, `[role=alert]`, badges, alerts) |
 | `colour.ground` | 0–1 | *1.1.* The median OKLCH lightness of what sits under nine points across the window (at 20/50/80% across and 25/50/75% down): the first element up from each point with an opaque fill, else the canvas. A dark language reads near 0.2, a light one near 1 |
