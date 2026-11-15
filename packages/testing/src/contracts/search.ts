@@ -27,6 +27,46 @@ export function searchContract(name: string, create: () => SearchClient | Promis
       await client.deleteIndex(posts);
     });
 
+    it('sorts by a field and counts facet values over everything that matched', async () => {
+      const client = await create();
+      await client.connect();
+      const products = unique('products');
+      await client.createIndex({
+        name: products,
+        fields: [
+          { name: 'name', type: 'string' },
+          { name: 'category', type: 'string', facet: true },
+          { name: 'tags', type: 'string[]', facet: true },
+          { name: 'price', type: 'int32' },
+        ],
+      });
+      await client.indexDocuments(products, [
+        { id: 'a', name: 'Trumpet', category: 'brass', tags: ['loud', 'shiny'], price: 300 },
+        { id: 'b', name: 'Violin', category: 'strings', tags: ['shiny'], price: 900 },
+        { id: 'c', name: 'Guitarron', category: 'strings', tags: ['loud', 'big'], price: 600 },
+        { id: 'd', name: 'Vihuela', category: 'strings', tags: ['loud'], price: 450 },
+      ]);
+      const ids = async (sort: string) => (await client.search(products, { query: '*', sort })).hits.map((h) => h.document.id);
+      expect(await ids('price:asc')).toEqual(['a', 'd', 'c', 'b']);
+      expect(await ids('price:desc')).toEqual(['b', 'c', 'd', 'a']);
+
+      // Counts cover every match, not just the page returned
+      const faceted = await client.search(products, { query: '*', facets: ['category', 'tags'], pageSize: 1, sort: 'price:asc' });
+      expect(faceted.hits).toHaveLength(1);
+      expect(faceted.total).toBe(4);
+      const counts = (field: string) => Object.fromEntries((faceted.facetCounts?.[field] ?? []).map((c) => [c.value, c.count]));
+      expect(counts('category')).toEqual({ strings: 3, brass: 1 });
+      expect(counts('tags')).toEqual({ loud: 3, shiny: 2, big: 1 });
+      expect(faceted.facetCounts?.category?.[0]).toEqual({ value: 'strings', count: 3 });
+
+      // And only the matches: a filter narrows the counts
+      const strings = await client.search(products, { query: '*', filters: { category: 'strings' }, facets: ['tags'] });
+      expect(Object.fromEntries((strings.facetCounts?.tags ?? []).map((c) => [c.value, c.count]))).toEqual({ loud: 2, shiny: 1, big: 1 });
+      // No facets asked for, none returned
+      expect((await client.search(products, { query: '*' })).facetCounts ?? {}).toEqual({});
+      await client.deleteIndex(products);
+    });
+
     it('rejects unknown field types, duplicate and missing indexes', async () => {
       const client = await create();
       await client.connect();

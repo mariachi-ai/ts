@@ -4,6 +4,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { MemoryCacheAdapter } from '@mariachi/cache';
+import { DefaultJobs, defineJob } from '@mariachi/jobs';
 import { MemoryInAppStore } from '@mariachi/notifications';
 import { MemorySearchAdapter } from '@mariachi/search';
 import { LocalStorageAdapter, MemoryStorageAdapter } from '@mariachi/storage';
@@ -13,7 +14,10 @@ import { TestJobQueue } from './adapters/jobs';
 import { TestLock } from './adapters/lock';
 import { TestSearchClient } from './adapters/search';
 import { TestStorageClient } from './adapters/storage';
-import { cacheContract, inboxContract, lockContract, searchContract, storageContract } from './contracts/index';
+import { TestRepository } from './adapters/database';
+import { cacheContract, inboxContract, lockContract, repositoryContract, searchContract, storageContract, type ContractNote } from './contracts/index';
+
+const silent = { info() {}, warn() {}, error() {}, debug() {}, child: () => silent };
 
 // Real adapters run the same suites in contracts.integration.test.ts.
 storageContract('memory', () => new MemoryStorageAdapter());
@@ -26,6 +30,7 @@ inboxContract('test double', () => new TestInAppStore());
 cacheContract('memory', (prefix) => new MemoryCacheAdapter({ adapter: 'memory', prefix }));
 cacheContract('test double', (prefix) => new TestCacheClient({ prefix }));
 lockContract('test double', () => new TestLock());
+repositoryContract('test double', () => new TestRepository<ContractNote>({ tenantColumn: 'tenantId' }));
 
 describe('job runner contract', () => {
   it('executes a registered handler when drained', async () => {
@@ -40,5 +45,25 @@ describe('job runner contract', () => {
     await queue.drain();
     expect(seen).toEqual(['ada']);
     expect(queue.getEnqueuedJobs()).toEqual([]);
+  });
+
+  it('is a whole job backend: DefaultJobs takes it, schedules included, and a schedule runs when the test says so', async () => {
+    const queue = new TestJobQueue();
+    const jobs = new DefaultJobs({ queue }, { logger: silent });
+    const sent: Array<{ kind: string; tenant: string | null }> = [];
+    jobs.registerJob(defineJob({ name: 'digest', schema: z.object({ kind: z.string() }), handler: async (ctx, data) => void sent.push({ kind: data.kind, tenant: ctx.tenantId }) }));
+    jobs.schedule({ name: 'nightly', cron: '0 6 * * *', jobName: 'digest', data: { kind: 'nightly' } });
+    expect(queue.getSchedules()).toEqual([{ name: 'nightly', cron: '0 6 * * *', jobName: 'digest', data: { kind: 'nightly' } }]);
+
+    // Nothing fires on a clock
+    await jobs.start();
+    expect(sent).toEqual([]);
+    await queue.runSchedule('nightly');
+    await queue.drain();
+    expect(sent).toEqual([{ kind: 'nightly', tenant: null }]);
+
+    await jobs.unschedule('nightly');
+    expect(queue.getSchedules()).toEqual([]);
+    await expect(queue.runSchedule('nightly')).rejects.toMatchObject({ code: 'jobs/unknown-schedule' });
   });
 });
