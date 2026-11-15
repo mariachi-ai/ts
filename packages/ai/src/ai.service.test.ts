@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { MockLanguageModelV4, convertArrayToReadableStream } from 'ai/test';
 import { AIError, createContext, type Context } from '@mariachi/core';
 import { AISdkAdapter } from './adapters/ai-sdk';
+import { AnthropicAdapter } from './adapters/anthropic';
+import { FallbackAdapter } from './adapters/fallback';
+import { OpenAIAdapter } from './adapters/openai';
 import { DefaultAI } from './ai';
 import { createAI, runAgent, toSse } from './index';
 import type { Adapter, AdapterCallConfig, AISessionStore, SessionState } from './session/manager';
@@ -477,6 +480,29 @@ describe('AISdkAdapter with a provider model', () => {
     });
     // The output cap reaches the provider
     expect(mock.doStreamCalls[0]?.maxOutputTokens).toBe(256);
+  });
+
+  it('says that its streams carry tool calls, and a fallback chain says so only when every provider does', async () => {
+    const sdk = new AISdkAdapter('mock', () => model(), 'mock-model');
+    expect(sdk.streamsToolCalls).toBe(true);
+    expect(new OpenAIAdapter({ apiKey: 'k' }).streamsToolCalls).toBe(true);
+    expect(new AnthropicAdapter({ apiKey: 'k' }).streamsToolCalls).toBe(true);
+    const toolCalls = [{ id: 'c1', name: 'weather', arguments: { city: 'Oaxaca' } }];
+    // An adapter of someone's own: one that streams text only, one with no stream at all
+    const textOnly: Adapter = { generate: async () => reply('x'), async *stream() { yield { content: 'x', done: true }; } };
+    const wholeReplies: Adapter = { generate: async () => reply('', { toolCalls }) };
+    expect(new FallbackAdapter([{ id: 'a', adapter: sdk }]).streamsToolCalls).toBe(true);
+    expect(new FallbackAdapter([{ id: 'a', adapter: sdk }, { id: 'b', adapter: wholeReplies }]).streamsToolCalls).toBe(true);
+    expect(new FallbackAdapter([{ id: 'a', adapter: sdk }, { id: 'b', adapter: textOnly }]).streamsToolCalls).toBe(false);
+
+    // And the chain does pass them on, from a provider that streams and from one that answers whole
+    const last = async (adapter: Adapter) => {
+      let final: StreamChunk | undefined;
+      for await (const chunk of adapter.stream?.([{ role: 'user', content: 'weather?' }], {}) ?? []) final = chunk;
+      return final;
+    };
+    expect((await last(new FallbackAdapter([{ id: 'a', adapter: sdk }])))?.toolCalls).toEqual([{ id: 'call_1', name: 'weather', arguments: { city: 'Oaxaca' } }]);
+    expect(await last(new FallbackAdapter([{ id: 'b', adapter: wholeReplies }]))).toMatchObject({ done: true, toolCalls, model: 'm1' });
   });
 
   it('hands the provider the signal, and reports a cancelled call as cancelled', async () => {
