@@ -209,3 +209,38 @@ describe('Stripe mappers', () => {
     });
   });
 });
+
+describe('StripeAdapter usage', () => {
+  function meterStub(fail?: { code: string }) {
+    const calls: Array<{ params: Record<string, unknown>; opts: Record<string, unknown> | undefined }> = [];
+    const client = {
+      billing: {
+        meterEvents: {
+          create: async (params: Record<string, unknown>, opts?: Record<string, unknown>) => {
+            calls.push({ params, opts });
+            if (fail) throw Object.assign(new Error('refused'), { type: 'StripeInvalidRequestError', ...fail });
+            return { identifier: params.identifier };
+          },
+        },
+      },
+    };
+    return { calls, adapter: new StripeAdapter({ secretKey: '', client: client as unknown as Stripe }) };
+  }
+  const report = { customerId: 'cus_1', metricName: 'api_calls', quantity: 3, timestamp: new Date(1_700_000_000_000), idempotencyKey: 'req-1' };
+
+  it('sends the key as the event identifier, so a resend is the same event, and no request idempotency key', async () => {
+    const { adapter, calls } = meterStub();
+    await adapter.reportUsage(report);
+    await adapter.reportUsage(report);
+    // Stripe replays the first response saved under a request key, a 500 included: a resend must be a new request
+    expect(calls).toEqual([
+      { params: { event_name: 'api_calls', identifier: 'req-1', timestamp: 1_700_000_000, payload: { stripe_customer_id: 'cus_1', value: '3' } }, opts: undefined },
+      { params: { event_name: 'api_calls', identifier: 'req-1', timestamp: 1_700_000_000, payload: { stripe_customer_id: 'cus_1', value: '3' } }, opts: undefined },
+    ]);
+  });
+
+  it('takes "an event with this identifier exists" as success, and any other refusal as a failure', async () => {
+    await expect(meterStub({ code: 'duplicate_meter_event' }).adapter.reportUsage(report)).resolves.toBeUndefined();
+    await expect(meterStub({ code: 'resource_missing' }).adapter.reportUsage(report)).rejects.toMatchObject({ code: expect.stringMatching(/^billing\//) });
+  });
+});

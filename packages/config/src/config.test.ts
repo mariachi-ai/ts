@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { z } from 'zod';
 import { ConfigError } from '@mariachi/core';
 import {
@@ -26,11 +26,32 @@ describe('loadConfig', () => {
 
   it('reads AI fallbacks and cost table from env', () => {
     const config = loadConfig({}, {
-      env: { AI_FALLBACK_MODELS: 'gpt-4o, gpt-4o-mini', AI_COST_TABLE: '{"claude-sonnet-5":{"input":0.003,"output":0.015}}' },
+      env: { AI_FALLBACK_MODELS: 'gpt-4o, gpt-4o-mini', AI_COST_TABLE: '{"claude-sonnet-5":{"input":0.003,"output":0.015}}', AI_BASE_URL: 'https://ai.example.com' },
     });
+    expect(config.ai?.baseUrl).toBe('https://ai.example.com');
+    expect(() => loadConfig({}, { env: { AI_BASE_URL: 'not a url' } })).toThrow(ConfigError);
     expect(config.ai?.fallbackModels).toEqual(['gpt-4o', 'gpt-4o-mini']);
     expect(config.ai?.costTable?.['claude-sonnet-5']).toEqual({ input: 0.003, output: 0.015 });
     expect(() => loadConfig({}, { env: { AI_COST_TABLE: '{nope' } })).toThrow(ConfigError);
+  });
+
+  it('reads email settings from env', () => {
+    const config = loadConfig({}, {
+      env: { EMAIL_ADAPTER: 'smtp', SMTP_URL: 'smtps://user:pass@smtp.example.com', EMAIL_FROM: 'App <app@example.com>', EMAIL_API_KEY: 'key-1', RESEND_API_KEY: 'key-2', EMAIL_API_URL: 'https://mail.example.com/api' },
+    });
+    expect(config.email).toEqual({ adapter: 'smtp', apiKey: 'key-1', from: 'App <app@example.com>', smtpUrl: 'smtps://user:pass@smtp.example.com', apiUrl: 'https://mail.example.com/api' });
+    expect(loadConfig({}, { env: { RESEND_API_KEY: 'key-2' } }).email?.apiKey).toBe('key-2');
+  });
+
+  it("never gives one email provider another's key", () => {
+    // The adapter defaults to Resend, so a generic key with no adapter named would go there.
+    expect(() => loadConfig({}, { env: { EMAIL_API_KEY: 'someone-elses-key' } })).toThrow(expect.objectContaining({ code: 'config/email-adapter-required' }));
+    expect(() => loadConfig({}, { env: { EMAIL_API_KEY: 'someone-elses-key', RESEND_API_KEY: 'resend-key' } })).toThrow(ConfigError);
+    // Resend's key stays with Resend.
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'postmark', RESEND_API_KEY: 'resend-key' } }).email).toEqual({ adapter: 'postmark' });
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'custom', EMAIL_API_KEY: 'platform-key', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('platform-key');
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'resend', EMAIL_API_KEY: 'explicit', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('explicit');
+    expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'resend', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('resend-key');
   });
 
   it('throws ConfigError with readable issues on invalid input', () => {
@@ -39,6 +60,61 @@ describe('loadConfig', () => {
       loadConfig({}, { env: { DATABASE_URL: 'not a url' } });
     } catch (e) {
       expect((e as ConfigError).message).toContain('database.url');
+    }
+  });
+
+  it('refuses a number, a boolean or an environment name it cannot read, naming the variable', () => {
+    const failure = (env: Record<string, string>) => {
+      try {
+        loadConfig({}, { env });
+      } catch (error) {
+        return [(error as ConfigError).code, (error as ConfigError).message];
+      }
+      return 'loaded';
+    };
+    expect(failure({ PORT: 'eighty' })).toEqual(['config/invalid', 'Invalid configuration: PORT must be a number']);
+    expect(failure({ DATABASE_URL: 'postgres://localhost/app', DATABASE_POOL_MAX: '10 connections' })).toEqual(['config/invalid', 'Invalid configuration: DATABASE_POOL_MAX must be a number']);
+    expect(failure({ TRUST_PROXY: 'maybe' })).toEqual(['config/invalid', 'Invalid configuration: TRUST_PROXY must be true or false']);
+    expect(failure({ NODE_ENV: 'banana' })).toEqual([
+      'config/invalid',
+      'Invalid configuration: NODE_ENV must be development, test or production (set ENV to one of them if NODE_ENV has to stay as it is)',
+    ]);
+    expect(failure({ ENV: 'prod' })).toEqual(['config/invalid', 'Invalid configuration: ENV must be development, test or production']);
+    // The value is never echoed: a mistyped secret pasted into the wrong variable stays out of logs
+    expect(JSON.stringify(failure({ PORT: 'sk_live_not_a_port' }))).not.toContain('sk_live');
+  });
+
+  it('reads the usual spellings of a boolean, leaves an empty variable unset, and lets ENV decide over NODE_ENV', () => {
+    for (const yes of ['true', 'TRUE', '1', 'yes', 'on']) expect(loadConfig({}, { env: { TRUST_PROXY: yes } }).server.trustProxy, yes).toBe(true);
+    for (const no of ['false', '0', 'no', 'Off']) expect(loadConfig({}, { env: { TRUST_PROXY: no } }).server.trustProxy, no).toBe(false);
+    expect(loadConfig({}, { env: { PORT: '', TRUST_PROXY: ' ', NODE_ENV: '' } })).toMatchObject({ env: 'development', server: { port: 3000 } });
+    expect(loadConfig({}, { env: { PORT: ' 8080 ' } }).server.port).toBe(8080);
+    // NODE_ENV=staging is common for tooling; ENV then says which of the three the app runs as
+    expect(loadConfig({}, { env: { NODE_ENV: 'staging', ENV: 'production' } }).env).toBe('production');
+  });
+
+  it('warns once when nothing says which environment this is, since it then runs as development', async () => {
+    vi.resetModules();
+    const fresh = await import('./index');
+    const warn = vi.spyOn(process, 'emitWarning').mockImplementation(() => undefined);
+    try {
+      // Told through options or overrides, or reading a test's own env: nothing to warn about
+      vi.stubEnv('NODE_ENV', 'production');
+      vi.stubEnv('ENV', '');
+      fresh.loadConfig({}, { dotenv: false });
+      vi.stubEnv('NODE_ENV', '');
+      fresh.loadConfig({ env: 'production' }, { dotenv: false });
+      fresh.loadConfig({}, { env: {} });
+      expect(warn).not.toHaveBeenCalled();
+
+      expect(fresh.loadConfig({}, { dotenv: false }).env).toBe('development');
+      fresh.loadConfig({}, { dotenv: false });
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn.mock.calls[0]?.[0]).toMatch(/Neither ENV nor NODE_ENV is set, so this app runs as "development"/);
+      expect(warn.mock.calls[0]?.[1]).toEqual({ code: 'MARIACHI_ENV_UNSET' });
+    } finally {
+      warn.mockRestore();
+      vi.unstubAllEnvs();
     }
   });
 

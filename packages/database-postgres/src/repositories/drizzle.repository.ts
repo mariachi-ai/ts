@@ -169,6 +169,12 @@ export abstract class DrizzleRepository<T extends Entity> implements Repository<
     }
   }
 
+  /** Bulk writes need at least one condition from the caller: an empty filter would touch every row in scope. */
+  protected requireFilter(operation: string, filter: QueryFilter<T> | undefined): void {
+    const hasFilter = Array.isArray(filter) ? filter.length > 0 : Object.values(filter ?? {}).some((v) => v !== undefined);
+    if (!hasFilter) throw new DatabaseError('database/unsafe-operation', `${operation} requires a non-empty filter`);
+  }
+
   protected buildWhere(ctx: Context, filter?: QueryFilter<T>, options: { withDeleted?: boolean } = {}): SQL | undefined {
     const conditions: SQL[] = [];
     if (this.softDeleteColumn && !options.withDeleted) conditions.push(isNull(this.column(this.softDeleteColumn)));
@@ -295,8 +301,9 @@ export abstract class DrizzleRepository<T extends Entity> implements Repository<
   }
 
   async updateWhere(ctx: Context, filter: QueryFilter<T>, data: Partial<Omit<T, 'id'>>): Promise<number> {
-    const where = this.buildWhere(ctx, filter);
-    if (!where) throw new DatabaseError('database/unsafe-operation', 'updateWhere requires a filter');
+    // The tenant and soft-delete conditions always make `where` non-empty, so check the caller's filter itself.
+    this.requireFilter('updateWhere', filter);
+    const where = this.buildWhere(ctx, filter)!;
     const rows = await this.run('updateWhere', () =>
       this.db.update(this.table).set(this.preparePatch(data as Record<string, unknown>)).where(where).returning({ id: this.column('id') as any }),
     );
@@ -408,8 +415,7 @@ export abstract class DrizzleRepository<T extends Entity> implements Repository<
   }
 
   async deleteWhere(ctx: Context, filter: QueryFilter<T>, options: { hard?: boolean } = {}): Promise<number> {
-    const hasFilter = Array.isArray(filter) ? filter.length > 0 : Object.values(filter).some((v) => v !== undefined);
-    if (!hasFilter) throw new DatabaseError('database/unsafe-operation', 'deleteWhere requires a non-empty filter');
+    this.requireFilter('deleteWhere', filter);
     if (this.softDeleteColumn && !options.hard) {
       return this.updateWhere(ctx, filter, { [this.softDeleteColumn]: new Date() } as Partial<Omit<T, 'id'>>);
     }

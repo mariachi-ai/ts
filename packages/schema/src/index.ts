@@ -12,6 +12,7 @@ export {
   userRolesTable,
   apiKeysTable,
   sessionsTable,
+  authWebhookDedupTable,
 } from '@mariachi/auth/schema';
 
 export {
@@ -19,6 +20,8 @@ export {
   billingSubscriptionsTable,
   billingChargesTable,
   billingRefundsTable,
+  billingInvoicesTable,
+  billingDisputesTable,
   billingCreditTransactionsTable,
   billingUsageRecordsTable,
   billingWebhookEventsTable,
@@ -40,3 +43,5 @@ export { featureFlagsTable } from '@mariachi/config/schema';
 export { auditLogsTable } from '@mariachi/audit/schema';
 
 export { webhookLogsTable } from '@mariachi/webhooks/schema';
+
+export { eventOutboxTable } from '@mariachi/events/schema';

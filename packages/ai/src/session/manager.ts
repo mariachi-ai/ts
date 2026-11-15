@@ -9,15 +9,17 @@ import type {
   ToolResult,
 } from '../types';
 
+/** What a session passes to its adapter on every call. */
+export interface AdapterCallConfig {
+  model?: string;
+  tools?: ToolDefinition[];
+  /** The session's `userId`. An adapter sends it to the provider only when it's configured to. */
+  userId?: string;
+}
+
 export interface Adapter {
-  generate(
-    messages: AIMessage[],
-    config: { model?: string; tools?: ToolDefinition[] },
-  ): Promise<AIResponse>;
-  stream?(
-    messages: AIMessage[],
-    config: { model?: string; tools?: ToolDefinition[] },
-  ): AsyncIterable<StreamChunk>;
+  generate(messages: AIMessage[], config: AdapterCallConfig): Promise<AIResponse>;
+  stream?(messages: AIMessage[], config: AdapterCallConfig): AsyncIterable<StreamChunk>;
 }
 
 export interface SessionState {
@@ -135,7 +137,7 @@ export class SessionManager {
     let lastError: unknown;
     for (const model of this.modelsFor(state)) {
       try {
-        const response = await this.adapter.generate(state.messages, { model, tools: state.config.tools });
+        const response = await this.adapter.generate(state.messages, { model, tools: state.config.tools, userId: state.config.userId });
         this.record(state, response);
         await this.store?.save(id, state);
         return response;
@@ -155,7 +157,7 @@ export class SessionManager {
     this.appendInput(state, message);
     const model = this.modelsFor(state)[0];
     if (!this.adapter.stream) {
-      const response = await this.adapter.generate(state.messages, { model, tools: state.config.tools });
+      const response = await this.adapter.generate(state.messages, { model, tools: state.config.tools, userId: state.config.userId });
       this.record(state, response);
       await this.store?.save(id, state);
       yield { content: response.content, done: false };
@@ -168,7 +170,7 @@ export class SessionManager {
     }
     let text = '';
     let usage: StreamChunk['usage'];
-    for await (const chunk of this.adapter.stream(state.messages, { model, tools: state.config.tools })) {
+    for await (const chunk of this.adapter.stream(state.messages, { model, tools: state.config.tools, userId: state.config.userId })) {
       text += chunk.content;
       if (chunk.usage) usage = chunk.usage;
       yield chunk;

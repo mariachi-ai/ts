@@ -1,0 +1,52 @@
+{
+  "name": "@mariachi/auth-oidc",
+  "version": "0.0.5",
+  "description": "OpenID Connect token verification for any standard provider (Auth0, Cognito, Keycloak, Entra ID, Okta, Firebase, ...): discovery, JWKS, and configurable tenant, role and scope claims.",
+  "mariachi": {
+    "category": "security",
+    "status": "alpha",
+    "useWhen": "Using an identity provider that issues standard OIDC tokens and has no package of its own",
+    "entry": [
+      "createOidcAuth",
+      "OidcAuthProvider"
+    ]
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "biome lint src",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariachi/auth": "workspace:*",
+    "@mariachi/core": "workspace:*",
+    "jose": "^6"
+  },
+  "devDependencies": {
+    "typescript": "^5.7",
+    "tsup": "^8",
+    "vitest": "^3"
+  }
+}

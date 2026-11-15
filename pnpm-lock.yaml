@@ -335,6 +335,9 @@ importers:
       '@ai-sdk/anthropic':
         specifier: ^4.0.61
         version: 4.0.61(zod@3.25.76)
+      '@ai-sdk/google':
+        specifier: ^4.0.121
+        version: 4.0.121(zod@3.25.76)
       '@mariachi/database-postgres':
         specifier: workspace:*
         version: link:../database-postgres
@@ -501,6 +504,28 @@ importers:
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.11)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
 
   packages/auth-gotrue:
+    dependencies:
+      '@mariachi/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@mariachi/core':
+        specifier: workspace:*
+        version: link:../core
+      jose:
+        specifier: ^6
+        version: 6.2.1
+    devDependencies:
+      tsup:
+        specifier: ^8
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
+      typescript:
+        specifier: ^5.7
+        version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.11)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
+
+  packages/auth-oidc:
     dependencies:
       '@mariachi/auth':
         specifier: workspace:*
@@ -1246,6 +1271,9 @@ importers:
       drizzle-orm:
         specifier: ^0.38
         version: 0.38.4(@opentelemetry/api@1.9.0)(@types/pg@8.6.1)(postgres@3.4.8)(react@19.2.4)
+      nodemailer:
+        specifier: ^10.5.0
+        version: 10.5.0
       tsup:
         specifier: ^8
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
@@ -1360,6 +1388,9 @@ importers:
       '@mariachi/database':
         specifier: workspace:*
         version: link:../database
+      '@mariachi/events':
+        specifier: workspace:*
+        version: link:../events
       '@mariachi/jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -1401,6 +1432,9 @@ importers:
 
   packages/server:
     dependencies:
+      '@fastify/busboy':
+        specifier: ^3.2.5
+        version: 3.2.5
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
@@ -1565,6 +1599,12 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/google@4.0.121':
+    resolution: {integrity: sha512-K4aC8ZTe/dXegkaE2TxD1Ln2BaNFV4iTI57BykEcoS2KjBihaC3mu+UcmNZyY5yaoBJlLVGcxPhItF32TU6fLg==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/openai@4.0.73':
     resolution: {integrity: sha512-Uj1A6LNLE2hU0qNpwsYP8ARbpn9XVt3SpvRUaj8RSC2ny8d3RsNXZibR8myE1sKtQfBwqbtHFKbPBatfNxsElA==}
     engines: {node: '>=22'}
@@ -1577,8 +1617,18 @@ packages:
     peerDependencies:
       zod: ^3.25.76 || ^4.1.8
 
+  '@ai-sdk/provider-utils@5.0.81':
+    resolution: {integrity: sha512-pfvvdQ3d1WxdBuug/mnGEP6E48cPokwD8dMBnsFeeAUp0/rb/H2aj0f3mwOiY62gu/Cu5GO44e+SE5nDHyBWMA==}
+    engines: {node: '>=22'}
+    peerDependencies:
+      zod: ^3.25.76 || ^4.1.8
+
   '@ai-sdk/provider@4.0.18':
     resolution: {integrity: sha512-+GZJIgz1jk86pwEbb3f1BD2bdoSKyWE4Jg4YUc7NMnMozbWemSKYZcw2F4nMaO5qwsL5A8RmioAKW81YktRpIQ==}
+    engines: {node: '>=22'}
+
+  '@ai-sdk/provider@4.0.38':
+    resolution: {integrity: sha512-GElz70UUCuDFFyD6m6aQJFgRY0HEABQzB5otzgkrisYaF5mnss7o0upAmbBTSD6KWiM9h7lZm1ls2c7xzHR8CA==}
     engines: {node: '>=22'}
 
   '@antfu/install-pkg@2.1.0':
@@ -2734,6 +2784,9 @@ packages:
   '@fastify/busboy@2.1.1':
     resolution: {integrity: sha512-vBZP4NlzfOlerQTnba4aqZoMhE/a9HY7HRqoOPaETQcSQuWEIyZMHGfVu6w9wGtGK5fED5qRs2DteVCjOH60sA==}
     engines: {node: '>=14'}
+
+  '@fastify/busboy@3.2.5':
+    resolution: {integrity: sha512-y8MTAeBlEQUNVnskmZQwpseZN3EgCksQNOULlfxWY6o6VEqh01+oExMgbM7gN6YLQ8pNDYeweNPKJRt8jQm2ZQ==}
 
   '@fastify/error@4.2.0':
     resolution: {integrity: sha512-RSo3sVDXfHskiBZKBPRgnQTtIqpi/7zhJOEmAxCiBcM7d0uwdGdxLlsCaLzGs8v8NnxIRlfG0N51p5yFaOentQ==}
@@ -6492,6 +6545,10 @@ packages:
   node-mock-http@1.0.5:
     resolution: {integrity: sha512-KQyt/wLjG3TAc7DOUhpqWzgd4ERxR80JOlTK5VE5R1S12IaPVN5qkj4klBce9HPG1Njuup4Sb5bljaT34lIyjw==}
 
+  nodemailer@10.5.0:
+    resolution: {integrity: sha512-L/w/HH5MqpzMDuZD7fQdt/+KqymuvrpaApaIjAH2XA3ILePwlcvXCVVvP75xVrXCEt2ggK2marrrHHFB5Qu0kA==}
+    engines: {node: '>=20.0.0'}
+
   normalize-path@3.0.0:
     resolution: {integrity: sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==}
     engines: {node: '>=0.10.0'}
@@ -8023,6 +8080,12 @@ snapshots:
       '@vercel/oidc': 3.2.0
       zod: 3.25.76
 
+  '@ai-sdk/google@4.0.121(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.38
+      '@ai-sdk/provider-utils': 5.0.81(zod@3.25.76)
+      zod: 3.25.76
+
   '@ai-sdk/openai@4.0.73(zod@3.25.76)':
     dependencies:
       '@ai-sdk/provider': 4.0.18
@@ -8038,7 +8101,19 @@ snapshots:
       undici: 7.29.1
       zod: 3.25.76
 
+  '@ai-sdk/provider-utils@5.0.81(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 4.0.38
+      '@standard-schema/spec': 1.1.0
+      '@workflow/serde': 4.1.0
+      eventsource-parser: 3.1.1
+      zod: 3.25.76
+
   '@ai-sdk/provider@4.0.18':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@4.0.38':
     dependencies:
       json-schema: 0.4.0
 
@@ -9608,6 +9683,8 @@ snapshots:
       fast-uri: 3.1.0
 
   '@fastify/busboy@2.1.1': {}
+
+  '@fastify/busboy@3.2.5': {}
 
   '@fastify/error@4.2.0': {}
 
@@ -13945,6 +14022,8 @@ snapshots:
     optional: true
 
   node-mock-http@1.0.5: {}
+
+  nodemailer@10.5.0: {}
 
   normalize-path@3.0.0: {}
 

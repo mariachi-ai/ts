@@ -1,4 +1,4 @@
-import { NotFoundError, type Context } from '@mariachi/core';
+import { DatabaseError, NotFoundError, type Context } from '@mariachi/core';
 import type { CursorPaginatedResult, CursorPaginationParams, Entity, FilterCondition, FindOptions, PaginatedResult, PaginationParams, QueryFilter, Repository, SortParams } from '../types';
 
 export class TestRepository<T extends Entity> implements Repository<T> {
@@ -173,7 +173,14 @@ export class TestRepository<T extends Entity> implements Repository<T> {
     return created;
   }
 
+  /** As `DrizzleRepository`: a bulk write with no condition from the caller is refused. */
+  private requireFilter(operation: string, filter: QueryFilter<T> | undefined): void {
+    const hasFilter = Array.isArray(filter) ? filter.length > 0 : Object.values(filter ?? {}).some((v) => v !== undefined);
+    if (!hasFilter) throw new DatabaseError('database/unsafe-operation', `${operation} requires a non-empty filter`);
+  }
+
   async updateWhere(ctx: Context, filter: QueryFilter<T>, data: Partial<Omit<T, 'id'>>): Promise<number> {
+    this.requireFilter('updateWhere', filter);
     const matches = await this.findMany(ctx, filter);
     for (const item of matches) await this.update(ctx, item.id, data);
     return matches.length;
@@ -196,6 +203,7 @@ export class TestRepository<T extends Entity> implements Repository<T> {
   }
 
   async deleteWhere(ctx: Context, filter: QueryFilter<T>, options?: { hard?: boolean }): Promise<number> {
+    this.requireFilter('deleteWhere', filter);
     const filtered = this.filterByContext(ctx, this.store);
     const toDelete = filtered.filter((i) => this.matchesFilter(i, filter));
     let count = 0;

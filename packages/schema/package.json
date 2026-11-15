@@ -45,6 +45,7 @@
     "@mariachi/billing": "workspace:*",
     "@mariachi/config": "workspace:*",
     "@mariachi/database": "workspace:*",
+    "@mariachi/events": "workspace:*",
     "@mariachi/jobs": "workspace:*",
     "@mariachi/notifications": "workspace:*",
     "@mariachi/webhooks": "workspace:*"

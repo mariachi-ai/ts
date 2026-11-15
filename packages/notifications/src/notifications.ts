@@ -11,6 +11,7 @@ import type {
 } from './types';
 import { NOTIFICATION_DISPATCH_JOB } from './types';
 import { renderTemplate } from './template';
+import { NOTIFICATION_REJECTED } from './adapters/email/failure';
 
 export interface NotificationsConfig {
   email: EmailAdapter;
@@ -25,9 +26,9 @@ export interface NotificationsConfig {
   attempts?: number;
 }
 
-/** Failures that repeat on every attempt: no recipient, or the channel is not configured. */
+/** Failures that repeat on every attempt: no recipient, the channel is not configured, or the provider refused the message. */
 function isPermanent(code: string): boolean {
-  return code === 'notifications/missing-recipient' || code.endsWith('-not-configured');
+  return code === 'notifications/missing-recipient' || code === NOTIFICATION_REJECTED || code.endsWith('-not-configured');
 }
 
 export abstract class Notifications implements Instrumentable {
@@ -126,6 +127,8 @@ export abstract class Notifications implements Instrumentable {
       } catch (error) {
         this.metrics?.increment('notifications.email.failed', 1);
         await this.onNotificationFailed?.(ctx, 'email', error as Error);
+        // A refusal keeps its code, so neither the inline retry nor a queued job sends it again.
+        if (error instanceof NotificationError && error.code === NOTIFICATION_REJECTED) throw error;
         throw new NotificationError('notifications/email-send-failed', (error as Error).message);
       }
     });

@@ -48,6 +48,7 @@ export class MemoryBillingStore implements BillingStore {
   readonly plans = new Map<string, Versioned<Plan>>();
   readonly webhookEvents = new Map<string, StoredWebhookEvent>();
   readonly usage: UsageRecord[] = [];
+  private readonly usageRecordedAt = new WeakMap<UsageRecord, Date>();
   readonly ledger: CreditTransaction[] = [];
 
   private upsert<T>(map: Map<string, Versioned<T>>, id: string, value: T, occurredAt: Date): boolean {
@@ -159,8 +160,31 @@ export class MemoryBillingStore implements BillingStore {
     if (record.idempotencyKey && this.usage.some((u) => u.tenantId === record.tenantId && u.idempotencyKey === record.idempotencyKey)) {
       return false;
     }
-    this.usage.push(record);
+    this.usage.push({ ...record, forwardPending: record.forwardPending ?? false, forwardedAt: record.forwardedAt ?? null });
+    this.usageRecordedAt.set(this.usage[this.usage.length - 1] as UsageRecord, new Date());
     return true;
+  }
+
+  async findUsageRecord(tenantId: string, idempotencyKey: string): Promise<UsageRecord | null> {
+    const found = this.usage.find((u) => u.tenantId === tenantId && u.idempotencyKey === idempotencyKey);
+    return found ? { ...found, recordedAt: this.usageRecordedAt.get(found) } : null;
+  }
+
+  async markUsageForwarded(tenantId: string, idempotencyKey: string, at: Date): Promise<void> {
+    const found = this.usage.find((u) => u.tenantId === tenantId && u.idempotencyKey === idempotencyKey);
+    if (found) Object.assign(found, { forwardedAt: at, forwardPending: false });
+  }
+
+  async listPendingUsage(options: { after: Date; before: Date; limit: number }): Promise<UsageRecord[]> {
+    const at = (u: UsageRecord) => this.usageRecordedAt.get(u) ?? new Date(0);
+    return this.usage
+      .filter((u) => u.forwardPending && u.idempotencyKey && at(u) >= options.after && at(u) < options.before)
+      .slice(0, options.limit)
+      .map((u) => ({ ...u, recordedAt: at(u) }));
+  }
+
+  async countPendingUsage(options: { before: Date }): Promise<number> {
+    return this.usage.filter((u) => u.forwardPending && u.idempotencyKey && (this.usageRecordedAt.get(u) ?? new Date(0)) < options.before).length;
   }
 
   private usageIn(tenantId: string, metricName: string, range: DateRange): UsageRecord[] {
