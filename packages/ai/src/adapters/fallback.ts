@@ -1,6 +1,6 @@
 import { AIError } from '@mariachi/core';
 import type { AIMessage, AIResponse, StreamChunk } from '../types';
-import type { Adapter, AdapterCallConfig } from '../session/manager';
+import { isFinalError, type Adapter, type AdapterCallConfig } from '../session/manager';
 
 export interface FallbackProvider {
   id: string;
@@ -11,10 +11,8 @@ export interface FallbackProvider {
 
 type CallConfig = AdapterCallConfig;
 
-/** Budget and missing-session errors are the caller's problem; another provider would fail the same way. */
-function isFinal(error: unknown): boolean {
-  return error instanceof AIError && (error.code === 'ai/token-budget-exceeded' || error.code === 'ai/session-not-found');
-}
+/** Budget, missing-session and cancelled calls are the caller's; another provider would fail the same way, or shouldn't be asked. */
+const isFinal = isFinalError;
 
 function describe(provider: FallbackProvider, model: string | undefined, error: unknown): string {
   return `${provider.id}${model ? `/${model}` : ''}: ${error instanceof Error ? error.message : String(error)}`;
@@ -58,7 +56,7 @@ export class FallbackAdapter implements Adapter {
       try {
         if (!provider.adapter.stream) {
           const response = await provider.adapter.generate(messages, { ...config, model });
-          yield { content: response.content, done: true, usage: response.usage };
+          yield { content: response.content, done: true, usage: response.usage, model: response.model, ...(response.toolCalls?.length ? { toolCalls: response.toolCalls } : {}) };
           return;
         }
         for await (const chunk of provider.adapter.stream(messages, { ...config, model })) {

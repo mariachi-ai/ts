@@ -69,8 +69,12 @@ const reply = await ai.send(ctx, session, 'Where is my order?');
 
 // Another request or process: load the stored session and continue it.
 const again = await ai.sessions.open(`support:${ticket.id}`);
-for await (const chunk of again!.stream!('And when will it arrive?')) res.write(chunk.content);
+for await (const chunk of ai.stream(ctx, again!, 'And when will it arrive?')) res.write(chunk.content);
 ```
+
+Make model calls through `ai.send`, `ai.stream` and `ai.runAgent`. Each call made that way is costed,
+checked against the session's budget, counted in metrics and recorded as telemetry. `session.send`
+and `session.stream` reach the model too, and record nothing.
 
 - Session ids are any string you choose. `createSession` waits for the store to save the session
   and throws `ai/session-persist-failed` if it can't.
@@ -79,11 +83,47 @@ for await (const chunk of again!.stream!('And when will it arrive?')) res.write(
 - `sessions.get(id)` returns only sessions in this process's memory; `sessions.open(id)` also loads
   from the store.
 
+## Streaming
+
+```ts
+// The procedure: the model's reply as events
+import { toSse } from '@mariachi/ai';
+
+async function reply(ctx: Context, input: { sessionId: string; message: string }) {
+  const session = await ai.sessions.open(input.sessionId);
+  return toSse(ai.stream(ctx, session!, input.message));
+}
+
+// The controller: send them
+import { sseResponse } from '@mariachi/api-facade';
+import type { AIStreamEvents } from '@mariachi/ai';
+
+this.post('/chat', { schema: { body: chatInput } }, async (ctx, body) => {
+  const { events, done } = await this.call<AIStreamEvents>(ctx, 'chat.reply', body);
+  return sseResponse(events, { done });
+});
+```
+
+- The browser gets a `delta` event per piece of text, a `tool-calls` event if the model asks for
+  tools, and a closing `done` event with the usage and the model.
+- The last chunk of `ai.stream` has `done: true`, the `usage`, the `model`, and `toolCalls` when the
+  model asked for any. They are in the session's history, as they are after `send`.
+- **Cancelling.** When the client goes away the transport stops reading, and a stream nobody reads
+  cancels its provider call: you stop paying for a reply no one will see. Nothing needs wiring for
+  that. To cancel for a reason of your own, pass `{ signal }` to `send`, `stream` or `runAgent`; a
+  call cancelled that way ends with `ai/aborted`. What the model had written
+  stays in the history and is recorded, with whatever usage the provider had reported by then (often
+  none: most providers report usage at the end).
+- A call that fails before the model answers leaves no trace in the history, so sending the message
+  again doesn't say it twice.
+
 ## Budgets and cost
 
-A session with `budget.maxTotalTokens` refuses the next `send` once it has used the budget
+A session's `budget` limits what it may use in all: `maxTotalTokens`, `maxInputTokens` and
+`maxOutputTokens`. Once any of them is spent, the next `send`, `stream` or agent step is refused
 (`ai/token-budget-exceeded`, HTTP 402). Another provider wouldn't help, so the fallback chain
-doesn't try one.
+doesn't try one. Each call also tells the provider how much the model may still write, so one long
+reply can't run far past the limit.
 
 Cost is `tokens / 1000 × rate` from the cost table. `config.ai.costTable` (env `AI_COST_TABLE` as
 JSON) is merged over the built-in rates (OpenAI's `gpt-4*` models and Anthropic's current Claude
@@ -105,9 +145,41 @@ everything fails, the error is `ai/providers-exhausted` with each attempt's mess
 
 ## Tools and agents
 
-`runAgent` loops model → tool calls → results until the model answers. A tool that throws doesn't
-end the loop: its error goes back to the model as a tool result (`isError: true`) so the model can
-retry or explain.
+```ts
+ai.registerTool({
+  name: 'order_status',
+  description: 'The status of an order',
+  schema: z.object({ orderId: z.string() }),
+  handler: async ({ orderId }, ctx) => orders.status(ctx!, orderId),   // ctx: the caller's, so the lookup is tenant-scoped
+});
+
+const session = await ai.createSession(ctx, id, { tenantId: ctx.tenantId, userId: ctx.userId });
+const answer = await ai.runAgent(ctx, session, 'Where is order A-1?');
+```
+
+- **Register tools once, at startup.** A session offers the model every registered tool, or the ones
+  it names (`toolNames: ['order_status']`), or tools of its own (`tools: [...]`, which may be `[]`
+  for none).
+- **Tools are saved by name.** A tool is a function, which a database can't hold. A session opened
+  later, or in another process, gets the registered tool of each saved name back, working. If one
+  isn't registered there, the call fails with `ai/tool-not-found` naming it, before anything is paid
+  for.
+- `ai.runAgent` loops model → tool calls → results until the model answers, for at most
+  `maxIterations` model calls (the run's, else the session's, else 10; past that,
+  `ai/max-iterations-exceeded`). Every model call in the run is costed and recorded, and the run
+  stops at the session's budget.
+- A tool that throws doesn't end the loop: its error goes back to the model as a tool result
+  (`isError: true`) so the model can retry or explain.
+- The exported `runAgent(session, message)` is the bare loop: it records nothing. Use it only if you
+  record the calls yourself.
+
+## Telemetry
+
+Every model call made through `ai` is an entry: session, model, tokens, latency, cost, and the
+tenant and user of the context. With the Postgres session store, `createAI` writes each entry to
+`ai_telemetry`; pass `persistTelemetry` to send them elsewhere. An entry is written without holding
+the call up, and one that can't be written is a warning in the log and an
+`ai.telemetry.persist_error` count, never a failed call.
 
 ## Prompts
 
@@ -122,5 +194,6 @@ place, and a missing prompt throws `ai/prompt-not-found`.
 ## Errors
 
 `AIError`: `ai/request-failed` (provider error, with `provider` and `model` in the metadata),
-`ai/providers-exhausted`, `ai/token-budget-exceeded`, `ai/session-not-found`,
-`ai/session-persist-failed`, `ai/prompt-not-found` and `ai/config`.
+`ai/providers-exhausted`, `ai/token-budget-exceeded`, `ai/aborted` (the call was cancelled),
+`ai/tool-not-found`, `ai/tool-invalid-input`, `ai/max-iterations-exceeded`, `ai/session-not-found`,
+`ai/session-persist-failed`, `ai/prompt-not-found`, `ai/not-supported` and `ai/config`.

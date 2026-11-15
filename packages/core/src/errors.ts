@@ -248,6 +248,8 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'storage/invalid-signature': 403,
   'search/missing-query-fields': 400,
   'ai/request-failed': 502,
+  // The client closed the request (nginx's 499): nobody is there to read another status
+  'ai/aborted': 499,
   'ai/providers-exhausted': 502,
   'integrations/invalid-output': 502,
   'integrations/invalid-signature': 401,
