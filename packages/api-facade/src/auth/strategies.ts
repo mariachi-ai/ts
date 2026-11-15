@@ -1,6 +1,6 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { AuthError, MariachiError } from '@mariachi/core';
-import type { IncomingRequest } from '@mariachi/server';
+import { parseCookies, type IncomingRequest } from '@mariachi/server';
 import type { AuthStrategyHandler, ResolvedIdentity } from '../types';
 
 export interface TokenVerifier {
@@ -27,21 +27,113 @@ async function verifyOrThrow(verifier: TokenVerifier, token: string, code: strin
   }
 }
 
-/** `Authorization: Bearer <token>` verified by a JWT adapter, SessionManager, or auth provider. */
-export function bearerStrategy(verifier: TokenVerifier, options: { cookie?: string } = {}): AuthStrategyHandler {
+/** A cookie-authenticated request that didn't come from this origin. Code `auth/cross-site-request`, status 403. */
+export class CrossSiteRequestError extends AuthError {
+  constructor(message: string, metadata?: Record<string, unknown>) {
+    super('auth/cross-site-request', message, metadata);
+    this.name = 'CrossSiteRequestError';
+  }
+}
+
+export interface SameOriginOptions {
+  /**
+   * Other origins whose pages may make state-changing requests with the cookie, e.g.
+   * `['https://app.example.com']` for an API on `api.example.com`. The API's own origin always may.
+   */
+  allowedOrigins?: string[];
+  /**
+   * The API's own origin as browsers see it, e.g. `https://api.example.com`. When set, a browser that
+   * sends no `Sec-Fetch-Site` must send exactly this `Origin`, scheme included. Without it the
+   * `Origin`'s host is compared with the `Host` header, which can't tell http from https.
+   */
+  publicOrigin?: string;
+}
+
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+
+/**
+ * The check that makes a cookie safe to authenticate with (CSRF): a request that can change state
+ * must come from a page of this origin, or of an origin on the list. A browser attaches the cookie to
+ * requests other sites cause, and says where a request comes from in `Sec-Fetch-Site` and `Origin`,
+ * which a page can't forge. `GET`, `HEAD` and `OPTIONS` pass, so they must not change state. A
+ * request that says nothing about where it comes from is refused: a client that isn't a browser
+ * sends a bearer token, not a cookie. Throws `auth/cross-site-request` (403).
+ */
+export function assertSameOrigin(req: IncomingRequest, options: SameOriginOptions = {}): void {
+  if (SAFE_METHODS.has(req.method.toUpperCase())) return;
+  const origin = header(req, 'origin');
+  const site = header(req, 'sec-fetch-site');
+  const refuse = (why: string) => new CrossSiteRequestError(`Cross-site request refused: ${why}`, { origin: origin?.slice(0, 200), site: site?.slice(0, 40) });
+  if (origin !== undefined && options.allowedOrigins?.includes(origin)) return;
+  // The browser's own statement, which a page can't set: the page that sent this is of the origin it was sent to
+  if (site === 'same-origin') return;
+  // A sibling subdomain (same-site) is another origin, and may be someone else's
+  if (site === 'cross-site' || site === 'same-site') throw refuse('it comes from another origin');
+  // A browser that doesn't send Sec-Fetch-Site: compare Origin with the Host it was sent to (also not the page's to set)
+  if (origin === undefined) throw refuse("it doesn't say where it comes from");
+  if (options.publicOrigin !== undefined) {
+    if (origin === options.publicOrigin) return;
+    throw refuse('it comes from another origin');
+  }
+  let host: string | undefined;
+  try {
+    host = new URL(origin).host;
+  } catch {
+    throw refuse('the Origin header is not an origin');
+  }
+  if (host && host === header(req, 'host')) return;
+  throw refuse('it comes from another origin');
+}
+
+export interface BearerOptions extends SameOriginOptions {
+  /** Also take the token from this cookie when there's no `Authorization` header. See `cookieStrategy`. */
+  cookie?: string;
+}
+
+/**
+ * `Authorization: Bearer <token>` verified by a JWT adapter, SessionManager, or auth provider. With
+ * `cookie`, a request without the header may carry the token in that cookie; such a request must then
+ * pass `assertSameOrigin`, because browsers send cookies on requests other sites cause.
+ */
+export function bearerStrategy(verifier: TokenVerifier, options: BearerOptions = {}): AuthStrategyHandler {
   return async (req) => {
     const auth = header(req, 'authorization');
     let token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : undefined;
     if (!token && options.cookie) {
-      const cookie = header(req, 'cookie');
-      token = cookie
-        ?.split(';')
-        .map((c) => c.trim())
-        .find((c) => c.startsWith(`${options.cookie}=`))
-        ?.slice(options.cookie.length + 1);
+      token = parseCookies(req.headers.cookie)[options.cookie] || undefined;
+      if (token) assertSameOrigin(req, options);
     }
     if (!token) return null;
     return verifyOrThrow(verifier, token, 'auth/invalid-token');
+  };
+}
+
+const warnedCookies = new Set<string>();
+
+export interface CookieStrategyOptions extends SameOriginOptions {
+  /** The cookie holding the session token. Name it `__Host-…` so no other host can set it. */
+  cookie: string;
+}
+
+/**
+ * A session token in a cookie, verified by a SessionManager, JWT adapter or auth provider. Every
+ * state-changing request must pass `assertSameOrigin`. Set the cookie with `ctx.setCookie` (its
+ * defaults are `HttpOnly; Secure; SameSite=Lax`) and remove it with `ctx.clearCookie`.
+ */
+export function cookieStrategy(verifier: TokenVerifier, options: CookieStrategyOptions): AuthStrategyHandler {
+  if (!options.cookie.startsWith('__Host-') && !warnedCookies.has(options.cookie)) {
+    warnedCookies.add(options.cookie);
+    // Without the prefix a sibling subdomain can plant a cookie of this name, and the planted one may be read first
+    process.emitWarning(
+      `cookieStrategy: the session cookie "${options.cookie}" has no __Host- prefix, so another host under the same domain can set it. Name it __Host-${options.cookie}.`,
+      { code: 'MARIACHI_COOKIE_PREFIX' },
+    );
+  }
+  return async (req) => {
+    const token = parseCookies(req.headers.cookie)[options.cookie];
+    if (!token) return null;
+    assertSameOrigin(req, options);
+    return verifyOrThrow(verifier, token, 'auth/invalid-session');
   };
 }
 
