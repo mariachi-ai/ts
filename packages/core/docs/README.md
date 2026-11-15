@@ -30,9 +30,11 @@ only point here.
 - [auth-and-providers.md](./auth-and-providers.md): identity providers, RBAC, API keys, webhook dedup
 - [organizations.md](./organizations.md): organizations, memberships and invitations in your own database
 - [feature-flags.md](./feature-flags.md): tenant overrides, rollouts, caching
-- [storage.md](./storage.md), [search.md](./search.md), [integrations.md](./integrations.md)
+- [storage.md](./storage.md): files on S3 and compatible services, local disk or memory; signed URLs, browser uploads
+- [search.md](./search.md): typed indexes, filters and facets in Postgres, Typesense or memory; tenant scoping, reindexing
+- [integrations.md](./integrations.md): wrapping a third-party API: validated functions, retries, per-tenant credentials, inbound webhooks
 - [testing.md](./testing.md): doubles, contract suites, integration tests
-- [runbook.md](./runbook.md)
+- [runbook.md](./runbook.md): running, deploying and configuring an app; developing the framework itself
 - [design.md](./design.md): the design library: presets, markup contract, overriding at any granularity, tokens
 - [design-catalog.md](./design-catalog.md): generated list of every component and preset
 - [design-playbook.md](./design-playbook.md): how a design language is made, measured and tested
@@ -43,13 +45,13 @@ only point here.
 ## Recipes
 
 - [add-domain-entity.md](./recipes/add-domain-entity.md): table, repository, service, handler, controller, tests
-- [add-background-job.md](./recipes/add-background-job.md)
-- [add-webhook-endpoint.md](./recipes/add-webhook-endpoint.md)
-- [add-integration.md](./recipes/add-integration.md)
+- [add-background-job.md](./recipes/add-background-job.md): a job outside the request, at most once, with retries
+- [add-webhook-endpoint.md](./recipes/add-webhook-endpoint.md): receive deliveries, verify the signature, acknowledge fast, process in a job
+- [add-integration.md](./recipes/add-integration.md): a third-party integration with `@mariachi/integrations`, file by file
 - [wiring-and-bootstrap.md](./recipes/wiring-and-bootstrap.md): the composition root, step by step
-- [add-design-component.md](./recipes/add-design-component.md)
-- [add-design-preset.md](./recipes/add-design-preset.md)
+- [add-design-component.md](./recipes/add-design-component.md): a new component in `@mariachi/design`, readable by every preset
+- [add-design-preset.md](./recipes/add-design-preset.md): a new built-in preset in `@mariachi/design`
 
 ## Decisions
 
-- [adr/001-adapter-pattern.md](./adr/001-adapter-pattern.md)
+- [adr/001-adapter-pattern.md](./adr/001-adapter-pattern.md): why every external system sits behind an adapter
