@@ -29,6 +29,7 @@ export {
   RateLimitError,
   TenancyError,
   AuditError,
+  OrganizationsError,
   AIError,
   IntegrationError,
   EncryptionError,

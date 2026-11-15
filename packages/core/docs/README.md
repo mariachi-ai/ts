@@ -27,6 +27,7 @@ only point here.
 - [ai.md](./ai.md): sessions, budgets, cost, provider fallback, streaming
 - [audit.md](./audit.md): append-only log, hash chain verification, retention and export
 - [auth-and-providers.md](./auth-and-providers.md): identity providers, RBAC, API keys, webhook dedup
+- [organizations.md](./organizations.md): organizations, memberships and invitations in your own database
 - [feature-flags.md](./feature-flags.md): tenant overrides, rollouts, caching
 - [storage.md](./storage.md), [search.md](./search.md), [integrations.md](./integrations.md)
 - [testing.md](./testing.md): doubles, contract suites, integration tests
