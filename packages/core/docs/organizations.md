@@ -110,7 +110,10 @@ names a different organization is. An app has one source of memberships, not bot
 Mind how long the token lives: with the token as the source, a removed member keeps their access
 until the token expires, not for five seconds. If something of your own issues the token's
 organization claim (a token hook), have it read this module's tables and keep `source: 'module'`:
-the claim is then only a default, which the check confirms on every request.
+the claim is then only a default, which the check confirms on every request. But a request that
+names a different organization from the token's is refused, so a user in two organizations can't
+switch by header while the token names one. Where users can be in several, leave the organization
+out of the token and let the request name it.
 
 ### Reading the tables yourself
 
@@ -209,7 +212,7 @@ registerOrganizationProcedures(communication, organizations, {
   limiter,
   deliverInvitation: invitationEmail({
     email: createEmailAdapter(config),                             // any email adapter
-    acceptUrl: 'https://app.example.com/invitations/accept',       // the token is added as ?token=
+    acceptUrl: 'https://app.example.com/invitations/accept',       // the token is added as #token=
     appName: 'Launchpad',
   }),
 });
@@ -230,8 +233,13 @@ await organizations.acceptInvitation(ctx, { token });
 - **Without `deliverInvitation`** the token comes back to whoever invited, once, and delivering it
   is theirs: `const { invitation, token } = await organizations.invite(ctx, organization.id, {
   email, role })`. `deliverInvitation` can be any function of your own, too.
-- **The accept page is yours.** It needs the user signed in, as the invited address, and then one
-  call. Keep the token out of logs and analytics on that page, and don't pass it to anything else.
+- **The token is in the link's fragment** (`#token=…`), not its query. A browser sends a fragment to
+  no server, so the token is in no access log on the way to your page (an edge, a proxy, the app's
+  own request log) and in no `Referer`. A fixed `acceptUrl` must have no fragment of its own; a page
+  that routes by fragment gives a function and builds its own link.
+- **The accept page is yours.** It reads the token from `location.hash`, needs the user signed in as
+  the invited address, and then makes one call. Keep the token out of logs and analytics on that
+  page, and take it out of the address bar once read (`history.replaceState`).
 
 **The invitee's email address is not an argument.** Accepting reads it from the user's verified
 identity, so nothing a client sends can stand in for it. By default that is the standard claims of
@@ -240,8 +248,11 @@ the request's token, `email` and `email_verified`, which the API layer puts on `
 For a provider whose tokens don't carry `email_verified`, say where the answer is. For GoTrue
 (Supabase Auth) that is one line, `verifiedEmail: goTrueVerifiedEmail({ url, serviceKey })` from
 `@mariachi/auth-gotrue`: it uses a top-level `email_verified` claim when a hook of yours adds one,
-otherwise the user's record (`email_confirmed_at`), and never `user_metadata`. For any other
-provider, ask it for the user's record, server-side:
+otherwise the user's record (`email_confirmed_at`), and never `user_metadata`. It reads GoTrue's
+settings too, and when GoTrue confirms sign-ups without sending mail it answers unverified
+(`trustAutoconfirm: true` for development). `requireClaim: true` takes the answer only from the
+claim, so the app holds no service key. For any other provider, ask it for the user's record,
+server-side:
 
 ```ts
 new DefaultOrganizations({

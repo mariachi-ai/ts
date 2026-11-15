@@ -29,7 +29,7 @@ export function gotrueFiles(name: string, e2e = true, orgs = false): Record<stri
     'AGENTS.md': AGENTS_AUTH(e2e) + (orgs ? organizationsAgents('gotrue') : ''),
     'src/config.ts': CONFIG_TS(orgs),
     'src/auth.ts': AUTH_TS,
-    'src/auth.test.ts': AUTH_TEST,
+    'src/auth.test.ts': AUTH_TEST(orgs),
     [LAYOUT.app]: APP_TS(orgs),
     ...(e2e ? { 'src/app.e2e.test.ts': orgs ? ORGANIZATIONS_APP_E2E_TEST : APP_E2E_TEST, [E2E_HARNESS_FILE]: e2eHarness('gotrue', orgs) } : {}),
     [LAYOUT.controllersIndex]: CONTROLLERS_INDEX(orgs),
@@ -106,7 +106,7 @@ const appSchema = z.object({
       /** Let the sign-in page take a session from an admin-made link, after asking (\`AUTH_LINK_SESSIONS\`). */
       linkSessions: z.boolean().default(false),
 ${orgs
-  ? "      /** A key that may read users through GoTrue's admin API (`AUTH_SERVICE_KEY`): how an invitee's address is known to be verified. A secret. */\n      serviceKey: secret(z.string()).optional(),\n"
+  ? "      /** A key that may read users through GoTrue's admin API (`AUTH_SERVICE_KEY`): how an invitee's address is known to be verified. A secret. */\n      serviceKey: secret(z.string()).optional(),\n      /** \"required\" when an access token hook always sets a top-level email_verified claim: no key, no lookup (`AUTH_EMAIL_VERIFIED_CLAIM`). */\n      emailVerifiedClaim: z.enum(['optional', 'required']).default('optional'),\n"
   : ''}    })
     .default({}),
 ${orgs
@@ -132,7 +132,7 @@ registerConfigSection(APP_CONFIG, {
       orgRoleClaim: optional(read('AUTH_ORG_ROLE_CLAIM')),
       personalTenants: flag(read('AUTH_PERSONAL_TENANTS')),
       linkSessions: flag(read('AUTH_LINK_SESSIONS')),
-${orgs ? "      serviceKey: optional(read('AUTH_SERVICE_KEY')),\n" : ''}    },
+${orgs ? "      serviceKey: optional(read('AUTH_SERVICE_KEY')),\n      emailVerifiedClaim: optional(read('AUTH_EMAIL_VERIFIED_CLAIM')),\n" : ''}    },
 ${orgs ? "    invitationUrl: optional(read('INVITATION_URL')),\n" : ''}    migrateOnStart: flag(read('MIGRATE_ON_START')),
   }),
 });
@@ -166,10 +166,10 @@ export function browserAuthUrl(auth: AuthSettings): string {
 }
 `;
 
-const AUTH_TEST = `import { describe, expect, it } from 'vitest';
+const AUTH_TEST = (orgs: boolean) => `import { describe, expect, it } from 'vitest';
 import { browserAuthUrl, goTrueConfig } from './auth';
 
-const defaults = { path: '${AUTH_PATH}', internalUrl: 'http://127.0.0.1:9999', orgClaim: 'org_id', orgRoleClaim: 'org_role', personalTenants: true, linkSessions: false };
+const defaults = { path: '${AUTH_PATH}', internalUrl: 'http://127.0.0.1:9999', orgClaim: 'org_id', orgRoleClaim: 'org_role', personalTenants: true, linkSessions: false${orgs ? ", emailVerifiedClaim: 'optional' as const" : ''} };
 const claims = { orgClaim: 'org_id', orgRoleClaim: 'org_role' };
 
 describe('goTrueConfig', () => {

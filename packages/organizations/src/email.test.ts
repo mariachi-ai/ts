@@ -40,14 +40,14 @@ function outbox() {
 }
 
 describe('invitationEmail', () => {
-  it('sends the link, with the token, to the invited address only', async () => {
+  it('sends the link to the invited address only, with the token in the fragment, which no server sees', async () => {
     const { email, sent } = outbox();
     await invitationEmail({ email, acceptUrl: 'https://app.example.com/invitations/accept', appName: 'Launchpad' })(ctx, delivery());
     expect(sent).toHaveLength(1);
     const [message] = sent;
     expect(message?.to).toBe('ivy@example.com');
     expect(message?.subject).toBe("You're invited to join Acme Rockets on Launchpad");
-    const url = `https://app.example.com/invitations/accept?token=${encodeURIComponent(TOKEN)}`;
+    const url = `https://app.example.com/invitations/accept#token=${encodeURIComponent(TOKEN)}`;
     expect(message?.text).toContain(url);
     expect(message?.text).toContain('as a member');
     expect(message?.text).toContain('until November 22, 2026');
@@ -58,7 +58,8 @@ describe('invitationEmail', () => {
   it('keeps the query the accept page already has, and says "an" before owner and admin', async () => {
     const { email, sent } = outbox();
     await invitationEmail({ email, acceptUrl: 'https://app.example.com/join?from=email', from: 'Launchpad <team@example.com>' })(ctx, delivery({ role: 'owner' }));
-    expect(sent[0]?.text).toContain(`https://app.example.com/join?from=email&token=${encodeURIComponent(TOKEN)}`);
+    expect(sent[0]?.text).toContain(`https://app.example.com/join?from=email#token=${encodeURIComponent(TOKEN)}`);
+    expect(new URL(/https:\S+/.exec(sent[0]?.text ?? '')?.[0] ?? '').search).toBe('?from=email');
     expect(sent[0]?.text).toContain('to join Acme Rockets as an owner');
     expect(sent[0]?.from).toBe('Launchpad <team@example.com>');
   });
@@ -88,6 +89,10 @@ describe('invitationEmail', () => {
     const { email, sent } = outbox();
     expect(() => invitationEmail({ email, acceptUrl: '/invitations/accept' })).toThrowError(expect.objectContaining({ code: 'organizations/invalid-accept-url' }));
     expect(() => invitationEmail({ email, acceptUrl: 'javascript:alert(1)' })).toThrowError(expect.objectContaining({ code: 'organizations/invalid-accept-url' }));
+    // The fragment is the token's place: a page that routes by fragment builds its own link
+    expect(() => invitationEmail({ email, acceptUrl: 'https://app.example.com/#/invitations/accept' })).toThrowError(
+      expect.objectContaining({ code: 'organizations/invalid-accept-url' }),
+    );
     const deliver = invitationEmail({ email, acceptUrl: ({ token }) => `mailto:eve@example.com?body=${token}` });
     const refused = await deliver(ctx, delivery()).catch((error: Error) => error);
     expect(refused).toMatchObject({ code: 'organizations/invalid-accept-url' });

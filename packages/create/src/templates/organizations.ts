@@ -45,7 +45,7 @@ export interface OrganizationsDeps {
   limiter: OrganizationLimiter;
   /** Sends invitation emails: an email adapter from @mariachi/notifications. */
   mailer?: InvitationMailer;
-  /** The page of your app that accepts an invitation (INVITATION_URL). The token is added as ?token=. */
+  /** The page of your app that accepts an invitation (INVITATION_URL). The token is added as its fragment, #token=. */
   invitationUrl?: string;
   /** Your product's name, for the invitation email. */
   appName: string;
@@ -103,7 +103,7 @@ registerConfigSection(APP_CONFIG, {
 export const organizationsEnv = (auth: ProjectAuth): string => `
 # Organizations (src/organizations.ts). An invitation is emailed when both of these are set; until
 # then whoever invites gets the token back in the response.
-#   INVITATION_URL  the page of your app that accepts an invitation; the token is added as ?token=
+#   INVITATION_URL  the page of your app that accepts an invitation; the token is added as its fragment, #token=
 #   EMAIL_ADAPTER   resend, postmark, sendgrid (with EMAIL_API_KEY) or smtp (with SMTP_URL; pnpm add nodemailer)
 # INVITATION_URL=https://app.example.com/invitations/accept
 # EMAIL_ADAPTER=
@@ -112,10 +112,15 @@ export const organizationsEnv = (auth: ProjectAuth): string => `
 ${
   auth === 'gotrue'
     ? `# Accepting an invitation needs to know the user's email address is verified. GoTrue's token doesn't
-# say so anywhere the user can't rewrite, so the app reads the user's record with this key (a
-# service-role key: a secret, never sent to a browser). Not needed if an access token hook of yours
-# adds a top-level email_verified claim.
+# say so anywhere the user can't rewrite. Choose one:
+#   AUTH_SERVICE_KEY            a service-role key (a secret, never sent to a browser): the app reads
+#                               the user's record. A GoTrue that confirms sign-ups without sending mail
+#                               (GOTRUE_MAILER_AUTOCONFIRM) then counts as unverified.
+#   AUTH_EMAIL_VERIFIED_CLAIM   set to "required" when an access token hook of yours always adds a
+#                               top-level email_verified claim: no key and no lookup, and a token
+#                               without the claim is refused.
 # AUTH_SERVICE_KEY=
+# AUTH_EMAIL_VERIFIED_CLAIM=optional
 `
     : `# Accepting an invitation reads the user's address from their token: put \`email\` and
 # \`email_verified: true\` in the tokens you issue, once you have confirmed the address.
@@ -163,14 +168,21 @@ export const organizationsAppSetup = (auth: ProjectAuth): string => `
         ? `
     // GoTrue's token says "verified" only where the user can rewrite it, so the answer is read from a
     // claim your own hook adds, or from the user's record (AUTH_SERVICE_KEY)
-    verifiedEmail: goTrueVerifiedEmail({ url: goTrueConfig(app.auth).url, serviceKey: app.auth.serviceKey }),`
+    verifiedEmail: goTrueVerifiedEmail({
+      url: goTrueConfig(app.auth).url,
+      serviceKey: app.auth.serviceKey,
+      requireClaim: app.auth.emailVerifiedClaim === 'required',
+    }),`
         : ''
     }
   });
 ${
   auth === 'gotrue'
-    ? `  if (!app.auth.serviceKey) {
-    logger.warn({ setting: 'AUTH_SERVICE_KEY' }, 'AUTH_SERVICE_KEY is not set: an invitation can be accepted only with a token that carries a top-level email_verified claim (see README.md)');
+    ? `  if (!app.auth.serviceKey && app.auth.emailVerifiedClaim !== 'required') {
+    logger.warn(
+      { settings: ['AUTH_SERVICE_KEY', 'AUTH_EMAIL_VERIFIED_CLAIM'] },
+      'Neither AUTH_SERVICE_KEY nor AUTH_EMAIL_VERIFIED_CLAIM=required is set: an invitation can be accepted only with a token that carries a top-level email_verified claim (see README.md)',
+    );
   }
 `
     : ''
@@ -229,16 +241,18 @@ curl -X POST localhost:3000/api/organizations/$ORGANIZATION_ID/invitations -H "a
   (\`EMAIL_ADAPTER\`, see \`.env.example\`), and the link is emailed to the invited address and never
   shown to whoever invited. Until both are set, the response to the invite carries the token and you
   pass the link on yourself. Your page signs the user in, then calls
-  \`POST /api/organizations/invitations/accept\` with \`{ "token": "…" }\` as them.
+  \`POST /api/organizations/invitations/accept\` with \`{ "token": "…" }\` as them. The token is in
+  the link's fragment (\`#token=…\`), which the browser sends to no server: read it from
+  \`location.hash\`, and don't copy it into a query string, a log or an analytics event.
 - **Only the invited address can accept**, and only once it is verified. ${
     auth === 'gotrue'
-      ? "GoTrue's token states that only inside `user_metadata`, which a user can rewrite, so the app reads the user's record instead: set `AUTH_SERVICE_KEY` (a service-role key, a secret), or add a top-level `email_verified` claim in an access token hook. With neither, accepting answers `auth/verified-email-unavailable`. Don't run invitations on a GoTrue that confirms sign-ups without sending mail (`GOTRUE_MAILER_AUTOCONFIRM`): every address is then \"verified\"."
+      ? "GoTrue's token states that only inside `user_metadata`, which a user can rewrite, so the app needs another source. Either set `AUTH_SERVICE_KEY` (a service-role key, a secret) and it reads the user's record; a GoTrue that confirms sign-ups without sending mail (`GOTRUE_MAILER_AUTOCONFIRM`) then counts every address as unverified, because anyone can sign up as any address there. Or have an access token hook add a top-level `email_verified` claim and set `AUTH_EMAIL_VERIFIED_CLAIM=required`: the app then holds no service key and looks nothing up. With neither, accepting answers `auth/verified-email-unavailable`."
       : 'The address is read from the token: issue tokens with `email`, and with `email_verified: true` once you have confirmed it.'
   }
 - Creating, inviting and accepting are rate limited (in Redis), per user and per organization.
 ${
   auth === 'gotrue'
-    ? "- **An organization claim in the token is only a default.** If a hook of yours puts one there (`AUTH_ORG_CLAIM`), the request runs in that organization without naming it, but the membership here is still what admits it, and the role comes from the membership, never from the token.\n"
+    ? "- **Leave the organization out of the token.** If a hook of yours puts one there (`AUTH_ORG_CLAIM`), a request runs in that organization without naming it (the membership here still admits it, and the role comes from the membership, never the token), but a request that names a different one is refused (`tenancy/mismatch`), so a user in two organizations could not switch. Let the header name the organization.\n"
     : ''
 }`;
 
@@ -295,8 +309,10 @@ describe('organizations', () => {
     expect(await invited.json()).not.toHaveProperty('token');
     const message = outbox.getSentEmails().at(-1);
     expect(message).toMatchObject({ to: 'ivy@example.test', subject: expect.stringContaining('Invitations Inc') });
-    const link = /https:\\/\\/app\\.example\\.test\\/invitations\\/accept\\?token=\\S+/.exec(message?.text ?? '')?.[0];
-    const token = new URL(link ?? '').searchParams.get('token');
+    // The token is in the link's fragment, which a browser sends to no server
+    const link = new URL(/https:\\/\\/app\\.example\\.test\\/invitations\\/accept\\S+/.exec(message?.text ?? '')?.[0] ?? '');
+    expect(link.search).toBe('');
+    const token = new URLSearchParams(link.hash.slice(1)).get('token');
 
     const accept = (as: typeof ivy) => running.request('/api/organizations/invitations/accept', { as, json: { token } });
     const stranger = await accept(eve);
@@ -340,13 +356,30 @@ ${
   it('cannot say whether an address is verified from a plain GoTrue token with no service key, and says so', async () => {
     const id = await create('Plain Tokens');
     await running.request(\`/api/organizations/\${id}/invitations\`, { as: ada, json: { email: 'ivy@example.test' } });
-    const link = /https:\\/\\/\\S+/.exec(outbox.getSentEmails().at(-1)?.text ?? '')?.[0];
-    const token = new URL(link ?? '').searchParams.get('token');
+    const link = new URL(/https:\\/\\/\\S+/.exec(outbox.getSentEmails().at(-1)?.text ?? '')?.[0] ?? '');
+    const token = new URLSearchParams(link.hash.slice(1)).get('token');
     // GoTrue's own token: the address, and "verified" only in user_metadata, which the user can write
     const plain = { userId: ivy.userId, tenantId: '', claims: { email: 'ivy@example.test', user_metadata: { email_verified: true } } };
     const res = await running.request('/api/organizations/invitations/accept', { as: plain, json: { token } });
     expect(res.status).toBe(500);
     expect(await res.json()).toMatchObject({ error: { code: 'auth/verified-email-unavailable' } });
+  });
+
+  it('takes the answer only from the claim when told the token hook always sets it', async () => {
+    const strict = await startApp({ mailer: outbox, env: { INVITATION_URL: 'https://app.example.test/invitations/accept', AUTH_EMAIL_VERIFIED_CLAIM: 'required' } });
+    try {
+      const created = await strict.request('/api/organizations', { as: ada, json: { name: 'Hooked' } });
+      const { organization } = (await created.json()) as { organization: { id: string } };
+      await strict.request(\`/api/organizations/\${organization.id}/invitations\`, { as: ada, json: { email: 'ivy@example.test' } });
+      const link = new URL(/https:\\/\\/\\S+/.exec(outbox.getSentEmails().at(-1)?.text ?? '')?.[0] ?? '');
+      const token = new URLSearchParams(link.hash.slice(1)).get('token');
+      // The hook says unverified (it does on a GoTrue that confirms without sending mail): refused
+      const unverified = await strict.request('/api/organizations/invitations/accept', { as: person(ivy.userId, 'ivy@example.test', false), json: { token } });
+      expect(await unverified.json()).toMatchObject({ error: { code: 'organizations/email-unverified' } });
+      expect((await strict.request('/api/organizations/invitations/accept', { as: ivy, json: { token } })).status).toBe(200);
+    } finally {
+      await strict.stop();
+    }
   });
 `
     : ''

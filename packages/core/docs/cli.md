@@ -37,9 +37,11 @@ provider keeps none. It works with either `--auth`. The project gets the tables
 header names once the user's membership is confirmed, rate limits on creating, inviting and
 accepting, and end-to-end tests for all of it. Invitations are emailed once `INVITATION_URL` (your
 accept page) and an email adapter (`EMAIL_ADAPTER`) are set; until then the invite's response
-carries the token. With `--auth gotrue`, whether an invitee's address is verified is read from the
-user's record (`AUTH_SERVICE_KEY`) or a claim your own token hook adds, never from what the user can
-edit. The page that accepts an invitation is yours to build.
+carries the token. The link carries the token in its fragment (`#token=`), which reaches no server
+log. With `--auth gotrue`, whether an invitee's address is verified is read from the user's record
+(`AUTH_SERVICE_KEY`) or from a claim your own token hook adds (`AUTH_EMAIL_VERIFIED_CLAIM=required`
+then needs no key), never from what the user can edit. The page that accepts an invitation is yours
+to build.
 
 ## generate
 

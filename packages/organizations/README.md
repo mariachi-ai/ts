@@ -29,7 +29,7 @@ The Postgres store needs `@mariachi/database-postgres` and `drizzle-orm`, which 
 | `createOrganizationAccess({ organizations, source?, cacheTtlMs? })` | Decides a request's tenant: `resolve(identity, requestedOrganizationId)` confirms the membership before the named organization becomes the tenant |
 | `organizationStrategy(strategy, access)` | Wraps an API auth strategy with that check, reading `x-organization-id` |
 | `registerOrganizationProcedures(communication, organizations, { deliverInvitation?, limiter?, limits? })` | The `organizations.*` procedures, with rate limits and invitation delivery |
-| `invitationEmail({ email, acceptUrl, appName?, from?, compose? })` | A `deliverInvitation` that emails the link to the invited address through any email adapter (`@mariachi/notifications`), in the request, storing the token nowhere |
+| `invitationEmail({ email, acceptUrl, appName?, from?, compose? })` | A `deliverInvitation` that emails the link to the invited address through any email adapter (`@mariachi/notifications`), in the request, storing the token nowhere; the token is in the link's fragment, which reaches no server log |
 | `OrganizationsController` | Endpoints under `/organizations` that call those procedures |
 | `DrizzleOrganizationStore` | Postgres `OrganizationStore` on `tenants` and the two tables above |
 | `MemoryOrganizationStore` | The same store in memory, for tests |

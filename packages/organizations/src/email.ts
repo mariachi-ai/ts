@@ -24,9 +24,12 @@ export interface InvitationEmailOptions {
   /** What sends the message: an email adapter from `@mariachi/notifications`, or anything with the same `send`. */
   email: InvitationMailer;
   /**
-   * The page of your app that accepts an invitation. The token is added as `?token=`. That page signs
-   * the user in, then calls `POST /organizations/invitations/accept` with `{ token }` as them. Give a
-   * function to build the whole link yourself (it must return an `http:` or `https:` URL).
+   * The page of your app that accepts an invitation. The token is added as the link's fragment,
+   * `#token=…`, which a browser keeps to itself: it is in no request, so in no access log and no
+   * `Referer`. The page reads it from `location.hash`, signs the user in, then calls
+   * `POST /organizations/invitations/accept` with `{ token }` as them. The address must have no
+   * fragment of its own. Give a function to build the whole link yourself (an `http:` or `https:`
+   * URL); a token put in a query string is sent to, and logged by, every server on the way.
    */
   acceptUrl: string | ((delivery: InvitationDelivery) => string);
   /** Your product's name, for the subject and the first line. */
@@ -58,10 +61,19 @@ function checked(url: string): string {
   return parsed.href;
 }
 
+/** A fixed accept page: a web address with no fragment, because the fragment is where the token goes. */
+function checkedPage(acceptUrl: string): URL {
+  const url = new URL(checked(acceptUrl));
+  if (url.hash) {
+    throw new ConfigError('organizations/invalid-accept-url', 'invitationEmail: acceptUrl has a fragment (#…) of its own, which is where the token goes. Give a function to build the link yourself');
+  }
+  return url;
+}
+
 function link(acceptUrl: InvitationEmailOptions['acceptUrl'], delivery: InvitationDelivery): string {
   if (typeof acceptUrl === 'function') return checked(acceptUrl(delivery));
-  const url = new URL(checked(acceptUrl));
-  url.searchParams.set('token', delivery.token);
+  const url = checkedPage(acceptUrl);
+  url.hash = `token=${encodeURIComponent(delivery.token)}`;
   return url.href;
 }
 
@@ -100,7 +112,7 @@ function defaultMessage(options: InvitationEmailOptions, delivery: InvitationDel
  */
 export function invitationEmail(options: InvitationEmailOptions): (ctx: Context, delivery: InvitationDelivery) => Promise<void> {
   // A fixed address that can't work is found when the app starts, not on the first invitation
-  if (typeof options.acceptUrl === 'string') checked(options.acceptUrl);
+  if (typeof options.acceptUrl === 'string') checkedPage(options.acceptUrl);
   return async (ctx, delivery) => {
     const url = link(options.acceptUrl, delivery);
     const message = options.compose ? await options.compose(ctx, { ...delivery, url }) : defaultMessage(options, delivery, url);

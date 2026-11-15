@@ -67,11 +67,16 @@ describe('a project with --orgs', () => {
 
   it("reads a GoTrue user's verified email from where the user can't write, and keeps the key a secret", () => {
     const app = orgs.gotrue['src/app.ts'] as string;
-    expect(app).toContain('verifiedEmail: goTrueVerifiedEmail({ url: goTrueConfig(app.auth).url, serviceKey: app.auth.serviceKey }),');
+    expect(app).toMatch(/verifiedEmail: goTrueVerifiedEmail\(\{\s+url: goTrueConfig\(app\.auth\)\.url,\s+serviceKey: app\.auth\.serviceKey,\s+requireClaim: app\.auth\.emailVerifiedClaim === 'required',\s+\}\),/);
+    // Warns only when neither source of the answer is set up
+    expect(app).toContain("if (!app.auth.serviceKey && app.auth.emailVerifiedClaim !== 'required') {");
     const config = orgs.gotrue['src/config.ts'] as string;
     expect(config).toContain("import { registerConfigSection, secret } from '@mariachi/config';");
     expect(config).toContain('serviceKey: secret(z.string()).optional(),');
     expect(config).toContain("serviceKey: optional(read('AUTH_SERVICE_KEY')),");
+    expect(config).toContain("emailVerifiedClaim: z.enum(['optional', 'required']).default('optional'),");
+    expect(config).toContain("emailVerifiedClaim: optional(read('AUTH_EMAIL_VERIFIED_CLAIM')),");
+    expect(orgs.gotrue['.env.example']).toContain('# AUTH_EMAIL_VERIFIED_CLAIM=optional');
     expect(orgs.gotrue['.env.example']).toContain('# AUTH_SERVICE_KEY=');
     // A JWT project reads the address from the token it issued itself
     expect(orgs.jwt['src/app.ts']).not.toContain('verifiedEmail');
