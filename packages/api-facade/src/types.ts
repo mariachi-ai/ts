@@ -83,6 +83,11 @@ export type RouteHandler<S extends RouteSchemas = RouteSchemas> = (
 export interface RouteOpts<S extends RouteSchemas = RouteSchemas> {
   /** Strategies accepted by this route, or `false` for public. Default: server `withAuth` list. */
   auth?: AuthStrategy | AuthStrategy[] | false;
+  /**
+   * Mount the route at the server's root, outside its `prefix` (`/` and `/settings`, not `/api/…`):
+   * for pages and the files they load. Such a route is left out of the OpenAPI document.
+   */
+  root?: boolean;
   /** Every listed scope is required. */
   scopes?: string[];
   /**
