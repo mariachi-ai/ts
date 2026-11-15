@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/auth-fusionauth",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "FusionAuth JWT verification (JWKS), webhook verification, and an IdentityClient for headless sign-in.",
   "mariachi": {
     "category": "security",
