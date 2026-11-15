@@ -121,6 +121,15 @@ describe('generated project', () => {
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
   }, 120_000);
 
+  it('passes its own end-to-end tests: the app over HTTP against a throwaway Postgres and Redis', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', project, '--config', join(project, 'vitest.e2e.config.ts')]);
+    expect(stdout).toMatch(/src\/app\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/invoice-items\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/failed/);
+  }, 300_000);
+
   it('boots its main.ts against Postgres and Redis and answers ready', async () => {
     const { status, output } = await bootReady(project, {
       SERVICE_NAME: 'scaffold-app',
@@ -217,6 +226,14 @@ describe('generated project with --auth gotrue', () => {
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
     expect(stdout).not.toMatch(/failed/);
   }, 120_000);
+
+  it('passes its own end-to-end tests with no GoTrue: /api/me for a member, an owner and a personal tenant', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app, '--config', join(app, 'vitest.e2e.config.ts')], app);
+    expect(stdout).toMatch(/src\/app\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/failed/);
+  }, 300_000);
 
   it('passes mariachi validate with no findings', async () => {
     const result = await validate(app);

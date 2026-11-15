@@ -44,8 +44,10 @@ describe('mariachi init --auth gotrue', () => {
       'src/auth.ts',
       'src/config.ts',
     ]);
-    const main = files['src/main.ts'];
-    expect(main).toContain('createGoTrueAuth(goTrueConfig(app.auth))');
+    // The entry point is the default project's; the wiring is in app.ts
+    expect(files['src/main.ts']).toBe(base['src/main.ts']);
+    const main = files['src/app.ts'];
+    expect(main).toContain('options.verifier ?? createGoTrueAuth(goTrueConfig(app.auth))');
     expect(main).toContain("withPersonalTenants(provider, { namespace: 'app' })");
     expect(main).toContain("createTenancy({ strategy: 'jwt-claim', claimName: app.auth.orgClaim }, instrumentation)");
     expect(main).toContain('.withMiddleware(createTenancyMiddleware(tenancy))');

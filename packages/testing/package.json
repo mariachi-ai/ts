@@ -9,7 +9,9 @@
     "entry": [
       "createTestHarness",
       "createTestContext",
-      "TestRepository"
+      "TestRepository",
+      "createTestAuth",
+      "startPostgres"
     ]
   },
   "type": "module",
@@ -51,6 +53,14 @@
     "@mariachi/search": "workspace:*",
     "@mariachi/storage": "workspace:*",
     "zod": "^3"
+  },
+  "peerDependencies": {
+    "testcontainers": ">=10"
+  },
+  "peerDependenciesMeta": {
+    "testcontainers": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@aws-sdk/client-s3": "^3",

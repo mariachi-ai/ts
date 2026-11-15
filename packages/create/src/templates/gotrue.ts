@@ -1,5 +1,6 @@
 import { LAYOUT, MARKERS } from '../layout';
 import { databaseName } from '../names';
+import { E2E_HARNESS_FILE, e2eHarness } from './e2e';
 
 /**
  * `mariachi init --auth gotrue`: sign-in by GoTrue (Supabase Auth, hosted or your own), verified
@@ -11,15 +12,16 @@ import { databaseName } from '../names';
 /** GoTrue's path when it's served under the app's own origin; hosted Supabase uses the same path. */
 export const AUTH_PATH = '/auth/v1';
 
-export function gotrueFiles(name: string): Record<string, string> {
+export function gotrueFiles(name: string, e2e = true): Record<string, string> {
   return {
     '.env.example': ENV_EXAMPLE(name, databaseName(name)),
     'README.md': README(name),
-    'AGENTS.md': AGENTS_AUTH,
+    'AGENTS.md': AGENTS_AUTH(e2e),
     'src/config.ts': CONFIG_TS,
     'src/auth.ts': AUTH_TS,
     'src/auth.test.ts': AUTH_TEST,
-    [LAYOUT.main]: MAIN_TS,
+    [LAYOUT.app]: APP_TS,
+    ...(e2e ? { 'src/app.e2e.test.ts': APP_E2E_TEST, [E2E_HARNESS_FILE]: e2eHarness('gotrue') } : {}),
     [LAYOUT.controllersIndex]: CONTROLLERS_INDEX,
     [`${LAYOUT.controllersDir}/me.controller.ts`]: ME_CONTROLLER,
     [`${LAYOUT.controllersDir}/me.controller.test.ts`]: ME_CONTROLLER_TEST,
@@ -187,17 +189,17 @@ describe('browserAuthUrl', () => {
 });
 `;
 
-const MAIN_TS = `import { existsSync } from 'node:fs';
+const APP_TS = `import { existsSync } from 'node:fs';
 import { ConfigError, KEYS } from '@mariachi/core';
 import { useConfigSection } from '@mariachi/config';
-import { bootstrap } from '@mariachi/lifecycle';
-import { createCommunication } from '@mariachi/communication';
-import { createPostgresDatabase, runMigrations } from '@mariachi/database-postgres';
+import { bootstrap, type BootstrapOptions } from '@mariachi/lifecycle';
+import { createCommunication, type CommunicationLayer } from '@mariachi/communication';
+import { createPostgresDatabase, runMigrations, type PostgresDatabase } from '@mariachi/database-postgres';
 import { createJobQueue, DefaultJobs } from '@mariachi/jobs';
-import { withPersonalTenants } from '@mariachi/auth';
+import { withPersonalTenants, type ResolvedIdentity } from '@mariachi/auth';
 import { createGoTrueAuth } from '@mariachi/auth-gotrue';
 import { createTenancy, createTenancyMiddleware } from '@mariachi/tenancy';
-import { bearerStrategy, createApiServer } from '@mariachi/api-facade';
+import { bearerStrategy, createApiServer, type FastifyAdapter } from '@mariachi/api-facade';
 import { APP_CONFIG, type AppSettings } from './config';
 import { goTrueConfig } from './auth';
 import { createControllers } from './api/controllers/index';
@@ -206,8 +208,35 @@ import { jobs as jobDefinitions } from './jobs/index';
 
 const MIGRATIONS = 'drizzle';
 
-async function main(): Promise<void> {
-  const { config, logger, tracer, metrics, container, lifecycle } = bootstrap();
+export interface AppOptions {
+  /** Passed to bootstrap(). Tests give their own environment and leave the signal handlers off. */
+  bootstrap?: BootstrapOptions;
+  /** Checks tokens in place of GoTrue. Tests pass createTestAuth().verifier. Personal tenants still apply. */
+  verifier?: { verify(token: string): Promise<ResolvedIdentity> };
+  /** Apply the committed migrations (drizzle/) at start. Default: the MIGRATE_ON_START setting. */
+  migrateOnStart?: boolean;
+  /**
+   * Called with the API server after the defaults below and before the controllers are registered:
+   * add auth strategies (\`api.withAuthStrategy('api-key', ...).withAuth(['session', 'api-key'])\`),
+   * middleware or rate limits without editing this file.
+   */
+  configureApi?: (api: FastifyAdapter) => void;
+}
+
+export interface App {
+  api: FastifyAdapter;
+  communication: CommunicationLayer;
+  database: PostgresDatabase;
+  jobs: DefaultJobs;
+  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
+  start(): Promise<string>;
+  /** Stops listening, then closes the worker and the connections. */
+  stop(): Promise<void>;
+}
+
+/** The composition root: builds everything the app is made of. main.ts starts it; so do the end-to-end tests. */
+export async function createApp(options: AppOptions = {}): Promise<App> {
+  const { config, logger, tracer, metrics, container, lifecycle } = bootstrap(options.bootstrap);
   const instrumentation = { logger, tracer, metrics };
   const app = useConfigSection<AppSettings>(APP_CONFIG);
 
@@ -221,7 +250,7 @@ async function main(): Promise<void> {
     { priority: 10 },
   );
   container.register(KEYS.Database, database);
-  if (app.migrateOnStart) {
+  if (options.migrateOnStart ?? app.migrateOnStart) {
     lifecycle.startup.register({
       name: 'migrations',
       priority: 15,
@@ -252,7 +281,7 @@ async function main(): Promise<void> {
   registerServices(communication, { db: database.db, jobs });
 
   // Sign-in is GoTrue's: its ES256 tokens are checked against its JWKS, issuer and audience.
-  const provider = createGoTrueAuth(goTrueConfig(app.auth));
+  const provider = options.verifier ?? createGoTrueAuth(goTrueConfig(app.auth));
   // The tenant is the organization the token names (AUTH_ORG_CLAIM). A user in no organization gets a
   // personal tenant, user.app.<id>, so the app also works for individuals (AUTH_PERSONAL_TENANTS).
   const auth = app.auth.personalTenants ? withPersonalTenants(provider, { namespace: 'app' }) : provider;
@@ -273,24 +302,123 @@ async function main(): Promise<void> {
     .withMiddleware(createTenancyMiddleware(tenancy))
     .withHealth(lifecycle.health)
     .withOpenApi({ info: { title: config.serviceName, version: '0.1.0' } });
+  options.configureApi?.(api);
   for (const controller of createControllers(communication)) api.registerController(controller);
 
+  let address = '';
   lifecycle.startup.register({
     name: 'api',
     priority: 100,
     fn: async () => {
-      const address = await api.listen(config.server.port, config.server.host);
+      address = await api.listen(config.server.port, config.server.host);
       logger.info({ address }, 'API listening');
     },
   });
   lifecycle.shutdown.register({ name: 'api', priority: 100, fn: () => api.close() });
 
-  await lifecycle.start();
+  return {
+    api,
+    communication,
+    database,
+    jobs,
+    start: async () => {
+      await lifecycle.start();
+      return address;
+    },
+    stop: async () => {
+      await lifecycle.stop();
+    },
+  };
 }
+`;
 
-main().catch((error: unknown) => {
-  console.error(error);
-  process.exit(1);
+const APP_E2E_TEST = `import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { startApp, type RunningApp } from './testing/e2e';
+
+let running: RunningApp;
+beforeAll(async () => {
+  running = await startApp();
+});
+afterAll(() => running?.stop());
+
+// Each user as the claims of their GoTrue token. GoTrue adds sub, email and its own role
+// ("authenticated"). An access-token hook adds the organization and the role in it, for a member only:
+// a user in no organization has none of those claims at all. The mapping to an identity is the provider's.
+const ORG = '6f0d6b0c-3a4e-4c1b-9f5e-2b7d1a9c8e10';
+const ADA = '0b9d4c53-8f0a-4d0e-9a63-5c2f1e7b3a41';
+const member = { sub: ADA, email: 'ada@example.test', role: 'authenticated', org_id: ORG, org_slug: 'acme', org_role: 'member' };
+const owner = { sub: 'c2a1f0de-7b6c-4e59-8d3a-1f0e9b8c7d62', role: 'authenticated', org_id: ORG, org_slug: 'acme', org_role: 'owner' };
+const solo = { sub: 'e4b7a9c1-2d3f-4a5b-8c6d-7e8f9a0b1c23', email: 'solo@example.test', role: 'authenticated' };
+
+describe('the app, started as main.ts starts it', () => {
+  it('is ready: the database and the job queue are connected', async () => {
+    const res = await running.request('/api/health/ready');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ status: 'healthy' });
+  });
+
+  it('serves the sign-in page to anyone, and asks everyone else for a token', async () => {
+    expect((await running.request('/api/sign-in')).status).toBe(200);
+    expect((await running.request('/api/me')).status).toBe(401);
+    expect((await running.request('/api/me', { headers: { authorization: 'Bearer made-up' } })).status).toBe(401);
+  });
+
+  it('puts a member in their organization, with the role the token gives them there', async () => {
+    const res = await running.request('/api/me', { claims: member });
+    expect(await res.json()).toEqual({ userId: ADA, tenantId: ORG, personal: false, roles: ['authenticated', 'member'], email: 'ada@example.test' });
+    expect((await running.request('/api/me/admin', { claims: member })).status).toBe(403);
+    expect((await running.request('/api/me/admin', { claims: owner })).status).toBe(200);
+  });
+
+  it('gives a user in no organization a personal tenant, where they are the admin', async () => {
+    const me = (await (await running.request('/api/me', { claims: solo })).json()) as { tenantId: string; personal: boolean; roles: string[] };
+    expect(me).toMatchObject({ tenantId: 'user.app.' + solo.sub, personal: true, roles: ['authenticated'] });
+    expect((await running.request('/api/me/admin', { claims: solo })).status).toBe(200);
+  });
+
+  it('treats a token someone acts through as the user it is for', async () => {
+    // An impersonation ("view as") token: sub is the user being viewed, act says who is acting
+    const viewed = { ...member, act: { sub: 'support:42' } };
+    const me = (await (await running.request('/api/me', { claims: viewed })).json()) as { userId: string; tenantId: string };
+    expect(me).toMatchObject({ userId: ADA, tenantId: ORG });
+    expect((await running.request('/api/me/admin', { claims: viewed })).status).toBe(403);
+  });
+
+  it('refuses a token that names a personal tenant itself, one with no subject, and a tenant header that disagrees', async () => {
+    const forged = await running.request('/api/me', { claims: { ...solo, org_id: 'user.app.' + ADA } });
+    expect(forged.status).toBe(401);
+    expect(await forged.json()).toMatchObject({ error: { code: 'auth/invalid-token' } });
+    expect((await running.request('/api/me', { claims: { role: 'authenticated', org_id: ORG } })).status).toBe(401);
+    expect((await running.request('/api/me', { claims: member, headers: { 'x-tenant-id': 'another-org' } })).status).toBe(403);
+  });
+
+  it('requires an organization when personal tenants are off', async () => {
+    const strict = await startApp({ env: { AUTH_PERSONAL_TENANTS: 'false' } });
+    try {
+      const res = await strict.request('/api/me', { claims: solo });
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(await res.json()).toMatchObject({ error: { code: 'tenancy/missing-tenant' } });
+      expect((await strict.request('/api/me', { claims: member })).status).toBe(200);
+    } finally {
+      await strict.stop();
+    }
+  });
+
+  it('takes additions to the API through the configureApi option, with no edit to app.ts', async () => {
+    const custom = await startApp({
+      configureApi: (api) =>
+        api.withMiddleware(async (ctx, next) => {
+          ctx.responseHeaders['x-served-by'] = 'e2e';
+          await next();
+        }),
+    });
+    try {
+      expect((await custom.request('/api/health/live')).headers.get('x-served-by')).toBe('e2e');
+      expect((await running.request('/api/health/live')).headers.get('x-served-by')).toBeNull();
+    } finally {
+      await custom.stop();
+    }
+  });
 });
 `;
 
@@ -1061,7 +1189,24 @@ describe('the sign-in page', () => {
 });
 `;
 
-const AGENTS_AUTH = `# Agent guide
+const AGENTS_AUTH_TESTS = `## Tests
+
+\`\`\`bash
+pnpm test          # unit tests (src/**/*.test.ts): no services needed
+pnpm test:e2e      # the whole app over HTTP (src/**/*.e2e.test.ts): starts a throwaway Postgres and Redis in Docker
+\`\`\`
+
+- An end-to-end test calls \`startApp()\` from \`src/testing/e2e.ts\`: the same \`createApp()\` that
+  \`main.ts\` starts, on a free port, with its own empty database. GoTrue isn't needed:
+  \`createTestAuth()\` from \`@mariachi/testing\` stands in for it, and everything after the token
+  check (personal tenants, tenancy, roles) is the real thing.
+- \`running.request('/api/me', { as: { userId, tenantId: 'org-1', claims: { org_id: 'org-1' } } })\`
+  is a member of an organization; \`tenantId: ''\` is a user in none, who gets a personal tenant.
+- \`mariachi generate entity\` writes an end-to-end test for the new routes. Extend it when you change them.
+
+`;
+
+const AGENTS_AUTH = (e2e: boolean) => `# Agent guide
 
 This is a Mariachi backend. Before writing code, read the framework docs shipped with
 \`@mariachi/core\`:
@@ -1074,8 +1219,9 @@ This is a Mariachi backend. Before writing code, read the framework docs shipped
 
 | Path | Layer |
 | --- | --- |
-| \`src/main.ts\` | Composition root: config, lifecycle, database, jobs, communication, sign-in and tenancy, HTTP server |
-| \`src/config.ts\`, \`src/auth.ts\` | This app's settings (\`AUTH_*\`, \`MIGRATE_ON_START\`) and where it finds GoTrue |
+| \`src/app.ts\` | Composition root: \`createApp()\` builds config, lifecycle, database, jobs, communication, sign-in and tenancy, and the HTTP server |
+| \`src/main.ts\` | The entry point: starts what \`createApp()\` built |
+${e2e ? '| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and the containers they share |\n' : ''}| \`src/config.ts\`, \`src/auth.ts\` | This app's settings (\`AUTH_*\`, \`MIGRATE_ON_START\`) and where it finds GoTrue |
 | \`src/contracts/\` | Zod schemas + procedure types shared by controllers and handlers |
 | \`src/api/controllers/\` | HTTP controllers (\`BaseController\`); call procedures, never services |
 | \`src/api/pages/\` | The example sign-in page |
@@ -1083,7 +1229,7 @@ This is a Mariachi backend. Before writing code, read the framework docs shipped
 | \`src/schema/\` | \`defineTable\` tables; \`mariachi db generate\` turns them into migrations |
 | \`src/jobs/\` | \`defineJob\` background jobs |
 
-## Sign-in, tenants and roles
+${e2e ? AGENTS_AUTH_TESTS : ''}## Sign-in, tenants and roles
 
 - Users sign in with GoTrue (Supabase Auth, hosted or your own); \`@mariachi/auth-gotrue\` verifies
   its tokens. Never store passwords here or add a second way to sign in beside it.
