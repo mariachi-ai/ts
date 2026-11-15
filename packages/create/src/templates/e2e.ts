@@ -3,7 +3,7 @@ import type { ProjectAuth } from '../types';
 /** What a generated project needs to test itself over HTTP: the vitest config, the containers and the harness. */
 export const VITEST_E2E_CONFIG = `import { defineConfig } from 'vitest/config';
 
-// End-to-end tests: the whole app over HTTP against a throwaway Postgres and Redis (needs Docker).
+// End-to-end tests: the whole app over HTTP against a throwaway Postgres (needs Docker).
 export default defineConfig({
   test: {
     include: ['src/**/*.e2e.test.ts'],
@@ -15,16 +15,15 @@ export default defineConfig({
 `;
 
 export const E2E_GLOBAL_SETUP = `import type { TestProject } from 'vitest/node';
-import { startPostgres, startRedis, stopContainers } from '@mariachi/testing';
+import { startPostgres, stopContainers } from '@mariachi/testing';
 
 /**
- * Runs once before the end-to-end tests: one throwaway Postgres and one Redis, in Docker, for all
- * of them. Each test file then makes its own database in that Postgres (see ./e2e).
+ * Runs once before the end-to-end tests: one throwaway Postgres, in Docker, for all of them. Each
+ * test file then makes its own database in it (see ./e2e). The app's jobs and search run in that
+ * database too, so nothing else is needed.
  */
 export default async function setup(project: TestProject): Promise<() => Promise<void>> {
-  const [postgresUrl, redisUrl] = await Promise.all([startPostgres(), startRedis()]);
-  project.provide('postgresUrl', postgresUrl);
-  project.provide('redisUrl', redisUrl);
+  project.provide('postgresUrl', await startPostgres());
   return stopContainers;
 }
 `;
@@ -56,7 +55,6 @@ ${gotrue ? "import { goTrueConfig } from '../auth';\nimport { APP_CONFIG, type A
 declare module 'vitest' {
   export interface ProvidedContext {
     postgresUrl: string;
-    redisUrl: string;
   }
 }
 
@@ -86,7 +84,7 @@ export interface RunningApp {
 
 /**
  * Starts the whole app for a test file: the same createApp() that main.ts starts, on a free port,
- * with its own empty database (the tables in src/schema, created directly) and its own job queue.
+ * with its own empty database (the tables in src/schema, created directly), which holds its job queue too.
 ${gotrue
   ? " * No GoTrue is needed: a request's claims are read by the provider's own mapping, then by personal\n * tenants, tenancy and roles, as a real token's are. \`request(path, { claims: { sub, role, org_id } })\`\n * is a signed-in request; \`{ as: { userId, tenantId } }\` writes the claims for you.\n"
   : " * Sign-in is createTestAuth(): \`request(path, { as: { userId, tenantId } })\` is a signed-in request.\n"}${orgs
@@ -115,13 +113,12 @@ ${gotrue
         dotenv: false,
         env: {
           NODE_ENV: 'test',
-          // Also the job queue's prefix, so files sharing the Redis don't see each other's jobs
+          // Also the job queue's name
           SERVICE_NAME: name,
           PORT: '0',
           HOST: '127.0.0.1',
           LOG_LEVEL: 'error',
           DATABASE_URL: databaseUrl.href,
-          REDIS_URL: inject('redisUrl'),
           ...env,
         },
       },

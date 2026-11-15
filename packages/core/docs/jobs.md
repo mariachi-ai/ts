@@ -26,7 +26,7 @@ It needs two tables. Export them from your schema so `mariachi db generate` writ
 
 ```ts
 // src/schema/index.ts
-export { jobsTable, jobSchedulesTable } from '@mariachi/jobs/schema';
+export { jobsTable, jobSchedulesTable } from '@mariachi/jobs/schema';   // a worker started without them says so: jobs/tables-missing
 ```
 
 Options: `queue` or `prefix` (workers with the same queue name share it), `concurrency` (5),

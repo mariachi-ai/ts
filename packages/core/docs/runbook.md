@@ -3,9 +3,7 @@
 ## Running an app
 
 ```bash
-cp .env.example .env && docker compose up -d   # Postgres + Redis
-pnpm db:migrate                                # mariachi db migrate
-pnpm dev
+pnpm dev    # mariachi dev: .env from .env.example, Postgres (Docker Compose), pending migrations, then the app with reload
 ```
 
 ### Deploying

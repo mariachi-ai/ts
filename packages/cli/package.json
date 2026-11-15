@@ -39,6 +39,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@mariachi/auth": "workspace:*",
     "@mariachi/config": "workspace:*",
     "@mariachi/core": "workspace:*",
     "@mariachi/create": "workspace:*",

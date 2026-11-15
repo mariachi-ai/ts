@@ -77,6 +77,49 @@ async function bootReady<T = undefined>(
   }
 }
 
+const APPLY_SCHEMA = `import { randomUUID } from 'node:crypto';
+import { sql } from 'drizzle-orm';
+import { applySchema, createPostgresDatabase } from '@mariachi/database-postgres';
+import * as schema from './src/schema/index';
+
+const name = 'boot_' + randomUUID().replaceAll('-', '');
+const server = createPostgresDatabase({ url: process.argv[2] as string });
+await server.connect();
+await server.db.execute(sql.raw('create database ' + name));
+await server.disconnect();
+const url = new URL(process.argv[2] as string);
+url.pathname = '/' + name;
+if (process.argv[3] !== 'empty') {
+  const database = createPostgresDatabase({ url: url.href });
+  await database.connect();
+  await applySchema(database.db, schema);
+  await database.disconnect();
+}
+console.log('DATABASE_URL=' + url.href);
+`;
+
+// One Postgres for every boot below; each gets a database of its own in it
+let postgres: Promise<string> | undefined;
+
+/**
+ * A new database on the test Postgres holding the project's own tables (its src/schema), as its
+ * migrations would leave it. Stands in for `mariachi dev`, which migrates before it starts the app.
+ * With `empty`, a new database with nothing in it.
+ */
+async function migratedDatabase(cwd: string, empty = false): Promise<string> {
+  const script = join(cwd, 'apply-schema.mts');
+  await writeFile(script, APPLY_SCHEMA);
+  try {
+    postgres ??= startPostgres();
+    const { stdout } = await run(process.execPath, [viteNode, script, await postgres, ...(empty ? ['empty'] : [])], { cwd, env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' } });
+    const url = /^DATABASE_URL=(.+)$/m.exec(stdout)?.[1];
+    if (!url) throw new Error(`no database url in: ${stdout}`); // mariachi-lint-ignore
+    return url;
+  } finally {
+    await rm(script, { force: true });
+  }
+}
+
 describe('generated project', () => {
   beforeAll(async () => {
     await rm(workDir, { recursive: true, force: true });
@@ -92,6 +135,8 @@ describe('generated project', () => {
   afterAll(async () => {
     await rm(workDir, { recursive: true, force: true });
     await stopAll();
+    // The Postgres the boots shared went with it
+    postgres = undefined;
   });
 
   it('registers generated pieces in the registry files', async () => {
@@ -122,16 +167,40 @@ describe('generated project', () => {
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
   }, 120_000);
 
-  it('passes its own end-to-end tests: the app over HTTP against a throwaway Postgres and Redis', async () => {
+  it('passes its own end-to-end tests: the app over HTTP against a throwaway Postgres, which holds its jobs and search too', async () => {
     const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', project, '--config', join(project, 'vitest.e2e.config.ts')]);
     expect(stdout).toMatch(/src\/app\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/src\/search\.e2e\.test\.ts/);
     expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
     expect(stdout).toMatch(/invoice-items\.e2e\.test\.ts/);
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
     expect(stdout).not.toMatch(/failed/);
   }, 300_000);
 
-  it('boots its main.ts against Postgres and Redis and answers ready', async () => {
+  it('boots its main.ts against Postgres alone and answers ready', async () => {
+    const { status, output } = await bootReady(project, {
+      SERVICE_NAME: 'scaffold-app',
+      NODE_ENV: 'development',
+      DATABASE_URL: await migratedDatabase(project),
+      JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
+    });
+    expect(output).not.toContain('database/not-connected');
+    expect({ status, output }).toMatchObject({ status: 200 });
+  }, 180_000);
+
+  it('says to migrate, and stops, when the database has none of its tables', async () => {
+    const { status, output } = await bootReady(project, {
+      SERVICE_NAME: 'scaffold-app',
+      NODE_ENV: 'development',
+      DATABASE_URL: await migratedDatabase(project, true),
+      JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
+    });
+    expect(status).toBeNull();
+    expect(output).toContain('jobs/tables-missing');
+    expect(output).toContain('mariachi db migrate');
+  }, 180_000);
+
+  it('runs its jobs on Redis when REDIS_URL is set, and is ready with both', async () => {
     const { status, output } = await bootReady(project, {
       SERVICE_NAME: 'scaffold-app',
       NODE_ENV: 'development',
@@ -139,7 +208,6 @@ describe('generated project', () => {
       REDIS_URL: await startRedis(),
       JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
     });
-    expect(output).not.toContain('database/not-connected');
     expect({ status, output }).toMatchObject({ status: 200 });
   }, 180_000);
 
@@ -175,6 +243,8 @@ describe('generated project with --auth gotrue', () => {
   afterAll(async () => {
     await rm(workDir, { recursive: true, force: true });
     await stopAll();
+    // The Postgres the boots shared went with it
+    postgres = undefined;
   });
 
   it('boots, serves the sign-in page to anyone, and asks everyone else for a token', async () => {
@@ -183,8 +253,7 @@ describe('generated project with --auth gotrue', () => {
       {
         SERVICE_NAME: 'gotrue-app',
         NODE_ENV: 'development',
-        DATABASE_URL: await startPostgres(),
-        REDIS_URL: await startRedis(),
+        DATABASE_URL: await migratedDatabase(app),
         AUTH_URL: 'https://auth.example.test/auth/v1',
         AUTH_ANON_KEY: 'publishable-key',
       },
@@ -256,6 +325,8 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth
   afterAll(async () => {
     await rm(workDir, { recursive: true, force: true });
     await stopAll();
+    // The Postgres the boots shared went with it
+    postgres = undefined;
   });
 
   it('registers the organizations routes and tables beside the generated ones', async () => {
@@ -294,8 +365,7 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth
       {
         SERVICE_NAME: `${auth}-orgs-app`,
         NODE_ENV: 'development',
-        DATABASE_URL: await startPostgres(),
-        REDIS_URL: await startRedis(),
+        DATABASE_URL: await migratedDatabase(app),
         ...(auth === 'gotrue' ? { AUTH_URL: 'https://auth.example.test/auth/v1' } : { JWT_SECRET }),
       },
       async (base) => {
