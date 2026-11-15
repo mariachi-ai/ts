@@ -9,7 +9,7 @@ interface Collection {
 }
 
 const fieldsOf = (index: SearchIndex): string =>
-  JSON.stringify([index.defaultSortingField ?? null, [...index.fields].sort((a, b) => a.name.localeCompare(b.name)).map((f) => [f.name, mapFieldType(f.type), f.facet ?? false, f.sort ?? null, f.index ?? true])]);
+  JSON.stringify([index.defaultSortingField ?? null, [...index.fields].sort((a, b) => a.name.localeCompare(b.name)).map((f) => [f.name, mapFieldType(f.type), f.facet ?? false, f.sort ?? false, f.index ?? true])]);
 
 interface State {
   collections: Map<string, Collection>;

@@ -365,8 +365,8 @@ describe('PostgresSearchAdapter', () => {
     const narrower: SearchIndex = { name, fields: [{ name: 'title', type: 'string' }] };
     await expect(acme.reindexAlias(name, narrower, [])).rejects.toMatchObject({ code: 'search/invalid-input' });
     expect((await acme.search(name, { query: '*', facets: ['kind'] })).total).toBe(2);
-    // The same fields in another order are the same fields
-    await acme.reindexAlias(name, { name, fields: [...index.fields].reverse() }, [{ id: '4', title: 'acme four', kind: 'a' }]);
+    // The same fields in another order, or with a default written out, are the same fields
+    await acme.reindexAlias(name, { name, fields: [...index.fields].reverse().map((f) => ({ sort: false, index: true, ...f })) }, [{ id: '4', title: 'acme four', kind: 'a' }]);
     await search.reindexAlias(name, narrower, []);
     await expect(globex.search(name, { query: '*', facets: ['kind'] })).rejects.toMatchObject({ code: 'search/invalid-input' });
     // Other tenants' documents are untouched by it

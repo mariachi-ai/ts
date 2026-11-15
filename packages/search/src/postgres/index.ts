@@ -77,7 +77,7 @@ function sameFields(a: SearchIndex, b: SearchIndex): boolean {
       sortBy: index.defaultSortingField ?? null,
       fields: [...index.fields]
         .sort((x, y) => x.name.localeCompare(y.name))
-        .map((f) => [f.name, mapFieldType(f.type), f.facet ?? false, f.sort ?? null, f.index ?? true]),
+        .map((f) => [f.name, mapFieldType(f.type), f.facet ?? false, f.sort ?? false, f.index ?? true]),
     });
   return shape(a) === shape(b);
 }
