@@ -126,7 +126,9 @@ export interface OrganizationsConfig {
    *
    * The default reads the standard claims of the request's verified token (`email` and
    * `email_verified` on `ctx.identity.claims`, which the API layer sets). Give your own for a
-   * provider that states them elsewhere, or to ask the provider for the user.
+   * provider whose tokens don't say, and read only from somewhere the user can't write: the
+   * provider's record of the user, or a claim the provider sets. Never a profile field the user can
+   * edit (GoTrue's `user_metadata`).
    */
   verifiedEmail?: (ctx: Context) => VerifiedEmail | undefined | Promise<VerifiedEmail | undefined>;
   /** Membership and role changes are written here. A change whose entry can't be written is undone. */

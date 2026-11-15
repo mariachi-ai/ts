@@ -88,18 +88,30 @@ await organizations.acceptInvitation(ctx, { token });
 **The invitee's email address is not an argument.** Accepting reads it from the user's verified
 identity, so nothing a client sends can stand in for it. By default that is the standard claims of
 the request's token, `email` and `email_verified`, which the API layer puts on `ctx.identity.claims`.
-For a provider that states them elsewhere, say where:
+
+For a provider whose tokens don't carry `email_verified`, say where the answer is. Ask the provider
+for the user's record, server-side:
 
 ```ts
 new DefaultOrganizations({
   store,
-  // GoTrue (Supabase Auth) tokens carry `email` but no top-level `email_verified`
-  verifiedEmail: (ctx) => {
-    const claims = ctx.identity?.claims ?? {};
-    return { email: claims.email, verified: claims.user_metadata?.email_verified === true };
+  verifiedEmail: async (ctx) => {
+    const user = await identityAdmin.getUser(ctx.userId!);          // your provider's admin API
+    return { email: user.email, verified: user.email_confirmed_at != null };
   },
 });
 ```
+
+Two things decide whether "verified" means anything:
+
+- **Read it only from somewhere the user can't write.** A claim the provider or your own token hook
+  sets is fine. A profile field the user can edit is not: GoTrue (Supabase Auth) lets a signed-in
+  user write their own `user_metadata`, so `user_metadata.email_verified` is the user's word about
+  themselves. Use `email_confirmed_at` from the user's record, or `app_metadata`, which only an
+  admin can set.
+- **It must come from a confirmation that happened.** A provider set to confirm sign-ups without
+  sending mail (GoTrue's `MAILER_AUTOCONFIRM`) marks every address confirmed, and then the check
+  proves nothing: anyone can sign up as the invited address. Don't run invitations on that setting.
 
 - Inviting an address that already belongs to a member is refused. Inviting one that already has
   an invitation replaces it; `resendInvitation` gives the same invitation a new token and expiry. In
