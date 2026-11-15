@@ -81,6 +81,14 @@ describe('DrizzleRepository guards', () => {
     const ctx = createContext({ logger: silent, tenantId: 't1' });
     await expect(repo.deleteWhere(ctx, {})).rejects.toMatchObject({ code: 'database/unsafe-operation' });
   });
+
+  it('refuses unfiltered bulk updates, though the tenant and soft-delete conditions are always there', async () => {
+    const ctx = createContext({ logger: silent, tenantId: 't1' });
+    await expect(repo.updateWhere(ctx, {}, { status: 'live' })).rejects.toMatchObject({ code: 'database/unsafe-operation' });
+    await expect(repo.updateWhere(ctx, [], { status: 'live' })).rejects.toMatchObject({ code: 'database/unsafe-operation' });
+    await expect(repo.updateWhere(ctx, { slug: undefined }, { status: 'live' })).rejects.toMatchObject({ code: 'database/unsafe-operation' });
+    await expect(repo.deleteWhere(ctx, [])).rejects.toMatchObject({ code: 'database/unsafe-operation' });
+  });
 });
 
 describe('mapPgError', () => {
