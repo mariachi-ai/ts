@@ -64,11 +64,18 @@ export function seedEnvironment(flag: string | undefined, nodeEnv: string | unde
   return flag?.trim() || nodeEnv?.trim() || 'development';
 }
 
-/** A host with no dot in its name: a Compose or container-network service (`postgres`, `db`), which is a development database. */
-function isServiceName(url: string): boolean {
+/**
+ * A database that is taken to be near: reached through a Unix socket (no host, or a path for one),
+ * or at a host with no dot in its name, which is a Compose or container-network service
+ * (`postgres`, `db`). A short name can also be a real database (an /etc/hosts alias, a private DNS
+ * name); that is the price of not asking every containerised dev setup for `--env`.
+ */
+function isNearby(url: string): boolean {
   try {
-    const host = new URL(url).hostname;
-    return host !== '' && !host.includes('.') && !host.includes(':');
+    const parsed = new URL(url);
+    const host = decodeURIComponent(parsed.hostname);
+    if (host === '' || host.startsWith('/') || parsed.searchParams.get('host')?.startsWith('/')) return true;
+    return !host.includes('.') && !host.includes(':');
   } catch {
     return false;
   }
@@ -80,7 +87,7 @@ function isServiceName(url: string): boolean {
  * and `--url` pointed somewhere else). Saying `--env` is how a person confirms what the database is.
  */
 export function assertSeedTarget(url: string, environment: string, explicit: boolean): void {
-  if (explicit || environment !== 'development' || isLocal(url) || isServiceName(url)) return;
+  if (explicit || environment !== 'development' || isLocal(url) || isNearby(url)) return;
   throw new ConfigError(
     'cli/seed-target-unclear',
     `This database (${safeUrl(url)}) is not on this machine, and the seeds would run as development. Pass --env to say what it is: --env development if it really is a development database`,

@@ -38,8 +38,14 @@ describe('where `db seed` will run', () => {
     expect(() => assertSeedTarget(REMOTE, 'development', true)).not.toThrow();
     expect(() => assertSeedTarget(REMOTE, 'staging', false)).not.toThrow();
     expect(() => assertSeedTarget(REMOTE, 'production', false)).not.toThrow();
-    // This machine, or a service on a container network (a name with no dot)
-    for (const local of ['postgres://postgres:postgres@localhost:5432/app', 'postgres://postgres:postgres@127.0.0.1:5432/app', 'postgres://postgres:postgres@postgres:5432/app']) {
+    // This machine, a Unix socket, or a service on a container network (a name with no dot)
+    for (const local of [
+      'postgres://postgres:postgres@localhost:5432/app',
+      'postgres://postgres:postgres@127.0.0.1:5432/app',
+      'postgres://postgres:postgres@postgres:5432/app',
+      'postgres:///app?host=/var/run/postgresql',
+      'postgresql://app@%2Fvar%2Frun%2Fpostgresql/app',
+    ]) {
       expect(() => assertSeedTarget(local, 'development', false)).not.toThrow();
     }
   });
