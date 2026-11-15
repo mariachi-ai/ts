@@ -73,7 +73,8 @@ All `db` commands take `--schema <path>` (default `src/schema/index.ts`) and `--
 
 The schema module exports every table: your own `defineTable`s, plus framework tables you use
 (`export { usersTable, tenantsTable } from '@mariachi/database'`, `eventOutboxTable` from
-`@mariachi/events/outbox`, or everything via `@mariachi/schema`).
+`@mariachi/events/schema`, or everything via `@mariachi/schema`, which re-exports each package's
+`./schema` subpath and so holds every framework table).
 
 ## design
 

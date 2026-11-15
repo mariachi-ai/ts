@@ -1348,6 +1348,9 @@ importers:
       '@mariachi/database':
         specifier: workspace:*
         version: link:../database
+      '@mariachi/events':
+        specifier: workspace:*
+        version: link:../events
       '@mariachi/notifications':
         specifier: workspace:*
         version: link:../notifications
