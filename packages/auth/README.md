@@ -15,7 +15,7 @@ Guide: [auth-and-providers.md](../core/docs/auth-and-providers.md)
 | --- | --- |
 | `@mariachi/auth` | Adapters, RBAC, API keys, middleware, webhook dispatcher, brute-force protection |
 | `@mariachi/auth/schema` | `roles`, `permissions`, `user_roles`, `api_keys`, `sessions`, `auth_webhook_dedup` tables |
-| `@mariachi/auth/postgres` | `DrizzleRoleStore`, `DrizzleApiKeyStore`, `DrizzleWebhookDedup` |
+| `@mariachi/auth/postgres` | `DrizzleRoleStore`, `DrizzleApiKeyStore`, `DrizzleSessionStore`, `DrizzleWebhookDedup` |
 
 ## Public API
 
@@ -26,6 +26,7 @@ Guide: [auth-and-providers.md](../core/docs/auth-and-providers.md)
 | `DrizzleRoleStore` | Role assignments, `defineRole`, and the permission source for RBAC |
 | `CachedRoleStore` | Caches role lookups in any `get/set/del` cache |
 | `ApiKeyService` | `issue`, `verify`, `rotate`, `revoke` over `DrizzleApiKeyStore` or `MemoryApiKeyStore` |
+| `SessionManager` | Opaque, revocable sessions: `create`, `verify`, `revoke`, `revokeAllForUser`, `list`, `purgeExpired` over `DrizzleSessionStore` or `InMemorySessionStore` |
 | `createAuthWebhookDispatcher` | Verified, deduplicated provider webhooks to communication procedures |
 | `OAuthAdapter`, `BruteForceProtector`, `createAuthMiddleware` | OAuth flows, lockouts, middleware |
 | `AuthProvider`, `IdentityClient` (types) | What provider packages implement: token checks and webhooks; headless sign-in, refresh, sign-out and user lookups |

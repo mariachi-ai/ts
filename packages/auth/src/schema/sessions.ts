@@ -1,4 +1,4 @@
-import { defineTable, column } from '@mariachi/database';
+import { defineTable, column, index } from '@mariachi/database';
 
 export const sessionsTable = defineTable('sessions', {
   id:           column.uuid().primaryKey().defaultRandom(),
@@ -14,4 +14,7 @@ export const sessionsTable = defineTable('sessions', {
   revokedAt:    column.timestamp(),
   createdAt:    column.timestamp().notNull().defaultNow(),
   lastActiveAt: column.timestamp().notNull().defaultNow(),
+}, {
+  // A user's sessions (list, sign out everywhere) and the purge of expired ones.
+  indexes: [index('sessions_user_id_idx').on('userId'), index('sessions_expires_at_idx').on('expiresAt')],
 });
