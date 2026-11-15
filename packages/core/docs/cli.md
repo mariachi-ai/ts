@@ -210,8 +210,9 @@ with.
   one named for a word, then one with a word in a heading, then the rest, with the generated
   catalogs last. Each line starts with what to read next (`storage#browser-uploads-and-downloads:55`
   is `mariachi docs storage#browser-uploads-and-downloads`). A quoted phrase is its words:
-  `--search "tables missing"` and `--search tables missing` are the same search. A doc named before
-  `--search` limits the search to it.
+  `--search "tables missing"` and `--search tables missing` are the same search. A word matches
+  inside longer words (`auth` finds `authenticate`). A doc named before `--search` limits the
+  search to it.
 - **A name that isn't a doc** gets the lines that mention it, in the same form, and exit code 1. A
   group's name (`recipes`, `guides`) gets that group's list.
 - `--json` gives the list (`{ dir, docs }`), a doc (`{ name, file, section, summary, text }`) or the
