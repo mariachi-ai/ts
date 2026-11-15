@@ -114,6 +114,13 @@ export class AuditError extends MariachiError {
   }
 }
 
+export class OrganizationsError extends MariachiError {
+  constructor(code: string, message: string, metadata?: Record<string, unknown>) {
+    super(code, message, metadata);
+    this.name = 'OrganizationsError';
+  }
+}
+
 export class AIError extends MariachiError {
   constructor(code: string, message: string, metadata?: Record<string, unknown>) {
     super(code, message, metadata);
@@ -223,6 +230,17 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'tenancy/mismatch': 403,
   'tenancy/reserved-tenant': 403,
   'tenancy/suspended': 403,
+  'organizations/user-required': 401,
+  'organizations/forbidden': 403,
+  'organizations/suspended': 403,
+  'organizations/email-mismatch': 403,
+  'organizations/email-unverified': 403,
+  'organizations/last-owner': 409,
+  'organizations/already-member': 409,
+  'organizations/slug-taken': 409,
+  'organizations/invalid-role': 400,
+  'organizations/invitation-invalid': 400,
+  'organizations/invitation-expired': 410,
   'rate-limit/exceeded': 429,
   'rate-limit/unknown-tier': 500,
   'rate-limit/backend-failed': 503,

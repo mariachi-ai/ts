@@ -49,6 +49,9 @@ scope to it, billing gives it its own customer and credits, and roles are grante
 who later joins an organization arrives with that organization's tenant; their personal one is
 still theirs when the token names no organization.
 
+When the provider has no organizations at all, [`@mariachi/organizations`](./organizations.md) keeps
+them, with memberships and invitations, in your own database.
+
 The rules, which are enforced and tested:
 
 - **Namespaced by issuer.** The id is `user.<namespace>.<userId>`, the user id percent-encoded so

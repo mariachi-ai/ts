@@ -25,6 +25,7 @@ and `tsc --noEmit` before you finish.
 | Call an LLM | `DefaultAI` sessions | [ai.md](./ai.md) |
 | Record who did what | `audit.log(ctx, ...)` on `DrizzleAuditLog` | [audit.md](./audit.md) |
 | Check a permission | `rbac.can(identity, action, resource)` | [auth-and-providers.md](./auth-and-providers.md#authorization-rbac) |
+| Let users share a workspace, invite each other, hold roles | `DefaultOrganizations` (when the identity provider has no organizations of its own) | [organizations.md](./organizations.md) |
 | Turn a feature on per tenant | `createFeatureFlags` + `DrizzleFeatureFlagStore` | [feature-flags.md](./feature-flags.md) |
 | Store or serve files | `DefaultStorage` | [storage.md](./storage.md) |
 | Full-text search | `DefaultSearch` on Typesense | [search.md](./search.md) |
