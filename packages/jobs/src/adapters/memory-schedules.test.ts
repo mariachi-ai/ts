@@ -100,6 +100,23 @@ describe('cron schedules in the in-memory queue', () => {
     await queue.stop();
   });
 
+  it('does not run a time again after a stop and a start with the clock set back', async () => {
+    const { queue, ran } = setup();
+    queue.register({ name: 'every-minute', cron: '* * * * *', jobName: 'digest.send' });
+    await queue.start();
+    await vi.advanceTimersByTimeAsync(30_000 + 50);
+    expect(ran).toHaveLength(1);
+    await queue.stop();
+    vi.setSystemTime(new Date('2026-11-15T10:00:10Z'));
+    await queue.start();
+    // 10:01 comes round again on the clock: it has run
+    await vi.advanceTimersByTimeAsync(MINUTE);
+    expect(ran).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(MINUTE);
+    expect(ran.map((run) => run.jobId)).toEqual(['schedule:every-minute:2026-11-15T10:01:00.000Z', 'schedule:every-minute:2026-11-15T10:02:00.000Z']);
+    await queue.stop();
+  });
+
   it('reads the times in the schedule\'s own timezone', async () => {
     const { queue, ran } = setup();
     // 07:00 in New York is 12:00 UTC in November
