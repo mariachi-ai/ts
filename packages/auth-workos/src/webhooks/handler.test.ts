@@ -100,3 +100,25 @@ describe('normalizeWorkOSEventType', () => {
     expect(normalizeWorkOSEventType(input)).toBe(output);
   });
 });
+
+describe('WorkOSWebhookHandler: rotation and the timestamp as sent', () => {
+  it('accepts a delivery signed with either secret while one is being rotated', () => {
+    const rotating = new WorkOSWebhookHandler({ secret: ['whsec_new', SECRET], now: () => NOW });
+    const body = event();
+    expect(rotating.verify(body, signed(body)).id).toBe('event_01K0EXAMPLE');
+    expect(rotating.verify(body, signed(body, NOW, 'whsec_new')).id).toBe('event_01K0EXAMPLE');
+    expect(() => rotating.verify(body, signed(body, NOW, 'whsec_gone'))).toThrow(expect.objectContaining({ code: 'auth/webhook-verification-failed' }));
+    expect(() => new WorkOSWebhookHandler({ secret: [] })).toThrow(expect.objectContaining({ code: 'auth/invalid-config' }));
+  });
+
+  it('checks the signature over the timestamp exactly as it was sent', () => {
+    const body = event();
+    const text = `0${NOW}`;
+    const header = { 'workos-signature': `t=${text}, v1=${computeWorkOSSignature(SECRET, text, body)}` };
+    expect(handler.verify(body, header).id).toBe('event_01K0EXAMPLE');
+    // The parsed number is not accepted in place of the characters that were signed.
+    expect(() => handler.verify(body, { 'workos-signature': `t=${NOW}, v1=${computeWorkOSSignature(SECRET, text, body)}` })).toThrow(
+      expect.objectContaining({ code: 'auth/webhook-verification-failed' }),
+    );
+  });
+});

@@ -1,5 +1,5 @@
 import { createRemoteJWKSet, jwtVerify } from 'jose';
-import { AuthError } from '@mariachi/core';
+import { AuthError, isReservedTenantId } from '@mariachi/core';
 import type {
   AuthProvider,
   AuthProviderWebhookConfig,
@@ -27,6 +27,11 @@ export class FusionAuthAuthProvider implements AuthProvider {
 
   constructor(config: FusionAuthConfig) {
     this.config = config;
+    if (!config.issuer) {
+      const message = 'FusionAuth: no `issuer` configured, so the tokens\' `iss` is not checked (the audience still is). Set it to the tenant\'s Issuer.';
+      if (config.logger) config.logger.warn({ provider: 'fusionauth' }, message);
+      else process.emitWarning(message, { code: 'MARIACHI_FUSIONAUTH_ISSUER' });
+    }
     const baseUrl = config.serverUrl.replace(/\/$/, '');
     const jwksUrl = new URL('/.well-known/jwks.json', baseUrl);
     this.jwks = createRemoteJWKSet(jwksUrl);
@@ -43,14 +48,18 @@ export class FusionAuthAuthProvider implements AuthProvider {
 
       const claims = payload as unknown as FusionAuthJwtPayload;
       const roles = Array.isArray(claims.roles) ? claims.roles : [];
+      const tenantId = claims.tid ?? claims.applicationId ?? '';
+      // Personal tenants are given after verification (withPersonalTenants), never read from a claim.
+      if (isReservedTenantId(tenantId)) throw new AuthError('auth/invalid-token', 'token names a tenant in the reserved personal-tenant namespace');
 
       return {
         userId: claims.sub,
-        tenantId: claims.tid ?? claims.applicationId ?? '',
+        tenantId,
         scopes: roles,
         roles,
         identityType: 'session',
         sessionId: claims.sid,
+        claims: { ...payload },
       };
     } catch (error) {
       throw new AuthError(

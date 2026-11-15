@@ -23,8 +23,8 @@ export interface ClerkWebhookControllerConfig {
  * Webhook controller for receiving Clerk webhooks via `@mariachi/webhooks` WebhookServer.
  *
  * Registers a single `POST /clerk/webhooks` route that dispatches all Clerk events
- * to a communication procedure. For per-event-type routing, use `createClerkWebhookHandler`
- * instead, which dispatches to individual procedures like `auth.clerk.user.created`.
+ * to a communication procedure. For per-event-type routing, use `createAuthWebhookDispatcher` from
+ * `@mariachi/auth` with `ClerkWebhookHandler`, which dispatches to procedures like `auth.user.created`.
  */
 export class ClerkWebhookController extends WebhookController {
   readonly prefix = 'clerk';

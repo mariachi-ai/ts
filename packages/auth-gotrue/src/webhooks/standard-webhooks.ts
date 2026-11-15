@@ -77,7 +77,11 @@ export function verifyStandardWebhook(
     .map((s) => Buffer.from(s.slice(3), 'base64'));
   if (offered.length === 0) return fail('no v1 signature');
   for (const key of keys) {
-    const expected = Buffer.from(signStandardWebhook(key, id, timestampSeconds, rawBody).slice(3), 'base64');
+    // Over the timestamp exactly as sent: the sender signed those characters, not the parsed number.
+    const mac = createHmac('sha256', key);
+    mac.update(`${id}.${ts}.`);
+    mac.update(rawBody);
+    const expected = mac.digest();
     if (offered.some((o) => o.length === expected.length && timingSafeEqual(o, expected))) {
       return { id, timestampSeconds };
     }

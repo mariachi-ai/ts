@@ -148,3 +148,17 @@ describe('GoTrueWebhookHandler', () => {
     expect(h.verify(raw, headers).tenantId).toBe('t-1');
   });
 });
+
+describe('GoTrueWebhookHandler: the timestamp as sent', () => {
+  it('checks the signature over the timestamp text, not the parsed number', async () => {
+    const { createHmac } = await import('node:crypto');
+    const handler = new GoTrueWebhookHandler({ secret: SECRET, nowSeconds: () => NOW });
+    const raw = JSON.stringify(accessTokenHook());
+    const id = 'msg-leading-zero';
+    const text = `0${NOW}`;
+    const signature = `v1,${createHmac('sha256', rawKey).update(`${id}.${text}.`).update(raw).digest('base64')}`;
+    const headers = { 'webhook-id': id, 'webhook-timestamp': text, 'webhook-signature': signature };
+    expect(handler.verify(raw, headers).id).toBe(id);
+    expect(() => handler.verify(raw, { ...headers, 'webhook-timestamp': String(NOW) })).toThrow(expect.objectContaining({ code: 'auth/webhook-verification-failed' }));
+  });
+});
