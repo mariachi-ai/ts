@@ -1,10 +1,10 @@
 /**
  * From measured screens to `fingerprint.json` and `checks.json`, and the distance between a screen and a
- * library, as `docs/design-fingerprint.md` (spec 1) defines them. Node-side; the probe is in `probe.ts`.
+ * library, as `docs/design-fingerprint.md` (spec 1.2) defines them. Node-side; the probe is in `probe.ts`.
  */
 import type { MeasureValue, ScreenMeasures } from './probe';
 
-export const SPEC_VERSION = 1;
+export const SPEC_VERSION = 1.2;
 export const WIDTHS = { wide: [1440, 900], narrow: [1024, 768], phone: [390, 844] } as const;
 export type WidthName = keyof typeof WIDTHS;
 export const KINDS = ['list', 'detail', 'form', 'dashboard', 'settings', 'dialog', 'firstUse', 'empty', 'error', 'loading', 'marketing'] as const;
@@ -197,10 +197,54 @@ export function checkMessage(check: Check, value: number, kinds: string[] = []):
 }
 
 /**
- * A screen's distance from a library: the root mean square, over the library's checks, of how far the value is
- * outside its normal range divided by that measure's spread across languages (0 inside the range).
+ * Each numeric measure's scale for distance: its spread across Mariachi's languages, frozen at spec 1.2 so that one
+ * language's change doesn't move every other language's distances. The values are `spreads()` (the 10th-to-90th
+ * percentile width of the languages' typical values) over the screens measured for spec 1.2. Regenerate them only with
+ * a spec bump: measure every language (`pnpm --filter @mariachi/design fingerprint`), run
+ * `pnpm --filter @mariachi/design fingerprint --print-scales`, and paste its table here.
  */
-export function distance(values: Record<string, MeasureValue>, checks: Checks, spread: Record<string, number>, kinds: string[] = []): number {
+export const MEASURE_SCALE: Readonly<Record<string, number>> = {
+  'colour.accentArea': 0.0812,
+  'colour.accentHue': 247.5,
+  'colour.ground': 0.8099,
+  'colour.hues': 2,
+  'colour.meaning': 0.1814,
+  'density.elements': 33.1,
+  'density.rowHeight': 29.0356,
+  'density.rowsVisible': 2.525,
+  'density.targets': 10.1,
+  'emphasis.primaries': 1,
+  'emphasis.primariesPage': 2,
+  'emphasis.primaryWidth': 0.4962,
+  'icons.labelled': 0.5212,
+  'icons.size': 6,
+  'media.area': 0.0044,
+  'media.aspect': 2.323,
+  'shape.controlRadius': 15.28,
+  'space.contentWidth': 0.2779,
+  'space.contentWidthPx': 347.8,
+  'space.empty': 0.1653,
+  'space.gutter': 248,
+  'space.sectionRatio': 1.54,
+  'states.centred': 1,
+  'structure.columns': 0,
+  'structure.depth': 2,
+  'structure.elevated': 0.3397,
+  'structure.tinted': 0.883,
+  'type.headingRatio': 0.967,
+  'type.lineLength': 31,
+  'type.sizes': 2,
+  'type.weights': 2,
+  'words.buttonLength': 1,
+  'words.headingLength': 2.5,
+};
+
+/**
+ * A screen's distance from a library: the root mean square, over the library's checks, of how far the value is
+ * outside its normal range divided by that measure's scale (0 inside the range). The scale is `MEASURE_SCALE`; the
+ * live `spread` across libraries is used only for a measure missing from it.
+ */
+export function distance(values: Record<string, MeasureValue>, checks: Checks, spread: Record<string, number>, kinds: string[] = [], scales: Readonly<Record<string, number>> = MEASURE_SCALE): number {
   let sum = 0;
   let n = 0;
   for (const c of checks.checks) {
@@ -209,8 +253,8 @@ export function distance(values: Record<string, MeasureValue>, checks: Checks, s
     const [lo, hi] = kinds.map((k) => c.normal.byKind[k]).find(Boolean) ?? c.normal.all;
     const out = v < lo ? lo - v : v > hi ? v - hi : 0;
     // A measure every language shares (no spread across them) can't tell libraries apart: it counts as inside,
-    // rather than an outsized distance from dividing by about zero. One with no spread measured counts in plain units.
-    const sp = spread[c.measure];
+    // rather than an outsized distance from dividing by about zero. One with no scale at all counts in plain units.
+    const sp = scales[c.measure] ?? spread[c.measure];
     if (sp === 0) {
       n++;
       continue;

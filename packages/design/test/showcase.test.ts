@@ -18,7 +18,7 @@ const screen = (id: string, measures: MeasuredScreen['result']['measures']): Mea
   id,
   kinds: ['list'],
   width: 'wide',
-  result: { specVersion: 1, width: 1440, measures },
+  result: { specVersion: 1.2, width: 1440, measures },
 });
 const lib = (
   name: string,

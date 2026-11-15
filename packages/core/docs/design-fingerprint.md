@@ -8,11 +8,18 @@ A design library's fingerprint is a product's habits, measured on its rendered s
 
 **Version 1.1 (2026-11-14)** adds five measures, marked *1.1*: the page's ground, the action colour's hue, control corners, and how panels are set apart (raised, tinted). Version 1 counted habits but couldn't see colour or shape, so languages that look nothing alike could measure close. It also stops words being a check on a language. `specVersion` stays 1; a reader of 1 ignores the new measures.
 
+**Version 1.2 (2026-11-15)** changes three definitions and how distance is scaled, each marked *1.2*. `specVersion` is 1.2, and fingerprints of 1.2 aren't compared with earlier ones.
+
+- **The primary by role, not chroma.** Without a declared primary, the accent was the most common saturated control fill, so a black or near-black primary read as no accent and its screens as having no main action. The accent is now the fill of the button-shaped control that stands out most from the ground, whatever its colour. A colourless one still has no hue.
+- **Rows are the innermost repeated group.** A page of cards that hold rows, or of sections, read its cards or sections as rows. Row height now comes from the innermost group of similar items.
+- **Inline SVG pictures are media.** A language that draws its pictures as inline SVG read no media. An SVG big enough to be a picture now counts; an icon never does.
+- **A fixed scale per measure.** Distance divided by each measure's spread across the languages as measured that day, so one language's change moved every other language's distances. The scale is now a table frozen at 1.2.
+
 The playbook that uses it is [design-playbook.md](./design-playbook.md).
 
 Measures are versioned. A change to a definition bumps `specVersion`, and fingerprints from different versions aren't compared.
 
-**specVersion: 1**
+**specVersion: 1.2**
 
 ## Rendering
 
@@ -43,11 +50,16 @@ These definitions are used by the measures below.
   - `shadow`: `box-shadow` not `none`.
   - `tint`: its background colour differs from its nearest ancestor's effective background by ΔE2000 ≥ 2.
   - `divider`: a top or bottom border only, at least half its parent's width.
-- **Media:** `img`, `video`, `canvas`, a `picture`, or an element with a `background-image`, at least 48 × 48 px and with no text inside. A box at least 95% of the window wide and 60% of it high is a backdrop, not media.
+- **Media:** `img`, `video`, `canvas`, a `picture`, or an element with a `background-image`, at least 48 × 48 px and with no text inside. *1.2:* also an inline `svg` (not inside another `svg`) big enough to be a picture: both sides at least 48 px, or an area of at least 4,096 px². An icon never reaches either. A box at least 95% of the window wide and 60% of it high is a backdrop, not media.
 - **Icon:** an `svg` (or an `img` of an SVG) of at most 32 × 32 px.
 - **Collection:** a parent (not inside an `svg`) with at least three visible children that share a tag and a first class name. It's a `list` when the children stack in one column, a `grid` when they sit in two or more columns and two or more rows, a `table` for `tbody` rows, and a `carousel` when its `scrollWidth` exceeds its `clientWidth` by more than 8 px with one row.
 - **Main column:** the element containing the largest share of the window's text characters that has at least three block children, excluding `nav`, `aside`, `header` and `footer`.
-- **Accent:** the product's action colour as drawn: the fill of its declared primary button (`.m-button[data-variant="primary"]`) when one is on the screen; otherwise the most common fill with OKLCH chroma > 0.1 on controls; otherwise `--m-color-accent-default`.
+- **Ground colour:** the fill under the nine ground points of `colour.ground` (below) whose OKLCH lightness is the median.
+- **Accent:** the product's action colour as drawn: the fill of its declared primary button (`.m-button[data-variant="primary"]`) when one is on the screen; otherwise *(1.2)* the fill of the filled button-shaped control that differs most from the ground colour, whatever its colour; otherwise `--m-color-accent-default`.
+  - *Button-shaped:* a `button`, `[role=button]`, submit or button `input`, `.m-button` or `a[href]`, 24 to 72 px tall and at least 24 px wide. Not a selected or current one (`aria-selected`, `aria-current`, `aria-pressed`, `:checked`), and not a destructive one (labelled as in `emphasis.destructive`, `data-variant="danger"`, or a fill within ΔE2000 5 of the danger colour).
+  - *Filled:* its fill differs from what it sits on (ΔE2000 ≥ 10) and from the ground colour (ΔE2000 ≥ 15).
+  - *Differs most:* of the fills within ΔE2000 10 of the largest difference from the ground colour, the one on the most controls (then the larger difference).
+  - Before 1.2 this step was the most common control fill with OKLCH chroma > 0.1, so a black primary read as none.
 - **Fill:** an element's background colour; when that's transparent, the first colour stop of its background gradient; for a control, failing both, the background of an absolutely positioned `::before` that draws its face.
 - **Primary action:** a control whose fill is within ΔE2000 5 of the accent, or the product's declared primary (`.m-button[data-variant="primary"]`).
 
@@ -83,7 +95,7 @@ Each measure has an id, its unit, and how it's computed. A value is recorded per
 | `density.elements` | count | Visible leaf elements (no visible element children) intersecting the window |
 | `density.targets` | count | Controls intersecting the window |
 | `density.rowsVisible` | count | Per `list` or `table` collection: items intersecting the window. Median over collections |
-| `density.rowHeight` | px | Median item height over `list` and `table` collections |
+| `density.rowHeight` | px | *1.2.* The median item height of the innermost `list` or `table` collection of similar items: one with no other such collection inside its items. Similar: at least two thirds of the items within 25% of its median item height (when none is, all `list` and `table` collections are used). When several qualify, the one with the most items; the median over those tied. Cards that hold rows give the rows' height, not the cards' |
 
 ### Structure
 
@@ -176,7 +188,7 @@ Every screen in the inventory has one kind: `list`, `detail`, `form`, `dashboard
 
 ```json
 {
-  "specVersion": 1,
+  "specVersion": 1.2,
   "library": "terracotta",
   "source": { "mode": "language | existing | url | project", "commit": "…", "measuredAt": "2026-11-13T00:00:00Z" },
   "screens": [{ "id": "list-detail", "kind": ["list", "detail"], "widths": ["wide", "narrow", "phone"] }],
@@ -202,7 +214,7 @@ Every screen in the inventory has one kind: `list`, `detail`, `form`, `dashboard
 
 ```json
 {
-  "specVersion": 1,
+  "specVersion": 1.2,
   "library": "terracotta",
   "checks": [
     {
@@ -227,6 +239,8 @@ Every screen in the inventory has one kind: `list`, `detail`, `form`, `dashboard
 A screen's distance from a library is the root mean square, over measures with a check, of:
 
 - 0 when the value is inside the normal range;
-- otherwise how far outside it is, divided by the spread of that measure across all of Mariachi's languages.
+- otherwise how far outside it is, divided by that measure's scale.
+
+*1.2:* the scale is fixed per measure (`MEASURE_SCALE`): the spread of the measure across all of Mariachi's languages (the 10th to 90th percentile of their typical values), computed once from the screens measured for 1.2 and frozen, so one language's change doesn't move every other language's distances. It's regenerated only with a spec bump (`fingerprint --print-scales` prints a fresh table). A measure missing from the table uses the live spread. A measure whose scale is 0 (every language shares it) can't tell libraries apart and counts as inside.
 
 The distinctiveness check uses the same distance. Every language's own held-out screens should sit nearer to it than to any of the other languages.
