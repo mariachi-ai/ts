@@ -123,7 +123,7 @@ are a contract: a release that changes one is a breaking change and says so.
 | | `name`, `slug` | `slug` is unique across all tenants |
 | | `status` | `active`, `suspended` or `deleted` |
 | `organization_memberships` | `organization_id` (uuid) | references `tenants.id` |
-| | `user_id` (text) | the user's id as the verified token states it |
+| | `user_id` (text) | the user's id as the app knows it (`ctx.userId`): the verified token's subject, with its namespace in front when the verifier has one (`withUserNamespace`). A reader that starts from a token must add the same prefix |
 | | `role` | `owner`, `admin` or `member` |
 | | `status` | `active` or `removed` |
 | | `email`, `name` | copies taken when the user joined; may be null |
