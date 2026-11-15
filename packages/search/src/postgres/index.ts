@@ -70,6 +70,18 @@ function assertDefinition(index: SearchIndex): void {
   }
 }
 
+/** Whether two definitions describe the same fields, whatever order they were written in. */
+function sameFields(a: SearchIndex, b: SearchIndex): boolean {
+  const shape = (index: SearchIndex): string =>
+    JSON.stringify({
+      sortBy: index.defaultSortingField ?? null,
+      fields: [...index.fields]
+        .sort((x, y) => x.name.localeCompare(y.name))
+        .map((f) => [f.name, mapFieldType(f.type), f.facet ?? false, f.sort ?? null, f.index ?? true]),
+    });
+  return shape(a) === shape(b);
+}
+
 const textFieldsOf = (index: SearchIndex): string[] => index.fields.filter((f) => isText(f.type) && f.index !== false).map((f) => f.name);
 
 /** What full-text search runs over: the document's string fields, one per line. */
@@ -138,9 +150,18 @@ export class PostgresSearchAdapter implements SearchClient {
     return this.db.transaction((tx) => fn(tx as unknown as DrizzleDb), config);
   }
 
-  /** One rebuild or removal of an index at a time; held to the end of the transaction. */
+  /** One change to an index's definition, or removal of it, at a time; held to the end of the transaction. */
   private lockIndex(tx: DrizzleDb, name: string): Promise<unknown> {
     return tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`mariachi_search:${name}`}::text))`);
+  }
+
+  /**
+   * This tenant's documents in one index: writes share the lock, a reindex takes it alone. So a tenant's
+   * rebuild waits for, and holds back, that tenant's writes only. Held to the end of the transaction.
+   */
+  private lockDocuments(tx: DrizzleDb, name: string, mode: 'shared' | 'exclusive'): Promise<unknown> {
+    const key = sql`hashtext(${`mariachi_search:${name}:${this.tenant}`}::text)`;
+    return tx.execute(mode === 'shared' ? sql`select pg_advisory_xact_lock_shared(${key})` : sql`select pg_advisory_xact_lock(${key})`);
   }
 
   async connect(): Promise<void> {
@@ -192,11 +213,16 @@ export class PostgresSearchAdapter implements SearchClient {
     }
   }
 
-  private async definition(conn: DrizzleDb, name: string, lock = false): Promise<SearchIndex> {
+  private async find(conn: DrizzleDb, name: string, lock = false): Promise<SearchIndex | undefined> {
     // With `for share`, the definition can't be replaced or removed until this transaction ends
     const found = rows<{ definition: unknown }>(await conn.execute(sql`select definition from ${indexes} where name = ${name} ${lock ? sql`for share` : sql``}`));
-    if (!found[0]) throw new SearchError('search/index-not-found', `Index ${name} not found`);
-    return json<SearchIndex>(found[0].definition);
+    return found[0] ? json<SearchIndex>(found[0].definition) : undefined;
+  }
+
+  private async definition(conn: DrizzleDb, name: string, lock = false): Promise<SearchIndex> {
+    const found = await this.find(conn, name, lock);
+    if (!found) throw new SearchError('search/index-not-found', `Index ${name} not found`);
+    return found;
   }
 
   private async insert(tx: DrizzleDb, index: SearchIndex, collection: string, docs: SearchDocument[]): Promise<void> {
@@ -234,7 +260,10 @@ export class PostgresSearchAdapter implements SearchClient {
 
   async indexDocuments(indexName: string, docs: SearchDocument[]): Promise<void> {
     try {
-      await this.transaction(async (tx) => this.insert(tx, await this.definition(tx, indexName, true), indexName, docs));
+      await this.transaction(async (tx) => {
+        await this.lockDocuments(tx, indexName, 'shared');
+        await this.insert(tx, await this.definition(tx, indexName, true), indexName, docs);
+      });
     } catch (error) {
       throw toSearchError(error, 'search/request-failed', `Failed to index documents in ${indexName}`);
     }
@@ -252,20 +281,29 @@ export class PostgresSearchAdapter implements SearchClient {
   /**
    * Replaces everything the index holds (for this client's tenant) with `docs`, in one transaction: a
    * reader sees the old documents until the commit and the new ones after it, never a mix and never
-   * nothing. Creates the index if it isn't there, and updates its fields if they changed.
+   * nothing. Creates the index if it isn't there.
+   *
+   * An index's fields are everyone's. The client that isn't tenant-scoped may change them here, which
+   * holds back every tenant's writes until it commits and leaves the other tenants' documents to be
+   * reindexed. A tenant's client can't: a definition that differs is refused, and its rebuild waits for
+   * and holds back that tenant's writes only.
    */
   async reindexAlias(alias: string, index: SearchIndex, docs: SearchDocument[]): Promise<void> {
     const definition = { ...index, name: alias };
     assertDefinition(definition);
     try {
       await this.transaction(async (tx) => {
-        await this.lockIndex(tx, alias);
-        // Writing the index row waits for writes in flight and holds later ones until the commit, so none is
-        // lost between the delete and the insert below
-        await tx
-          .insert(indexes)
-          .values({ name: alias, definition })
-          .onConflictDoUpdate({ target: indexes.name, set: { definition, updatedAt: sql`now()` } });
+        // Before any other lock, so two definition changes can't wait on each other
+        if (!this.tenant) await this.lockIndex(tx, alias);
+        await this.lockDocuments(tx, alias, 'exclusive');
+        await tx.insert(indexes).values({ name: alias, definition }).onConflictDoNothing();
+        const current = await this.definition(tx, alias, true);
+        if (!sameFields(current, definition)) {
+          if (this.tenant) {
+            throw new SearchError('search/invalid-input', `The fields of ${alias} belong to every tenant: change them through the client that isn't tenant-scoped, then reindex each tenant`);
+          }
+          await tx.update(indexes).set({ definition, updatedAt: sql`now()` }).where(eq(indexes.name, alias));
+        }
         await tx.execute(sql`delete from ${documents} where tenant_id = ${this.tenant} and collection = ${alias}`);
         await this.insert(tx, definition, alias, docs);
       });

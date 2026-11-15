@@ -328,6 +328,52 @@ describe('PostgresSearchAdapter', () => {
     expect(rows(await database.db.execute(sql`select 1 from mariachi_search_documents where collection = ${name}`))).toHaveLength(0);
   });
 
+  it('keeps one tenant\'s rebuild from holding back, or redefining, the others', async () => {
+    const name = unique('shared');
+    const index: SearchIndex = { name, fields: [{ name: 'title', type: 'string' }, { name: 'kind', type: 'string', facet: true }] };
+    const [acme, globex] = [search.forTenant('acme'), search.forTenant('globex')];
+    // The first tenant to reindex creates the index
+    await acme.reindexAlias(name, index, [{ id: '1', title: 'acme one', kind: 'a' }]);
+    await globex.indexDocument(name, { id: '1', title: 'globex one', kind: 'g' });
+
+    // A rebuild in progress: acme's own writes wait for it, globex's don't
+    const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+    let finish = (): void => {};
+    const held = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
+    let started = (): void => {};
+    const underway = new Promise<void>((resolve) => {
+      started = resolve;
+    });
+    const rebuild = withTransaction(database.db, ctx, async () => {
+      await acme.reindexAlias(name, index, [{ id: '2', title: 'acme two', kind: 'a' }]);
+      started();
+      await held;
+    });
+    await underway;
+    await globex.indexDocument(name, { id: '2', title: 'globex two', kind: 'g' });
+    expect((await globex.search(name, { query: '*' })).total).toBe(2);
+    const own = acme.indexDocument(name, { id: '3', title: 'acme three', kind: 'a' }).then(() => 'written');
+    expect(await Promise.race([own, pause(300).then(() => 'waiting')])).toBe('waiting');
+    finish();
+    await rebuild;
+    expect(await own).toBe('written');
+    expect((await acme.search(name, { query: '*' })).hits.map((h) => h.document.id).sort()).toEqual(['2', '3']);
+
+    // A tenant can't change the fields; the client that isn't tenant-scoped can
+    const narrower: SearchIndex = { name, fields: [{ name: 'title', type: 'string' }] };
+    await expect(acme.reindexAlias(name, narrower, [])).rejects.toMatchObject({ code: 'search/invalid-input' });
+    expect((await acme.search(name, { query: '*', facets: ['kind'] })).total).toBe(2);
+    // The same fields in another order are the same fields
+    await acme.reindexAlias(name, { name, fields: [...index.fields].reverse() }, [{ id: '4', title: 'acme four', kind: 'a' }]);
+    await search.reindexAlias(name, narrower, []);
+    await expect(globex.search(name, { query: '*', facets: ['kind'] })).rejects.toMatchObject({ code: 'search/invalid-input' });
+    // Other tenants' documents are untouched by it
+    expect((await globex.search(name, { query: '*' })).total).toBe(2);
+    await search.deleteIndex(name);
+  });
+
   it('returns the most frequent facet values, ten unless told otherwise', async () => {
     const name = unique('faceted');
     await search.createIndex({ name, fields: [{ name: 'title', type: 'string' }, { name: 'tag', type: 'string', facet: true }] });

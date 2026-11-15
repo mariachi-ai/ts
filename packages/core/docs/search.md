@@ -121,8 +121,11 @@ the new ones after, and an index made with `createIndex` is reindexed the same w
   together, so a reindex that commits meanwhile can't give you hits from before it and counts
   from after.
 - **Tenants.** Index definitions are shared; documents belong to a tenant. `client.forTenant(id)`
-  is a client for one tenant, which is what `tenantScoped` uses. Clearing one tenant's documents is a
-  reindex with none; `deleteIndex` removes the index for everyone and is refused on a tenant's client.
+  is a client for one tenant, which is what `tenantScoped` uses. A tenant's reindex replaces that
+  tenant's documents and holds back only that tenant's writes while it runs. Clearing one tenant's
+  documents is a reindex with none. Changing an index's fields, and `deleteIndex`, are for the
+  client that isn't tenant-scoped and are refused on a tenant's (`search/invalid-input`); after a
+  change of fields, reindex each tenant.
 - **Documents are checked.** A declared field must hold its declared type or be absent
   (`search/invalid-input`). Fields you don't declare are stored and can be filtered on, including
   nested ones (`filters: { 'owner.team': 'red' }`).
@@ -141,6 +144,8 @@ the new ones after, and an index made with `createIndex` is reindexed the same w
 - **Indexes.** Two GIN indexes, on the search vector and on the document (for filters), are part of
   the table definition, so your migration creates them and nothing is created at startup. On a
   table that already holds many documents, edit the migration to `create index concurrently`.
+  Run `analyze mariachi_search_documents` after a bulk load, so the planner knows what the table
+  holds; the GIN index on the vector is what serves one large index.
 
 ## Analytics
 

@@ -8,6 +8,9 @@ interface Collection {
   documents: Map<string, Map<string, SearchDocument>>;
 }
 
+const fieldsOf = (index: SearchIndex): string =>
+  JSON.stringify([index.defaultSortingField ?? null, [...index.fields].sort((a, b) => a.name.localeCompare(b.name)).map((f) => [f.name, mapFieldType(f.type), f.facet ?? false, f.sort ?? null, f.index ?? true])]);
+
 interface State {
   collections: Map<string, Collection>;
   connected: boolean;
@@ -156,6 +159,9 @@ export class MemorySearchAdapter implements SearchClient {
     for (const field of index.fields) mapFieldType(field.type);
     const existing = this.state.collections.get(alias);
     const collection: Collection = existing ?? { index: { ...index, name: alias }, documents: new Map() };
+    if (existing && this.tenant && fieldsOf(existing.index) !== fieldsOf(index)) {
+      throw new SearchError('search/invalid-input', `The fields of ${alias} belong to every tenant: change them through the client that isn't tenant-scoped`);
+    }
     collection.index = { ...index, name: alias };
     this.state.collections.set(alias, collection);
     collection.documents.set(this.tenant, new Map(documents.map((document) => [document.id, document])));

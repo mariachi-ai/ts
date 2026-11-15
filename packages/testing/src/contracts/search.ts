@@ -106,6 +106,9 @@ export function searchContract(name: string, create: () => SearchClient | Promis
         await b.reindexAlias(notes, index, []);
         expect((await b.search(notes, { query: '*' })).total).toBe(0);
         expect((await a.search(notes, { query: '*' })).total).toBe(2);
+        // An index's fields are everyone's: one tenant can't change them
+        await expect(b.reindexAlias(notes, { ...index, fields: [{ name: 'title', type: 'string' }] }, [])).rejects.toMatchObject({ code: 'search/invalid-input' });
+        expect((await a.search(notes, { query: '*', facets: ['kind'] })).facetCounts?.kind).toHaveLength(2);
       }
       await expect(a.deleteIndex(notes)).rejects.toMatchObject({ code: 'search/invalid-input' });
       expect(() => client.forTenant?.('')).toThrow();
