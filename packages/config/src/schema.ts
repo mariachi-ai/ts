@@ -125,7 +125,8 @@ export const AppConfigSchema = z.object({
       errors: z
         .object({
           adapter: z.enum(['noop', 'sentry']).default('noop'),
-          dsn: z.string().optional(),
+          // A current DSN has only a public key and shows as it is; an older `public:secret@` one has its secret hidden
+          dsn: secretUrl(z.string()).optional(),
         })
         .optional(),
     })

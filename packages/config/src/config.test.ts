@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { format, inspect } from 'node:util';
 import { z } from 'zod';
-import { ConfigError } from '@mariachi/core';
+import { ConfigError, redactForOutput } from '@mariachi/core';
 import {
   loadConfig,
   useConfig,
@@ -197,6 +197,37 @@ describe('loadConfig', () => {
       expect(useConfigSection<{ apiKey: string }>('payments').apiKey).toBe('pay_live_0123456789');
       expect(JSON.stringify(config)).not.toContain('pay_live_0123456789');
       expect(inspect(useConfigSection('payments'))).toBe(`{ apiKey: '${REDACTED}', region: 'eu' }`);
+    });
+
+    it('hides a credential in a URL wherever it sits, and leaves a URL without one exactly as written', () => {
+      const shown = (env: Record<string, string>) => JSON.parse(JSON.stringify(loadConfig({}, { env })));
+      // In the query string, as libpq and some hosted databases write it
+      const query = shown({ DATABASE_URL: 'postgres://db.internal:5432/app?user=app&password=query-pass-0123&sslmode=require&sslkey=/keys/client.key' });
+      expect(query.database.url).toBe('postgres://db.internal:5432/app?user=app&password=***&sslmode=require&sslkey=***');
+      expect(shown({ REDIS_URL: 'redis://cache.internal:6379/0?access_token=tok-0123456789' }).redis.url).toBe('redis://cache.internal:6379/0?access_token=***');
+      // A Sentry DSN: today's has a public key only; the older form carried a secret after it
+      const modern = 'https://0123456789abcdef@o42.ingest.sentry.io/4242';
+      expect(shown({ SENTRY_DSN: modern }).observability.errors.dsn).toBe(modern);
+      expect(shown({ SENTRY_DSN: 'https://0123456789abcdef:dsn-secret-0123@o42.ingest.sentry.io/4242' }).observability.errors.dsn).toBe(
+        'https://0123456789abcdef:***@o42.ingest.sentry.io/4242',
+      );
+      const plain = 'postgres://db.internal/app?sslmode=require&application_name=api';
+      expect(shown({ DATABASE_URL: plain }).database.url).toBe(plain);
+      // Not a URL the parser accepts, but something sits where a password would: all of it is hidden
+      expect(shown({ DATABASE_URL: 'app:pw-0123@tcp(db.internal:3306)/app' }).database.url).toBe(REDACTED);
+    });
+
+    it('shows nothing of a secrets store: the env adapter holds the whole environment', async () => {
+      const env = { VENDOR_TOKEN: 'vendor-token-0123456789', TENANT_ACME_VENDOR_TOKEN: 'acme-token-0123456789' };
+      const adapter = new EnvSecretsAdapter(env);
+      await adapter.set('ROTATED', 'rotated-value-0123456789');
+      const store = new Secrets(adapter);
+      expect(await store.getOrThrow('VENDOR_TOKEN')).toBe(env.VENDOR_TOKEN);
+      expect(await store.getForTenant('VENDOR_TOKEN', 'acme')).toBe(env.TENANT_ACME_VENDOR_TOKEN);
+      const text = [JSON.stringify({ ctx: { secrets: store } }), JSON.stringify(adapter), inspect({ store, adapter }, { depth: null, showHidden: false }), format('%o', store)].join('\n');
+      for (const value of [...Object.values(env), 'rotated-value-0123456789']) expect(text, value).not.toContain(value);
+      expect(text).toContain('[Secrets]');
+      expect(redactForOutput({ secrets: store })).toEqual({ secrets: '[Secrets]' });
     });
   });
 

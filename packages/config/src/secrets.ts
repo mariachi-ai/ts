@@ -1,8 +1,12 @@
 import { ConfigError } from '@mariachi/core';
+import { hideContents } from './redact';
 import type { SecretsAdapter } from './types';
 
 export class Secrets implements SecretsAdapter {
-  constructor(private readonly adapter: SecretsAdapter) {}
+  constructor(private readonly adapter: SecretsAdapter) {
+    // It holds the adapter, which holds the values: a logged `ctx.secrets` must show none of them
+    hideContents(this, '[Secrets]');
+  }
 
   get(key: string, tenantId?: string): Promise<string | undefined> {
     return this.adapter.get(key, tenantId);

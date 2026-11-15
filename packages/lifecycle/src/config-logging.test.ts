@@ -1,6 +1,6 @@
 import { Writable } from 'node:stream';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { loadConfig, REDACTED, resetConfig } from '@mariachi/config';
+import { EnvSecretsAdapter, loadConfig, REDACTED, resetConfig, Secrets } from '@mariachi/config';
 import { ConsoleLoggerAdapter, PinoLoggerAdapter } from '@mariachi/observability';
 import { inspect } from 'node:util';
 
@@ -42,6 +42,8 @@ describe('logging the loaded config with the real logger', () => {
       logger.info({ first: shared, second: shared }, 'the same object twice');
       logger.child({ billing: config.billing }).warn({ startup: { ai: config.ai, encryption: [config.encryption] } }, 'nested');
       logger.error({ err: Object.assign(new Error('could not start'), { config }) }, 'in an error');
+      // A request context carries the secrets store, and the env adapter behind it holds the whole environment
+      logger.info({ ctx: { tenantId: 't1', secrets: new Secrets(new EnvSecretsAdapter(env)) } }, 'a context');
 
       const text = out.text();
       for (const secret of forbidden) expect(text, secret).not.toContain(secret);

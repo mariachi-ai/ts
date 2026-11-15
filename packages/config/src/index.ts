@@ -132,7 +132,7 @@ export type { AppConfig, AppConfigInput, ConfigOptions, SecretsAdapter, FeatureF
 export type { FlagContext, FeatureFlagRecord, FeatureFlagStore, TenantFlagOverride } from './types';
 export { AppConfigSchema };
 export { buildConfigFromEnv, readEnv };
-export { REDACTED, secret, secretUrl } from './redact';
+export { REDACTED, hideContents, secret, secretUrl } from './redact';
 export { EnvSecretsAdapter } from './adapters/env';
 export { Secrets } from './secrets';
 export { CachedFeatureFlags, StoreFeatureFlagAdapter, StaticFeatureFlagAdapter } from './flags/adapters';

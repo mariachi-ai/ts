@@ -22,7 +22,10 @@ export function secret<T extends z.ZodTypeAny>(schema: T): T {
   return schema;
 }
 
-/** Marks a URL that may carry a password (`postgres://user:pass@host/db`): only the password is hidden. */
+/**
+ * Marks a URL that may carry a password (`postgres://user:pass@host/db`, `...?password=pass`): only the
+ * password, and any query parameter named like a credential, is hidden.
+ */
 export function secretUrl<T extends z.ZodTypeAny>(schema: T): T {
   marked.set(schema, 'url');
   return schema;
@@ -48,15 +51,26 @@ function shapeOf(schema: z.ZodTypeAny | undefined): Record<string, z.ZodTypeAny>
   return undefined;
 }
 
+/** Query parameters that carry a credential in connection URLs: `?password=`, `?sslkey=`, `?access_token=`, `?auth=`. */
+const SECRET_PARAM = /pass|pwd|token|secret|key|credential|signature|^auth$|^sig$/i;
+
+/** Something where a password would sit, in a string with no `//` before it: `user:pass@…`. */
+const USERINFO_WITHOUT_SLASHES = /^[^/?#]*:[^@/\s]+@/;
+
 function hideUrlPassword(value: string): string {
   try {
     const url = new URL(value);
-    if (!url.password) return value;
-    url.password = '***';
+    const params = [...url.searchParams.keys()].filter((name) => SECRET_PARAM.test(name) && url.searchParams.get(name));
+    // `user:pass@tcp(host)/db` parses, as a scheme and a path, with no password the parser knows of
+    if (!url.password && USERINFO_WITHOUT_SLASHES.test(value)) return REDACTED;
+    // Unchanged, character for character, when there is nothing to hide
+    if (!url.password && !params.length) return value;
+    if (url.password) url.password = '***';
+    for (const name of params) url.searchParams.set(name, '***');
     return url.toString();
   } catch {
     // Not a URL the parser accepts: hide all of it sooner than show a password
-    return /:[^@/\s]+@/.test(value) ? REDACTED : value;
+    return /:[^@/\s]+@/.test(value) || SECRET_PARAM.test(value) ? REDACTED : value;
   }
 }
 
@@ -98,4 +112,19 @@ export function protectSecrets<T>(value: T, schema: z.ZodTypeAny | undefined): T
     writable: true,
   });
   return value;
+}
+
+/**
+ * For a class that holds secrets it should never show (a secrets store, say): logging, printing or
+ * serialising an instance gives `label` and nothing of what it holds.
+ *
+ * ```ts
+ * class VaultSecrets { constructor() { hideContents(this, '[VaultSecrets]'); } }
+ * ```
+ */
+export function hideContents(instance: object, label: string): void {
+  const shown = () => label;
+  for (const key of ['toJSON', REDACT, inspect.custom] as const) {
+    Object.defineProperty(instance, key, { value: shown, enumerable: false, configurable: true, writable: true });
+  }
 }
