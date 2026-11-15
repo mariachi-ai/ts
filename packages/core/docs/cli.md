@@ -46,6 +46,50 @@ never overwrite files without `--force`: if any target exists, nothing is writte
 edited by inserting above the `// mariachi:<kind>` marker comments, so keep those comments.
 `--project-root <dir>` targets another directory.
 
+## dev
+
+```bash
+mariachi dev                 # everything a first run needs, then the app with reload
+mariachi dev --prepare-only  # the preparation without starting the app (CI, scripts)
+```
+
+Gets a project from a fresh checkout to running, doing only what's missing:
+
+| Step | When | What it does |
+| --- | --- | --- |
+| `.env` | There is none | Copies `.env.example`. An existing `.env` is never written |
+| Services | The project has a Compose file, and its local Postgres or Redis isn't answering | `docker compose up -d`, then waits up to a minute for them. `--no-services` skips this |
+| First migration | The schema has tables and the migrations folder is empty | Writes `drizzle/0000_init.sql`. Later schema changes are never turned into migrations here: it prints a note, and `mariachi db generate` stays a deliberate step |
+| Migrate | Migrations are pending | Applies them |
+| Run | Always | `tsx watch --env-file=.env src/main.ts` (`--entry <file>`, `--no-watch`) |
+
+A database or Redis on another host is never started for you: `dev` says it can't reach it and stops.
+
+## doctor
+
+```bash
+mariachi doctor            # exit 1 when something has to be fixed
+mariachi doctor --json     # { ready, checks: [{ name, status, detail, fix? }] }
+```
+
+Checks that the project is ready to run, in the order a first run goes wrong, and says what to run
+for each problem:
+
+| Check | Fails when | Warns when |
+| --- | --- | --- |
+| `node` | Node is older than the project's `engines.node` | |
+| `project` | There's no `package.json` depending on `@mariachi/core`, or no `src/` | |
+| `dependencies` | Packages aren't installed | Installed `@mariachi/*` packages are at different versions |
+| `env` | `.env` is missing and the environment lacks what `.env.example` lists | A variable `.env.example` lists is empty |
+| `config` | The configuration the app would load is invalid (it names the variable) | |
+| `database` | `DATABASE_URL` is unset or Postgres doesn't answer | |
+| `migrations` | The schema has tables and no migration exists, or migrations aren't applied | The schema has changes no migration captures |
+| `redis` | `REDIS_URL` is unset though `.env.example` lists it, or Redis doesn't answer | |
+| `architecture` | `mariachi validate` finds errors | It finds warnings |
+
+A check that depends on one that failed is skipped, not failed twice. Passwords in URLs are shown
+as `***`. `--strict` exits 1 on warnings too; `--timeout <ms>` sets how long to wait for a service.
+
 ## validate
 
 ```bash
