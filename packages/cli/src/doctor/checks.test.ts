@@ -36,6 +36,8 @@ describe('doctor helpers', () => {
     const refused = Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:1'), { code: 'ECONNREFUSED' });
     expect(reason(Object.assign(new Error('Could not connect to Postgres'), { cause: refused }))).toBe('connect ECONNREFUSED 127.0.0.1:1');
     expect(reason(Object.assign(new Error('password authentication failed'), { code: '28P01' }))).toBe('password authentication failed (28P01)');
+    // A framework error keeps its cause in metadata
+    expect(reason(Object.assign(new Error('Could not connect to Postgres'), { code: 'database/connect-failed', metadata: { cause: refused } }))).toBe('connect ECONNREFUSED 127.0.0.1:1');
     expect(reason('plain')).toBe('plain');
   });
 

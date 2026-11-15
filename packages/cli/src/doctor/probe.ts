@@ -23,8 +23,10 @@ function within<T>(work: Promise<T>, ms: number, what: string): Promise<T> {
 
 /** The root cause's message: database errors wrap the driver's. */
 export function reason(error: unknown): string {
-  let e = error as { message?: string; cause?: unknown; code?: string } | undefined;
-  while (e?.cause && typeof e.cause === 'object') e = e.cause as typeof e;
+  type Wrapped = { message?: string; cause?: unknown; code?: string; metadata?: { cause?: unknown } };
+  let e = error as Wrapped | undefined;
+  // Node's errors carry the cause as `cause`; the framework's carry it in their metadata
+  for (let next = e?.cause ?? e?.metadata?.cause; next && typeof next === 'object'; next = e?.cause ?? e?.metadata?.cause) e = next as Wrapped;
   if (!e?.message) return String(error);
   return e.code && !e.message.includes(e.code) && !e.code.startsWith('cli/') ? `${e.message} (${e.code})` : e.message;
 }
