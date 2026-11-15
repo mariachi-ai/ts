@@ -27,6 +27,8 @@ export {
 
 export { aiSessionsTable, aiMessagesTable, aiTelemetryTable } from '@mariachi/ai/schema';
 
+export { jobsTable, jobSchedulesTable } from '@mariachi/jobs/schema';
+
 export {
   notificationsTable,
   notificationPreferencesTable,

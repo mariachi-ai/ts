@@ -42,7 +42,7 @@
 | Package | Status | What it is | Use it when | Entry points |
 | --- | --- | --- | --- | --- |
 | `@mariachi/events` | beta | Domain events with envelopes, consumer groups, Redis Streams/NATS JetStream adapters, dead letters and a transactional outbox. | Reacting to something that happened in another module or process | `createEventBus`, `DefaultEvents`, `defineEvent`, `Outbox`, `OutboxRelay` |
-| `@mariachi/jobs` | beta | Background jobs and cron on BullMQ with context propagation, retries, dedup and a dead-letter queue. | Work that runs later, on a schedule, or must survive restarts | `createJobQueue`, `defineJob`, `DefaultJobs` |
+| `@mariachi/jobs` | beta | Background jobs and cron on BullMQ or Postgres, with context propagation, retries, dedup and a dead-letter queue. | Work that runs later, on a schedule, or must survive restarts | `createJobQueue`, `defineJob`, `DefaultJobs`, `createPostgresJobQueue` |
 | `@mariachi/realtime` | beta | WebSockets with channel authorization, heartbeats, presence and cross-instance fanout. | Pushing live updates to connected clients | `DefaultRealtime`, `WSAdapter`, `createRealtimeInfra` |
 
 ## Security and access

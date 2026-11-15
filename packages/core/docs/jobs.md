@@ -1,7 +1,42 @@
 # Jobs
 
-Background work on BullMQ (Redis), or in memory for tests. Use a job when work should leave the
-request path, run later or on a schedule, or needs retries that survive a restart.
+Background work in Postgres or on BullMQ (Redis), or in memory for tests. Use a job when work should
+leave the request path, run later or on a schedule, or needs retries that survive a restart.
+
+## Which queue
+
+| | Postgres (`@mariachi/jobs/postgres`) | BullMQ (`createJobQueue({ adapter: 'bullmq' })`) |
+| --- | --- | --- |
+| Needs | The database the app already has | Redis |
+| Enqueue inside `withTransaction` | Commits or rolls back with the business write | Not transactional: use the [outbox](./events.md) for that |
+| Throughput | Plenty for most apps: workers poll (1 s by default; a job enqueued in the same process starts at once) | Higher, and push-based |
+| Completed jobs | Deleted | Kept for inspection (`keepCompleted`) |
+
+Start with Postgres: one service fewer to run, and a job can't be lost or orphaned by a rolled-back
+request. Move to BullMQ when the queue's volume calls for it. Definitions, `enqueue`, retries, the
+dead-letter list, schedules and hooks are the same on both.
+
+```ts
+import { createPostgresJobQueue } from '@mariachi/jobs/postgres';
+
+const jobs = new DefaultJobs({ queue: createPostgresJobQueue(database.db, { prefix: config.serviceName }, logger) }, instrumentation);
+```
+
+It needs two tables. Export them from your schema so `mariachi db generate` writes the migration:
+
+```ts
+// src/schema/index.ts
+export { jobsTable, jobSchedulesTable } from '@mariachi/jobs/schema';
+```
+
+Options: `queue` or `prefix` (workers with the same queue name share it), `concurrency` (5),
+`pollIntervalMs` (1000), `lockMs` (30000), `defaultRetry`, `deadLetter`, `shutdownTimeoutMs`.
+
+Any number of processes can work one queue: a job is claimed with `FOR UPDATE SKIP LOCKED`, and the
+worker renews its claim while the handler runs. **A job runs at least once.** If a process dies
+mid-job, the claim lapses after `lockMs` and another worker runs the job again, counted as an
+attempt; a job that dies on every allowed attempt is dead-lettered as `jobs/stalled`. So handlers
+must be safe to repeat: wrap side effects that must happen once with `runOnce`.
 
 ## Define and register
 
@@ -19,7 +54,8 @@ export const sendDigestJob = defineJob({
   },
 });
 
-const jobs = new DefaultJobs({ queue: createJobQueue({ adapter: 'bullmq', redisUrl, prefix: 'app' }, logger) }, instrumentation);
+const jobs = new DefaultJobs({ queue: createPostgresJobQueue(database.db, { prefix: 'app' }, logger) }, instrumentation);
+// or, on Redis: createJobQueue({ adapter: 'bullmq', redisUrl, prefix: 'app' }, logger)
 jobs.registerJob(sendDigestJob);
 lifecycle.manage('jobs', jobs);                        // connect/disconnect/health
 lifecycle.startup.register({ name: 'jobs-worker', priority: 90, fn: () => jobs.start() }); // worker processes only
@@ -37,9 +73,10 @@ await jobs.cancel(ctx, jobId);                                               // 
 ```
 
 The context is serialized into the job, so the handler logs with the same `traceId` and repositories
-are scoped to the same tenant. Dedup keys may contain any characters (they're hashed into a BullMQ-safe
-id). A key only dedups while the job still exists (waiting, delayed, or kept after completion); to
-guarantee a side effect happens once, also wrap it with `runOnce`.
+are scoped to the same tenant. Dedup keys may contain any characters (on BullMQ they're hashed into
+a safe id). A key only dedups while the job still exists: waiting, delayed, running or
+dead-lettered, and on BullMQ also while it's kept after completion. To guarantee a side effect
+happens once, also wrap it with `runOnce`.
 
 ## Retries and the dead-letter queue
 
@@ -74,10 +111,14 @@ jobs.schedule({ name: 'nightly-digest', cron: '0 6 * * *', timezone: 'Europe/Ams
 await jobs.unschedule('nightly-digest');
 ```
 
-Schedules are upserted when `start()` runs, and any schedule in Redis that this process didn't register
-is removed. Removing a `schedule()` call from code therefore removes the schedule on the next deploy.
+Schedules are upserted when `start()` runs, and any schedule in the queue that this process didn't
+register is removed. Removing a `schedule()` call from code therefore removes the schedule on the next deploy.
 It also means every process that calls `start()` must register the full set of schedules; an API-only
 process should not call `start()`.
+
+On Postgres, each tick is enqueued once however many workers are running (the job's id is the
+schedule and the tick's time), a restart keeps the next tick, and ticks missed while no worker was
+running are not replayed.
 
 ## Shutdown
 

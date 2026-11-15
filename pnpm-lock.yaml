@@ -1153,13 +1153,25 @@ importers:
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
+      '@mariachi/database':
+        specifier: workspace:*
+        version: link:../database
       bullmq:
         specifier: ^5
         version: 5.70.1
+      cron-parser:
+        specifier: ^4.9.0
+        version: 4.9.0
       zod:
         specifier: ^3.24
         version: 3.25.76
     devDependencies:
+      '@mariachi/database-postgres':
+        specifier: workspace:*
+        version: link:../database-postgres
+      drizzle-orm:
+        specifier: ^0.38
+        version: 0.38.4(@opentelemetry/api@1.9.0)(@types/pg@8.6.1)(postgres@3.4.8)(react@19.2.4)
       tsup:
         specifier: ^8
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
@@ -1348,6 +1360,9 @@ importers:
       '@mariachi/database':
         specifier: workspace:*
         version: link:../database
+      '@mariachi/jobs':
+        specifier: workspace:*
+        version: link:../jobs
       '@mariachi/notifications':
         specifier: workspace:*
         version: link:../notifications
