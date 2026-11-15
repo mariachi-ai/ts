@@ -71,7 +71,7 @@ a sub-path, as the Pages deploy does.
 | --- | --- |
 | `pnpm --filter @mariachi/explorer test:unit` | loaders against the real repo and fixtures |
 | `pnpm explore:test` | every route loads with no console errors and no broken internal links; axe on every page, and on key pages in every preset and mode; search, theming, compare, playground, override isolation |
-| `pnpm explore:visual` | screenshots of the kitchen sink and sample pages in every preset and mode |
+| `pnpm explore:visual` | screenshots of the kitchen sink and each sample's frame in every preset and mode, and of the shell (a package page's header with the package's own details masked, and a docs page) |
 
 Browser tests need a build first (`pnpm build`). Visual baselines are per platform; the committed ones
 are Linux, generated in the Playwright image CI uses:
