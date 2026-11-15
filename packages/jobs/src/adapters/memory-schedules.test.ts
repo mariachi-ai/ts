@@ -9,14 +9,14 @@ const logger: Logger = { info() {}, warn() {}, debug() {}, error: (fields) => vo
 const MINUTE = 60_000;
 
 function setup() {
-  const ran: Array<{ at: string; data: unknown }> = [];
+  const ran: Array<{ at: string; data: unknown; jobId: string }> = [];
   const queue = new MemoryJobAdapter({}, logger);
   queue.registerJob(
     defineJob({
       name: 'digest.send',
       schema: z.object({ list: z.string().optional() }),
-      handler: async (_ctx, data) => {
-        ran.push({ at: new Date().toISOString(), data });
+      handler: async (ctx, data) => {
+        ran.push({ at: new Date().toISOString(), data, jobId: ctx.jobId });
       },
     }),
   );
@@ -39,7 +39,8 @@ describe('cron schedules in the in-memory queue', () => {
     await queue.start();
     expect(ran).toEqual([]);
     await vi.advanceTimersByTimeAsync(30_000 + 50);
-    expect(ran).toEqual([{ at: expect.stringMatching(/^2026-11-15T10:01:00/), data: { list: 'weekly' } }]);
+    // The id is the schedule and the tick's time, as the Postgres queue writes it
+    expect(ran).toEqual([{ at: expect.stringMatching(/^2026-11-15T10:01:00/), data: { list: 'weekly' }, jobId: 'schedule:every-minute:2026-11-15T10:01:00.000Z' }]);
     await vi.advanceTimersByTimeAsync(2 * MINUTE);
     expect(ran.map((run) => run.at.slice(11, 16))).toEqual(['10:01', '10:02', '10:03']);
     await queue.stop();
@@ -79,6 +80,23 @@ describe('cron schedules in the in-memory queue', () => {
     await queue.unregister('digest');
     await vi.advanceTimersByTimeAsync(10 * MINUTE);
     expect(ran).toHaveLength(2);
+    await queue.stop();
+  });
+
+  it('never runs a time twice when the clock steps back', async () => {
+    const { queue, ran } = setup();
+    queue.register({ name: 'every-minute', cron: '* * * * *', jobName: 'digest.send' });
+    await queue.start();
+    await vi.advanceTimersByTimeAsync(30_000 + 50);
+    expect(ran.map((run) => run.jobId)).toEqual(['schedule:every-minute:2026-11-15T10:01:00.000Z']);
+    // The machine's clock is set back five minutes (a time sync, a VM thawed)
+    vi.setSystemTime(new Date('2026-11-15T09:56:00Z'));
+    // The times it has already passed come round again on the clock, and none of them runs
+    await vi.advanceTimersByTimeAsync(5 * MINUTE + 30_000);
+    expect(ran).toHaveLength(1);
+    // The next one is the one after the last that ran
+    await vi.advanceTimersByTimeAsync(MINUTE);
+    expect(ran.map((run) => run.jobId)).toEqual(['schedule:every-minute:2026-11-15T10:01:00.000Z', 'schedule:every-minute:2026-11-15T10:02:00.000Z']);
     await queue.stop();
   });
 
