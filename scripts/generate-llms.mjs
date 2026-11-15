@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Generates packages/core/docs/llms.txt, the index of the docs for coding agents, from the index in
-// packages/core/docs/README.md. `--check` fails if the file is stale, or if a doc is in the folder
-// and not in the index (CI). `mariachi docs` reads the file.
+// packages/core/docs/README.md. `--check` fails if the file is stale, if a doc is in the folder and
+// not in the index, or if an index line doesn't say what its doc is (CI). `mariachi docs` reads the file.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -25,13 +25,6 @@ function firstParagraph(text) {
     .trim();
 }
 
-/** A doc's own first sentence, for an index line that gives no description. */
-function ownSummary(file) {
-  const paragraph = firstParagraph(fs.readFileSync(path.join(DOCS, file), 'utf8')).replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-  const sentence = /^(.+?[.:])(\s|$)/.exec(paragraph)?.[1] ?? paragraph;
-  return sentence.replace(/[.:]$/, '');
-}
-
 const sections = [];
 const listed = new Set();
 let current;
@@ -45,7 +38,8 @@ for (const line of lines) {
   if (!current || !/^\s*(-|\d+\.) /.test(line)) continue;
   const links = [...line.matchAll(/\[[^\]]*\]\(\.\/([^)\s#]+\.md)\)/g)].map((m) => m[1]);
   if (links.length === 0) continue;
-  // What follows the last link's colon describes the line; with several links on a line, each gets its own
+  // What follows the link's colon says what the doc is. A person writes it: a guess from the doc's
+  // first words gave "Goal" and "Accepted".
   const described = links.length === 1 ? /\)\s*:\s*(.+)$/.exec(line)?.[1]?.trim() : undefined;
   for (const file of links) {
     if (!fs.existsSync(path.join(DOCS, file))) {
@@ -54,7 +48,11 @@ for (const line of lines) {
     }
     if (listed.has(file)) continue;
     listed.add(file);
-    const summary = (described ?? ownSummary(file)).replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    const summary = (described ?? '').replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+    if (summary.split(/\s+/).filter(Boolean).length < 3 || summary.startsWith('```')) {
+      errors.push(`README.md lists ${file} without saying what it is: give it a line of its own, "- [${path.basename(file)}](./${file}): a few words about it"`);
+      continue;
+    }
     current.entries.push({ name: file.replace(/\.md$/, ''), file, summary });
   }
 }
