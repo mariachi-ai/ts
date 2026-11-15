@@ -56,7 +56,9 @@ describe('cost', () => {
   it('merges overrides, matches dated ids by prefix, and prices unknown models at 0', () => {
     expect(resolveRates('gpt-4o-2024-08-06')).toEqual(resolveRates('gpt-4o'));
     expect(resolveRates('gpt-4o-mini-2024-07-18')).toEqual(resolveRates('gpt-4o-mini'));
-    expect(estimateCost('claude-sonnet-5', 1000, 1000)).toBe(0);
+    expect(estimateCost('some-unknown-model', 1000, 1000)).toBe(0);
+    expect(estimateCost('claude-sonnet-5-5', 1000, 1000)).toBeCloseTo(0.012);
+    expect(estimateCost('claude-opus-5-5', 1000, 1000)).toBeCloseTo(0.024);
     expect(estimateCost('claude-sonnet-5', 1000, 1000, { 'claude-sonnet-5': { input: 1, output: 2 } })).toBe(3);
     expect(resolveRates('gpt-4', { 'claude-x': { input: 1, output: 1 } })).toBeDefined();
   });

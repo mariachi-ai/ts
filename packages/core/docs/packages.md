@@ -61,7 +61,7 @@
 
 | Package | Status | What it is | Use it when | Entry points |
 | --- | --- | --- | --- | --- |
-| [`@mariachi/ai`](../../ai/README.md) | beta | LLM sessions persisted in Postgres, with token budgets, streaming, tools, agents, RAG, provider fallback and cost tracking. | Calling language models | `createAI`, `DefaultAI`, `AnthropicAdapter`, `FallbackAdapter`, `runAgent` |
+| [`@mariachi/ai`](../../ai/README.md) | beta | LLM sessions persisted in Postgres, with token budgets, streaming, tools, agents, RAG, provider fallback and cost tracking. | Calling language models | `createAI`, `DefaultAI`, `AnthropicAdapter`, `OpenAIAdapter`, `GoogleAdapter`, `FallbackAdapter`, `runAgent` |
 | [`@mariachi/audit`](../../audit/README.md) | beta | Append-only audit log enforced by a database trigger, with per-tenant hash chaining, tenant-scoped queries, retention and export. | Recording who did what, for compliance or support | `DefaultAudit`, `DrizzleAuditLog`, `installAuditAppendOnly` |
 | [`@mariachi/billing`](../../billing/README.md) | beta | Stripe billing with a local Postgres mirror: customers, subscriptions, plans, charges, refunds, a credit ledger, usage and replayable webhooks. | Taking payments, metering usage or checking entitlements | `DefaultBilling`, `createBillingAdapter`, `createBillingWebhookHandler`, `DrizzleBillingStore` |
 | [`@mariachi/integrations`](../../integrations/README.md) | beta | Third-party API integrations: validated functions with retries, per-tenant encrypted credentials, a callable registry and webhook signature checks. | Wrapping an external API | `defineIntegrationFn`, `IntegrationRegistry`, `resolveTenantCredential` |

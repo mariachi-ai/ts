@@ -26,8 +26,10 @@ describe('loadConfig', () => {
 
   it('reads AI fallbacks and cost table from env', () => {
     const config = loadConfig({}, {
-      env: { AI_FALLBACK_MODELS: 'gpt-4o, gpt-4o-mini', AI_COST_TABLE: '{"claude-sonnet-5":{"input":0.003,"output":0.015}}' },
+      env: { AI_FALLBACK_MODELS: 'gpt-4o, gpt-4o-mini', AI_COST_TABLE: '{"claude-sonnet-5":{"input":0.003,"output":0.015}}', AI_BASE_URL: 'https://ai.example.com' },
     });
+    expect(config.ai?.baseUrl).toBe('https://ai.example.com');
+    expect(() => loadConfig({}, { env: { AI_BASE_URL: 'not a url' } })).toThrow(ConfigError);
     expect(config.ai?.fallbackModels).toEqual(['gpt-4o', 'gpt-4o-mini']);
     expect(config.ai?.costTable?.['claude-sonnet-5']).toEqual({ input: 0.003, output: 0.015 });
     expect(() => loadConfig({}, { env: { AI_COST_TABLE: '{nope' } })).toThrow(ConfigError);
