@@ -21,6 +21,7 @@ export const AppConfigSchema = z.object({
     .object({
       adapter: z.string().default('postgres'),
       url: z.string().url(),
+      /** @deprecated Not used: the Postgres driver opens connections on demand and closes idle ones. Only `poolMax` bounds the pool. */
       poolMin: z.number().int().min(0).default(2),
       poolMax: z.number().int().min(1).default(10),
     })
@@ -43,8 +44,12 @@ export const AppConfigSchema = z.object({
   encryption: z
     .object({
       adapter: z.enum(['local', 'aws-kms', 'gcp-kms']).default('local'),
+      /** The local adapter's key (`ENCRYPTION_KEY`). */
       key: z.string().min(32).optional(),
+      /** Which generation `key` is. Use it as the key's id (`keys: { ['v' + keyVersion]: key }`), and raise it when you rotate. */
       keyVersion: z.number().int().positive().default(1),
+      /** The KMS key to wrap data keys with (`ENCRYPTION_KMS_KEY_ID`): an AWS key id or ARN, or a GCP key name. */
+      kmsKeyId: z.string().optional(),
     })
     .optional(),
   storage: z
@@ -53,6 +58,10 @@ export const AppConfigSchema = z.object({
       bucket: z.string().optional(),
       region: z.string().optional(),
       basePath: z.string().optional(),
+      /** Signs the local adapter's URLs (`STORAGE_SIGNING_SECRET`). */
+      signingSecret: z.string().min(32).optional(),
+      /** Where public objects are served from, e.g. a CDN or `/api/storage` (`STORAGE_PUBLIC_BASE_URL`). */
+      publicBaseUrl: z.string().optional(),
     })
     .optional(),
   billing: z
@@ -101,6 +110,8 @@ export const AppConfigSchema = z.object({
         .object({
           adapter: z.enum(['pino', 'console']).default('pino'),
           level: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+          /** Human-readable lines for a terminal (`LOG_PRETTY`). Needs `pino-pretty`. Not for production. */
+          pretty: z.boolean().optional(),
         })
         .optional(),
       tracing: z

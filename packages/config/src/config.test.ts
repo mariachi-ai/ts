@@ -118,6 +118,30 @@ describe('loadConfig', () => {
     }
   });
 
+  it('reads the storage, encryption and logging settings the docs name', () => {
+    const config = loadConfig(
+      {},
+      {
+        env: {
+          STORAGE_ADAPTER: 'local',
+          STORAGE_BASE_PATH: './storage',
+          STORAGE_SIGNING_SECRET: 's'.repeat(32),
+          STORAGE_PUBLIC_BASE_URL: '/api/storage',
+          ENCRYPTION_ADAPTER: 'aws-kms',
+          ENCRYPTION_KMS_KEY_ID: 'arn:aws:kms:eu-west-1:1:key/abc',
+          ENCRYPTION_KEY_VERSION: '3',
+          LOG_PRETTY: 'true',
+        },
+      },
+    );
+    expect(config.storage).toMatchObject({ adapter: 'local', basePath: './storage', signingSecret: 's'.repeat(32), publicBaseUrl: '/api/storage' });
+    expect(config.encryption).toMatchObject({ adapter: 'aws-kms', kmsKeyId: 'arn:aws:kms:eu-west-1:1:key/abc', keyVersion: 3 });
+    expect(config.observability?.logging?.pretty).toBe(true);
+    // A signing secret too short to sign anything safely is refused
+    expect(() => loadConfig({}, { env: { STORAGE_SIGNING_SECRET: 'short' } })).toThrow(ConfigError);
+    expect(() => loadConfig({}, { env: { LOG_PRETTY: 'sometimes' } })).toThrow(/LOG_PRETTY must be true or false/);
+  });
+
   it('defaults observability adapters to noop', () => {
     const config = loadConfig({ observability: { tracing: {}, errors: {} } }, { env: {} });
     expect(config.observability?.tracing?.adapter).toBe('noop');

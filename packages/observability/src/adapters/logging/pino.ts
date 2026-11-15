@@ -1,6 +1,6 @@
 import pino from 'pino';
 import type { Logger } from '@mariachi/core';
-import { currentContext } from '@mariachi/core';
+import { currentContext, loadOptionalPeer } from '@mariachi/core';
 
 /** Adds the ambient Context's identifiers to every log line. */
 export function contextBindings(): Record<string, unknown> {
@@ -14,8 +14,14 @@ export function contextBindings(): Record<string, unknown> {
 
 export interface PinoLoggerOptions {
   level?: string;
+  /**
+   * Human-readable lines instead of JSON, for a terminal. Needs the optional peer `pino-pretty`.
+   * Not for production: log collectors expect the JSON.
+   */
   pretty?: boolean;
   redact?: string[];
+  /** Where to write. Default: stdout. */
+  destination?: NodeJS.WritableStream;
 }
 
 const DEFAULT_REDACT = [
@@ -39,12 +45,22 @@ export class PinoLoggerAdapter implements Logger {
     if (options && '__pino' in options) {
       this.#instance = options.__pino;
     } else {
-      this.#instance = pino({
+      const settings = {
         level: options?.level ?? 'info',
         mixin: contextBindings,
         redact: { paths: options?.redact ?? DEFAULT_REDACT, censor: '[REDACTED]' },
         serializers: { err: pino.stdSerializers.err, error: pino.stdSerializers.err },
-      });
+      };
+      if (options?.pretty) {
+        // In-process and synchronous (no worker thread), so lines come out in order and nothing is lost at exit
+        const pretty = loadOptionalPeer<(options: Record<string, unknown>) => pino.DestinationStream>('pino-pretty', 'PinoLoggerAdapter({ pretty: true })', import.meta.url);
+        // Colour is for a terminal. Given somewhere else to write (a file, a test's stream), the lines are plain text;
+        // on stdout pino-pretty decides, which honours NO_COLOR and FORCE_COLOR.
+        const destination = options.destination as (NodeJS.WritableStream & { isTTY?: boolean }) | undefined;
+        this.#instance = pino(settings, pretty({ sync: true, ...(destination ? { destination, colorize: destination.isTTY === true } : {}) }));
+      } else {
+        this.#instance = options?.destination ? pino(settings, options.destination as pino.DestinationStream) : pino(settings);
+      }
     }
   }
 
