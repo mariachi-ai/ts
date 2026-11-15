@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import cronParser from 'cron-parser';
 import { JobsError, type Logger } from '@mariachi/core';
 import type {
   DeadLetterEntry,
@@ -24,8 +25,19 @@ interface PendingJob {
 
 /**
  * In-process queue with the same semantics as BullMQ (retry/backoff, dedup, DLQ). For local
- * development and tests; jobs are lost on restart. Cron schedules are not executed.
+ * development and tests; jobs are lost on restart. Cron schedules run while this process does, in
+ * this process only: a run that was due while it was stopped is not made up.
  */
+const MAX_TIMEOUT_MS = 2 ** 31 - 1;
+
+function nextRun(schedule: ScheduleDefinition, after: Date): Date {
+  try {
+    return cronParser.parseExpression(schedule.cron, { currentDate: after, tz: schedule.timezone }).next().toDate();
+  } catch (error) {
+    throw new JobsError('jobs/invalid-schedule', `Cron expression "${schedule.cron}" can't be read: ${(error as Error).message}`);
+  }
+}
+
 export class MemoryJobAdapter implements JobQueue, JobWorker, JobScheduler {
   private readonly definitions = new Map<string, JobDefinition>();
   private readonly pending = new Map<string, PendingJob>();
@@ -33,6 +45,7 @@ export class MemoryJobAdapter implements JobQueue, JobWorker, JobScheduler {
   private readonly listeners: JobFailureListener[] = [];
   private readonly completedListeners: JobCompletedListener[] = [];
   private readonly schedules = new Map<string, ScheduleDefinition>();
+  private readonly scheduleTimers = new Map<string, NodeJS.Timeout>();
   private running = false;
   private readonly inflight = new Set<Promise<void>>();
   private readonly abort = new AbortController();
@@ -94,22 +107,57 @@ export class MemoryJobAdapter implements JobQueue, JobWorker, JobScheduler {
   }
 
   register(schedule: ScheduleDefinition): void {
+    // Read now, so a cron expression that can't be read fails where it is written
+    nextRun(schedule, new Date());
     this.schedules.set(schedule.name, schedule);
+    if (this.running) this.arm(schedule);
   }
 
   async unregister(name: string): Promise<void> {
     this.schedules.delete(name);
+    this.disarm(name);
   }
 
   async start(): Promise<void> {
     this.running = true;
     for (const job of this.pending.values()) if (!job.timer) this.schedule(job, 0);
+    for (const schedule of this.schedules.values()) this.arm(schedule);
   }
 
   async stop(): Promise<void> {
     this.running = false;
     for (const job of this.pending.values()) if (job.timer) clearTimeout(job.timer);
+    for (const name of [...this.scheduleTimers.keys()]) this.disarm(name);
     await Promise.allSettled([...this.inflight]);
+  }
+
+  private disarm(name: string): void {
+    const timer = this.scheduleTimers.get(name);
+    if (timer) clearTimeout(timer);
+    this.scheduleTimers.delete(name);
+  }
+
+  /** Waits for the schedule's next time, enqueues its job, and waits for the one after. */
+  private arm(schedule: ScheduleDefinition): void {
+    this.disarm(schedule.name);
+    const due = nextRun(schedule, new Date());
+    // A timer can't wait longer than this; a schedule further off is looked at again then
+    const wait = Math.min(due.getTime() - Date.now(), MAX_TIMEOUT_MS);
+    const timer = setTimeout(() => {
+      this.scheduleTimers.delete(schedule.name);
+      // Replaced or removed while this was waiting: the newer one has its own timer
+      if (!this.running || this.schedules.get(schedule.name) !== schedule) return;
+      if (Date.now() >= due.getTime()) {
+        // One job per schedule per time, however often this is armed
+        void this.enqueue(schedule.jobName, schedule.data ?? {}, { jobId: `schedule:${schedule.name}:${due.getTime()}` }).catch((error: unknown) =>
+          this.logger.error({ schedule: schedule.name, err: error }, 'could not enqueue a scheduled job'),
+        );
+      }
+      this.arm(schedule);
+    }, Math.max(0, wait));
+    // A schedule alone doesn't keep the process alive
+    timer.unref?.();
+    this.scheduleTimers.set(schedule.name, timer);
   }
 
   /** Resolves when no jobs are pending or running. Test helper. */

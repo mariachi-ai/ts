@@ -13,31 +13,38 @@ None of this exists in code. Don't generate code that uses it.
 
 The goal: `mariachi init` gives a working multi-user app with nothing else to install.
 
-1. **Organizations, parts 2 and 3.** Part 1, the `@mariachi/organizations` package, shipped in 0.1.0.
-   - Part 2: the request check that makes the organization a client names (`x-organization-id`) the
-     tenant, after confirming membership; procedures and an optional controller; rate limits on
-     inviting and accepting; `withUserNamespace` for apps with several identity providers.
-   - Part 3: invitation emails through `@mariachi/notifications`, and `mariachi init --orgs`.
-2. **The generated app uses what 0.1.0 shipped.**
-   - The Postgres job queue when there is no Redis, so a new app needs only Postgres.
-   - `pnpm dev` runs `mariachi dev`.
-   - Search on Postgres, tenant-scoped.
-   - Sign-in that works in the default template. Today a fresh app answers 401 on every route unless
-     it was made with `--auth gotrue`.
-3. **A UI path.** `init` makes a backend only. Add a page generator and static serving, install
-   `@mariachi/design`, and ship the design kits (`mariachi design add <kit>`).
-4. **What an agent reads and runs.**
-   - `llms.txt` and a `mariachi docs` command; listing routes, procedures and jobs from the CLI.
+Built for it already: organizations with a request check, invitation emails and `init --orgs`; a
+generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi token`; pages
+(`init --ui`, `generate page`) with static files and an escaping `html` template; `mariachi docs` and
+`llms.txt`; cron schedules in the in-memory job queue. What is left:
+
+1. **Sign-in a person can use in a new project.**
+   - A local GoTrue in the `--auth gotrue` project's Compose file, so its sign-in page works with no
+     account anywhere. It needs an `auth` schema, a signing key written at `init`, and a mail sink.
+   - A page that accepts an invitation (`--orgs --ui`): it carries the visitor from the emailed link
+     through sign-in and back, then posts the token. `INVITATION_URL` can then have a default.
+   - A browser sign-in for the default (`--auth jwt`) project, or a decision that it has none. Its
+     pages can show only public content today.
+2. **Design kits in a generated project.** After the kits package lands: `init --ui` copies a kit into
+   `src/design`, serves it under `/assets/design` and links its imports, and token overrides move to
+   `src/design.css`. Serve `@mariachi/design/behaviors` and a kit's `motion.js` from `/assets`.
+3. **What an agent reads and runs.**
+   - Listing routes, procedures and jobs from the CLI.
    - Generators for an event and its subscriber, a webhook endpoint, a procedure on an existing
-     service, a page and a seed. The entity generator's fixed `name` column and naive plurals.
+     service and a seed. The entity generator's fixed `name` column and naive plurals.
    - `mariachi validate` checking `ctx` first, Zod at boundaries and procedure names, not only imports.
      A `lint` script in generated projects.
-5. **Small fixes.**
-   - FusionAuth's three `IdentityClient` methods that throw `auth/not-supported`.
-   - Cron schedules in the in-memory job queue.
-   - Stale counts in `CLAUDE.md`, this repo's README and the roadmap.
-   - A way to clear usage records that were never forwarded and are past the resend window.
-6. **Vendor SDKs as optional peers (breaking).** ioredis, nats, bullmq, typesense, the S3 SDK, stripe,
+   - The example entity indexed for search, as a worked example of `deps.search`.
+4. **Small fixes.**
+   - FusionAuth's three `IdentityClient` methods that throw `auth/not-supported` (resetting a password
+     with a token, and the two halves of verifying an email with a code).
+   - Settling usage records that were never forwarded and are past the resend window: listing them,
+     and marking each as "the provider has it" or "written off".
+   - A rate limiter in Postgres, so a project with organizations and several processes shares its
+     limits without Redis.
+   - `mariachi doctor`'s hint for an unreachable Redis says `docker compose up -d` even when the
+     Compose file has no Redis service.
+5. **Vendor SDKs as optional peers (breaking).** ioredis, nats, bullmq, typesense, the S3 SDK, stripe,
    resend, the AI SDK providers and `@clerk/backend` install with every app today. The rule is that an
    app installs the SDKs of the adapters it uses.
 

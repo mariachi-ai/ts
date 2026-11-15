@@ -142,6 +142,9 @@ On Postgres, each tick is enqueued once however many workers are running (the jo
 schedule and the tick's time), a restart keeps the next tick, and ticks missed while no worker was
 running are not replayed.
 
+The in-memory queue runs schedules too, for development and tests: in the one process, while it is
+started, with nothing kept across a restart.
+
 ## Shutdown
 
 `disconnect()` stops taking new jobs and waits up to `shutdownTimeoutMs` (30s) for running ones to

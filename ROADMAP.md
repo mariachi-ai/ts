@@ -69,8 +69,9 @@ Each package's status is listed in the [catalog](packages/core/docs/packages.md)
 - `@mariachi/testing` doubles kept honest by contract suites that also run against the real adapters.
 
 **Design and explorer.**
-- `@mariachi/design` (alpha): a token contract (semantic and component tiers, Zod-validated), six presets
-  (minimal, brutalist, editorial, soft, enterprise, terminal) and 36 components as plain HTML + CSS,
+- `@mariachi/design` (alpha): a token contract (semantic and component tiers, Zod-validated), six plain presets
+  (minimal, brutalist, editorial, soft, enterprise, terminal), the design languages built on them
+  (listed in `design.md`), and 36 components as plain HTML + CSS,
   including AI patterns (chat, thinking, tool calls, citations, composer, usage).
 - Overrides at any granularity: one token, one component, one area, a replaced component, or a preset
   (`extendTheme`), through CSS or `mariachi.design.ts` + `mariachi design build|check|new-theme`.
