@@ -49,6 +49,8 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
      limits without Redis.
    - `mariachi doctor`'s hint for an unreachable Redis says `docker compose up -d` even when the
      Compose file has no Redis service.
+   - `mariachi db seed` takes a database URL with no host as local even when a `host=` parameter or
+     `PGHOST` names a remote one.
 
 ## Later
 
