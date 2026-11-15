@@ -89,6 +89,38 @@ describe('DrizzleBillingStore', () => {
     expect(s.totalQuantity).toBe(5);
   });
 
+  it('knows which usage the provider has confirmed, and lists the rest oldest first', async () => {
+    const at = new Date();
+    const rec = (key: string, tenantId = 't_fwd') => ({ tenantId, customerId: 'cus_fwd', metricName: 'tokens', quantity: 2, timestamp: at, idempotencyKey: key, dimensions: { project: 'p1' }, forwardPending: true });
+    await store.recordUsage(rec('f1'));
+    await store.recordUsage(rec('f2'));
+    await store.recordUsage(rec('f1', 't_fwd_other'));
+    expect(await store.findUsageRecord('t_fwd', 'f1')).toEqual({ ...rec('f1'), forwardedAt: null, recordedAt: expect.any(Date) });
+    expect(await store.findUsageRecord('t_fwd', 'nope')).toBeNull();
+
+    const mine = async () => (await store.listPendingUsage({ after: new Date(0), before: new Date(Date.now() + 1000), limit: 100 })).filter((u) => u.tenantId.startsWith('t_fwd')).map((u) => `${u.tenantId}:${u.idempotencyKey}`);
+    expect(await mine()).toEqual(['t_fwd:f1', 't_fwd:f2', 't_fwd_other:f1']);
+    // Recorded after `before`: may still be in flight
+    expect((await store.listPendingUsage({ after: new Date(0), before: new Date(Date.now() - 60_000), limit: 100 })).filter((u) => u.tenantId.startsWith('t_fwd'))).toEqual([]);
+
+    const confirmed = new Date();
+    await store.markUsageForwarded('t_fwd', 'f1', confirmed);
+    expect((await store.findUsageRecord('t_fwd', 'f1'))?.forwardedAt?.getTime()).toBe(confirmed.getTime());
+    // The other tenant's record under the same key is untouched
+    expect(await mine()).toEqual(['t_fwd:f2', 't_fwd_other:f1']);
+    expect((await store.listPendingUsage({ after: new Date(0), before: new Date(Date.now() + 1000), limit: 1 })).length).toBe(1);
+    // A row with no pending mark (written before the column existed) is not pending, however recent
+    await store.recordUsage({ tenantId: 't_fwd', customerId: 'cus_fwd', metricName: 'tokens', quantity: 9, timestamp: at, idempotencyKey: 'legacy' });
+    expect(await store.findUsageRecord('t_fwd', 'legacy')).toMatchObject({ forwardPending: false, forwardedAt: null });
+    expect(await mine()).toEqual(['t_fwd:f2', 't_fwd_other:f1']);
+    const before = await store.countPendingUsage({ before: new Date(Date.now() + 1000) });
+    await store.markUsageForwarded('t_fwd', 'f2', new Date());
+    expect(await store.countPendingUsage({ before: new Date(Date.now() + 1000) })).toBe(before - 1);
+    expect(await store.countPendingUsage({ before: new Date(0) })).toBe(0);
+    // Recorded before `after`: too old to resend
+    expect((await store.listPendingUsage({ after: new Date(Date.now() + 60_000), before: new Date(Date.now() + 120_000), limit: 100 })).filter((u) => u.tenantId.startsWith('t_fwd'))).toEqual([]);
+  });
+
   it('tracks webhook attempts', async () => {
     await store.recordWebhookEvent({ id: 'evt_pg', type: 'x', status: 'processing' });
     await store.recordWebhookEvent({ id: 'evt_pg', type: 'x', status: 'failed', error: 'boom' });

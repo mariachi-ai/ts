@@ -4,9 +4,10 @@ import { applySchema, createPostgresDatabase, type PostgresDatabase } from '@mar
 import { startPostgres, stopAll } from '../../../../test/setup';
 import { ApiKeyService } from '../api-keys';
 import { RBACAdapter } from '../authorization/rbac';
-import { apiKeysTable, authWebhookDedupTable, rolesTable, userRolesTable } from '../schema/index';
+import { apiKeysTable, authWebhookDedupTable, rolesTable, sessionsTable, userRolesTable } from '../schema/index';
+import { sessionStoreContract } from '../sessions.contract';
 import type { ResolvedIdentity } from '../types';
-import { DrizzleApiKeyStore, DrizzleRoleStore, DrizzleWebhookDedup } from './index';
+import { DrizzleApiKeyStore, DrizzleRoleStore, DrizzleSessionStore, DrizzleWebhookDedup } from './index';
 
 const run = crypto.randomUUID().slice(0, 8);
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child() { return silent; } };
@@ -15,13 +16,15 @@ let database: PostgresDatabase;
 beforeAll(async () => {
   database = createPostgresDatabase({ url: await startPostgres() });
   await database.connect();
-  await applySchema(database.db, [rolesTable, userRolesTable, apiKeysTable, authWebhookDedupTable]);
+  await applySchema(database.db, [rolesTable, userRolesTable, apiKeysTable, authWebhookDedupTable, sessionsTable]);
 }, 180_000);
 
 afterAll(async () => {
   await database?.disconnect();
   await stopAll();
 });
+
+sessionStoreContract('postgres', () => new DrizzleSessionStore(database.db));
 
 describe('DB-backed RBAC', () => {
   it('reads role permissions from the roles table', async () => {

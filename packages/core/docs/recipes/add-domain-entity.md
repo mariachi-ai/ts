@@ -101,7 +101,7 @@ export class OrdersService {
 
   async cancel(ctx: Context, id: string): Promise<Order> {
     const order = await this.orders.getById(ctx, id);
-    if (order.status === 'paid') throw new ConflictError('orders/already-paid', 'Paid orders cannot be cancelled');
+    if (order.status === 'paid') throw new ConflictError('Paid orders cannot be cancelled', { orderId: id });
     return this.orders.update(ctx, id, { status: 'cancelled' });
   }
 }

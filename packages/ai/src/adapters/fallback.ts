@@ -1,6 +1,6 @@
 import { AIError } from '@mariachi/core';
-import type { AIMessage, AIResponse, StreamChunk, ToolDefinition } from '../types';
-import type { Adapter } from '../session/manager';
+import type { AIMessage, AIResponse, StreamChunk } from '../types';
+import type { Adapter, AdapterCallConfig } from '../session/manager';
 
 export interface FallbackProvider {
   id: string;
@@ -9,7 +9,7 @@ export interface FallbackProvider {
   models?: string[];
 }
 
-type CallConfig = { model?: string; tools?: ToolDefinition[] };
+type CallConfig = AdapterCallConfig;
 
 /** Budget and missing-session errors are the caller's problem; another provider would fail the same way. */
 function isFinal(error: unknown): boolean {

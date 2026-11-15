@@ -23,6 +23,7 @@ import {
   type SubscriptionChangePreview,
   type UpdateSubscriptionInput,
   type UsageBreakdown,
+  type UsageRecord,
   type UsageSummary,
 } from './types';
 
@@ -42,6 +43,15 @@ function resolveKey(key: string | undefined, operation: string): string {
   if (key === '') throw new BillingError('billing/idempotency-key-required', `${operation} requires an idempotencyKey`);
   return key ?? `mariachi:${operation}:${randomUUID()}`;
 }
+
+/**
+ * How long after it was recorded a usage record may be sent to the provider again. Stripe only
+ * promises to recognise a repeated event identifier for about a day; past that a resend could be
+ * counted twice, so it is left for a person to reconcile.
+ */
+const RESEND_WINDOW_MS = 23 * 60 * 60 * 1000;
+
+const resendable = (record: UsageRecord): boolean => !!record.recordedAt && Date.now() - record.recordedAt.getTime() < RESEND_WINDOW_MS;
 
 function invalid(message: string): BillingError {
   return new BillingError('billing/invalid-input', message);
@@ -410,11 +420,64 @@ export abstract class Billing implements Instrumentable {
       timestamp,
       idempotencyKey,
       dimensions,
+      // Until the provider confirms it. If the call below fails, this is what marks the record for a resend.
+      forwardPending: true,
     });
-    if (!fresh) return false;
-    await this.adapter.reportUsage({ customerId: customer.id, metricName: input.metricName, quantity: input.quantity, timestamp, idempotencyKey });
+    if (!fresh) {
+      // Recorded before under this key. If the provider never confirmed it (the call failed, or the
+      // process died in between), send what was recorded again: the provider dedups on the key.
+      const recorded = await this.store.findUsageRecord?.(tenantId, idempotencyKey);
+      if (recorded?.forwardPending && resendable(recorded)) await this.forwardUsage(recorded);
+      return false;
+    }
+    await this.forwardUsage({ tenantId, customerId: customer.id, metricName: input.metricName, quantity: input.quantity, timestamp, idempotencyKey });
     this.metrics?.increment('billing.usage.reported', input.quantity, { metric: input.metricName });
     return true;
+  }
+
+  /** Sends a recorded usage record to the provider, then marks it confirmed. */
+  private async forwardUsage(record: UsageRecord): Promise<void> {
+    await this.adapter.reportUsage({
+      customerId: record.customerId,
+      metricName: record.metricName,
+      quantity: record.quantity,
+      timestamp: record.timestamp,
+      idempotencyKey: record.idempotencyKey,
+    });
+    if (record.idempotencyKey) await this.store.markUsageForwarded?.(record.tenantId, record.idempotencyKey, new Date());
+  }
+
+  /**
+   * Sends usage that was recorded here and never confirmed by the provider: a report whose
+   * provider call failed and that nobody retried. Run it on a schedule (a job every few minutes).
+   * Records younger than `olderThanMs` (default one minute) are left alone, since their report may
+   * still be in flight. A record that fails again stays pending for the next run. Records older
+   * than a day are never resent: by then the provider may no longer recognise the key, and a
+   * resend could be counted twice. `stale` is how many of those there are (also the gauge
+   * `billing.usage.stale`): each is usage counted here that the provider may not have, for a
+   * person to settle.
+   */
+  async forwardPendingUsage(ctx: Context, options: { limit?: number; olderThanMs?: number } = {}): Promise<{ forwarded: number; failed: number; stale: number }> {
+    const list = this.store.listPendingUsage?.bind(this.store);
+    if (!list) return { forwarded: 0, failed: 0, stale: 0 };
+    const now = Date.now();
+    const pending = await list({ after: new Date(now - RESEND_WINDOW_MS), before: new Date(now - (options.olderThanMs ?? 60_000)), limit: options.limit ?? 100 });
+    let forwarded = 0;
+    let failed = 0;
+    for (const record of pending) {
+      try {
+        await this.forwardUsage(record);
+        forwarded++;
+      } catch (error) {
+        failed++;
+        ctx.logger.warn({ err: error, tenantId: record.tenantId, metric: record.metricName, idempotencyKey: record.idempotencyKey }, 'usage could not be forwarded; it stays pending');
+      }
+    }
+    if (forwarded) this.metrics?.increment('billing.usage.forwarded_late', forwarded);
+    const stale = (await this.store.countPendingUsage?.({ before: new Date(now - RESEND_WINDOW_MS) })) ?? 0;
+    this.metrics?.gauge('billing.usage.stale', stale);
+    if (stale) ctx.logger.warn({ stale }, 'usage recorded here was never confirmed by the provider and is now too old to resend');
+    return { forwarded, failed, stale };
   }
 
   async getUsage(ctx: Context, metricName: string, range: DateRange): Promise<UsageSummary> {

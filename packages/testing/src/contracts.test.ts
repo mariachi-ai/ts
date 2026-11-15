@@ -9,12 +9,13 @@ import { MemoryInAppStore } from '@mariachi/notifications';
 import { MemorySearchAdapter } from '@mariachi/search';
 import { LocalStorageAdapter, MemoryStorageAdapter } from '@mariachi/storage';
 import { TestCacheClient } from './adapters/cache';
+import { TestRepository } from './adapters/database';
 import { TestInAppStore } from './adapters/notifications';
 import { TestJobQueue } from './adapters/jobs';
 import { TestLock } from './adapters/lock';
 import { TestSearchClient } from './adapters/search';
 import { TestStorageClient } from './adapters/storage';
-import { TestRepository } from './adapters/database';
+import { createTestContext } from './factories/context.factory';
 import { cacheContract, inboxContract, lockContract, repositoryContract, searchContract, storageContract, type ContractNote } from './contracts/index';
 
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child: () => silent };
@@ -65,5 +66,19 @@ describe('job runner contract', () => {
     await jobs.unschedule('nightly');
     expect(queue.getSchedules()).toEqual([]);
     await expect(queue.runSchedule('nightly')).rejects.toMatchObject({ code: 'jobs/unknown-schedule' });
+  });
+});
+
+describe('TestRepository bulk writes', () => {
+  it('refuses an empty filter, as DrizzleRepository does', async () => {
+    const repo = new TestRepository<{ id: string; tenantId: string; name: string }>({ tenantColumn: 'tenantId' });
+    const ctx = createTestContext({ tenantId: 't1' });
+    const row = await repo.create(ctx, { tenantId: 't1', name: 'kept' });
+    for (const empty of [{}, [], { name: undefined }]) {
+      await expect(repo.updateWhere(ctx, empty, { name: 'overwritten' })).rejects.toMatchObject({ code: 'database/unsafe-operation' });
+      await expect(repo.deleteWhere(ctx, empty)).rejects.toMatchObject({ code: 'database/unsafe-operation' });
+    }
+    expect((await repo.findById(ctx, row.id))?.name).toBe('kept');
+    expect(await repo.updateWhere(ctx, { name: 'kept' }, { name: 'renamed' })).toBe(1);
   });
 });

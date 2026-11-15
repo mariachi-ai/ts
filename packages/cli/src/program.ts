@@ -2,6 +2,8 @@ import { Command } from 'commander';
 import { MARIACHI_VERSION } from '@mariachi/create';
 import { registerDbCommand } from './commands/db';
 import { registerDesignCommand } from './commands/design';
+import { registerDevCommand } from './commands/dev';
+import { registerDoctorCommand } from './commands/doctor';
 import { registerExploreCommand } from './commands/explore';
 import { registerGenerateCommand } from './commands/generate';
 import { registerInitCommand } from './commands/init';
@@ -16,6 +18,8 @@ export function createProgram(): Command {
   registerInitCommand(program);
   registerGenerateCommand(program);
   registerValidateCommand(program);
+  registerDevCommand(program);
+  registerDoctorCommand(program);
   registerDbCommand(program);
   registerDesignCommand(program);
   registerExploreCommand(program);

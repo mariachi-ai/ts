@@ -14,7 +14,7 @@ const guide = await loadLanguageGuide(language);
 ---
 
 <Base title={`${language.label}: DESIGN.md`} description={guide.summary || language.pitch} sidebar={designSidebar(catalog)} toc={guide.headings.filter((h) => h.depth === 2)}>
-  <nav class="m-breadcrumb" aria-label="Breadcrumb">
+  <nav class="m-breadcrumb x-crumbs" aria-label="Breadcrumb">
     <ol>
       <li><a href={href('design')}>Design</a></li>
       <li><a href={href('design/languages')}>Languages</a></li>

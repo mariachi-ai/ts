@@ -53,6 +53,10 @@ export interface RequestContext {
   startedAt: number;
   /** Headers applied to the response, including error responses (e.g. RateLimit-*). */
   responseHeaders: Record<string, string>;
+  /** `Set-Cookie` values applied to the response, one header each (see `serializeCookie`). */
+  responseCookies: string[];
+  /** Aborts when the client goes away before the response is finished: pass it to slow upstream calls. */
+  signal: AbortSignal;
 }
 
 export interface IncomingRequest {
@@ -74,11 +78,12 @@ export class HttpResponse<T = unknown> {
   constructor(
     readonly status: number,
     readonly body: T,
-    readonly headers: Record<string, string> = {},
+    /** A list sends the header once per value (`set-cookie`). */
+    readonly headers: Record<string, string | string[]> = {},
   ) {}
 }
 
-export const httpResponse = <T>(status: number, body: T, headers?: Record<string, string>) =>
+export const httpResponse = <T>(status: number, body: T, headers?: Record<string, string | string[]>) =>
   new HttpResponse(status, body, headers);
 
 export interface ServerRoute {

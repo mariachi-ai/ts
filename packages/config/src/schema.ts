@@ -67,7 +67,10 @@ export const AppConfigSchema = z.object({
       adapter: z.string().default('resend'),
       apiKey: z.string().optional(),
       from: z.string().optional(),
+      /** `smtp://user:pass@host:587` or `smtps://…`, for `adapter: 'smtp'`. */
       smtpUrl: z.string().optional(),
+      /** The base URL of an HTTP email API, when it isn't the provider's own (also for custom adapters). */
+      apiUrl: z.string().url().optional(),
     })
     .optional(),
   search: z
@@ -81,6 +84,8 @@ export const AppConfigSchema = z.object({
     .object({
       adapter: z.string().default('openai'),
       apiKey: z.string().optional(),
+      /** Where the provider's API is, for a proxy, a gateway or a local model server (`createAI`'s `baseURL`). */
+      baseUrl: z.string().url().optional(),
       model: z.string().optional(),
       /** Tried in order on the primary provider when the model fails. */
       fallbackModels: z.array(z.string()).optional(),
