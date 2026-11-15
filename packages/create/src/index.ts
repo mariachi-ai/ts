@@ -6,6 +6,7 @@ export {
   generateJob,
   generateIntegration,
   generatePage,
+  generateSeed,
 } from './generators';
 export { validate, RULES } from './validate/index';
 export { names, pluralize, type Names } from './names';
@@ -23,6 +24,7 @@ export type {
   GenerateJobConfig,
   GenerateIntegrationConfig,
   GeneratePageConfig,
+  GenerateSeedConfig,
   GenerateResult,
   ValidateOptions,
   ValidationResult,

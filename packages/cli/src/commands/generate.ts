@@ -6,6 +6,7 @@ import {
   generateIntegration,
   generateJob,
   generatePage,
+  generateSeed,
   generateService,
   type GenerateOptions,
   type GenerateResult,
@@ -20,6 +21,7 @@ const GENERATORS: Record<string, (options: GenerateOptions) => Promise<GenerateR
   job: generateJob,
   integration: generateIntegration,
   page: generatePage,
+  seed: generateSeed,
 };
 
 export function registerGenerateCommand(program: Command): void {

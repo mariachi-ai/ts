@@ -616,9 +616,16 @@ ${orgs ? '    organizations,\n' : ''}    start: async () => {
 `;
 
 const SEEDS_INDEX = `import type { SeedDefinition } from '@mariachi/database';
+import type { DrizzleDb } from '@mariachi/database-postgres';
+// ${MARKERS.imports}
 
-/** Seeds run by \`mariachi db seed\`, each once per environment. Create them with \`defineSeed\`. */
-export const seeds: SeedDefinition[] = [];
+/**
+ * Seeds run by \`mariachi db seed\`, in this order, each once per environment.
+ * \`mariachi generate seed <name>\` writes one and lists it here.
+ */
+export const seeds: SeedDefinition<DrizzleDb>[] = [
+  // ${MARKERS.seeds}
+];
 `;
 
 const SERVICES_INDEX = `import type { CommunicationLayer } from '@mariachi/communication';

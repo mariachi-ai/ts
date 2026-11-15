@@ -77,6 +77,7 @@ mariachi generate integration acme
 | `controller` | `api/controllers/<name>.controller.ts`; reuses `contracts/<name>.ts` if it exists | `api/controllers/index.ts` |
 | `job` | `jobs/<name>.job.ts` (`defineJob` with schema, retry, timeout) | `jobs/index.ts` |
 | `integration` | `integrations/<name>/client.ts` (timeouts, retries on transient status codes, `IntegrationError`) and a test | none; construct it in `app.ts` |
+| `seed` | `seeds/<name>.seed.ts` (`defineSeed`, run once per environment by `mariachi db seed`) | `seeds/index.ts` |
 | `page` | `api/pages/<name>.ts` (the page, as `html` in the project's layout) and a test. Needs a project made with `--ui` | `api/controllers/pages.controller.ts` (its route at `/<name>`) and `api/pages/layout.ts` (its link in the bar) |
 
 Names can be kebab, camel or Pascal case (`invoice-item`, `invoiceItem`, `InvoiceItem`). Generators

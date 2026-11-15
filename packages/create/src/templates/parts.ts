@@ -220,3 +220,26 @@ describe('${n.pascal}Client', () => {
   });
 });
 `;
+
+/** `src/seeds/<name>.seed.ts`, written by `mariachi generate seed`. */
+export const seedFile = (n: Names): string => `import { defineSeed } from '@mariachi/database';
+import type { DrizzleDb } from '@mariachi/database-postgres';
+
+/**
+ * Data the app starts with. \`mariachi db seed\` runs it once per environment and records that it
+ * ran (\`--force\` runs it again), so write it to be safe to repeat: insert with onConflictDoNothing,
+ * or look before you write. It runs everywhere but production unless \`environments\` says otherwise.
+ */
+export const ${n.camel}Seed = defineSeed<DrizzleDb>({
+  name: '${n.kebab}',
+  // environments: ['development', 'test'],
+  run: async (ctx, db) => {
+    // Rows go in through the tables in src/schema, compiled for Drizzle:
+    //   import { compileTable } from '@mariachi/database-postgres';
+    //   import { notesTable } from '../schema/notes';
+    //   await db.insert(compileTable(notesTable)).values({ tenantId: 'dev-tenant', name: 'First note' }).onConflictDoNothing();
+    void db;
+    ctx.logger.info({ seed: '${n.kebab}' }, 'seed ran');
+  },
+});
+`;
