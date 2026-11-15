@@ -39,6 +39,9 @@ describe('a project with --orgs', () => {
   it('checks the membership where the request becomes an identity, around whichever verifier signs users in', () => {
     expect(orgs.jwt['src/app.ts']).toContain(".withAuthStrategy('session', organizationStrategy(bearerStrategy(verifier), access))");
     expect(orgs.gotrue['src/app.ts']).toContain(".withAuthStrategy('session', organizationStrategy(bearerStrategy(auth), access))");
+    // A JWT that names no tenant must verify: that is a user with no organization yet, on their way to one
+    expect(orgs.jwt['src/app.ts']).toContain('audience: config.auth.jwtAudience, requireTenant: false });');
+    expect(plain.jwt['src/app.ts']).not.toContain('requireTenant');
     // Personal tenants still wrap the provider, so a user who names no organization has somewhere to work
     expect(orgs.gotrue['src/app.ts']).toContain("app.auth.personalTenants ? withPersonalTenants(provider, { namespace: 'app' }) : provider");
     for (const auth of AUTHS) {

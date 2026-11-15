@@ -369,7 +369,9 @@ ${orgs ? '  const app = useConfigSection<AppSettings>(APP_CONFIG);\n' : ''}
   let verifier = options.verifier;
   if (!verifier) {
     if (!config.auth?.jwtSecret) throw new ConfigError('app/jwt-secret-required', 'JWT_SECRET is required');
-    verifier = new JWTAdapter({ secret: config.auth.jwtSecret, issuer: config.auth.jwtIssuer, audience: config.auth.jwtAudience });
+${orgs
+  ? "    // A token may name no tenant: a user who is in no organization yet still has to create or join one\n    verifier = new JWTAdapter({ secret: config.auth.jwtSecret, issuer: config.auth.jwtIssuer, audience: config.auth.jwtAudience, requireTenant: false });"
+  : '    verifier = new JWTAdapter({ secret: config.auth.jwtSecret, issuer: config.auth.jwtIssuer, audience: config.auth.jwtAudience });'}
   }
 
   // Startup runs in ascending priority; shutdown runs in reverse.

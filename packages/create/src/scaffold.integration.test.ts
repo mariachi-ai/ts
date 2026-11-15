@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startPostgres, startRedis, stopAll } from '../../../test/setup';
+import { JWTAdapter } from '@mariachi/auth';
 import { createProject, generateController, generateEntity, generateIntegration, generateJob, generateService, validate } from './index';
 
 const run = promisify(execFile);
@@ -241,6 +242,8 @@ describe('generated project with --auth gotrue', () => {
   });
 });
 
+const JWT_SECRET = 'scaffold-test-secret-at-least-32-characters';
+
 describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth %s)', (auth) => {
   const app = join(workDir, `${auth}-orgs-app`);
 
@@ -293,12 +296,24 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth
         NODE_ENV: 'development',
         DATABASE_URL: await startPostgres(),
         REDIS_URL: await startRedis(),
-        ...(auth === 'gotrue' ? { AUTH_URL: 'https://auth.example.test/auth/v1' } : { JWT_SECRET: 'scaffold-test-secret-at-least-32-characters' }),
+        ...(auth === 'gotrue' ? { AUTH_URL: 'https://auth.example.test/auth/v1' } : { JWT_SECRET }),
       },
-      async (base) => ({ organizations: (await fetch(`${base}/api/organizations`)).status }),
+      async (base) => {
+        const anonymous = (await fetch(`${base}/api/organizations`)).status;
+        if (auth !== 'jwt') return { anonymous };
+        // A real token for a user in no organization yet, through the app's own verifier. The route answers
+        // before it reads the database (which has no tables here): the token was accepted, the invitation wasn't.
+        const token = await new JWTAdapter({ secret: JWT_SECRET }).sign({ userId: 'user-ada', tenantId: '', scopes: [] });
+        const accept = await fetch(`${base}/api/organizations/invitations/accept`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ token: 'not-an-invitation' }),
+        });
+        return { anonymous, tenantless: accept.status, code: ((await accept.json()) as { error?: { code?: string } }).error?.code };
+      },
     );
     expect({ status, output }).toMatchObject({ status: 200 });
-    expect(probed).toEqual({ organizations: 401 });
+    expect(probed).toEqual(auth === 'jwt' ? { anonymous: 401, tenantless: 400, code: 'organizations/invitation-invalid' } : { anonymous: 401 });
   }, 180_000);
 
   it('passes mariachi validate with no findings', async () => {
