@@ -10,4 +10,6 @@ says which two lines to add by hand.
 
 `mariachi db seed` runs as `NODE_ENV` when `--env` isn't given. It used to run as `development`
 whatever the environment said, so against a production database it ran every seed that didn't name
-its environments. With `NODE_ENV=production`, such seeds are now skipped unless you pass `--env`.
+its environments. With `NODE_ENV=production`, such seeds are now skipped unless you pass `--env`. It
+prints the database and the environment before it runs, and refuses a database on another machine
+when it would run as `development` without `--env` saying so.

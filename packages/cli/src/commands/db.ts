@@ -16,6 +16,7 @@ import { planMigration } from '../db/migrations';
 import { importModule, writePlannedMigration } from '../db/project';
 
 import { DIM, GREEN, RED, RESET, YELLOW } from '../colors';
+import { isLocal, safeUrl } from '../doctor/checks';
 import { fail } from '../output';
 
 interface DbOptions {
@@ -61,6 +62,29 @@ function withSchemaOptions(cmd: Command): Command {
  */
 export function seedEnvironment(flag: string | undefined, nodeEnv: string | undefined): string {
   return flag?.trim() || nodeEnv?.trim() || 'development';
+}
+
+/** A host with no dot in its name: a Compose or container-network service (`postgres`, `db`), which is a development database. */
+function isServiceName(url: string): boolean {
+  try {
+    const host = new URL(url).hostname;
+    return host !== '' && !host.includes('.') && !host.includes(':');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Refuses the one mix-up that seeds demo data into a real database: a database on another machine,
+ * seeded as development because nothing said otherwise (a laptop's .env sets NODE_ENV=development,
+ * and `--url` pointed somewhere else). Saying `--env` is how a person confirms what the database is.
+ */
+export function assertSeedTarget(url: string, environment: string, explicit: boolean): void {
+  if (explicit || environment !== 'development' || isLocal(url) || isServiceName(url)) return;
+  throw new ConfigError(
+    'cli/seed-target-unclear',
+    `This database (${safeUrl(url)}) is not on this machine, and the seeds would run as development. Pass --env to say what it is: --env development if it really is a development database`,
+  );
 }
 
 export function registerDbCommand(program: Command): void {
@@ -143,11 +167,15 @@ export function registerDbCommand(program: Command): void {
     .action(async (options: DbOptions & { file: string; env?: string; force?: boolean }) => {
       try {
         const environment = seedEnvironment(options.env, readEnv('NODE_ENV'));
+        const target = databaseUrl(options);
+        assertSeedTarget(target, environment, Boolean(options.env?.trim()));
         const mod = await importModule(options.file);
         const seeds = (Array.isArray(mod.seeds) ? mod.seeds : Array.isArray(mod.default) ? mod.default : Object.values(mod)).filter(
           (s): s is SeedDefinition<DrizzleDb> => !!s && typeof s === 'object' && 'name' in s && 'run' in s,
         );
         if (seeds.length === 0) throw new ConfigError('cli/no-seeds', `${options.file} exports no seeds (use defineSeed)`);
+        // Said before anything runs, so a wrong target can still be stopped
+        console.log(`Seeding ${safeUrl(target)} as ${environment}`);
         await withAdapter(options, (adapter) =>
           runSeeds(adapter.getClient<DrizzleDb>(), seeds, {
             environment,
