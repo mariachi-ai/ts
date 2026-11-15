@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { BillingError, type Context } from '@mariachi/core';
 import { compileTable, currentTransaction, mapPgError, withTransaction, type DrizzleDb } from '@mariachi/database-postgres';
 import {
@@ -95,6 +95,20 @@ function toPlan(r: Row): Plan {
     lookupKey: r.lookupKey ?? null,
     metadata: (r.metadata as Record<string, string> | null) ?? {},
     productMetadata: (r.productMetadata as Record<string, string> | null) ?? {},
+  };
+}
+
+function toUsageRecord(r: typeof usage.$inferSelect): UsageRecord {
+  return {
+    tenantId: r.tenantId,
+    customerId: r.customerId,
+    metricName: r.metricName,
+    quantity: Number(r.quantity),
+    timestamp: r.timestamp,
+    idempotencyKey: r.idempotencyKey ?? undefined,
+    dimensions: r.dimensions ?? null,
+    forwardedAt: r.forwardedAt ?? null,
+    recordedAt: r.createdAt,
   };
 }
 
@@ -397,6 +411,31 @@ export class DrizzleBillingStore implements BillingStore {
       this.db.insert(usage).values(record).onConflictDoNothing().returning({ id: usage.id }),
     );
     return rows.length > 0;
+  }
+
+  async findUsageRecord(tenantId: string, idempotencyKey: string): Promise<UsageRecord | null> {
+    const rows = await this.run('findUsageRecord', () =>
+      this.db.select().from(usage).where(and(eq(usage.tenantId, tenantId), eq(usage.idempotencyKey, idempotencyKey))).limit(1),
+    );
+    return rows[0] ? toUsageRecord(rows[0]) : null;
+  }
+
+  async markUsageForwarded(tenantId: string, idempotencyKey: string, at: Date): Promise<void> {
+    await this.run('markUsageForwarded', () =>
+      this.db.update(usage).set({ forwardedAt: at }).where(and(eq(usage.tenantId, tenantId), eq(usage.idempotencyKey, idempotencyKey))),
+    );
+  }
+
+  async listPendingUsage(options: { after: Date; before: Date; limit: number }): Promise<UsageRecord[]> {
+    const rows = await this.run('listPendingUsage', () =>
+      this.db
+        .select()
+        .from(usage)
+        .where(and(isNull(usage.forwardedAt), isNotNull(usage.idempotencyKey), gte(usage.createdAt, options.after), lt(usage.createdAt, options.before)))
+        .orderBy(asc(usage.createdAt))
+        .limit(options.limit),
+    );
+    return rows.map(toUsageRecord);
   }
 
   async summarizeUsage(tenantId: string, metricName: string, range: DateRange): Promise<UsageSummary> {

@@ -126,7 +126,22 @@ await billing.consumeCredits(ctx, 25, { description: 'Report export', referenceT
 await billing.getCreditBalance(ctx);
 ```
 
-Usage is recorded locally first (deduplicated by key), then reported to Stripe. The credit ledger is
+Usage is recorded locally first (deduplicated by key), then reported to Stripe. If that second step
+fails, `reportUsage` throws and the record stays marked as not confirmed. **Retry with the same
+key**: the retry sends the recorded usage again (not what the retry passes), Stripe treats it as the
+same event, and it is counted once on both sides. For reports nobody retries, run the sweep on a
+schedule:
+
+```ts
+jobs.registerJob(defineJob({ name: 'billing-forward-usage', schema: z.object({}), handler: async (ctx) => void (await billing.forwardPendingUsage(ctx)) }));
+jobs.schedule({ name: 'billing-forward-usage', cron: '*/5 * * * *', jobName: 'billing-forward-usage' });
+```
+
+`forwardPendingUsage(ctx, { limit, olderThanMs })` returns `{ forwarded, failed }`; what fails again
+stays pending for the next run. Neither path resends a record more than a day old: Stripe only
+promises to recognise a repeated key for about that long, and past it a resend could be billed
+twice. Those stay in `billing_usage_records` with an empty `forwarded_at`, for a person to reconcile. Give `reportUsage` a key of your own: without one, each call gets a
+new key, so a retried call is new usage. The credit ledger is
 local and append-only: each entry stores `balanceAfter`, computed under a per-customer Postgres
 advisory lock, so concurrent consumers can't overdraw. Insufficient balance throws
 `billing/insufficient-credits` (HTTP 402) unless you pass `allowNegative`.

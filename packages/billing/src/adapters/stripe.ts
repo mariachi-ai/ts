@@ -365,14 +365,24 @@ export class StripeAdapter implements BillingAdapter {
   }
 
   async reportUsage(input: { customerId: string; metricName: string; quantity: number; timestamp: Date; idempotencyKey?: string }): Promise<void> {
-    await this.call('reportUsage', () =>
-      this.stripe.billing.meterEvents.create({
-        event_name: input.metricName,
-        identifier: input.idempotencyKey,
-        timestamp: Math.floor(input.timestamp.getTime() / 1000),
-        payload: { stripe_customer_id: input.customerId, value: String(input.quantity) },
-      }),
-    );
+    await this.call('reportUsage', async () => {
+      try {
+        await this.stripe.billing.meterEvents.create(
+          {
+            event_name: input.metricName,
+            identifier: input.idempotencyKey,
+            timestamp: Math.floor(input.timestamp.getTime() / 1000),
+            payload: { stripe_customer_id: input.customerId, value: String(input.quantity) },
+          },
+          // A retry of the same report gets the first call's answer back, not a second event
+          input.idempotencyKey ? { idempotencyKey: `usage:${input.idempotencyKey}` } : undefined,
+        );
+      } catch (error) {
+        // Stripe already has an event with this identifier: the earlier attempt did arrive
+        if ((error as { code?: string }).code === 'duplicate_meter_event') return;
+        throw error;
+      }
+    });
   }
 
   async getCreditBalance(customerId: string, currency?: string): Promise<CreditBalance> {

@@ -168,6 +168,10 @@ export interface UsageRecord {
   timestamp: Date;
   idempotencyKey?: string;
   dimensions?: Dimensions | null;
+  /** When the provider confirmed the record. Unset or null: not yet known to have reached it. */
+  forwardedAt?: Date | null;
+  /** When the store recorded it. Set by the store on records it returns. */
+  recordedAt?: Date;
 }
 
 export interface UsageSummary {
@@ -448,6 +452,16 @@ export interface BillingStore {
 
   /** Records usage once per idempotency key. Returns false for a duplicate. */
   recordUsage(record: UsageRecord): Promise<boolean>;
+  /**
+   * The record stored under this key, with whether the provider has confirmed it. With these three
+   * methods a report whose provider call failed can be sent again; a store without them keeps the
+   * older behaviour (a repeat of a key is dropped).
+   */
+  findUsageRecord?(tenantId: string, idempotencyKey: string): Promise<UsageRecord | null>;
+  /** Marks the record as confirmed by the provider. */
+  markUsageForwarded?(tenantId: string, idempotencyKey: string, at: Date): Promise<void>;
+  /** Records the provider hasn't confirmed, oldest first, recorded after `after` and before `before`. */
+  listPendingUsage?(options: { after: Date; before: Date; limit: number }): Promise<UsageRecord[]>;
   summarizeUsage(tenantId: string, metricName: string, range: DateRange): Promise<UsageSummary>;
   /** Sums usage per value of `dimensions[groupBy]` (`null` for records without it). */
   summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string): Promise<UsageBreakdown['groups']>;
