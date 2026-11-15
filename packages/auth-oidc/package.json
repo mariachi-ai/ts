@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/auth-oidc",
-  "version": "0.0.5",
+  "version": "0.1.0",
   "description": "OpenID Connect token verification for any standard provider (Auth0, Cognito, Keycloak, Entra ID, Okta, Firebase, ...): discovery, JWKS, and configurable tenant, role and scope claims.",
   "mariachi": {
     "category": "security",
