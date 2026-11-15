@@ -29,6 +29,7 @@ export {
   RateLimitError,
   TenancyError,
   AuditError,
+  OrganizationsError,
   AIError,
   IntegrationError,
   EncryptionError,
@@ -57,6 +58,8 @@ export type {
   BaseEntity,
   TenantEntity,
 } from './types';
+
+export { PERSONAL_TENANT_PREFIX, personalTenantId, parsePersonalTenant, isPersonalTenant, isReservedTenantId, markPersonalTenant, claimsReservedTenant } from './tenant';
 
 export {
   type Result,
@@ -107,5 +110,7 @@ export {
 } from './disposable';
 
 export { loadOptionalPeer } from './optional';
+
+export { REDACT, type Redactable, redactForOutput } from './redaction';
 
 export { type IdempotencyStore, type IdempotencyClaim, InMemoryIdempotencyStore, runOnce } from './idempotency';

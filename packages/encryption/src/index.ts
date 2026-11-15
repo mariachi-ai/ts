@@ -22,7 +22,7 @@ export { isEnvelope as isEncrypted } from './envelope';
  * const encryption = createEncryption(
  *   config.env === 'production'
  *     ? { adapter: 'aws-kms', awsKmsKeyId: config.encryption.kmsKeyId }
- *     : { adapter: 'local', keys: { k1: config.encryption.localKey } },
+ *     : { adapter: 'local', keys: { [`v${config.encryption.keyVersion}`]: config.encryption.key } },
  * );
  * ```
  */

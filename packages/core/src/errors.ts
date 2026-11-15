@@ -114,6 +114,13 @@ export class AuditError extends MariachiError {
   }
 }
 
+export class OrganizationsError extends MariachiError {
+  constructor(code: string, message: string, metadata?: Record<string, unknown>) {
+    super(code, message, metadata);
+    this.name = 'OrganizationsError';
+  }
+}
+
 export class AIError extends MariachiError {
   constructor(code: string, message: string, metadata?: Record<string, unknown>) {
     super(code, message, metadata);
@@ -221,7 +228,19 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'webhooks/invalid-payload': 400,
   'tenancy/missing-tenant': 400,
   'tenancy/mismatch': 403,
+  'tenancy/reserved-tenant': 403,
   'tenancy/suspended': 403,
+  'organizations/user-required': 401,
+  'organizations/forbidden': 403,
+  'organizations/suspended': 403,
+  'organizations/email-mismatch': 403,
+  'organizations/email-unverified': 403,
+  'organizations/last-owner': 409,
+  'organizations/already-member': 409,
+  'organizations/slug-taken': 409,
+  'organizations/invalid-role': 400,
+  'organizations/invitation-invalid': 400,
+  'organizations/invitation-expired': 410,
   'rate-limit/exceeded': 429,
   'rate-limit/unknown-tier': 500,
   'rate-limit/backend-failed': 503,
@@ -247,7 +266,10 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'storage/path-traversal': 400,
   'storage/invalid-signature': 403,
   'search/missing-query-fields': 400,
+  'search/tenant-required': 500,
   'ai/request-failed': 502,
+  // The client closed the request (nginx's 499): nobody is there to read another status
+  'ai/aborted': 499,
   'ai/providers-exhausted': 502,
   'integrations/invalid-output': 502,
   'integrations/invalid-signature': 401,

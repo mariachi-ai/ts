@@ -54,6 +54,17 @@ function toTools(tools: ToolDefinition[] | undefined) {
   }]));
 }
 
+/** A cancelled call, told apart from a provider failure. */
+function aborted(config: AdapterCallConfig, error: unknown): AIError | undefined {
+  const cancelled = config.signal?.aborted || (error instanceof Error && error.name === 'AbortError');
+  return cancelled ? new AIError('ai/aborted', 'The request was cancelled') : undefined;
+}
+
+function toToolCalls(calls: Array<{ toolCallId: string; toolName: string; input?: unknown }> | undefined) {
+  if (!calls?.length) return undefined;
+  return calls.map((call) => ({ id: call.toolCallId, name: call.toolName, arguments: (call.input ?? {}) as Record<string, unknown> }));
+}
+
 function usageOf(usage: { inputTokens?: number; outputTokens?: number } | undefined) {
   const inputTokens = usage?.inputTokens ?? 0;
   const outputTokens = usage?.outputTokens ?? 0;
@@ -100,19 +111,19 @@ export class AISdkAdapter {
         messages: prompt.messages,
         tools: toTools(config.tools),
         providerOptions: this.options.providerOptions?.(config),
+        abortSignal: config.signal,
+        maxOutputTokens: config.maxOutputTokens,
       });
       return {
         content: result.text ?? '',
-        toolCalls: result.toolCalls?.map((call) => ({
-          id: call.toolCallId,
-          name: call.toolName,
-          arguments: (call.input ?? {}) as Record<string, unknown>,
-        })),
+        toolCalls: toToolCalls(result.toolCalls),
         usage: usageOf(result.usage),
         model: modelId,
         latencyMs: Math.round(performance.now() - start),
       };
     } catch (error) {
+      const cancelled = aborted(config, error);
+      if (cancelled) throw cancelled;
       throw new AIError('ai/request-failed', error instanceof Error ? error.message : `${this.name} request failed`, {
         provider: this.name,
         model: modelId,
@@ -131,14 +142,40 @@ export class AISdkAdapter {
         messages: prompt.messages,
         tools: toTools(config.tools),
         providerOptions: this.options.providerOptions?.(config),
+        abortSignal: config.signal,
+        maxOutputTokens: config.maxOutputTokens,
       });
-      for await (const part of result.textStream) {
-        yield { content: part, done: false };
+      // The full stream says how it ended: a `finish` part is a complete reply whatever the signal says by
+      // then, an `abort` part a cancelled one, an `error` part a failed one
+      const calls: Array<{ toolCallId: string; toolName: string; input?: unknown }> = [];
+      let finished = false;
+      for await (const part of result.fullStream) {
+        if (part.type === 'text-delta') {
+          if (part.text) yield { content: part.text, done: false };
+        } else if (part.type === 'tool-call') {
+          calls.push(part);
+        } else if (part.type === 'abort') {
+          throw new AIError('ai/aborted', 'The request was cancelled');
+        } else if (part.type === 'error') {
+          throw part.error;
+        } else if (part.type === 'finish') {
+          finished = true;
+          yield {
+            content: '',
+            done: true,
+            usage: { inputTokens: part.totalUsage.inputTokens ?? 0, outputTokens: part.totalUsage.outputTokens ?? 0 },
+            model: modelId,
+            toolCalls: toToolCalls(calls),
+          };
+        }
       }
-      const usage = await result.usage;
-      yield { content: '', done: true, usage: { inputTokens: usage.inputTokens ?? 0, outputTokens: usage.outputTokens ?? 0 } };
+      if (!finished) {
+        throw aborted(config, undefined) ?? new AIError('ai/request-failed', `${this.name} ended the stream without finishing the reply`, { provider: this.name, model: modelId });
+      }
     } catch (error) {
       if (error instanceof AIError) throw error;
+      const cancelled = aborted(config, error);
+      if (cancelled) throw cancelled;
       throw new AIError('ai/request-failed', error instanceof Error ? error.message : `${this.name} stream failed`, {
         provider: this.name,
         model: modelId,

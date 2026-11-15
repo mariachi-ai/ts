@@ -1,7 +1,7 @@
 /**
  * The fingerprint probe: measures one rendered screen, at one width, as `docs/design-fingerprint.md` (spec 1)
  * defines it. It runs in the page. Everything it needs is in this file's functions, which `probeSource`
- * joins into one expression for `page.evaluate`, so Mariachi's runner and Ensemble's browser run the same code.
+ * joins into one expression for `page.evaluate`, so Mariachi's runner and any other browser runner run the same code.
  *
  * Keep every function here self-contained: no imports, no module-level values. They're serialised.
  */

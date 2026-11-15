@@ -1,7 +1,7 @@
 {
   "name": "@mariachi/jobs",
   "version": "0.0.5",
-  "description": "Background jobs and cron on BullMQ with context propagation, retries, dedup and a dead-letter queue.",
+  "description": "Background jobs and cron on BullMQ or Postgres, with context propagation, retries, dedup and a dead-letter queue.",
   "mariachi": {
     "category": "async",
     "status": "beta",
@@ -9,7 +9,8 @@
     "entry": [
       "createJobQueue",
       "defineJob",
-      "DefaultJobs"
+      "DefaultJobs",
+      "createPostgresJobQueue"
     ]
   },
   "type": "module",
@@ -18,6 +19,16 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js",
+      "require": "./dist/schema.cjs"
+    },
+    "./postgres": {
+      "types": "./dist/postgres.d.ts",
+      "import": "./dist/postgres.js",
+      "require": "./dist/postgres.cjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -41,12 +52,28 @@
   },
   "dependencies": {
     "@mariachi/core": "workspace:*",
+    "@mariachi/database": "workspace:*",
     "bullmq": "^5",
+    "cron-parser": "^4.9.0",
     "zod": "^3.24"
+  },
+  "peerDependencies": {
+    "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
+    "drizzle-orm": "^0.38"
+  },
+  "peerDependenciesMeta": {
+    "@mariachi/database-postgres": {
+      "optional": true
+    },
+    "drizzle-orm": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.7",
     "tsup": "^8",
-    "vitest": "^3"
+    "vitest": "^3",
+    "@mariachi/database-postgres": "workspace:*",
+    "drizzle-orm": "^0.38"
   }
 }

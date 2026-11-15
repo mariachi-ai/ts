@@ -25,7 +25,7 @@ function signed(body: unknown, opts: { key?: Buffer; id?: string; ts?: number; e
   };
 }
 
-// The access-token hook's payload as GoTrue v2.197.0 sent it (reports/AU0/05d-hook-http-payload.json).
+// The access-token hook's payload as GoTrue v2.197.0 sent it.
 const accessTokenHook = (method = 'password') => ({
   metadata: { uuid: '1a5e06fe-1dae-42a2-9a25-9f2eb12f56ad', time: '2026-10-21T11:34:49.023243544Z', name: 'customize-access-token', ip_address: '172.21.0.5' },
   user_id: '190fe7b7-ba4b-46b6-950a-d3e323803432',
@@ -146,5 +146,19 @@ describe('GoTrueWebhookHandler', () => {
     const body = { ...accessTokenHook(), claims: { ...accessTokenHook().claims, tenant: 't-1' } };
     const { raw, headers } = signed(body, { ts: now });
     expect(h.verify(raw, headers).tenantId).toBe('t-1');
+  });
+});
+
+describe('GoTrueWebhookHandler: the timestamp as sent', () => {
+  it('checks the signature over the timestamp text, not the parsed number', async () => {
+    const { createHmac } = await import('node:crypto');
+    const handler = new GoTrueWebhookHandler({ secret: SECRET, nowSeconds: () => NOW });
+    const raw = JSON.stringify(accessTokenHook());
+    const id = 'msg-leading-zero';
+    const text = `0${NOW}`;
+    const signature = `v1,${createHmac('sha256', rawKey).update(`${id}.${text}.`).update(raw).digest('base64')}`;
+    const headers = { 'webhook-id': id, 'webhook-timestamp': text, 'webhook-signature': signature };
+    expect(handler.verify(raw, headers).id).toBe(id);
+    expect(() => handler.verify(raw, { ...headers, 'webhook-timestamp': String(NOW) })).toThrow(expect.objectContaining({ code: 'auth/webhook-verification-failed' }));
   });
 });

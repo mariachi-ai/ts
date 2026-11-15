@@ -1,3 +1,4 @@
+import { hideContents } from '../redact';
 import type { SecretsAdapter } from '../types';
 
 function envKey(key: string, tenantId?: string): string {
@@ -11,7 +12,10 @@ function envKey(key: string, tenantId?: string): string {
 export class EnvSecretsAdapter implements SecretsAdapter {
   private readonly overrides = new Map<string, string>();
 
-  constructor(private readonly env: Record<string, string | undefined> = process.env) {}
+  constructor(private readonly env: Record<string, string | undefined> = process.env) {
+    // `env` is the whole environment
+    hideContents(this, '[EnvSecretsAdapter]');
+  }
 
   async get(key: string, tenantId?: string): Promise<string | undefined> {
     const k = envKey(key, tenantId);

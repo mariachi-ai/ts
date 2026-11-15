@@ -1,6 +1,5 @@
-import { AuthError } from '@mariachi/core';
 import type { Context, Middleware } from '@mariachi/core';
-import type { AuthProvider } from '@mariachi/auth';
+import { createAuthMiddleware, type AuthProvider } from '@mariachi/auth';
 
 export interface ClerkMiddlewareOptions {
   /**
@@ -10,27 +9,11 @@ export interface ClerkMiddlewareOptions {
   getToken?: (ctx: Context) => string | null;
 }
 
-export function createClerkMiddleware(
-  provider: AuthProvider,
-  options?: ClerkMiddlewareOptions,
-): Middleware {
-  const getToken =
-    options?.getToken ??
-    ((ctx: Context) => (ctx as Context & { token?: string }).token ?? null);
-
-  return async (ctx, next) => {
-    const token = getToken(ctx);
-    if (!token) {
-      throw new AuthError('auth/unauthorized', 'Missing session token');
-    }
-
-    const identity = await provider.verify(token);
-    ctx.userId = identity.userId;
-    ctx.tenantId = identity.tenantId;
-    ctx.scopes = identity.scopes;
-    ctx.identityType = identity.identityType;
-    ctx.sessionId = identity.sessionId;
-
-    await next();
-  };
+/**
+ * The framework's auth middleware over a Clerk provider. Kept for existing imports: it is
+ * `createAuthMiddleware(provider, options)` from `@mariachi/auth`, so the verified claims reach
+ * `ctx.jwtClaims` (and tenancy's `jwt-claim` strategy) as they do for every other provider.
+ */
+export function createClerkMiddleware(provider: AuthProvider, options?: ClerkMiddlewareOptions): Middleware {
+  return createAuthMiddleware({ verify: (token) => provider.verify(token), sign: async () => '' }, options);
 }

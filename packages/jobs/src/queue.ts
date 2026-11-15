@@ -9,5 +9,9 @@ export type JobBackend = JobQueue & JobWorker & JobScheduler;
 export function createJobQueue(config: JobConfig, logger: Logger): JobBackend {
   if (config.adapter === 'bullmq') return new BullMQAdapter(config, logger);
   if (config.adapter === 'memory') return new MemoryJobAdapter(config, logger);
+  if (config.adapter === 'postgres') {
+    // It needs the app's database client, and lives behind a subpath so apps on Redis don't load a Postgres driver
+    throw new JobsError('jobs/postgres-needs-database', "The Postgres queue takes the database client: createPostgresJobQueue(database.db, config, logger) from '@mariachi/jobs/postgres'");
+  }
   throw new JobsError('jobs/unknown-adapter', `Unknown job adapter: ${config.adapter}`);
 }

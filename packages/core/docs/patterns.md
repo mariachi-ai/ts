@@ -2,8 +2,8 @@
 
 ## Composition root
 
-One function builds the object graph: `src/main.ts` in a generated project. Nothing else constructs
-infrastructure. The order is:
+One function builds the object graph: `createApp()` in `src/app.ts` of a generated project.
+`src/main.ts` starts it, and so do the end-to-end tests. Nothing else constructs infrastructure. The order is:
 
 1. `bootstrap()`: loads and validates config, creates logger/tracer/metrics/error tracker, registers
    them in the container, installs signal handlers.

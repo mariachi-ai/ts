@@ -8,7 +8,7 @@ import type { AuthWebhookEvent } from '@mariachi/auth';
 import { createGoTrueAuth } from './index';
 
 /**
- * Against a real GoTrue v2.197.0 (the version Ensemble pins) on Postgres 16, started with
+ * Against a real GoTrue v2.197.0 on Postgres 16, started with
  * Testcontainers: its JWKS, a password sign-in's token, and its signed access-token hook.
  */
 const GOTRUE_IMAGE = 'supabase/auth:v2.197.0';

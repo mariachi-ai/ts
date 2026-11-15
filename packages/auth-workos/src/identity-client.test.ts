@@ -13,7 +13,7 @@ const user = (over: Record<string, unknown> = {}) => ({
   firstName: 'Ada',
   lastName: 'Lovelace',
   profilePictureUrl: 'https://img.example.org/ada.png',
-  externalId: 'ensemble-uuid-1',
+  externalId: 'app-uuid-1',
   metadata: {},
   ...over,
 });
@@ -53,7 +53,7 @@ describe('WorkOSIdentityClient: sign-in', () => {
     const out = await client.signInWithPassword({ email: 'ada@example.org', password: 'pw', ipAddress: '203.0.113.7', userAgent: 'test' });
     expect(out).toEqual({
       status: 'signed-in',
-      user: { id: 'user_01', email: 'ada@example.org', emailVerified: true, name: 'Ada Lovelace', avatarUrl: 'https://img.example.org/ada.png', externalId: 'ensemble-uuid-1' },
+      user: { id: 'user_01', email: 'ada@example.org', emailVerified: true, name: 'Ada Lovelace', avatarUrl: 'https://img.example.org/ada.png', externalId: 'app-uuid-1' },
       tokens: { accessToken: accessToken(), refreshToken: 'rt_1', sessionId: 'session_01', expiresAt: 1_792_656_827_000 },
     });
     expect(userManagement.authenticateWithPassword).toHaveBeenCalledWith({
@@ -197,7 +197,7 @@ describe('WorkOSIdentityClient: sessions and users', () => {
 
   it('gets users by id (null when missing) and by email (case-insensitive)', async () => {
     const { client } = fakeSdk();
-    expect((await client.getUser('user_01'))?.externalId).toBe('ensemble-uuid-1');
+    expect((await client.getUser('user_01'))?.externalId).toBe('app-uuid-1');
     expect((await client.findUserByEmail('ada@example.org'))?.id).toBe('user_01');
     const missing = fakeSdk({
       getUser: async () => {
@@ -211,9 +211,9 @@ describe('WorkOSIdentityClient: sessions and users', () => {
 
   it('creates users with the verification the app vouches for, and deletes them', async () => {
     const { client, userManagement } = fakeSdk();
-    const created = await client.createUser({ email: 'invitee@example.org', emailVerified: true, externalId: 'ensemble-uuid-2' });
+    const created = await client.createUser({ email: 'invitee@example.org', emailVerified: true, externalId: 'app-uuid-2' });
     expect(created).toMatchObject({ email: 'invitee@example.org', emailVerified: true });
-    expect(userManagement.createUser).toHaveBeenCalledWith(expect.objectContaining({ email: 'invitee@example.org', emailVerified: true, externalId: 'ensemble-uuid-2' }));
+    expect(userManagement.createUser).toHaveBeenCalledWith(expect.objectContaining({ email: 'invitee@example.org', emailVerified: true, externalId: 'app-uuid-2' }));
     await client.deleteUser('user_01');
     expect(userManagement.deleteUser).toHaveBeenCalledWith('user_01');
   });

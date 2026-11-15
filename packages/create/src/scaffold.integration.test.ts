@@ -41,8 +41,15 @@ function freePort(): Promise<number> {
   });
 }
 
-/** Runs a project's `src/main.ts` until `/api/health/ready` answers, then stops it. `status` is null if it exited or never answered. */
-async function bootReady(cwd: string, env: Record<string, string>): Promise<{ status: number | null; output: string }> {
+/**
+ * Runs a project's `src/main.ts` until `/api/health/ready` answers, then stops it. `status` is null if
+ * it exited or never answered. `probe` runs against the live server once it's ready.
+ */
+async function bootReady<T = undefined>(
+  cwd: string,
+  env: Record<string, string>,
+  probe?: (base: string) => Promise<T>,
+): Promise<{ status: number | null; output: string; probed?: T }> {
   const port = await freePort();
   const child = spawn(process.execPath, [viteNode, 'src/main.ts'], {
     cwd,
@@ -60,7 +67,7 @@ async function bootReady(cwd: string, env: Record<string, string>): Promise<{ st
     for (const deadline = Date.now() + 60_000; Date.now() < deadline; ) {
       if ((await Promise.race([exited, wait(250)])) === 'exited') return { status: null, output };
       const res = await fetch(`http://127.0.0.1:${port}/api/health/ready`).catch(() => null);
-      if (res) return { status: res.status, output };
+      if (res) return { status: res.status, output, probed: res.ok && probe ? await probe(`http://127.0.0.1:${port}`) : undefined };
     }
     return { status: null, output };
   } finally {
@@ -114,6 +121,15 @@ describe('generated project', () => {
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
   }, 120_000);
 
+  it('passes its own end-to-end tests: the app over HTTP against a throwaway Postgres and Redis', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', project, '--config', join(project, 'vitest.e2e.config.ts')]);
+    expect(stdout).toMatch(/src\/app\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/invoice-items\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/failed/);
+  }, 300_000);
+
   it('boots its main.ts against Postgres and Redis and answers ready', async () => {
     const { status, output } = await bootReady(project, {
       SERVICE_NAME: 'scaffold-app',
@@ -146,16 +162,49 @@ describe('generated project', () => {
   });
 });
 
-describe('generated project with --auth ensemble', () => {
-  const app = join(workDir, 'ensemble-app');
+describe('generated project with --auth gotrue', () => {
+  const app = join(workDir, 'gotrue-app');
 
   beforeAll(async () => {
     await rm(app, { recursive: true, force: true });
-    await createProject({ name: 'ensemble-app', outputDir: app, auth: 'ensemble' });
+    await createProject({ name: 'gotrue-app', outputDir: app, auth: 'gotrue' });
     await generateEntity({ name: 'invoice-item', projectRoot: app });
   }, 30_000);
 
-  afterAll(() => rm(workDir, { recursive: true, force: true }));
+  afterAll(async () => {
+    await rm(workDir, { recursive: true, force: true });
+    await stopAll();
+  });
+
+  it('boots, serves the sign-in page to anyone, and asks everyone else for a token', async () => {
+    const { status, output, probed } = await bootReady(
+      app,
+      {
+        SERVICE_NAME: 'gotrue-app',
+        NODE_ENV: 'development',
+        DATABASE_URL: await startPostgres(),
+        REDIS_URL: await startRedis(),
+        AUTH_URL: 'https://auth.example.test/auth/v1',
+        AUTH_ANON_KEY: 'publishable-key',
+      },
+      async (base) => {
+        const page = await fetch(`${base}/api/sign-in`);
+        const script = await fetch(`${base}/api/sign-in/client.js`);
+        return {
+          page: page.status,
+          csp: page.headers.get('content-security-policy'),
+          script: await script.text(),
+          me: (await fetch(`${base}/api/me`)).status,
+          forged: (await fetch(`${base}/api/me`, { headers: { authorization: 'Bearer not-a-token' } })).status,
+        };
+      },
+    );
+    expect({ status, output }).toMatchObject({ status: 200 });
+    expect(probed).toMatchObject({ page: 200, me: 401, forged: 401 });
+    expect(probed?.csp).toContain("connect-src 'self' https://auth.example.test;");
+    expect(probed?.script).toContain('const AUTH = "https://auth.example.test/auth/v1";');
+    expect(probed?.script).toContain('const ANON_KEY = "publishable-key";');
+  }, 180_000);
 
   it('registers generated controllers beside the sign-in ones', async () => {
     const controllers = await readFile(join(app, 'src/api/controllers/index.ts'), 'utf-8');
@@ -168,14 +217,23 @@ describe('generated project with --auth ensemble', () => {
     await sh('typescript/bin/tsc', ['-p', 'tsconfig.json'], app);
   }, 120_000);
 
-  it('passes its own generated tests (config, /api/me with org roles, the sign-in page)', async () => {
+  it('passes its own generated tests (config, /api/me with an organization and a personal tenant, the sign-in page and its PKCE flow)', async () => {
     const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app], app);
     expect(stdout).toMatch(/src\/auth\.test\.ts/);
     expect(stdout).toMatch(/me\.controller\.test\.ts/);
     expect(stdout).toMatch(/sign-in\.controller\.test\.ts/);
+    expect(stdout).toMatch(/pages\/sign-in\.test\.ts/);
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
     expect(stdout).not.toMatch(/failed/);
   }, 120_000);
+
+  it('passes its own end-to-end tests with no GoTrue: /api/me for a member, an owner and a personal tenant', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app, '--config', join(app, 'vitest.e2e.config.ts')], app);
+    expect(stdout).toMatch(/src\/app\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/failed/);
+  }, 300_000);
 
   it('passes mariachi validate with no findings', async () => {
     const result = await validate(app);

@@ -1,5 +1,5 @@
-import { createContext, type Logger } from '@mariachi/core';
-import type { EnqueueOptions, JobContext, JobDefinition, JobQueue, JobWorker, JobCompletedListener, JobFailureListener } from '@mariachi/jobs';
+import { JobsError, createContext, type Logger } from '@mariachi/core';
+import type { EnqueueOptions, JobContext, JobDefinition, JobQueue, JobScheduler, JobWorker, JobCompletedListener, JobFailureListener, ScheduleDefinition } from '@mariachi/jobs';
 
 const silent: Logger = {
   info() {},
@@ -16,8 +16,15 @@ export interface EnqueuedJob<T = unknown> {
   options?: EnqueueOptions;
 }
 
-export class TestJobQueue implements JobQueue, JobWorker {
+/**
+ * A job queue for tests: `enqueue` records, `drain()` runs what was queued through the registered
+ * handlers. It is a full `JobBackend`, so `new DefaultJobs({ queue: new TestJobQueue() })` works,
+ * schedules included: nothing fires on a clock, and `runSchedule(name)` enqueues a schedule's job
+ * the way its cron tick would.
+ */
+export class TestJobQueue implements JobQueue, JobWorker, JobScheduler {
   private readonly jobs: EnqueuedJob[] = [];
+  private readonly schedules = new Map<string, ScheduleDefinition>();
   private readonly definitions = new Map<string, JobDefinition>();
   private readonly failed: JobFailureListener[] = [];
   private readonly completed: JobCompletedListener[] = [];
@@ -52,6 +59,26 @@ export class TestJobQueue implements JobQueue, JobWorker {
 
   async start(): Promise<void> { await this.drain(); }
   async stop(): Promise<void> {}
+
+  register(schedule: ScheduleDefinition): void {
+    this.schedules.set(schedule.name, schedule);
+  }
+
+  async unregister(name: string): Promise<void> {
+    this.schedules.delete(name);
+  }
+
+  /** The cron schedules registered, by name. */
+  getSchedules(): ScheduleDefinition[] {
+    return [...this.schedules.values()];
+  }
+
+  /** Enqueues a schedule's job with its data, as one tick of its cron would. Returns the job id. */
+  async runSchedule(name: string): Promise<string> {
+    const schedule = this.schedules.get(name);
+    if (!schedule) throw new JobsError('jobs/unknown-schedule', `No schedule named ${name} is registered`);
+    return this.enqueue(schedule.jobName, schedule.data ?? {});
+  }
 
   getEnqueuedJobs<T = unknown>(): EnqueuedJob<T>[] {
     return [...this.jobs] as EnqueuedJob<T>[];

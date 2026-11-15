@@ -1,4 +1,4 @@
-import { AuthError, MariachiError } from '@mariachi/core';
+import { AuthError, claimsReservedTenant, MariachiError } from '@mariachi/core';
 import type { Context, Middleware } from '@mariachi/core';
 import type { AuthenticationAdapter } from './types';
 
@@ -27,6 +27,8 @@ export function createAuthMiddleware(adapter: AuthenticationAdapter, options?: A
       if (error instanceof MariachiError && error.code.startsWith('auth/')) throw error;
       throw new AuthError('auth/unauthorized', 'Token verification failed');
     }
+    // A `user.` tenant is only ever given by withPersonalTenants; one that came from a token's own claim is forged.
+    if (claimsReservedTenant(identity)) throw new AuthError('auth/invalid-token', 'Token names a reserved personal tenant');
     ctx.userId = identity.userId;
     ctx.tenantId = identity.tenantId;
     ctx.scopes = identity.scopes;

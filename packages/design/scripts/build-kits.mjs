@@ -13,7 +13,7 @@
 //   <id>/kit.json     id, label, kind, the Mariachi version and commit, fonts, the motion version and files,
 //                     and a sha256 per file
 //
-// Kits are build output for tools that copy them (Ensemble's template and its copy-in tool); the npm
+// Kits are build output for tools that copy them into a project; the npm
 // package leaves them out. Run after build-assets, with @mariachi/motion built (turbo builds it first).
 import { execFileSync } from 'node:child_process';
 import crypto from 'node:crypto';

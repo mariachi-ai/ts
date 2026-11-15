@@ -1,4 +1,5 @@
 import type { Logger } from '@mariachi/core';
+import { redactForOutput } from '@mariachi/core';
 import { contextBindings } from './pino';
 
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40 } as const;
@@ -9,13 +10,14 @@ export class ConsoleLoggerAdapter implements Logger {
   #level: Level;
 
   constructor(bindings: Record<string, unknown> = {}, level = 'info') {
-    this.#bindings = { ...bindings };
+    this.#bindings = { ...redactForOutput(bindings) };
     this.#level = (level in LEVELS ? level : 'info') as Level;
   }
 
   #log(level: Level, obj: Record<string, unknown>, msg?: string): void {
     if (LEVELS[level] < LEVELS[this.#level]) return;
-    const merged = { ...contextBindings(), ...this.#bindings, ...obj };
+    // Before the spread: a copy of an object that declares a redacted form no longer declares it
+    const merged = { ...contextBindings(), ...this.#bindings, ...redactForOutput(obj) };
     const output = Object.keys(merged).length > 0 ? [merged, msg].filter(Boolean) : [msg ?? ''];
     console[level](...output);
   }

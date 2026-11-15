@@ -16,6 +16,10 @@ export interface RealtimeConfig {
 }
 
 /** Who is on the other end of a connection. Established once, at connect time. */
+/**
+ * Who a connection belongs to. Pass the identity your token verifier returned (or a spread of it):
+ * a personal tenant is only accepted with the mark `withPersonalTenants` puts on that object.
+ */
 export interface ConnectionIdentity {
   userId: string;
   tenantId: string | null;

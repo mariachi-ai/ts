@@ -53,6 +53,7 @@
     "@mariachi/jobs": "workspace:*",
     "@mariachi/lifecycle": "workspace:*",
     "@mariachi/tenancy": "workspace:*",
+    "@mariachi/testing": "workspace:*",
     "@types/node": "^22",
     "drizzle-orm": "^0.38",
     "zod": "^3.24",

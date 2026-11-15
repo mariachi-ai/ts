@@ -6,22 +6,28 @@ in the environment win.
 ## init
 
 ```bash
-npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --mariachi-version <range>, --auth jwt|ensemble
+npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue
 ```
 
-Creates the [project layout](./architecture.md#project-layout): `src/main.ts` (config, lifecycle,
-Postgres, BullMQ jobs, communication, API server with JWT auth, health and OpenAPI), registry files,
-`docker-compose.yml` (Postgres + Redis), `.env.example`, `vitest.config.ts`, `AGENTS.md`, and an example
-`note` entity wired end to end. Dependencies are pinned to the framework version that generated the
+Creates the [project layout](./architecture.md#project-layout): `src/app.ts` (`createApp()`: config, lifecycle,
+Postgres, BullMQ jobs, communication, API server with JWT auth, health and OpenAPI), a `src/main.ts`
+that starts it, registry files, `docker-compose.yml` (Postgres + Redis), `.env.example`,
+`vitest.config.ts`, end-to-end test support (`pnpm test:e2e`, see [testing.md](./testing.md#end-to-end-tests)),
+`AGENTS.md`, and an example `note` entity wired end to end. Dependencies are pinned to the framework version that generated the
 project. The directory must be empty or not exist.
 
-`--auth ensemble` signs users in with Ensemble's per-app auth instead of HS256 JWTs: GoTrue at
-`/auth/v1` on the app's host, verified with `@mariachi/auth-gotrue` (configured from `AUTH_URL`,
-`AUTH_ORIGIN` or `APP_ORIGIN`, else GoTrue on the preview's loopback with its discovered issuer), and
-`@mariachi/tenancy` taking the tenant from the `org_id` claim (roles include `org_role`). It adds
-`ensemble.environment.json` (the environment's settings: Compose with Postgres and Redis, the `/`
-route, `auth`), `seed/users.yaml` (the project's organization with an admin and a member persona), `.env.ensemble` (what a preview runs
-with), `GET /api/me` and an example sign-in page at `/api/sign-in` (password, sign-up, magic link).
+`--no-e2e` leaves out the end-to-end test support (`pnpm test:e2e`, `src/testing/`, the
+`@mariachi/testing` and `testcontainers` devDependencies), for environments with no Docker.
+
+`--auth gotrue` signs users in with GoTrue (Supabase Auth, hosted or your own) instead of HS256
+JWTs. `@mariachi/auth-gotrue` verifies its tokens (configured from `AUTH_URL`, `AUTH_ORIGIN` or
+`APP_ORIGIN`, else a GoTrue on a private address with its discovered issuer), and
+`@mariachi/tenancy` takes the tenant from the organization claim (`AUTH_ORG_CLAIM`, `org_id` by
+default). A user whose token names no organization gets a personal tenant, so the project works
+with a plain Supabase project; `AUTH_PERSONAL_TENANTS=false` requires an organization instead. It
+adds `GET /api/me`, `MIGRATE_ON_START`, and an example sign-in page at `/api/sign-in` (password,
+sign-up, magic link; emailed links use PKCE, so a link works once and only in the browser that
+asked for it).
 
 ## generate
 
@@ -35,11 +41,11 @@ mariachi generate integration acme
 
 | Type | Creates | Registers in |
 | --- | --- | --- |
-| `entity` | `schema/<plural>.ts`, `contracts/<plural>.ts`, `services/<plural>/{repository,service,handler,service.test}.ts`, `api/controllers/<plural>.controller.ts` with CRUD + cursor pagination | `schema/index.ts`, `services/index.ts`, `api/controllers/index.ts` |
+| `entity` | `schema/<plural>.ts`, `contracts/<plural>.ts`, `services/<plural>/{repository,service,handler,service.test}.ts`, `api/controllers/<plural>.controller.ts` with CRUD + cursor pagination, and `api/controllers/<plural>.e2e.test.ts` | `schema/index.ts`, `services/index.ts`, `api/controllers/index.ts` |
 | `service` | `contracts/<name>.ts` with an `<name>.execute` procedure, service, handler, test | `services/index.ts` |
 | `controller` | `api/controllers/<name>.controller.ts`; reuses `contracts/<name>.ts` if it exists | `api/controllers/index.ts` |
 | `job` | `jobs/<name>.job.ts` (`defineJob` with schema, retry, timeout) | `jobs/index.ts` |
-| `integration` | `integrations/<name>/client.ts` (timeouts, retries on transient status codes, `IntegrationError`) and a test | none; construct it in `main.ts` |
+| `integration` | `integrations/<name>/client.ts` (timeouts, retries on transient status codes, `IntegrationError`) and a test | none; construct it in `app.ts` |
 
 Names can be kebab, camel or Pascal case (`invoice-item`, `invoiceItem`, `InvoiceItem`). Generators
 never overwrite files without `--force`: if any target exists, nothing is written. Registry files are

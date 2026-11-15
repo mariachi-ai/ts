@@ -14,7 +14,7 @@ and `tsc --noEmit` before you finish.
 | Do work later, with retries, or on a cron | `defineJob` + `jobs.enqueue(ctx, ...)` / `jobs.schedule` | `mariachi generate job <name>`, [jobs.md](./jobs.md) |
 | Tell other modules something happened | `defineEvent` + `events.publish(ctx, ...)` / `subscribe` | [events.md](./events.md) |
 | Publish an event atomically with a DB write | transactional outbox | [events.md](./events.md#transactional-outbox) |
-| Receive a signed callback from a provider | `WebhookController` + `SignatureAuthController` | [recipe](./recipes/add-webhook-endpoint.md) |
+| Receive a signed callback from a provider | `WebhookController` + `GitHubWebhookAuth` / `StripeWebhookAuth` / `StandardWebhookAuth` / `HmacWebhookAuth` (or `SignatureAuthController` for another scheme) | [recipe](./recipes/add-webhook-endpoint.md) |
 | Call a third-party API | typed client with retry + `IntegrationError` | `mariachi generate integration <name>` |
 | Push live updates to browsers | `DefaultRealtime` + `WSAdapter` | [realtime.md](./realtime.md) |
 | Cache or lock | `DefaultCache.getOrSet`, `createLock().withLock` | below |
@@ -25,9 +25,10 @@ and `tsc --noEmit` before you finish.
 | Call an LLM | `DefaultAI` sessions | [ai.md](./ai.md) |
 | Record who did what | `audit.log(ctx, ...)` on `DrizzleAuditLog` | [audit.md](./audit.md) |
 | Check a permission | `rbac.can(identity, action, resource)` | [auth-and-providers.md](./auth-and-providers.md#authorization-rbac) |
+| Let users share a workspace, invite each other, hold roles | `DefaultOrganizations` (when the identity provider has no organizations of its own) | [organizations.md](./organizations.md) |
 | Turn a feature on per tenant | `createFeatureFlags` + `DrizzleFeatureFlagStore` | [feature-flags.md](./feature-flags.md) |
 | Store or serve files | `DefaultStorage` | [storage.md](./storage.md) |
-| Full-text search | `DefaultSearch` on Typesense | [search.md](./search.md) |
+| Full-text search | `DefaultSearch` on `createPostgresSearch(db)` (no extra server) or Typesense (typo tolerance) | [search.md](./search.md) |
 | Limit a tenant's usage outside HTTP | `DefaultRateLimiting.consumeTier` | [http.md](./http.md#rate-limits) |
 | Test without infrastructure | `@mariachi/testing` doubles | [testing.md](./testing.md) |
 | Style a UI consistently | `@mariachi/design` classes + a preset (`data-theme`) | [design.md](./design.md), [design-catalog.md](./design-catalog.md) |
@@ -107,7 +108,7 @@ throw new ValidationError('Invalid date range', [{ path: ['to'], message: 'must 
     `ctx.request.rawBody` or the webhooks package, never `JSON.stringify(body)`.
 15. **Email template values are escaped; `{{{raw}}}` is not.** Never put user input in a triple-brace
     placeholder.
-16. **Search isn't tenant-scoped.** Index `tenantId` and filter on it in every query.
+16. **Search isn't tenant-scoped unless you ask.** Pass `tenantScoped: true` to `DefaultSearch` (Postgres and memory adapters); otherwise index `tenantId` and filter on it in every query.
 17. **Doubles must pass the contract suites.** When you change a real adapter's behavior, update the
     suite in `packages/testing/src/contracts/` so the double is forced to match.
 18. **Use design-catalog markup; never invent classes.** `m-` classes and data attributes are the

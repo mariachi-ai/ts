@@ -36,7 +36,9 @@ all of the boundaries above.
 
 ```
 src/
-  main.ts                    composition root (config → lifecycle → resources → communication → HTTP)
+  app.ts                     composition root: createApp() (config → lifecycle → resources → communication → HTTP)
+  main.ts                    entry point: starts what createApp() built
+  testing/                   end-to-end test support: startApp() and the containers the tests share
   contracts/<domain>.ts      Zod schemas + `Procedures` type augmentation, shared by controllers and handlers
   api/controllers/           BaseController subclasses; index.ts lists them
   services/<domain>/         <domain>.service.ts, .repository.ts, .handler.ts, .service.test.ts
@@ -51,8 +53,8 @@ Contracts are the only thing controllers and services share. They hold schemas a
 
 ## One process, many roles
 
-The composition root decides what a process runs. The generated `main.ts` runs the API and the job
-worker together. To split them later, create a second entry point that bootstraps the same resources
+The composition root decides what a process runs. The generated `createApp()` (`src/app.ts`), which
+`main.ts` starts, runs the API and the job worker together. To split them later, create a second entry point that bootstraps the same resources
 and calls `jobs.start()` without starting the HTTP server. Services and handlers don't change.
 
 ## Adapters
