@@ -126,7 +126,28 @@ await billing.consumeCredits(ctx, 25, { description: 'Report export', referenceT
 await billing.getCreditBalance(ctx);
 ```
 
-Usage is recorded locally first (deduplicated by key), then reported to Stripe. The credit ledger is
+Usage is recorded locally first (deduplicated by key), then reported to Stripe. If that second step
+fails, `reportUsage` throws and the record stays marked as waiting for confirmation. **Retry with
+the same key**: the retry sends the recorded usage again (not what the retry passes) under the same
+event identifier, which Stripe counts once. For reports nobody retries, run the sweep on a
+schedule:
+
+```ts
+jobs.registerJob(defineJob({ name: 'billing-forward-usage', schema: z.object({}), handler: async (ctx) => void (await billing.forwardPendingUsage(ctx)) }));
+jobs.schedule({ name: 'billing-forward-usage', cron: '*/5 * * * *', jobName: 'billing-forward-usage' });
+```
+
+`forwardPendingUsage(ctx, { limit, olderThanMs })` returns `{ forwarded, failed, stale }`; what
+fails again stays pending for the next run. Neither path resends a record more than a day old:
+Stripe only promises to recognise a repeated identifier for about that long, and past it a resend
+could be billed twice. `stale` counts those (also the gauge `billing.usage.stale`): usage counted
+here that Stripe may not have, left in `billing_usage_records` with `forward_pending` set for a
+person to settle. Only records `reportUsage` itself marked are ever resent, so rows from before
+this existed are left alone.
+
+If you call `reportUsage` inside a database transaction that rolls back when it throws, the record
+rolls back with it and there is nothing to resend; your own retry then reports under the same key. Give `reportUsage` a key of your own: without one, each call gets a
+new key, so a retried call is new usage. The credit ledger is
 local and append-only: each entry stores `balanceAfter`, computed under a per-customer Postgres
 advisory lock, so concurrent consumers can't overdraw. Insufficient balance throws
 `billing/insufficient-credits` (HTTP 402) unless you pass `allowNegative`.
