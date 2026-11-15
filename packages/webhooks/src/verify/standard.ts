@@ -43,7 +43,7 @@ export function verifyStandardWebhook(
   const id = headerValue(headers, `${prefix}-id`);
   const signature = headerValue(headers, `${prefix}-signature`);
   if (!id || !signature) return invalidSignature(provider, 'webhook-id or webhook-signature is missing');
-  const timestampSeconds = checkedTimestamp(provider, headerValue(headers, `${prefix}-timestamp`), options);
+  const { timestampSeconds, text: timestamp } = checkedTimestamp(provider, headerValue(headers, `${prefix}-timestamp`), options);
 
   const offered = signature
     .split(' ')
@@ -52,7 +52,7 @@ export function verifyStandardWebhook(
     .map((entry) => Buffer.from(entry.slice(3), 'base64'));
   if (offered.length === 0) return invalidSignature(provider, 'no v1 signature');
   for (const key of keys) {
-    const expected = hmac('sha256', key, [`${id}.${timestampSeconds}.`, rawBody]);
+    const expected = hmac('sha256', key, [`${id}.${timestamp}.`, rawBody]);
     if (offered.some((candidate) => safeEqual(candidate, expected))) return { eventId: id, timestampSeconds };
   }
   return invalidSignature(provider, 'signature mismatch');

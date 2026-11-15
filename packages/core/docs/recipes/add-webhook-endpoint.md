@@ -33,8 +33,14 @@ one is being rotated. A rejected delivery is logged with the reason and answered
 **Dedup only uses signed material.** GitHub's `X-GitHub-Delivery` (like most senders' delivery-id
 headers) isn't covered by the signature, so someone replaying a captured delivery can change it.
 Those authenticators key dedup on a digest of the signature instead, which is the same for the same
-body; the sender's id is in `identity.metadata.deliveryId` for logs. GitHub signs no timestamp
-either, so for GitHub the idempotency store is the replay protection: don't run without one.
+body; the sender's id is in `identity.metadata.deliveryId` for logs.
+
+GitHub and plain-HMAC senders sign no timestamp, so for them the idempotency store is the only
+replay protection: don't run without one, and keep its keys for a long time (a delivery replayed
+after its key expires is processed again). A key is recorded only after the handler succeeds; if
+it throws, the claim is released, so the sender's own redelivery of a failed attempt (GitHub's
+"Redeliver": same body, same signature) is processed and not dropped as a duplicate. A delivery
+seen again while the first is still being processed is answered as a duplicate.
 
 **A tenant has to be authenticated too.** Nothing signs a URL, so with one secret for everyone, a
 valid delivery posted to another tenant's path would be attributed to that tenant. Two safe ways:
