@@ -67,6 +67,10 @@ function nextRun(cron: string, timezone: string | undefined, after: Date): Date 
  */
 export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
   readonly queueName: string;
+  /** This process's identity in the queue. Changes on `reset()`. */
+  get workerId(): string {
+    return this.worker;
+  }
   private worker = randomUUID();
   /** Ids of the jobs whose handlers are running in this process right now. */
   private readonly live = new Set<string>();
@@ -256,6 +260,7 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
       .where(and(eq(jobs.queue, this.queueName), eq(jobs.lockedBy, previous), eq(jobs.status, 'active')));
     this.live.clear();
     this.wakeUp?.();
+    this.logger.info({ queue: this.queueName, from: previous, to: this.worker }, 'job worker reset: its running jobs were returned to the queue and it has a new worker id');
   }
 
   /** Writes this process's schedules and removes the queue's others, as `JobScheduler.start` promises. */
@@ -463,6 +468,30 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
       if (final) this.logger.error({ jobId: row.id, jobName: row.name, err: error }, 'job failed permanently');
     }
   }
+}
+
+export interface ResetOnSignalOptions {
+  /** Default `SIGUSR2`. */
+  signal?: NodeJS.Signals;
+  logger?: Logger;
+}
+
+/**
+ * Calls `queue.reset()` when the process receives a signal, for a runtime that copies running
+ * machines and can tell each copied process so (see `PostgresJobAdapter.reset`). Opt-in. A second
+ * signal while a reset is under way waits for it and resets again, which finds nothing to return.
+ * Returns a function that removes the handler.
+ */
+export function resetOnSignal(queue: Pick<PostgresJobAdapter, 'reset'>, options: ResetOnSignalOptions = {}): () => void {
+  const signal = options.signal ?? 'SIGUSR2';
+  let last: Promise<void> = Promise.resolve();
+  const handler = () => {
+    last = last
+      .then(() => queue.reset())
+      .catch((err: unknown) => options.logger?.error({ err, signal }, 'could not reset the job worker'));
+  };
+  process.on(signal, handler);
+  return () => void process.off(signal, handler);
 }
 
 /** A Postgres-backed job queue for `new DefaultJobs({ queue })`. `db` is the app's Drizzle client. */

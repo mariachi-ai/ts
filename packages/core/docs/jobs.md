@@ -52,7 +52,9 @@ What to know when you run it:
   database (a fork, a snapshot restored beside the original), the copy has the same worker id and
   is mid-way through the same jobs. Call `queue.reset()` in the copy before it does anything else:
   it aborts the handlers running there (`ctx.signal`), returns their jobs to the copy's queue with
-  the attempt uncharged, and takes a new worker id. Mariachi can't know a copy exists, so anything
+  the attempt uncharged, and takes a new worker id. `resetOnSignal(queue)` from
+  `@mariachi/jobs/postgres` does that when the process receives `SIGUSR2` (or the signal you name),
+  for a runtime that can signal the processes of a copy. Mariachi can't know a copy exists, so anything
   waiting in a copied database, and every schedule, runs in both: side effects that leave the
   machine (email, webhooks, payments) happen twice unless the copy's queue is emptied or its
   handlers check where they are.

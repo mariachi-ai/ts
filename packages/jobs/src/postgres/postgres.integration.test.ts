@@ -6,7 +6,7 @@ import { createContext, MariachiError, type Context, type Logger } from '@mariac
 import { applySchema, createPostgresDatabase, withTransaction, type PostgresDatabase } from '@mariachi/database-postgres';
 import { startPostgres, stopAll } from '../../../../test/setup';
 import { createJobQueue, defineJob, Jobs, type JobCompletedEvent, type JobContext, type JobFailureEvent } from '../index';
-import { jobSchedulesTable, jobsTable, jobTables, PostgresJobAdapter, type PostgresJobConfig } from './index';
+import { jobSchedulesTable, jobsTable, jobTables, PostgresJobAdapter, resetOnSignal, type PostgresJobConfig } from './index';
 
 const logger: Logger = { info() {}, warn() {}, error() {}, debug() {}, child: () => logger };
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -352,6 +352,29 @@ describe('Postgres job queue', () => {
     await jobs.enqueue(ctx, 'long', {});
     await waitFor(async () => jobs.completed.length === 2);
     expect(before).toBeTruthy();
+  });
+
+  it('resets on a signal when asked to, once per signal, and stops listening when told', async () => {
+    const { backend } = make();
+    const first = backend.workerId;
+    const listeners = process.listenerCount('SIGUSR2');
+    const off = resetOnSignal(backend, { logger });
+    expect(process.listenerCount('SIGUSR2')).toBe(listeners + 1);
+    // Delivered the way the runtime delivers it, without sending this test process a real signal
+    process.emit('SIGUSR2');
+    await waitFor(() => backend.workerId !== first);
+    const second = backend.workerId;
+    process.emit('SIGUSR2');
+    await waitFor(() => backend.workerId !== second);
+    off();
+    expect(process.listenerCount('SIGUSR2')).toBe(listeners);
+    const third = backend.workerId;
+    await sleep(50);
+    expect(backend.workerId).toBe(third);
+
+    const other = resetOnSignal(backend, { signal: 'SIGHUP' });
+    expect(process.listenerCount('SIGHUP')).toBeGreaterThan(0);
+    other();
   });
 
   it('fails an attempt that runs past its timeout, and tells the handler through its signal', async () => {
