@@ -109,8 +109,9 @@ export const heather = extendTheme(minimal, {
         '3xl': '1.75rem',
         '4xl': '2rem',
       },
-      // Bold is the reference's own 653
-      weight: { regular: '400', medium: '500', semibold: '600', bold: '653' },
+      // Three weights, as the live video page draws them: 400 text, 500 controls and labels, 653 for
+      // headings and emphasis. There is no 600 in the reference's app, so semibold is its 653
+      weight: { regular: '400', medium: '500', semibold: '653', bold: '653' },
       leading: { tight: '1.167', normal: '1.57', relaxed: '1.6' },
       tracking: { tight: '-0.01em', normal: '0', wide: '0.03em' },
       body: { weight: '400' },
@@ -264,7 +265,7 @@ export const heather = extendTheme(minimal, {
       thumbInset: '3px',
       thumbShadow: 'none',
     },
-    // Members and lists: no frame, no header fill, 12px semibold headers, hairline rows
+    // Members and lists: no frame, no header fill, 12px bold headers, hairline rows
     table: {
       fontSize: 'var(--m-font-size-md)',
       cellPaddingX: 'var(--m-space-3)',
@@ -273,7 +274,7 @@ export const heather = extendTheme(minimal, {
       headerBg: 'transparent',
       headerFg: 'var(--m-color-fg-subtle)',
       headerFontSize: 'var(--m-font-size-sm)',
-      headerFontWeight: 'var(--m-font-weight-semibold)',
+      headerFontWeight: 'var(--m-font-weight-bold)',
       headerTransform: 'none',
       headerTracking: '0',
       rowHoverBg: { light: '#f8f8f8', dark: '#242528' },
@@ -295,7 +296,7 @@ export const heather = extendTheme(minimal, {
       heading: {
         fg: 'var(--m-color-fg-subtle)',
         size: 'var(--m-font-size-sm)',
-        weight: 'var(--m-font-weight-semibold)',
+        weight: 'var(--m-font-weight-bold)',
         transform: 'none',
         tracking: '0',
       },
@@ -305,10 +306,11 @@ export const heather = extendTheme(minimal, {
         hoverBg: { light: '#f0f1f2', dark: '#2b2b2e' },
         activeFg: 'var(--m-color-accent-text)',
         activeBg: 'var(--m-color-accent-subtle)',
-        activeWeight: 'var(--m-font-weight-semibold)',
+        activeWeight: 'var(--m-font-weight-medium)',
         radius: '6px',
         paddingX: 'var(--m-space-3)',
-        paddingY: 'calc(0.5rem * var(--m-density))',
+        // 6px above and below a 15px line: rows about 36px, as the library draws them
+        paddingY: 'calc(0.375rem * var(--m-density))',
       },
       count: { bg: 'transparent', fg: 'var(--m-color-fg-subtle)' },
     },
@@ -372,14 +374,14 @@ export const heather = extendTheme(minimal, {
       currentFg: 'var(--m-color-accent-text)',
       currentBorder: 'transparent',
     },
-    // Small 4px labels in sentence case, semibold, on a soft tint
+    // Small 4px labels in sentence case, bold, on a soft tint
     badge: {
       height: '1.25rem',
       paddingX: '0.375rem',
       radius: '4px',
       borderWidth: '0px',
       fontSize: 'var(--m-font-size-sm)',
-      fontWeight: 'var(--m-font-weight-semibold)',
+      fontWeight: 'var(--m-font-weight-bold)',
       textTransform: 'none',
       tracking: '0',
       neutral: {
@@ -394,7 +396,7 @@ export const heather = extendTheme(minimal, {
       size: { sm: '1.5rem', md: '2rem', lg: '2.5rem' },
       bg: 'var(--m-color-accent-subtle)',
       fg: 'var(--m-color-accent-text)',
-      fontWeight: 'var(--m-font-weight-semibold)',
+      fontWeight: 'var(--m-font-weight-medium)',
       ringColor: 'var(--m-color-bg-surface)',
       ringWidth: '2px',
     },
@@ -478,7 +480,7 @@ export const heather = extendTheme(minimal, {
     kbd: {
       fontFamily: 'var(--m-font-family-sans)',
       fontSize: 'var(--m-font-size-sm)',
-      fontWeight: 'var(--m-font-weight-semibold)',
+      fontWeight: 'var(--m-font-weight-medium)',
       bg: { light: '#f0f1f2', dark: '#303134' },
       border: 'transparent',
       radius: '4px',

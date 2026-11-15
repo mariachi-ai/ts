@@ -151,9 +151,10 @@ export const cirrus = extendTheme(minimal, {
       gridGap: 'var(--m-space-6)',
       splitSide: '16rem',
     },
-    // 8px buttons: solid blue for the one that matters, white with a hairline for the rest
+    // 8px buttons: solid blue for the one that matters, white with a hairline for the rest. The app's
+    // buttons are 620 (the sign-in card's, measured); the public site's pills are 550 (set in the recipes)
     button: {
-      fontWeight: 'var(--m-font-weight-medium)',
+      fontWeight: 'var(--m-font-weight-semibold)',
       shadow: 'var(--m-shadow-sm)',
       hoverShadow: 'var(--m-shadow-sm)',
       activeShadow: 'none',

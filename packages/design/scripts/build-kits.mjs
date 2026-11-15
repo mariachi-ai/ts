@@ -163,11 +163,13 @@ for (const theme of Object.values(presets)) {
     files[rel] = crypto.createHash('sha256').update(content).digest('hex');
   };
 
-  // Fonts: the language's body and heading families (mono falls back to the system's).
+  // Fonts: the language's body and heading families, and its mono where an open package is installed (otherwise
+  // mono falls back to the system's, as most languages' code does).
   const families = a ? [...new Set([a.type.body, a.type.heading])] : [];
+  const mono = a && !families.includes(a.type.mono) && fontFace(a.type.mono) ? [a.type.mono] : [];
   const fonts = [];
   const faceCss = [];
-  for (const family of families) {
+  for (const family of [...families, ...mono]) {
     const face = fontFace(family);
     if (!face) {
       fonts.push({ family, files: [], note: 'No open font package; the theme falls back to the next font in its stack.' });
@@ -209,6 +211,15 @@ for (const theme of Object.values(presets)) {
   fs.writeFileSync(path.join(dir, 'kit.json'), `${JSON.stringify(manifest, null, 2)}\n`);
   count++;
 }
+// Each language's library files (the design-language playbook) go beside its DESIGN.md in dist/archetypes/<id>/.
+const LIBRARY = ['brief.md', 'never.md', 'preferences.md', 'questions.md', 'patterns', 'precedents'];
+for (const a of archetypes) {
+  for (const name of LIBRARY) {
+    const from = path.join(root, 'src', 'archetypes', a.id, name);
+    if (fs.existsSync(from)) fs.cpSync(from, path.join(dist, 'archetypes', a.id, name), { recursive: true });
+  }
+}
+
 // Check what was written: every sha matches its file, and every language has its body font.
 for (const id of fs.readdirSync(out)) {
   const m = JSON.parse(fs.readFileSync(path.join(out, id, 'kit.json'), 'utf8'));

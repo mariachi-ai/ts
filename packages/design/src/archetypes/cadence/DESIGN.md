@@ -1,7 +1,7 @@
 # Cadence
 
 Category: content-first and immersive. Dark first: near-black panels with 8px corners sitting in a
-black frame, one bright green for play and for "on", white pills for the main call, huge bold titles
+black frame, one bright green for play and for "on", green and white pills for the main call, huge bold titles
 over a wash of colour, cover art on every row and card, dense track lists with no rules between rows,
 and buttons that grow a little under the pointer. For music, audio and media apps where people browse
 for hours and the content is the hero.
@@ -9,7 +9,9 @@ for hours and the content is the hero.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes;
+- **`patterns/`**, **`never.md`**, **`precedents/index.md`** and **`brief.md`** hold the composition: what
+  the language reaches for by job, what it refuses, and the one-page summary;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `cadence` preset of `@mariachi/design` (`data-theme="cadence"`,
@@ -57,11 +59,15 @@ chose light. Light mode is built from the same system's published light palette.
   - 16–24px inside panels;
   - 32–48px between sections.
 - **Layout.**
-  - A black frame with a 64px top bar and a 72px now-playing bar.
+  - The app is a black frame exactly the window's height: a 64px top bar, the panels, and a 72px
+    now-playing bar pinned at the bottom. The page never scrolls; each panel scrolls inside itself.
   - The collection panel about 21rem wide on the left; the main panel fills the rest; a detail
     panel of 20–26rem may open on the right.
   - Content in the main panel runs edge to edge with 24px gutters; settings run in a 52rem column,
-    sign-up forms in 28rem.
+    sign-up forms in 28rem; the sign-in form in 20.25rem inside a 46rem panel.
+  - The main view ends with its foot (link columns in 30px rows, a rule, the fine print); public
+    pages end with the site footer (40px rows).
+  - On a phone the main view comes first and the collection panel drops below it.
   - Shelves are grids of cards with no gap: the card's own 12px padding spaces them.
 - **Density.** Dense by default; for data-heavy screens set `--m-density: 0.85`.
 
@@ -74,11 +80,13 @@ are in the reference at the end.
   labels and buttons, 800 for page titles. DM Mono (`@fontsource/dm-mono`) only for paths and codes.
 - **Sizes** (the published desktop scale):
   - body 16px; secondary lines, labels, small buttons and table text 14px; fine print 12px;
-  - shelf and panel titles 24px bold; page titles 32px bold; error titles 48px bold;
+  - shelf, panel and article section titles 24px bold; page titles 32px bold; error and help-article
+    titles 48px bold;
   - the page title of a mix, performer or record 96px at 800 with tracking −0.04em, shrinking to fit
     (`clamp(2.5rem, 5.5vw, 6rem)`).
 - **Line height.** Tight: 1.375 for text, 1.15 for titles.
-- **Case.** Sentence case everywhere, never uppercase.
+- **Case.** Sentence case everywhere. The one exception is the site footer's column titles: 12px,
+  800, uppercase, tracked 0.08em, grey.
 - **Figures.** Durations and counts in tabular figures: `3:54`, `412,806 listeners each month`.
 
 ## Icons
@@ -132,7 +140,10 @@ are in the reference at the end.
 All 36 of the library's components, as Cadence draws them. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
-- `m-split` for the collection panel (21rem) beside the main view, 8px apart on the black frame;
+- the app frame: a column the window's height (top bar, panels, now-playing bar), the panels in a
+  wrapping row with `flex-direction: row-reverse` and the main view first in the source, so the
+  collection (21rem) sits on the left when wide and below the main view on a phone; 8px apart;
+  each panel `overflow-y: auto` (the recipes' `shell`);
 - `m-container` inside a panel: full width with 24px gutters, 52rem for settings, 28rem for forms;
 - `m-grid` for shelves (10.5rem columns, no gap) and shortcut tiles (12rem, 8px gap);
 - `m-stack` and `m-cluster` for everything inside.
@@ -141,8 +152,10 @@ All 36 of the library's components, as Cadence draws them. Every one is in `gall
 - **Button.** Always a pill, bold, growing to 104% on hover. 32px (`sm`, 14px label) in rows and
   panels; 48px (`md`) for the main call of a page, with its label at 16px
   (`--m-button-font-size: var(--m-font-size-md)`); 56px (`lg`).
-  - **Primary:** the green with black text, one per view.
-  - **White pill:** the call on a dark page (sign in, empty states, errors): the primary variant with
+  - **Primary:** the green with black text, for the one main action of a view: the play button in
+    the app, the main pill on public pages and in flows (a hero's offer, Continue, Next). On a public
+    page the site header's green pill (Sign in) may sit above it; never two side by side.
+  - **White pill:** the app top bar's call, empty states and errors: the primary variant with
     `--m-button-primary-bg: var(--m-color-bg-inverse)` and `--m-button-primary-fg:
     var(--m-color-fg-inverse)`.
   - **Secondary** (the default): outlined, a 1px grey ring and white text on no fill.
@@ -168,7 +181,9 @@ All 36 of the library's components, as Cadence draws them. Every one is in `gall
     highlight grey, the open item the tint, the playing item's title green with a speaker icon.
   - Pinned items show a small green pin. Counts ("new") are blue pills.
 - **Navbar** (public pages). Black (the frame grey in light), 64px, the mark and name on the left,
-  bold 16px subdued links that turn white on hover, a ghost text action and a white pill on the right.
+  bold 16px subdued links that turn white on hover (the current one white), "Create account" as the
+  last link, pushed right, then the **green** pill (Sign in). A help page adds a ghost globe before
+  the pill. On a phone the links scroll inside the bar and the pill stays.
 - **Top bar** (in the app). The mark, a round grey icon button, the round search field, then a white
   pill, ghost icon buttons and the avatar in a grey ring.
 - **Tabs.**
@@ -255,36 +270,115 @@ All 36 of the library's components, as Cadence draws them. Every one is in `gall
 - **Words.** Say what happened, whether anything changed, and what to do. No codes in sentences, no
   blame, no exclamation marks.
 
+## The two families
+
+Every page belongs to one of two families. Decide which before building.
+
+- **The app:** home, a record, mix, show or performer, the collection, settings and empty places.
+  Recipes: `dashboard`, `list-detail`, `settings`, `empty-state`. Flows that stand alone (sign-up,
+  a full-page error) share the app's type and pills but not its frame: `onboarding`, `errors`.
+- **Public pages:** plans and marketing, help articles, sign-in. Recipes: `pricing`, `reading`,
+  `sign-in`.
+
+| | App | Public |
+| --- | --- | --- |
+| Frame | A black frame the window's height; panels scroll inside it; the now-playing bar pinned at the bottom | A normal page that scrolls; no panels around the content |
+| Header | The top bar: mark, round Discover, the round search field, a white pill, ghost icons, the avatar | The site header: mark and name, bold 16px links, "Create account", the **green** pill |
+| Main action | The green round play button; the white pill for the top bar's call | The green pill (header, hero, Continue) |
+| Sidebar | The collection panel, 21rem, on the left | None |
+| Titles | One thing: up to 96px at 800. Home and settings: 32px bold. Shelves: 24px bold | Hero: up to 96px at 800. Article: 48px bold, sections 24px bold. Sign-in: 32px bold |
+| Footer | The main view's foot: bold 16px titles, grey 16px links in 30px rows, a rule | The site footer: black, 12px uppercase grey titles, white 16px links in 40px rows |
+| On a phone | The main view first, the collection below it; the now-playing bar keeps the track | The header keeps the mark and the pill; columns stack; sign-in's panel fills the width |
+
+- `observed`: both headers, both footers, the fixed frame, the pinned bottom bar, the green site pill
+  and the white app pill, on the source's studied screens (private notes). The phone order is
+  `inferred` from the phone app, where the collection is a tab of its own.
+- **What stays the same:** near-black and black, Figtree in three weights, pills that grow on hover,
+  green for the main action only, sentence case.
+
 ## Page shapes (recipes)
 
-- **Dashboard** (home).
+- **Dashboard** (home, app).
   - Filter chips at the top over a soft wash of the brand colour.
   - A greeting in 32px bold, then a grid of shortcut tiles.
   - Shelves: a 24px bold title with "See everything" on the right, then a row of cards; one row of
-    round performer cards.
-  - Around it, the collection panel and the now-playing bar.
-- **List and detail.**
+    round performer cards. Then the main view's foot.
+  - Around it, the collection panel and the pinned now-playing bar.
+- **List and detail** (app).
   - A header washed in colour: big art with a shadow, the type ("Public mix"), the huge title, a
     subdued description and a meta line with the owner's avatar.
   - The action row: the 56px green play button, shuffle, add, more; a view switch on the right.
-  - The track list, then the detail as the now-playing panel on the right: big art, title and
-    performer with the saved tick, an "About the performer" box and credits.
-- **Onboarding.** The mark centred, a thin green step bar, a back chevron beside "Step 2 of 3" and
-  the step's name, a bold question, a white search field, round picks with a green tick, one field,
-  and a full-width green pill.
-- **Settings.** One column inside the frame: a 32px bold title with a search icon, bold 16px group
-  titles, subdued 14px labels with switches, selects and outlined pills on the right. Closing the
-  account comes last, with a danger pill.
-- **Empty state.** A 48px glyph in an 88px grey disc, a 32px bold title, one line, a white pill and
-  an outlined one; the grey prompt boxes with small white pills below.
-- **Pricing.**
-  - A black header, a huge bold title, a bold line with the offer, a green and an outlined pill and
-    fine print.
+  - The track list (56px rows, one rule under the header, none between rows), the main view's foot,
+    and the detail as the now-playing panel on the right: big art, title and performer with the
+    saved tick, an "About the performer" box and credits.
+- **Onboarding** (flow). The mark centred, a thin green step bar, a back chevron beside "Step 2 of 3"
+  and the step's name, a bold question, a white search field, round picks with a green tick, one
+  field, and a full-width green pill.
+- **Settings** (app). One column inside the frame: a 32px bold title with a search icon, bold 16px
+  group titles, subdued 14px labels with switches, selects and outlined pills on the right. Closing
+  the account comes last, with a danger pill.
+- **Empty state** (app). A 48px glyph in an 88px grey disc, a 32px bold title, one line, a white pill
+  and an outlined one; the grey prompt boxes with small white pills below.
+- **Pricing** (public).
+  - The site header; a hero that fills the first window: the huge bold title, one bold 16px line
+    with the offer, a green and an outlined pill, 12px fine print.
   - Plan cards on the highlight grey: a coloured tag on the first, the mark and plan family, the tier
-    name in its colour, the price in bold, a rule, plain bullets, a full-width pill in the tier's
-    colour, and centred fine print.
-  - Questions as hairline rows below.
-- **Errors.** The field, form, snackbar and full-page errors above, as one page.
+    name at 32px in its colour, the price in bold, a rule, plain bullets, a full-width pill in the
+    tier's colour, and centred fine print.
+  - Questions as hairline rows, then the site footer.
+- **Errors** (flow and public). The field, form, snackbar and full-page errors above, as one page.
+- **Reading** (public: a help article).
+  - The site header with a globe; a breadcrumb of bold 16px grey links with chevrons.
+  - Two columns: the main one holds an outlined search box (16px corners), a topic card on the
+    highlight grey (48px art, a bold title, a grey line, a chevron), the article on the highlight grey
+    (8px corners, 24px in: a 48px bold title, a 16px lead, device chips, 24px bold section titles,
+    numbered steps, a "Did this help?" row), and related articles as 44px link rows. Beside it, the
+    topics as accordion rows on the highlight grey with hairlines between, one open with its pages.
+  - The site footer. On a phone the topics drop under the article.
+- **Sign-in** (public).
+  - A wash from the highlight grey down to black; one centred panel (46rem, 8px corners) holding a
+    20.25rem column: the mark, a 32px bold title, the email field, the full-width green Continue, an
+    "or" rule, three outlined pills with a 24px icon on the left and the label centred, the way to
+    create an account (14px, the link bold and underlined) and 12px fine print. No header, no footer.
+
+### Signature moves
+
+1. **A fixed black frame.** Rounded near-black panels 8px apart, the page never scrolls, and the
+   now-playing bar is always at the bottom (`observed`: the document is the window's height on the
+   source's web player, at 1440 and 390).
+2. **The art paints the page.** A wash of the art's colour behind a page's header, fading into the
+   panel; the chrome itself is black and grey (`observed`).
+3. **One huge title.** The thing's name at up to 96px and 800, beside its art; everything else is
+   24px or smaller (`observed`: 4 or 5 text sizes a screen, `type.sizes` 4 [4, 5] on the source).
+4. **Green means play.** The round green play button on every playable thing, the green pill on public
+   pages, green for "on"; nowhere else (`observed`).
+5. **Dense rows without rules.** 56px rows of art and two lines, set apart by space and the hover
+   tint (`observed`).
+6. **Pills that grow.** Every button is a pill or a circle and grows to 104% on hover (`observed`).
+
+### How a screen is assembled
+
+- **It opens with** the top bar, then in the main panel either chips (home, a collection), the washed
+  header with the art (one thing), or a 32px title (settings). Public pages open with the site
+  header and a hero, a breadcrumb or the sign-in panel.
+- **Reading order:** art, title, the meta line, the action row, then the list; shelves top to bottom,
+  each read left to right.
+- **How much one screen does:** one thing or one collection. Detail opens in the right-hand panel
+  instead of a new page when something is playing.
+- **When narrow:** the right panel goes under the main view; the collection goes under it on a phone;
+  shelves keep their card width with fewer to a row; chips scroll sideways; the now-playing bar
+  keeps the track and lets the controls go.
+- **Too much content:** the panel scrolls; shelves end with "See everything"; lists keep loading as
+  the panel scrolls (no pages).
+- **No content:** the chips stay and the empty block takes the list's place (see
+  [patterns/say-nothing-is-here.md](./patterns/say-nothing-is-here.md)).
+- **Four or five text sizes and three weights** a screen: 12, 14, 16, 24 and the title; 400, 700 and
+  800 (`observed` on the source; the recipes measure 4 [3, 5] sizes and 2 [2, 3] weights).
+- **Rows:** 30px link rows in the main view's foot, 40px in the site footer, 48px settings and
+  collection rows (64px with 48px art), 56px songs (`observed`: rows 33 [30, 52] on the source).
+
+The patterns, by job, are in [`patterns/`](./patterns/); the refusals in [never.md](./never.md); the
+recipes as precedents in [precedents/index.md](./precedents/index.md).
 
 ## Words
 

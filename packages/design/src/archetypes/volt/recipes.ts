@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Volt's seven layout recipes: framework-free HTML using only @mariachi/design classes and tokens
+ * Volt's nine layout recipes: framework-free HTML using only @mariachi/design classes and tokens
  * (no colour literals), with sample data from a made-up payments app ("brisk"). They follow the
  * language's real screen patterns, translated from a phone app to the desktop: white 20px cards on
  * a light grey screen, bold amounts set tight, big regular headlines, black pill actions with grey
@@ -79,8 +79,8 @@ const money = `font-weight: var(--m-font-weight-bold); letter-spacing: var(--m-f
 const display =
   'font-family: var(--m-font-family-display); font-weight: var(--m-font-weight-regular); letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)';
 const pageTitle = `${display}; font-size: var(--m-font-size-3xl)`;
-// Section titles: medium, 20px
-const sectionTitle = 'font-size: var(--m-font-size-lg); font-weight: var(--m-font-weight-medium); letter-spacing: -0.01em';
+// Section titles: medium, 24px
+const sectionTitle = 'font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium); letter-spacing: -0.01em';
 const cardTitle = 'font-size: var(--m-font-size-md); font-weight: var(--m-font-weight-medium)';
 const label = 'font-size: var(--m-font-size-sm); color: var(--m-color-fg-muted)';
 const gain = 'color: var(--m-color-success-fg)';
@@ -101,16 +101,18 @@ const tile = (ic: string, tone = 'grey', size = 40) => {
   return `<span aria-hidden="true" style="display: inline-grid; place-items: center; flex: none; inline-size: ${size}px; block-size: ${size}px; border-radius: 9999px; background: ${bg}; color: ${fg}">${icon(ic, Math.round(size / 2))}</span>`;
 };
 // A person: initials in a round avatar, the brand green by default, blue or ink for variety
+// Initials sit on the type ramp: 12px small, 14px in rows, 24px large
+const initialsSize: Record<string, string> = { sm: 'var(--m-font-size-xs)', '': 'var(--m-font-size-sm)', lg: 'var(--m-font-size-xl)' };
 const person = (initials: string, tone = '', size = '') => {
-  const style =
+  const colours =
     tone === 'info'
-      ? ' style="background: var(--m-color-info-solid); color: var(--m-color-info-on-solid)"'
+      ? 'background: var(--m-color-info-solid); color: var(--m-color-info-on-solid); '
       : tone === 'ink'
-        ? ' style="background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)"'
+        ? 'background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse); '
         : tone === 'grey'
-          ? ' style="background: var(--m-color-accent-subtle); color: var(--m-color-fg-default)"'
+          ? 'background: var(--m-color-accent-subtle); color: var(--m-color-fg-default); '
           : '';
-  return `<span class="m-avatar"${size ? ` data-size="${size}"` : ''}${style} aria-hidden="true">${initials}</span>`;
+  return `<span class="m-avatar"${size ? ` data-size="${size}"` : ''} style="${colours}font-size: ${initialsSize[size]}" aria-hidden="true">${initials}</span>`;
 };
 const chevron = `<span style="color: var(--m-color-fg-subtle); display: inline-flex; flex: none">${icon(I.right, 18)}</span>`;
 
@@ -195,7 +197,7 @@ const keyRow = (keys: string[]) =>
   keys
     .map(
       (k) =>
-        `<button type="button" class="m-button" data-variant="ghost" style="--m-button-ghost-fg: var(--m-color-brand-fg); --m-button-ghost-hover-bg: transparent; --m-button-ghost-active-bg: transparent; font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-semibold); inline-size: 100%"${k === '‹' ? ' aria-label="Delete a digit"' : ''}>${k === '‹' ? icon(I.left, 22) : k}</button>`,
+        `<button type="button" class="m-button" data-variant="ghost" style="--m-button-ghost-fg: var(--m-color-brand-fg); --m-button-ghost-hover-bg: transparent; --m-button-ghost-active-bg: transparent; font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-bold); inline-size: 100%"${k === '‹' ? ' aria-label="Delete a digit"' : ''}>${k === '‹' ? icon(I.left, 22) : k}</button>`,
     )
     .join('');
 
@@ -241,8 +243,8 @@ const days = [
 ] as const;
 const bars = `<svg viewBox="0 0 320 150" width="100%" style="display: block; block-size: auto" role="img" aria-label="Spending by day this week: $186.40 in all, most on Wednesday">
                   <line x1="0" x2="284" y1="20" y2="20" stroke-width="1" style="stroke: var(--m-color-border-muted)"/><line x1="0" x2="284" y1="70" y2="70" stroke-width="1" style="stroke: var(--m-color-border-muted)"/><line x1="0" x2="284" y1="120" y2="120" stroke-width="1" style="stroke: var(--m-color-border-default)"/>
-                  <text x="318" y="24" text-anchor="end" style="fill: var(--m-color-fg-muted); font-size: 10px">$80</text><text x="318" y="74" text-anchor="end" style="fill: var(--m-color-fg-muted); font-size: 10px">$40</text><text x="318" y="124" text-anchor="end" style="fill: var(--m-color-fg-muted); font-size: 10px">$0</text>
-${days.map(([d, v], i) => `                  <rect x="${i * 40 + 6}" y="${v ? 120 - v * 1.25 : 116}" width="26" height="${v ? v * 1.25 : 4}" rx="${v ? 4 : 2}" style="fill: ${v ? 'var(--m-color-brand-default)' : 'var(--m-color-border-default)'}"/><text x="${i * 40 + 19}" y="140" text-anchor="middle" style="fill: var(--m-color-fg-muted); font-size: 10px">${d}</text>`).join('\n')}
+                  <text x="318" y="24" text-anchor="end" style="fill: var(--m-color-fg-muted); font-size: var(--m-font-size-xs)">$80</text><text x="318" y="74" text-anchor="end" style="fill: var(--m-color-fg-muted); font-size: var(--m-font-size-xs)">$40</text><text x="318" y="124" text-anchor="end" style="fill: var(--m-color-fg-muted); font-size: var(--m-font-size-xs)">$0</text>
+${days.map(([d, v], i) => `                  <rect x="${i * 40 + 6}" y="${v ? 120 - v * 1.25 : 116}" width="26" height="${v ? v * 1.25 : 4}" rx="${v ? 4 : 2}" style="fill: ${v ? 'var(--m-color-brand-default)' : 'var(--m-color-border-default)'}"/><text x="${i * 40 + 19}" y="140" text-anchor="middle" style="fill: var(--m-color-fg-muted); font-size: var(--m-font-size-xs)">${d}</text>`).join('\n')}
                 </svg>`;
 
 const offer = (ic: string, tone: string, pct: string, what: string) =>
@@ -295,7 +297,7 @@ ${activity(tile(I.car, 'grey'), 'Lanefare Rides', 'Card · Tuesday', '$17.25', f
               <div class="m-card-body m-stack" data-gap="3">
                 <div class="m-stack" data-gap="1">
                   <h2 id="vt-week" style="${label}">Spent this week</h2>
-                  <span style="${money}; font-size: var(--m-font-size-2xl)">$186.40</span>
+                  <span style="${money}; font-size: var(--m-font-size-xl)">$186.40</span>
                   <span class="m-cluster" data-gap="1" style="font-size: var(--m-font-size-sm)"><span style="display: inline-flex">${icon(I.down, 16)}</span> <span style="${strong}">$22.10</span> under last week</span>
                 </div>
                 ${bars}
@@ -443,10 +445,11 @@ ${linkRow(I.chat, 'Get help with this payment', true)}
 );
 
 // ---------------------------------------------------------------------------------------------
-// Onboarding: one question at a time on white, a green bar at the top, choice tiles, a black pill
+// Onboarding: one question at a time on white, a green bar at the top, choice tiles, one field, a
+// black pill
 
 const tileChoice = (name: string, value: string, title: string, ic: string, checked = false) =>
-  `<label class="m-stack" data-gap="2" style="padding: var(--m-space-4); border-radius: 12px; border: ${checked ? '2px solid var(--m-color-fg-default)' : 'var(--m-border-width-thin) solid var(--m-color-border-strong)'}; cursor: pointer"><input class="m-sr-only" type="radio" name="${name}" value="${value}"${checked ? ' checked' : ''}><span style="display: inline-flex">${icon(ic, 22)}</span><span style="${strong}">${title}</span></label>`;
+  `<label class="m-stack" data-gap="2" style="padding: var(--m-space-4); border-radius: 12px; border: ${checked ? '2px solid var(--m-color-fg-default)' : 'var(--m-border-width-thin) solid var(--m-color-border-strong)'}; cursor: pointer"><input class="m-sr-only" type="radio" name="${name}" value="${value}"${checked ? ' checked' : ''}><span style="display: inline-flex">${icon(ic, 20)}</span><span style="${strong}">${title}</span></label>`;
 
 const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color-bg-surface)">
   <header class="m-cluster" data-justify="between" style="padding: var(--m-space-5) var(--m-layout-container-padding)">
@@ -461,10 +464,10 @@ const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color
       </div>
       <div class="m-stack" data-gap="3">
         <h1 id="vt-onb-title" style="${display}; font-size: var(--m-font-size-3xl)">What will you use brisk for first?</h1>
-        <p style="color: var(--m-color-fg-muted); font-size: var(--m-font-size-lg)">Pick one. You can turn on everything else later.</p>
+        <p style="color: var(--m-color-fg-muted)">Pick one. You can turn on everything else later.</p>
       </div>
       <fieldset style="border: 0; padding: 0; margin: 0">
-        <legend class="m-sr-only">First thing to set up</legend>
+        <legend class="m-sr-only" style="font-weight: var(--m-font-weight-medium)">First thing to set up</legend>
         <div class="m-grid" style="--m-layout-grid-min: 10rem; --m-layout-grid-gap: var(--m-space-3)">
           ${tileChoice('vt-use', 'friends', 'Paying friends', I.transfer, true)}
           ${tileChoice('vt-use', 'pay', 'Getting paid', I.cash)}
@@ -473,18 +476,9 @@ const onboarding = `<div style="min-block-size: 100vh; background: var(--m-color
         </div>
       </fieldset>
       <div class="m-field">
-        <label class="m-field-label" for="vt-onb-name">Name for your profile</label>
-        <input class="m-input" id="vt-onb-name" value="Jordan Lee" autocomplete="name">
-      </div>
-      <div class="m-field">
-        <label class="m-field-label" for="vt-onb-handle">Your handle</label>
+        <label class="m-field-label" for="vt-onb-handle">Pick your handle</label>
         <input class="m-input" id="vt-onb-handle" value="@jordanlee" aria-describedby="vt-onb-handle-hint">
         <p class="m-field-hint" id="vt-onb-handle-hint">Friends pay you with this. It’s free, and yours.</p>
-      </div>
-      <div class="m-field">
-        <label class="m-field-label" for="vt-onb-email">Email</label>
-        <input class="m-input" id="vt-onb-email" type="email" value="jordan.lee@example" aria-invalid="true" aria-describedby="vt-onb-email-error">
-        <p class="m-field-error" id="vt-onb-email-error">That email is missing its ending, like .com or .org.</p>
       </div>
       <div class="m-stack" data-gap="3">
         <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Next</button>
@@ -602,7 +596,7 @@ const emptyState = shell(
 // cards (the recommended one in brand green), a benefits table, big grey questions, a black footer
 
 const tick = (t: string) =>
-  `            <li class="m-cluster" data-gap="2" style="flex-wrap: nowrap; align-items: start"><span style="display: inline-flex; flex: none; padding-block-start: 2px">${icon(I.check, 18)}</span>${t}</li>`;
+  `            <li class="m-cluster" data-gap="2" style="flex-wrap: nowrap; align-items: start"><span style="display: inline-flex; flex: none; padding-block-start: 2px">${icon(I.check, 20)}</span>${t}</li>`;
 const plan = (
   id: string,
   name: string,
@@ -645,7 +639,7 @@ const pricing = `<div style="background: var(--m-color-bg-surface)">
   </nav>
   <div class="m-navbar-actions">
     <a class="m-button" data-variant="primary" data-size="sm" href="#" style="--m-button-primary-bg: var(--m-color-brand-default); --m-button-primary-border: var(--m-color-brand-default); --m-button-primary-fg: var(--m-color-brand-fg); --m-button-primary-hover-bg: var(--m-color-brand-default)">Join ${icon(I.arrowRight, 16)}</a>
-    <a class="m-button" data-variant="primary" data-size="sm" href="#" style="--m-button-primary-bg: var(--m-color-bg-inverse); --m-button-primary-border: var(--m-color-bg-inverse); --m-button-primary-fg: var(--m-color-fg-inverse); --m-button-primary-hover-bg: var(--m-color-bg-inverse)">Log in</a>
+    <a class="m-button" data-variant="secondary" data-size="sm" href="#" style="--m-button-secondary-bg: var(--m-color-bg-inverse); --m-button-secondary-border: var(--m-color-bg-inverse); --m-button-secondary-fg: var(--m-color-fg-inverse); --m-button-secondary-hover-bg: var(--m-color-bg-inverse)">Log in</a>
   </div>
 </header>
 <main class="m-container" style="padding-block: var(--m-space-12) var(--m-space-16)">
@@ -653,7 +647,7 @@ const pricing = `<div style="background: var(--m-color-bg-surface)">
     <div class="m-grid" style="--m-layout-grid-min: 22rem; --m-layout-grid-gap: var(--m-space-8); align-items: end">
       <h1 style="${display}; font-size: var(--m-font-size-4xl)">Pick how hard your money works</h1>
       <div class="m-stack" data-gap="4">
-        <p style="font-size: var(--m-font-size-lg)">Every account sends, spends and saves for free. Plans add more back on what you already do, and you can leave whenever you like.</p>
+        <p>Every account sends, spends and saves for free. Plans add more back on what you already do, and you can leave whenever you like.</p>
         <p style="${label}">brisk is a made-up app. Plans and prices are examples.</p>
       </div>
     </div>
@@ -680,7 +674,7 @@ ${cmp('Second card', [no, no, yes])}
     </section>
     <section class="m-stack" data-gap="4" aria-labelledby="vt-faq">
       <h2 id="vt-faq" style="${display}; font-size: var(--m-font-size-3xl)">Questions, answered</h2>
-      <div class="m-accordion" style="border-inline-width: 0; border-block-start-width: 0; --m-accordion-summary-size: var(--m-font-size-2xl); --m-accordion-padding-y: var(--m-space-5)">
+      <div class="m-accordion" style="border-width: 0; --m-accordion-summary-size: var(--m-font-size-2xl); --m-accordion-padding-y: var(--m-space-5)">
 ${faq('Can I change plans whenever I want?', 'Yes. Moving up starts right away; moving down starts at the end of the month you’ve paid for.', true)}
 ${faq('Is there a minimum to keep in my account?', 'No. Starter has no minimum and no monthly charge.')}
 ${faq('What happens to my goals if I move to Starter?', 'They all stay, money and all. You just can’t add a new one until you’re under the limit.')}
@@ -689,6 +683,7 @@ ${faq('How is the plan paid for?', 'From your spending balance on the same day e
     </section>
   </div>
 </main>
+</div>
 <footer style="background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse); padding: var(--m-space-16) var(--m-layout-container-padding)">
   <div class="m-stack" data-gap="10" style="max-inline-size: var(--m-layout-container-max-lg); margin-inline: auto">
     <h2 style="${display}; font-size: var(--m-font-size-3xl)">Money that keeps up with you</h2>
@@ -700,66 +695,185 @@ ${faq('How is the plan paid for?', 'From your spending balance on the same day e
     </div>
     <p style="font-size: var(--m-font-size-xs); opacity: 0.7">brisk is a made-up app used to show this design. Nothing here is a real offer.</p>
   </div>
-</footer>
-</div>`;
+</footer>`;
 
 // ---------------------------------------------------------------------------------------------
-// Errors: red field errors, a notice above the form, a notification-card toast, a green 404 slab,
-// and white cards for failure and no access
+// Errors, inside the app: red field errors, a red notice above the form, a notice in the page for a
+// payment that failed, then the whole-page errors: not found centred on the grey screen (a 32px
+// title, one line, one black pill), failure and no access as two white cards
 
-const errorCard = (code: string, ic: string, tone: string, title: string, body: string, actions: string) => `    <section class="m-card" aria-labelledby="vt-err-${code}">
-      <div class="m-card-body m-stack" data-gap="4" data-align="center" style="text-align: center; padding-block: var(--m-space-12)">
-        ${tile(ic, tone, 80)}
-        <span style="${label}; font-family: var(--m-font-family-mono)">Error ${code}</span>
-        <h2 id="vt-err-${code}" style="${display}; font-size: var(--m-font-size-2xl)">${title}</h2>
-        <p style="color: var(--m-color-fg-muted); max-inline-size: 28rem">${body}</p>
-        <div class="m-cluster" data-gap="2" data-justify="center">${actions}</div>
-      </div>
-    </section>`;
+const errorCard = (code: string, ic: string, tone: string, title: string, body: string, actions: string) => `          <section class="m-card" aria-labelledby="vt-err-${code}">
+            <div class="m-card-body m-stack" data-gap="4" data-align="center" style="text-align: center; padding-block: var(--m-space-10)">
+              ${tile(ic, tone, 64)}
+              <span style="${label}; font-family: var(--m-font-family-mono)">Error ${code}</span>
+              <h2 id="vt-err-${code}" style="${sectionTitle}">${title}</h2>
+              <p style="color: var(--m-color-fg-muted); max-inline-size: 22rem">${body}</p>
+              <div class="m-cluster" data-gap="2" data-justify="center">${actions}</div>
+            </div>
+          </section>`;
 
-const errors = `<main class="m-container" data-size="md" style="padding-block: var(--m-space-12)">
-  <div class="m-stack" data-gap="10">
-    <form class="m-card" aria-labelledby="vt-err-form">
-      <div class="m-card-body m-stack" data-gap="5">
-        <h1 id="vt-err-form" style="${display}; font-size: var(--m-font-size-2xl)">Send to someone new</h1>
-        <div class="m-alert" data-tone="danger" role="alert">
+const errors = shell(
+  'Transfers',
+  `      <div class="m-stack" data-gap="10">
+        <form class="m-stack" data-gap="6" aria-labelledby="vt-err-form">
+          <h1 id="vt-err-form" style="${pageTitle}">Send to someone new</h1>
+          <div class="m-alert" data-tone="danger" role="alert">
+            <span class="m-alert-icon">${icon(I.alert, 20)}</span>
+            <div class="m-alert-content"><div class="m-alert-title">Two things to fix</div><div class="m-alert-body">Nothing was sent. Check the handle and the amount, then try again.</div></div>
+          </div>
+          <div class="m-card"><div class="m-card-body m-stack" data-gap="5">
+            <div class="m-field">
+              <label class="m-field-label" for="vt-err-to">To</label>
+              <input class="m-input" id="vt-err-to" value="@theo-wrigth" aria-invalid="true" aria-describedby="vt-err-to-e">
+              <p class="m-field-error" id="vt-err-to-e">No one has that handle. Did you mean @theowright?</p>
+            </div>
+            <div class="m-field">
+              <label class="m-field-label" for="vt-err-amount">Amount</label>
+              <input class="m-input" id="vt-err-amount" value="$2,400.00" aria-invalid="true" aria-describedby="vt-err-amount-e" style="${money}; font-size: var(--m-font-size-xl)">
+              <p class="m-field-error" id="vt-err-amount-e">That’s more than your $2,184.50 balance. Lower it or add funds first.</p>
+            </div>
+            <div class="m-field">
+              <label class="m-field-label" for="vt-err-for">For</label>
+              <input class="m-input" id="vt-err-for" value="Gas money">
+            </div>
+            <div class="m-grid" style="--m-layout-grid-min: 10rem; --m-layout-grid-gap: var(--m-space-2)">
+              <button type="button" class="m-button" data-variant="secondary" style="inline-size: 100%">Cancel</button>
+              <button type="submit" class="m-button" data-variant="primary" style="inline-size: 100%">Send</button>
+            </div>
+          </div></div>
+        </form>
+        <div class="m-alert" data-tone="danger" role="status">
           <span class="m-alert-icon">${icon(I.alert, 20)}</span>
-          <div class="m-alert-content"><div class="m-alert-title">Two things to fix</div><div class="m-alert-body">Nothing was sent. Check the handle and the amount, then try again.</div></div>
+          <div class="m-alert-content"><div class="m-alert-title">Your $15.00 to Theo didn’t go through</div><div class="m-alert-body">The money is still in your balance.</div>
+          <div class="m-alert-actions"><button type="button" class="m-button" data-variant="secondary" data-size="sm">Retry</button></div></div>
         </div>
-        <div class="m-field">
-          <label class="m-field-label" for="vt-err-to">To</label>
-          <input class="m-input" id="vt-err-to" value="@theo-wrigth" aria-invalid="true" aria-describedby="vt-err-to-e">
-          <p class="m-field-error" id="vt-err-to-e">No one has that handle. Did you mean @theowright?</p>
+        <section class="m-stack" data-gap="3" data-align="center" style="text-align: center; padding-block: var(--m-space-8)" aria-labelledby="vt-err-404">
+          <h2 id="vt-err-404" style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); letter-spacing: -0.02em">This page took the money and ran</h2>
+          <p style="color: var(--m-color-fg-muted)">Nothing lives at this address. Your balance is fine.</p>
+          <div style="padding-block-start: var(--m-space-3)"><a class="m-button" data-variant="primary" href="#">Back to Overview</a></div>
+        </section>
+        <div class="m-grid" style="--m-layout-grid-min: 18rem; align-items: stretch">
+${errorCard('500', I.rotate, 'ink', 'We tripped on our end', 'No money moved. Give it a minute and try again.', `<button type="button" class="m-button" data-variant="secondary">Try again</button>`)}
+${errorCard('403', I.lock, 'grey', 'This one isn’t yours to open', 'Only the person who set up this shared goal can change it.', `<button type="button" class="m-button" data-variant="secondary">Ask to join</button>`)}
         </div>
-        <div class="m-field">
-          <label class="m-field-label" for="vt-err-amount">Amount</label>
-          <input class="m-input" id="vt-err-amount" value="$2,400.00" aria-invalid="true" aria-describedby="vt-err-amount-e" style="${money}; font-size: var(--m-font-size-xl)">
-          <p class="m-field-error" id="vt-err-amount-e">That’s more than your $2,184.50 balance. Lower it or add funds first.</p>
-        </div>
-        <div class="m-field">
-          <label class="m-field-label" for="vt-err-for">For</label>
-          <input class="m-input" id="vt-err-for" value="Gas money">
-        </div>
-        <div class="m-grid" style="--m-layout-grid-min: 10rem; --m-layout-grid-gap: var(--m-space-2)">
-          <button type="button" class="m-button" data-variant="secondary" style="inline-size: 100%">Cancel</button>
-          <button type="submit" class="m-button" data-variant="primary" style="inline-size: 100%">Send</button>
+      </div>`,
+  'md',
+);
+
+// ---------------------------------------------------------------------------------------------
+// Reading: the public help centre. A white bar with a faint shadow, a black and a grey pill; the
+// "Support" title and a grey pill search; the article at 32px with muted text and numbered steps;
+// then a grey band with related articles as rows in a white card and two contact cards
+
+// The help centre's bar: white, a faint shadow, the wordmark, a black pill and a grey pill
+const helpBar = `<header class="m-navbar" style="--m-navbar-shadow: var(--m-shadow-sm)">
+    ${wordmark()}
+    <div class="m-navbar-actions" style="margin-inline-start: auto">
+      <a class="m-button" data-variant="primary" data-size="sm" href="#">Join ${icon(I.arrowRight, 16)}</a>
+      <a class="m-button" data-variant="secondary" data-size="sm" href="#">Log in</a>
+    </div>
+  </header>`;
+
+const stepNo = (n: number, t: string) =>
+  `            <li class="m-cluster" data-gap="3" style="flex-wrap: nowrap; align-items: start"><span aria-hidden="true" style="display: inline-grid; place-items: center; flex: none; inline-size: 24px; block-size: 24px; border-radius: 9999px; background: var(--m-color-bg-sunken); font-size: var(--m-font-size-sm); font-weight: var(--m-font-weight-medium); ${num}">${n}</span><span style="color: var(--m-color-fg-muted)">${t}</span></li>`;
+const article = (title: string, last = false) =>
+  `              <li><a href="#" class="m-cluster" data-justify="between" data-gap="3" style="flex-wrap: nowrap; padding: var(--m-space-4) var(--m-space-5); color: inherit; text-decoration: none${last ? '' : `; ${hair}`}"><span class="m-cluster" data-gap="4" style="flex-wrap: nowrap"><span style="display: inline-flex">${icon(I.file, 20)}</span><span style="${strong}">${title}</span></span>${chevron}</a></li>`;
+const contact = (ic: string, title: string, sub: string) =>
+  `            <a href="#" class="m-card" style="border-radius: var(--m-radius-sm); color: inherit; text-decoration: none"><span class="m-card-body m-cluster" data-justify="between" data-gap="3" style="flex-wrap: nowrap; align-items: start"><span class="m-cluster" data-gap="4" style="flex-wrap: nowrap; align-items: start"><span style="display: inline-flex">${icon(ic, 20)}</span><span class="m-stack" data-gap="0"><span style="${strong}">${title}</span><span style="${label}">${sub}</span></span></span>${chevron}</span></a>`;
+const helpTitle = 'font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); letter-spacing: -0.02em; line-height: 1.15';
+
+const reading = `<div style="background: var(--m-color-bg-surface)">
+  ${helpBar}
+  <main class="m-container" data-size="md" style="padding-block: var(--m-space-10) var(--m-space-12)">
+    <div class="m-stack" data-gap="8">
+      <div class="m-stack" data-gap="6">
+        <p style="${helpTitle}">Support</p>
+        <div style="position: relative">
+          <span style="position: absolute; inset-inline-start: var(--m-space-5); inset-block: 0; display: inline-flex; align-items: center; color: var(--m-color-fg-muted)">${icon(I.search, 20)}</span>
+          <input class="m-input" type="search" placeholder="Try: change my handle" aria-label="Search support" style="--m-input-radius: 9999px; block-size: 3.125rem; padding-inline-start: var(--m-space-12); background: var(--m-color-bg-sunken); border-color: transparent">
         </div>
       </div>
-    </form>
-    <section class="m-stack" data-gap="3" aria-label="A toast">
-      <div class="m-toast" data-tone="danger" role="alert" style="max-inline-size: 30rem; align-items: center"><div class="m-cluster" data-gap="3" style="flex-wrap: nowrap">${tile(I.alert, 'danger')}<div class="m-toast-content"><div class="m-toast-title">Your $15.00 to Theo didn’t go through</div><div class="m-toast-body">The money is still in your balance.</div></div></div><button type="button" class="m-button" data-variant="primary" data-size="sm">Retry</button></div>
+      <article class="m-stack" data-gap="5" aria-labelledby="vt-read-title">
+        <h1 id="vt-read-title" style="${helpTitle}">Splitting a bill with friends</h1>
+        <p style="color: var(--m-color-fg-muted); max-inline-size: 42rem">Split any card payment from the last 30 days. Everyone you add gets a request for their share, and you get paid back into your spending balance.</p>
+        <p style="color: var(--m-color-fg-muted)">To split a payment:</p>
+        <ol class="m-stack" data-gap="3" style="${plainList}">
+${stepNo(1, 'Open <strong style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-bold)">Transfers</strong> and tap the payment')}
+${stepNo(2, 'Choose <strong style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-bold)">Split it</strong>')}
+${stepNo(3, 'Add the people who owe you, by handle or phone number')}
+${stepNo(4, 'Check each share, then press <strong style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-bold)">Send requests</strong>')}
+        </ol>
+        <p style="color: var(--m-color-fg-muted); max-inline-size: 42rem">Requests that aren’t paid in 14 days close on their own. You can remind someone once a day from the payment’s receipt, or read about <a href="#" style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-medium); text-decoration: underline">requests that expire</a>.</p>
+      </article>
+    </div>
+  </main>
+</div>
+<section class="m-container" data-size="md" style="padding-block: var(--m-space-12) var(--m-space-16)" aria-label="More help">
+  <div class="m-stack" data-gap="10">
+    <section class="m-stack" data-gap="4" aria-labelledby="vt-read-related">
+      <h2 id="vt-read-related" style="${sectionTitle}">Related</h2>
+      <div class="m-card" style="border-radius: var(--m-radius-sm)"><ul class="m-stack" data-gap="0" style="${plainList}">
+${article('Pay someone back')}
+${article('Remind someone about a request')}
+${article('Cancel a request you sent', true)}
+      </ul></div>
     </section>
-    <section class="m-card" style="background: var(--m-color-brand-default); color: var(--m-color-brand-fg)" aria-labelledby="vt-err-404">
-      <div class="m-card-body m-stack" data-gap="5" style="padding: var(--m-space-12) var(--m-space-10)">
-        <span style="${display}; font-size: 8rem; line-height: 0.9; letter-spacing: -0.05em">404</span>
-        <h2 id="vt-err-404" style="${display}; font-size: var(--m-font-size-2xl); max-inline-size: 24rem">This page took the money and ran</h2>
-        <div><a class="m-button" data-variant="primary" href="#" style="--m-button-primary-bg: var(--m-color-brand-fg); --m-button-primary-border: var(--m-color-brand-fg); --m-button-primary-fg: var(--m-color-brand-default); --m-button-primary-hover-bg: var(--m-color-brand-fg)">${icon(I.home, 18)} Go home</a></div>
+    <section class="m-stack" data-gap="4" aria-labelledby="vt-read-contact">
+      <h2 id="vt-read-contact" style="${sectionTitle}">Still stuck?</h2>
+      <div class="m-grid" style="--m-layout-grid-min: 16rem; --m-layout-grid-gap: var(--m-space-3)">
+${contact(I.chat, 'Message us', 'From Support in the app, any time')}
+${contact(I.phone, 'Call the help line', 'Every day, 8 AM to 9 PM')}
       </div>
     </section>
-${errorCard('500', I.rotate, 'ink', 'We tripped on our end', 'No money moved. Give it a minute and try again; if it keeps happening, message us from Support.', `<button type="button" class="m-button" data-variant="primary">Try again</button><a class="m-button" data-variant="secondary" href="#">${icon(I.help, 18)} Support</a>`)}
-${errorCard('403', I.lock, 'grey', 'This one isn’t yours to open', 'Only the person who set up this shared goal can change it. Ask them to add you as a member.', `<button type="button" class="m-button" data-variant="primary">Ask to join</button><a class="m-button" data-variant="ghost" href="#">${icon(I.back, 18)} Back</a>`)}
   </div>
-</main>`;
+</section>
+<footer style="background: var(--m-color-bg-surface); box-shadow: var(--m-shadow-sm); padding: var(--m-space-8) var(--m-layout-container-padding)">
+  <div class="m-cluster" data-justify="between" data-gap="6" style="max-inline-size: var(--m-layout-container-max-md); margin-inline: auto">
+    ${wordmark()}
+    <nav class="m-cluster" data-gap="6" aria-label="Footer">
+      <a href="#" style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-medium); text-decoration: underline">Support</a>
+      <a href="#" style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-medium); text-decoration: underline">Status</a>
+      <a href="#" style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-medium); text-decoration: underline">Privacy</a>
+    </nav>
+  </div>
+</footer>`;
+
+// ---------------------------------------------------------------------------------------------
+// Sign in: as onboarding, one question on white. A big regular title, one field, a full-width black
+// pill, then other ways in as rows with grey round icons and chevrons
+
+const wayIn = (ic: string, title: string, sub: string, last = false) =>
+  `          <li><a href="#" class="m-cluster" data-gap="3" style="flex-wrap: nowrap; color: inherit; text-decoration: none">${tile(ic)}<span class="m-cluster" data-justify="between" data-gap="3" style="flex: 1; flex-wrap: nowrap; padding-block: var(--m-space-3)${last ? '' : `; ${hair}`}"><span class="m-stack" data-gap="0"><span style="${strong}">${title}</span><span style="${label}">${sub}</span></span>${chevron}</span></a></li>`;
+
+const signIn = `<div style="min-block-size: 100vh; background: var(--m-color-bg-surface)">
+  <header class="m-cluster" data-justify="between" style="padding: var(--m-space-5) var(--m-layout-container-padding)">
+    ${wordmark()}
+    <a class="m-button" data-variant="secondary" href="#">Join brisk</a>
+  </header>
+  <main class="m-container" data-size="sm" style="padding-block: var(--m-space-12) var(--m-space-16)">
+    <div class="m-stack" data-gap="8">
+      <form class="m-stack" data-gap="6" aria-labelledby="vt-in-title">
+        <div class="m-stack" data-gap="3">
+          <h1 id="vt-in-title" style="${display}; font-size: var(--m-font-size-3xl)">Welcome back</h1>
+          <p style="color: var(--m-color-fg-muted)">We’ll text or email you a code. No password to remember.</p>
+        </div>
+        <div class="m-field">
+          <label class="m-field-label" for="vt-in-who">Phone or email</label>
+          <input class="m-input" id="vt-in-who" autocomplete="username" placeholder="(555) 014-2290 or you@example.com">
+        </div>
+        <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Send my code</button>
+      </form>
+      <section class="m-stack" data-gap="2" aria-labelledby="vt-in-other">
+        <h2 id="vt-in-other" style="${cardTitle}">Other ways in</h2>
+        <ul class="m-stack" data-gap="0" style="${plainList}">
+${wayIn(I.qr, 'Scan with your phone', 'Open brisk on your phone and point it here')}
+${wayIn(I.lock, 'Use a passkey', 'Face, fingerprint or your device PIN', true)}
+        </ul>
+      </section>
+      <p style="${label}">brisk is a made-up app. No account is opened and no code is sent.</p>
+    </div>
+  </main>
+</div>`;
 
 export const voltRecipes: ArchetypeRecipe[] = [
   {
@@ -780,7 +894,7 @@ export const voltRecipes: ArchetypeRecipe[] = [
     name: 'onboarding',
     title: 'Onboarding',
     description:
-      'One question at a time on white: a green progress bar, a big regular title, choice tiles that take a 2px black line when picked, fields, and a full-width black pill.',
+      'One question at a time on white: a green progress bar, a big regular title, choice tiles that take a 2px black line when picked, one field, and a full-width black pill.',
     html: onboarding,
   },
   {
@@ -807,7 +921,21 @@ export const voltRecipes: ArchetypeRecipe[] = [
     name: 'errors',
     title: 'Errors',
     description:
-      'Red field errors that say how to fix it, a red notice above the form that says nothing was sent, a white notification toast, the green not-found slab, and white cards for failure and no access.',
+      'Inside the app: red field errors that say how to fix it, a red notice above the form that says nothing was sent, a notice in the page for a payment that failed, not found centred on the grey screen with one black pill, and white cards for failure and no access.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'The public help centre: a white bar with a faint shadow and a black and a grey pill, the Support title and a grey pill search, a 32px article title, muted text and numbered steps, then related articles as rows in a white card and two contact cards on a grey band.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'One question on white, as onboarding: a big regular title, one field, a full-width black pill, and other ways in as rows with grey round icons and chevrons.',
+    html: signIn,
   },
 ];

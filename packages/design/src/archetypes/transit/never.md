@@ -1,0 +1,15 @@
+# Never
+
+What Transit refuses to do. Each refusal carries how it is known: `observed` cites the source's screens (ids in the private notes) or a measured number, `inferred` is a reading of what was seen, `told` is a decision by the person who commissioned the language. The recipes follow every one.
+
+1. **Never a coloured main action.** The action is black (white in dark mode) with white text. `observed`: every studied form and landing page on the source shows a black button under its fields or title (screenshots of its ride, price, city, booking and not-found pages). Blue appears on a button only inside a prompt banner, as on the source's help pages.
+2. **Never a shadow on a panel on the page.** Panels are set apart by a 2px pale edge, the grey fill or a hairline; only floating layers (menus, snackbars, dialogs, tooltips) cast a shadow. `observed`: `structure.elevated` 0 on 57 of 66 studied source screen-widths; the rest are a floating tip and dropdowns on its store pages. The language: 0 on every recipe except the errors page's snackbar.
+3. **Never an inset shadow for a chosen edge.** The chosen row's 2px black edge is a border. `inferred` from the published booking panel's 2px border; it keeps rule 2 true.
+4. **Never a fourth weight.** 400, 500 and 700 only. `observed`: 3 weights on 63 of 66 studied source screen-widths (2 on the other 3); the language 3 on all 27.
+5. **Never more than five or six text sizes, never 18 or 24px text.** `observed`: the source uses 4–6 sizes (`type.sizes` typical 5, range [4, 6]); the language 4–5 from 12, 14, 16, 20, 28, 36 and 52px.
+6. **Never panels three deep.** A panel holds rows and hairlines, not another panel. `observed`: depth 1 on 44 and 2 on 20 of 66 studied source screen-widths (`structure.depth` [1, 2]); the language [1, 2].
+7. **Never a white, outlined field.** Fields are the grey fill with 8px corners. `observed` on every studied form (ride, price, city, booking, help search). The 1px mid-grey edge is the library's contrast floor, not the source's (private notes).
+8. **Never blue links outside a help article, and never a coloured underline.** Links are black and underlined; a help article links to other answers in blue. `observed`: black underlined breadcrumbs and links on the source's public and not-found pages, blue underlined links inside its help articles.
+9. **Never a pill for the main action.** Pills are chips, header links and the white Join pill. `observed`: the source's black buttons have 8px corners (`shape.controlRadius` 8 on 44 of 66 studied screen-widths), its header links and its white join button are pills.
+10. **Never a photo, real map tile, logo or illustration in a recipe.** Vehicles and services are icons in grey tiles; the map is a token-drawn placeholder. `told`: the commission (copy the system, never the screen). The source leads with pictures on 23 of 66 studied screen-widths (`media.role` leads); the language has none.
+11. **Never a sidebar on a public page, never a black bar inside the app.** `observed`: the source's public pages use the black bar; its booking page uses the white header with tabs.

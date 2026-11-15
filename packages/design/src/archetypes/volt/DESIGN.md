@@ -9,7 +9,7 @@ and money apps that should feel fast and confident.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `volt` preset of `@mariachi/design` (`data-theme="volt"`,
@@ -18,7 +18,7 @@ The tokens are in the `volt` preset of `@mariachi/design` (`data-theme="volt"`,
 ## Principles
 
 - **Loud colour, used once.** The electric green (`--m-color-brand-default`) is the brand: the
-  money keypad, the recommended plan, the not-found slab, progress, rings, chart bars and counts.
+  money keypad, the recommended plan, the wordmark, progress, rings, chart bars and counts.
   Everything else is black, white and grey. Never tint a whole screen grey-green or use a second
   bright colour beside it.
 - **Black means do it.** Inside the app the action is a black pill with white text. Secondary
@@ -34,7 +34,7 @@ The tokens are in the `volt` preset of `@mariachi/design` (`data-theme="volt"`,
 
 | What | Light | Dark |
 | --- | --- | --- |
-| Brand green (keypad, slabs, bars, rings, counts) | `#00e013` with black text | the same |
+| Brand green (keypad, picked plan, bars, rings, counts) | `#00e013` with black text | the same |
 | Screen (canvas) | light grey `#f0f0f0` | black `#000000` |
 | Cards (surface, raised) | white `#ffffff` | `#1a1a1a`, raised `#262626` |
 | Grey panels inside cards (sunken) | `#f0f0f0` | `#232323` |
@@ -49,17 +49,19 @@ The tokens are in the `volt` preset of `@mariachi/design` (`data-theme="volt"`,
 | Warning | yellow `#ffcc00` fill, `#7a5200` text | `#ffd84d` text |
 | Information | blue `#0a5cb8` text, `#0a6fd6` fill | `#7cb8ff` text |
 
-- **Radius.** 8px for small chips, 12px for inputs, selects and choice tiles, 16px for notices and
+- **Radius.** 8px for small chips and the help centre's row cards, 12px for inputs, selects and choice tiles, 16px for notices and
   menus, 20px for cards, toasts and the table, 28px for dialogs and 32px for the big marketing
   tiles. Buttons, chips, badges, nav items and segments are pills; icon tiles and avatars are
   circles.
-- **Shadow.** None on the page: cards are white on grey with no border and no shadow. Floating
-  things (toasts, menus, dialogs) take a soft, wide lift. In dark mode, a 1px light ring instead.
+- **Shadow.** None on the page: cards are white on grey with no border and no shadow. The only
+  shadows on a page are the public help centre's bar and footer (`0 2px 4px` at 6%). Floating things (menus,
+  dialogs, a toast) take a soft, wide lift. In dark mode, a 1px light ring instead.
 - **Motion.** 200, 300 and 450 ms on a quick-out curve (`cubic-bezier(0, 0.45, 0.25, 1)`). Things
   slide and fade; nothing bounces.
 - **Spacing.** A 4px unit. The usual gaps are:
   - 8px between pills in a group;
-  - 12px between an icon and its text; rows are about 64px tall with a 40px circle;
+  - 12px between an icon and its text; rows are about 70px tall (12px above and below a title and
+    a line of help) with a 40px circle; the help centre's one-line rows are 57px;
   - 16px between cards;
   - 20px card padding, 32px for a large card;
   - 32–64px between page sections.
@@ -75,17 +77,23 @@ scales are in the reference at the end.
 
 ## Type
 
-- **Families.** Inter Tight throughout: a tight, neutral grotesk. Regular (400) for text and for
-  big headlines, medium (500) for titles, labels and buttons, bold (700) for amounts. Never set a
-  headline bold; never set an amount light.
+- **Families.** Inter Tight throughout: a tight, neutral grotesk. Three weights only: regular
+  (400) for text and for big headlines, medium (500) for titles, labels, buttons and badges, bold
+  (700) for amounts, keypad digits and the words a help step tells you to press. Never 600. Never
+  set a headline bold; never set an amount light.
 - **Mono.** Geist Mono, only for references and codes.
-- **Sizes:**
-  - body 16px with a 1.5 line height; help and secondary lines 14px;
-  - card titles 16px at 500; section titles 20px at 500;
-  - page titles 40px at 400, tracked −3%, line height 1.05;
-  - marketing headlines 56px at 400; the not-found number much larger;
-  - amounts 24–56px at 700, tracked −3%; the keypad's amount about 88px at 600.
-- **Case.** Sentence case everywhere. Only badges are capitals (12px, 600, tracked 4%).
+- **Sizes:** page shapes keep to 12 / 14 / 16 / 24 / 32 / 40 / 56px (20px appears only in the empty
+  state's sentence and in components, such as the accordion's default question), and one screen uses four to six of them
+  (four on most):
+  - body 16px with a 1.5 line height; help and secondary lines 14px; badges and chart labels 12px;
+  - card titles 16px at 500; section titles 24px at 500;
+  - page titles 40px at 400, tracked −3%, line height 1.05; the public help centre's titles 32px
+    at 500;
+  - marketing headlines 56px at 400;
+  - amounts 24, 40 or 56px at 700, tracked −3%; the keypad's amount about 88px at 700, its digits
+    24px at 700.
+  - Avatar initials sit on the ramp: 12px small, 14px in rows, 24px large.
+- **Case.** Sentence case everywhere. Only badges are capitals (12px, 500, tracked 4%).
 - **Figures.** Use `font-variant-numeric: tabular-nums`. Amounts are written in full with the
   currency sign and cents at the same size: `$2,184.50`. Money in is green with a plus
   (`+$410.00`); money out is plain black with no minus.
@@ -111,7 +119,7 @@ scales are in the reference at the end.
 ## Charts
 
 - **Bars** in the brand green with 4px top corners; days with nothing are short grey stubs. The
-  scale sits on the right in 10px muted figures, over faint hairline gridlines. A Week / Month /
+  scale sits on the right in 12px muted figures, over faint hairline gridlines. A Week / Month /
   Quarter segmented control sits under the chart.
 - **Lines** (prices, balances) are a single 2.5px green line with no fill, no axis and no dots.
 - **Goals** are a ring: a 5px green arc on a grey track with an icon in the middle.
@@ -179,8 +187,11 @@ All 36 of the library's components, as Volt draws them. Every one is in `gallery
   - Items are 16px with a 20px icon, black, as pills; the current one sits on the grey pill in
     medium. A second group (Settings, Support) sits apart. Counts are green pills with black
     figures.
-- **Navbar** (public pages). No fill, 84px, the wordmark, 14px medium pill links, and two pill
-  actions at the right: a green one ("Join brisk →") and a black one ("Log in").
+- **Navbar** (public pages). Two kinds:
+  - **Marketing:** no fill, 84px, the wordmark, 14px medium pill links, and two pill actions at
+    the right: a green one ("Join →") and a black one ("Log in").
+  - **Help centre:** white with the faint bar shadow, the wordmark, then at the right a black pill
+    ("Join →") and a grey pill ("Log in"); no links.
 - **Top bar** (in the app). A white pill search field at the left; round grey icon buttons and one
   black pill ("Send") at the right.
 - **Tabs.**
@@ -204,17 +215,19 @@ All 36 of the library's components, as Volt draws them. Every one is in `gallery
 - **Card.** White, 20px corners, no border and no shadow on the grey screen, 20px padding. Titles
   are 16px at 500, not headings. The outlined variant (marketing pages, plans not picked) has a 1px
   grey line on white. The brand card is the green with black text.
-- **Badge.** A pill, 12px capitals at 600: green wash for good news ("RECEIVED"), yellow for
+- **Badge.** A pill, 12px capitals at 500: green wash for good news ("RECEIVED"), yellow for
   waiting ("REQUEST"), red for problems, grey for neutral. On green, a black badge with green text.
 - **Avatar.** Round initials at 500: the brand green with black by default, ink (black with white)
-  or blue with white for variety. 28px small, 40px in rows, 64px in headers.
+  or blue with white for variety. 28px small, 40px in rows, 64px in headers; the initials at 12, 14
+  and 24px.
 - **Divider.** A hairline. In cards, rows are separated by hairlines that start after the icon.
 - **Accordion.** The site's questions: a hairline between items, the question large (20px) and
   regular in grey, a small chevron at the end, no hover fill. On public pages, drop the outer edges
-  (`border-inline-width: 0; border-block-start-width: 0`) and set the questions at 32px
+  (`border-width: 0`, so only the hairlines between questions remain) and set the questions at 32px
   (`--m-accordion-summary-size: var(--m-font-size-2xl)`).
 - **Code, kbd.** Geist Mono on the grey fill, 6px corners inline, 12px for blocks.
-- **Prose.** 16px with a 1.5 line height, at most 40rem wide, links in green and underlined.
+- **Prose.** 16px with a 1.5 line height, at most 42rem wide, links in green and underlined. On
+  the public help centre, text is muted and links are ink, medium and underlined.
 - **Progress.** An 8px pill bar: green on the grey track (the deeper `#128a00` in light mode, for
   contrast).
 - **Meter.** The same bar: green with room left, yellow when low, red when over.
@@ -229,6 +242,8 @@ All 36 of the library's components, as Volt draws them. Every one is in `gallery
   - The phone's notification card: white (raised grey in dark), 20px corners, a soft lift, a 40px
     round icon at the start, a medium title, muted detail and one small black pill.
   - It's white whatever the tone; the icon and the words carry the tone.
+  - Only for news from somewhere else (money arrived while you were on another screen). A failure
+    on the screen in front of you is a notice in the page, so no page shape floats a toast.
 - **Dialog.**
   - The bottom sheet, centred on the desktop: white, 28px corners, a soft lift over a 40% black
     scrim, 24px padding.
@@ -264,50 +279,105 @@ All 36 of the library's components, as Volt draws them. Every one is in `gallery
   submit, never while someone types.
 - **In a form:** a red notice above the form: how many things to fix, and that nothing was sent.
   Focus moves to it.
-- **Somewhere else:** a white notification toast with a red round icon that says what happened and
-  where the money is ("The money is still in your balance"), with one small black pill ("Retry").
+- **Something that failed on this screen** (a payment that didn't go): a red notice in the page,
+  under the form, that says what happened and where the money is ("The money is still in your
+  balance"), with one small grey pill ("Retry").
 - **A whole page:**
-  - **Not found** is the green slab: a huge regular "404" in black, a short line, and one black
-    pill home.
-  - **Failure (500)** and **no access (403)** are white cards: a 40px icon in an 80px circle (ink
-    or grey), the code in small mono, a 32px regular title, one sentence and one or two pills.
+  - **Not found** sits centred on the screen with no card: a 32px title at 500, one muted line,
+    and one black pill back. The public site's and the help centre's not-found pages are the same
+    three parts.
+  - **Failure (500)** and **no access (403)** are white cards side by side: a 32px icon in a 64px
+    circle (ink or grey), the code in small mono, a 24px title at 500, one sentence and one grey
+    pill.
 - **Words.** Say whether money moved, say what to do next, and keep it short. A little attitude is
   fine ("This page took the money and ran"); blame, codes in sentences and exclamation marks are
   not.
 
 ## Page shapes (recipes)
 
+### The two families
+
+| | The app (dashboard, list and detail, settings, empty state, errors; onboarding and sign-in before it) | Public pages (pricing, reading) |
+| --- | --- | --- |
+| Ground | The light grey screen (`#f0f0f0`) with white cards; onboarding and sign-in are white | White; the help centre puts its related rows and contact cards on a grey band under the article |
+| Header | A 240px white side column (wordmark, the balance in a grey panel, pill nav items) and a top bar: a white pill search at the left, round grey icon buttons and the black "Send" pill at the right. Onboarding and sign-in: the wordmark and one grey pill | Marketing: no fill, 84px, pill links, a green and a black pill. Help centre: white with the faint bar shadow, a black and a grey pill, no links |
+| Column | 76rem; settings, empty state and errors 46rem; onboarding and sign-in 28rem | Marketing 76rem; the help centre 46rem |
+| Titles | 40px at 400; section titles 24px at 500; amounts bold at 24, 40 or 56px; the keypad's 88px | Marketing 56px at 400; the help centre 32px at 500, for both "Support" and the article |
+| Actions | Black pills (green in dark), grey pills for the rest; an equal pair of black pills for money in and out | Marketing: green and black pills; plan buttons 48px pills. Help centre: black and grey pills |
+| Footer | None | Marketing: a black band with outlined 32px-cornered stat tiles. Help centre: white with the faint shadow, the wordmark and underlined medium links |
+| On a phone | The side column stacks above; cards stack in reading order; full-width pills stay full width | Plan cards and contact cards stack; the bars keep their two pills |
+
+### Signature moves
+
+1. **Black pill, white card, grey screen.** Every app action is a pill; the one that matters is
+   black (green in dark); cards are white 20px panels with no edge and no shadow on `#f0f0f0`.
+2. **Big, tight, regular headlines and bold amounts.** Page titles 40px at 400 tracked −3%; money
+   at 700 in tabular figures, the keypad's amount at 88px.
+3. **One bright colour, the electric green:** the keypad, the picked plan, bars, rings, the
+   wordmark, the progress bar, counts. Never body text, never every button.
+4. **Round icons in rows.** A 40px grey circle (ink or green for emphasis) or round initials, a
+   medium title over a 14px line, the amount or a chevron at the end, a hairline between rows.
+5. **Three weights, few sizes:** 400, 500 and 700; four to six sizes a screen.
+6. **Flat:** no shadow on app content; panels are set apart by white on grey.
+
+### How a screen is assembled
+
+- **It opens with** the side column and the top bar, then the page title at 40px (on a first run:
+  the wordmark, the step and a 40px question on white).
+- **Reading order:** the title, then the money (a balance, an amount, a receipt) with its pills,
+  then rows grouped in white cards under 24px section titles, then smaller cards.
+- **How much one screen does:** one job, with one black pill, or an equal pair for money in and
+  out. The top bar's "Send" is always there.
+- **When narrow:** the side column stacks above; two-column grids fold to one; pills that were full
+  width stay full width.
+- **Too much content:** rows group by day or topic under section titles, each group its own white
+  card; "See all" instead of pages of results.
+- **None:** the frame stays (column, bar, title); a white card holds a 112px green circle, a 32px
+  regular title, one sentence, a black pill and a grey pill.
+
+### The recipes
+
 - **Dashboard.**
   - A big regular title.
-  - The balance card (title, the amount large and bold, account details, two equal black pills, a
-    row for deposits under a hairline) beside the green keypad (huge amount, the digits, a black
-    outline pill and a black pill).
-  - Recent activity in a white card with round avatars; spending bars with the period switch.
+  - The balance card (title, the amount at 40px bold, account details, two equal black pills, a
+    row for deposits under a hairline) beside the green keypad (the 88px amount, bold 24px digits,
+    a black outline pill and a black pill).
+  - Recent activity in a white card with round avatars; spending bars with 12px labels and the
+    period switch.
   - A "Growing" row of small cards: a goal with a ring, stocks with a sparkline, offers as round
     icons with their discount.
 - **List and detail.**
   - The title and a row of filter chips.
   - Payments grouped under medium headings, each group a white card of rows; the open row takes the
     grey fill.
-  - The receipt beside it: round close and more buttons, the person large, the amount huge (green
-    if money in), a status badge, a black pill and a grey pill, "What happened" steps and "What you
-    can do" rows.
+  - The receipt beside it: round close and more buttons, the person large, the amount at 56px
+    (green if money in), a status badge, a black pill and a grey pill, "What happened" steps and
+    "What you can do" rows.
 - **Onboarding.** On white, in a 28rem column: the wordmark and a grey "Log in" pill on top, the
-  step and a green progress bar, a big regular question, choice tiles, fields, a full-width large
-  black pill and a ghost "Back".
+  step and a green progress bar, a 40px regular question, choice tiles, one field, a full-width
+  large black pill and a ghost "Back". One question a step.
 - **Settings.** The profile centred (big green avatar, name, handle, two grey pills), then titled
   groups of rows in white cards with grey round icons, a theme segmented control, and grey "Sign
   out" with red "Close account" at the end.
 - **Empty state.** A white card: a 112px green circle with a black icon, a 32px regular title, one
   sentence, a black pill and a grey pill.
 - **Pricing.**
-  - The bare public bar with a green and a black pill.
-  - A huge regular headline beside a short intro.
+  - The bare marketing bar with a green and a black pill.
+  - A 56px regular headline beside a 16px intro.
   - Three plan cards: two outlined, the recommended one in the brand green with a black badge and a
-    black pill; the price bold and large.
-  - A side-by-side table, big grey questions in the accordion, and a black footer with outlined
-    32px-cornered stat tiles and a green "Join today" tile.
-- **Errors.** The field, form, toast and full-page errors above, as one page.
+    black pill; plan names 24px at 500, the price bold at 40px.
+  - A side-by-side table on a grey panel, big grey questions split by hairlines, and a black footer
+    band with outlined 32px-cornered stat tiles and a green "Join today" tile.
+- **Errors** (in the app). A 40px title, a red notice above the form, the form's card with red
+  field errors, a red notice in the page for a payment that failed (with a grey "Retry"), not found
+  centred on the grey screen, and the 500 and 403 cards side by side.
+- **Reading** (the public help centre). The help bar; "Support" at 32px and a grey pill search;
+  the article title at 32px, muted 16px text, numbered steps in small grey circles with the words
+  to press in bold, an underlined ink link; then on the grey band "Related" as 57px rows in a white
+  8px-cornered card (a file icon, a medium title, a chevron) and two contact cards; the white
+  footer.
+- **Sign-in.** As onboarding: on white, a 40px regular "Welcome back", one line, one field, a
+  full-width large black pill, then "Other ways in" as rows with grey round icons and chevrons.
 
 ## Words
 

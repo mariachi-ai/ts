@@ -19,6 +19,8 @@ export const RECIPE_KINDS: Record<string, ScreenKind[]> = {
   'empty-state': ['empty'],
   pricing: ['marketing'],
   errors: ['error'],
+  reading: ['detail'],
+  'sign-in': ['form', 'firstUse'],
 };
 
 /** One screen measured at one width. */
@@ -126,23 +128,57 @@ const MESSAGES: Record<string, string> = {
   'emphasis.primaries': 'This screen has {value} main actions. Yours have {low} to {high}.',
   'icons.size': 'Icons here are {value}px. Yours are {low} to {high}px.',
   'media.area': 'Pictures cover {pct} of this screen. On yours they cover {lowPct} to {highPct}.',
+  'colour.ground': 'This page is {pct} light. Yours are {lowPct} to {highPct}.',
+  'colour.accentHue': 'The main colour here is a different hue from yours.',
+  'shape.controlRadius': 'Buttons and fields here have {value}px corners. Yours have {low} to {high}px.',
+  'structure.elevated': '{pct} of the panels here are raised by a shadow. On yours it’s {lowPct} to {highPct}.',
+  'structure.tinted': '{pct} of the panels here are set on a tint. On yours it’s {lowPct} to {highPct}.',
   'words.headingLength': 'Headings here are {value} words long. Yours are {low} to {high}.',
   'words.buttonLength': 'Button labels here are {value} words. Yours are {low} to {high}.',
 };
 
-/** Whether a range is clear enough to check: the 90th percentile within twice the 10th. */
-export function clearRange(range: [number, number]): boolean {
+/**
+ * Measures where 0 is a habit, not an absence (spec 1.1): a square language's corners, a language that never raises a
+ * panel or never tints one. For these, a range of exactly 0 is clear.
+ */
+export const ZERO_IS_A_HABIT = new Set(['shape.controlRadius', 'structure.elevated', 'structure.tinted']);
+
+/** Whether a range is clear enough to check: the 90th percentile within twice the 10th (or exactly 0 where 0 is a habit). */
+export function clearRange(range: [number, number], measure?: string): boolean {
   const [lo, hi] = range;
+  if (measure && ZERO_IS_A_HABIT.has(measure) && lo === 0 && hi === 0) return true;
   return lo > 0 && hi <= 2 * lo;
 }
 
 /** `checks.json`: the numeric measures with a clear range, by kind of screen where a kind has 3 or more values. */
-export function buildChecks(fp: Fingerprint): Checks {
+/** How check ranges are drawn. A kind shown by one screen (at several widths) gets its own range, padded by `singlePad` of its value (0 by default: with one screen per kind, the narrow ranges are what tell languages apart). */
+export interface CheckOptions { singlePad?: number }
+
+export function buildChecks(fp: Fingerprint, options: CheckOptions = {}): Checks {
+  const singlePad = options.singlePad ?? 0;
+  // A kind gets its own range only when two or more distinct screens show it (not one screen at three widths)
+  const screensByKind: Record<string, Set<string>> = {};
+  for (const s of fp.screens) {
+    for (const k of s.kind) {
+      if (!screensByKind[k]) screensByKind[k] = new Set();
+      screensByKind[k].add(s.id);
+    }
+  }
   const checks: Check[] = [];
   for (const [id, s] of Object.entries(fp.measures)) {
-    if (s.unit !== 'number' || !s.range || s.n < 5 || !clearRange(s.range) || !MESSAGES[id]) continue;
+    if (s.unit !== 'number' || !s.range || s.n < 5 || !clearRange(s.range, id) || !MESSAGES[id]) continue;
+    // A language's recipes carry invented words, so words earn a check only on a real product (spec 1, design-library.md)
+    if (fp.source.mode === 'language' && id.startsWith('words.')) continue;
     const byKind: Record<string, [number, number]> = {};
-    for (const [k, v] of Object.entries(s.byKind)) if (v.range && v.n >= 3) byKind[k] = v.range;
+    for (const [k, v] of Object.entries(s.byKind)) {
+      if (!v.range || v.n < 3) continue;
+      if ((screensByKind[k]?.size ?? 0) >= 2) byKind[k] = v.range;
+      else {
+        // One screen of this kind: its own range, widened so a close screen isn't "outside" by a hair
+        const pad = singlePad * Math.max(Math.abs(v.range[0]), Math.abs(v.range[1]));
+        byKind[k] = [r3(v.range[0] - pad), r3(v.range[1] + pad)];
+      }
+    }
     checks.push({ id, measure: id, normal: { all: s.range, byKind }, message: MESSAGES[id] });
   }
   return { specVersion: SPEC_VERSION, library: fp.library, checks };
@@ -172,19 +208,26 @@ export function distance(values: Record<string, MeasureValue>, checks: Checks, s
     if (typeof v !== 'number') continue;
     const [lo, hi] = kinds.map((k) => c.normal.byKind[k]).find(Boolean) ?? c.normal.all;
     const out = v < lo ? lo - v : v > hi ? v - hi : 0;
-    const sp = spread[c.measure] || 1;
-    sum += (out / sp) ** 2; n++;
+    // A measure every language shares (no spread across them) can't tell libraries apart: it counts as inside,
+    // rather than an outsized distance from dividing by about zero. One with no spread measured counts in plain units.
+    const sp = spread[c.measure];
+    if (sp === 0) {
+      n++;
+      continue;
+    }
+    const scale = sp ?? 1;
+    sum += (out / scale) ** 2; n++;
   }
   return n ? Math.sqrt(sum / n) : 0;
 }
 
-/** Each numeric measure's spread across libraries: the 10th-to-90th percentile width of their typical values. */
+/** Each numeric measure's spread across libraries: the 10th-to-90th percentile width of their typical values (0 when they all share it). */
 export function spreads(fingerprints: Fingerprint[]): Record<string, number> {
   const out: Record<string, number> = {};
   const ids = new Set(fingerprints.flatMap((f) => Object.keys(f.measures)));
   for (const id of ids) {
     const t = fingerprints.map((f) => f.measures[id]).filter((m) => m?.unit === 'number').map((m) => m.typical as number);
-    if (t.length >= 3) out[id] = Math.max(1e-6, quantile(t, 0.9) - quantile(t, 0.1));
+    if (t.length >= 3) out[id] = quantile(t, 0.9) - quantile(t, 0.1);
   }
   return out;
 }

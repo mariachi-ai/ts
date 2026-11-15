@@ -75,7 +75,6 @@ export const marigoldArchetype: Archetype = {
       { name: 'Green', light: '#58cc02', dark: '#93d333' },
       { name: 'Sky', light: '#1cb0f6', dark: '#49c0f8' },
       { name: 'Orange', light: '#ff9600', dark: '#ffb100' },
-      { name: 'Violet', light: '#ce82ff', dark: '#d6a1ff' },
       { name: 'Red', light: '#ff4b4b', dark: '#ee5555' },
       { name: 'Yellow', light: '#ffc800', dark: '#ffc800' },
     ],

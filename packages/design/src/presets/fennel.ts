@@ -224,6 +224,8 @@ export const fennel = extendTheme(minimal, {
       labelFontWeight: 'var(--m-font-weight-semibold)',
       hintFg: 'var(--m-color-fg-muted)',
       hintFontSize: 'var(--m-font-size-sm)',
+      // The text face runs at 400 and 600 only
+      errorFontWeight: 'var(--m-font-weight-regular)',
     },
     checkbox: { size: '1.375rem', radius: '3px', mark: { light: '#ffffff', dark: '#121511' } },
     radio: { size: '1.5rem', dot: { light: '#ffffff', dark: '#121511' } },
@@ -276,7 +278,8 @@ export const fennel = extendTheme(minimal, {
       link: {
         fg: 'var(--m-color-fg-default)',
         activeFg: forest,
-        activeBg: fill,
+        // The current item is forest-green text at 600 with no fill; hover takes the neutral fill
+        activeBg: 'transparent',
         hoverBg: fill,
         activeWeight: 'var(--m-font-weight-semibold)',
         radius: '9999px',
@@ -297,7 +300,7 @@ export const fennel = extendTheme(minimal, {
       border: 'transparent',
       shadow: 'none',
       brandFamily: 'var(--m-font-family-display)',
-      brandWeight: '900',
+      brandWeight: 'var(--m-font-weight-semibold)',
       link: {
         radius: '9999px',
         fontWeight: 'var(--m-font-weight-semibold)',

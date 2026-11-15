@@ -1,7 +1,7 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Lagoon's seven page shapes: framework-free HTML using only @mariachi/design classes and tokens (no
+ * Lagoon's nine page shapes: framework-free HTML using only @mariachi/design classes and tokens (no
  * colour literals), with sample data from an invented messenger, "Natter". They follow the
  * language's real screen patterns, translated from a desktop window to a web layout: a light grey
  * sidebar with a capsule search, a grid of pinned circles and rows of round avatars, names, times
@@ -136,9 +136,11 @@ const sidebar = (label: string, body: string) =>
       ${body}
     </aside>`;
 
-// The window: the sidebar beside the main pane
-const shell = (side: string, main: string) =>
-  `<div class="m-split" style="--m-layout-split-gap: 0; min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+// The window: the sidebar beside the main pane. On a phone the list and the open page are separate
+// screens: a page reached from the list (a group's details, a settings section) comes first, as the
+// phone pushes it, and the list follows below
+const shell = (side: string, main: string, pageFirst = false) =>
+  `<div class="m-split" style="--m-layout-split-gap: 0; min-block-size: 100vh; background: var(--m-color-bg-canvas)${pageFirst ? '; flex-wrap: wrap-reverse' : ''}">
   ${side}
   ${main}
 </div>`;
@@ -268,7 +270,7 @@ const dashboard = shell(homeSidebar, thread);
 // ---- List and detail: a group's details beside the list ----------------------------------------------
 
 const roundAction = (ic: string, label: string) =>
-  `<a href="#" aria-label="${label}" style="display: grid; place-items: center; inline-size: 2.75rem; block-size: 2.75rem; border-radius: 9999px; background: var(--m-button-secondary-bg); color: var(--m-color-fg-default)">${icon(ic, 20, 2)}</a>`;
+  `<a href="#" aria-label="${label}" style="display: grid; place-items: center; inline-size: 2.75rem; block-size: 2.75rem; border-radius: 9999px; background: var(--m-button-secondary-bg); color: var(--m-color-fg-default)">${icon(ic, 18)}</a>`;
 
 const member = (initials: string, name: string, t: Tone) =>
   `<li class="m-stack" data-gap="1" data-align="center" style="${xs}">${face(initials, t, 'lg')}<span>${name}</span></li>`;
@@ -340,45 +342,51 @@ const listDetail = shell(
         ${grouped([groupRow('<button type="button" style="all: unset; cursor: pointer">Leave this group</button>', '', 'danger-fg')], 'Leave')}
       </div>
     </main>`,
+  true,
 );
 
-// ---- Onboarding: a centred welcome on the grouped grey ----------------------------------------------
+// ---- Onboarding: the first step, your name and picture, as a sheet on the grouped grey ----------------
 
-const feature = (ic: string, title: string, body: string) =>
-  `<li class="m-cluster" data-gap="4" data-align="start" style="flex-wrap: nowrap"><span style="flex: none; display: inline-flex; color: var(--m-color-accent-default)">${icon(ic, 30)}</span><span class="m-stack" data-gap="0"><span style="${semi}">${title}</span><span style="${muted}">${body}</span></span></li>`;
+// A round tinted button: a pale blue circle with a blue glyph (the sheet's picture, emoji and edit buttons)
+const tintedRound = (ic: string, label: string, current = false) =>
+  `<button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="${label}"${current ? ' aria-pressed="true"' : ''} style="inline-size: 2.75rem; block-size: 2.75rem; padding: 0; background: var(--m-color-accent-subtle); color: var(--m-color-accent-text)">${icon(ic, 18)}</button>`;
+// A look to choose: initials on a tint; the chosen one ringed in blue
+const look = (initials: string, t: Tone, label: string, chosen = false) =>
+  `<li><button type="button" aria-label="${label}" aria-pressed="${chosen}" style="all: unset; display: block; cursor: pointer; border-radius: 9999px${chosen ? '; box-shadow: 0 0 0 2px var(--m-color-bg-raised), 0 0 0 4px var(--m-color-accent-default)' : ''}">${face(initials, t, 'lg')}</button></li>`;
+const checkRow = (id: string, label: string, hint: string, checked = false) =>
+  groupRow(
+    `<label for="${id}" class="m-stack" data-gap="0" style="cursor: pointer"><span>${label}</span><span style="${xs}; ${muted}">${hint}</span></label>`,
+    `<span style="display: inline-flex; color: var(--m-color-accent-default)${checked ? '' : '; visibility: hidden'}">${icon(I.check, 18, 2.5)}</span><input class="m-sr-only" type="radio" name="lg-ob-share" id="${id}"${checked ? ' checked' : ''}>`,
+  );
 
-const onboarding = `<main style="min-block-size: 100vh; padding: var(--m-space-12) var(--m-space-4); background: var(--m-color-bg-sunken)">
-  <div class="m-stack" data-gap="8" style="max-inline-size: 30rem; margin-inline: auto">
-    <section class="m-stack" data-gap="4" data-align="center" style="text-align: center" aria-labelledby="lg-ob-title">
-      ${mark(4.5)}
-      <h1 id="lg-ob-title" style="font-size: var(--m-font-size-4xl); ${bold}; letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Say hello to Natter</h1>
-      <p style="font-size: var(--m-font-size-lg); ${muted}">Three things to know before your first chat.</p>
-    </section>
-    <ul class="m-stack" data-gap="5" style="padding: 0 var(--m-space-2); list-style: none">
-      ${feature(I.users, 'Friends and groups in one list', 'Pin the people you talk to most; they stay at the top as circles.')}
-      ${feature(I.lock, 'Private by default', 'Only the people in a chat can read it, on any of your devices.')}
-      ${feature(I.sparkle, 'React without typing', 'Press and hold any message to answer with a heart or a thumbs-up.')}
-    </ul>
-    <form class="m-stack" data-gap="2" aria-labelledby="lg-ob-profile">
-      <h2 id="lg-ob-profile" style="padding-inline: var(--m-space-4); ${sm}; ${muted}; font-weight: var(--m-font-weight-medium)">Your name</h2>
-      <div class="m-card" style="padding: var(--m-space-4)">
-        <div class="m-cluster" data-gap="4" style="flex-wrap: nowrap">
-          ${face('CV', 'info', 'lg')}
-          <div class="m-stack" data-gap="2" style="flex: 1">
-            <label class="m-sr-only" for="lg-ob-first">First name</label>
-            <input class="m-input" id="lg-ob-first" value="Clara" autocomplete="given-name">
-            <label class="m-sr-only" for="lg-ob-last">Last name</label>
-            <input class="m-input" id="lg-ob-last" placeholder="Last name" autocomplete="family-name">
-          </div>
-        </div>
+const onboarding = `<main style="min-block-size: 100vh; padding: var(--m-space-10) var(--m-space-4); background: var(--m-color-bg-sunken)">
+  <div class="m-stack" data-gap="6" style="max-inline-size: 30rem; margin-inline: auto">
+    <div class="m-cluster" data-justify="between" style="flex-wrap: nowrap">${brand}<span style="${sm}; ${muted}">Step 1 of 2</span></div>
+    <form class="m-card m-stack" data-gap="6" aria-labelledby="lg-ob-title" style="padding: var(--m-space-8) var(--m-space-6) var(--m-space-6); background: var(--m-color-bg-raised)">
+      <section class="m-stack" data-gap="3" data-align="center" style="text-align: center">
+        ${face('CV', 'info', 'lg', 'inline-size: 5.5rem; block-size: 5.5rem; font-size: var(--m-font-size-3xl)')}
+        <h1 id="lg-ob-title" style="font-size: var(--m-font-size-3xl); ${bold}; letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Clara Voss</h1>
+        <p style="${sm}; ${muted}">Choose the name and picture people see when you message them.</p>
+        <div class="m-cluster" data-gap="4" data-justify="center">${tintedRound(I.image, 'Choose a photo')}${tintedRound(I.smile, 'Choose an emoji')}${tintedRound(I.compose, 'Edit your name', true)}</div>
+      </section>
+      <section class="m-stack" data-gap="3" aria-labelledby="lg-ob-looks">
+        <div class="m-cluster" data-justify="between"><h2 id="lg-ob-looks" style="font-size: var(--m-font-size-md); ${bold}">Initials</h2><a href="#" style="${sm}; color: var(--m-color-accent-text); text-decoration: none">More looks</a></div>
+        <ul style="display: grid; grid-template-columns: repeat(auto-fill, minmax(3.5rem, 1fr)); gap: var(--m-space-3); justify-items: center; padding: 0; list-style: none" aria-label="Looks">
+          ${look('CV', 'info', 'Blue', true)}${look('CV', 'success', 'Green')}${look('CV', 'warning', 'Orange')}${look('CV', 'danger', 'Red')}${look('CV', 'grey', 'Grey')}
+        </ul>
+      </section>
+      <fieldset class="m-stack" data-gap="2" style="border: 0; margin: 0; padding: 0">
+        <legend style="padding-inline: var(--m-space-4); margin-block-end: var(--m-space-2); ${sm}; ${muted}; font-weight: var(--m-font-weight-medium)">Share them with</legend>
+        <ul class="m-card" aria-label="Share them with" style="gap: 0; padding: 0; list-style: none; background: var(--m-color-bg-sunken); box-shadow: none">${[
+          checkRow('lg-ob-contacts', 'People in your contacts', 'Everyone you’ve saved', true),
+          checkRow('lg-ob-ask', 'Ask me each time', 'Choose when you start a chat'),
+        ].join(`<li aria-hidden="true" style="margin-inline-start: var(--m-space-4); ${hair('block-start')}"></li>`)}</ul>
+      </fieldset>
+      <div class="m-cluster" data-gap="2" data-justify="end">
+        <a class="m-button" data-variant="secondary" href="#">Set up later</a>
+        <button type="submit" class="m-button" data-variant="primary">Continue</button>
       </div>
-      <p style="padding-inline: var(--m-space-4); ${xs}; ${muted}">People you message see your name and initials. You can add a picture later.</p>
     </form>
-    <div class="m-stack" data-gap="3" data-align="center">
-      <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%">Continue</button>
-      <a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Set up later</a>
-      <span class="m-cluster" data-gap="2" role="img" aria-label="Step 1 of 3" style="margin-block-start: var(--m-space-2)"><span style="inline-size: 0.5rem; block-size: 0.5rem; border-radius: 9999px; background: var(--m-color-fg-default)"></span><span style="inline-size: 0.5rem; block-size: 0.5rem; border-radius: 9999px; background: var(--m-color-border-strong)"></span><span style="inline-size: 0.5rem; block-size: 0.5rem; border-radius: 9999px; background: var(--m-color-border-strong)"></span></span>
-    </div>
   </div>
 </main>`;
 
@@ -459,6 +467,7 @@ const settings = shell(
         ${grouped([groupRow('<button type="button" style="all: unset; cursor: pointer">Reset notification settings</button>', '', 'danger-fg')], 'Reset')}
       </div>
     </main>`,
+  true,
 );
 
 // ---- Empty state: a search with nothing found, and the thread pane at rest --------------------------
@@ -469,8 +478,8 @@ const emptyState = shell(
     `${sidebarTop(`${glass(I.filter, 'Show only')}${glass(I.compose, 'New chat')}`)}
       ${searchField('lg-empty-search', 'Search', 'harbour picnic')}
       <div class="m-stack" data-gap="1" data-align="center" style="padding: var(--m-space-12) var(--m-space-4); text-align: center">
-        <span style="display: inline-flex; color: var(--m-color-fg-subtle)">${icon(I.search, 36, 1.5)}</span>
-        <h2 style="margin-block-start: var(--m-space-2); font-size: var(--m-font-size-lg); ${bold}">No results</h2>
+        <span style="display: inline-flex; color: var(--m-color-fg-subtle)">${icon(I.search, 44, 1.5)}</span>
+        <h2 style="margin-block-start: var(--m-space-2); font-size: var(--m-font-size-2xl); ${bold}; letter-spacing: var(--m-font-tracking-tight)">No results</h2>
         <p style="${sm}; ${muted}">Nothing matches “harbour picnic”. Check the spelling, or search for a name.</p>
       </div>`,
   ),
@@ -485,10 +494,25 @@ const emptyState = shell(
     </main>`,
 );
 
+// ---- Public pages: the site bar shared by pricing and reading -------------------------------------------
+
+const siteBar = (current: string, bg = 'var(--m-color-bg-canvas)') => `<header class="m-navbar" style="--m-navbar-bg: ${bg}">
+    <a class="m-navbar-brand" href="#" style="color: inherit; text-decoration: none">${brand}</a>
+    <nav class="m-navbar-nav" aria-label="Site">
+      ${['Features', 'Plans', 'Safety', 'Help'].map((l) => `<a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${l}</a>`).join('\n      ')}
+    </nav>
+    <div class="m-navbar-actions">
+      <a class="m-button" data-variant="ghost" href="#">Sign in</a>
+      <a class="m-button" data-variant="primary" href="#">Get Natter</a>
+    </div>
+  </header>`;
+
 // ---- Pricing: an invented product's plans, on the same system ---------------------------------------
 
+// Features as rows, as the language draws every list: 44px, the tick at the left, a hairline inset to
+// the text between rows
 const tick = (text: string) =>
-  `<li class="m-cluster" data-gap="2" data-align="start" style="flex-wrap: nowrap"><span style="flex: none; display: inline-flex; margin-block-start: 2px; color: var(--m-color-accent-default)">${icon(I.check, 16, 2.5)}</span>${text}</li>`;
+  `<li class="m-cluster" data-gap="3" style="flex-wrap: nowrap; min-block-size: 2.75rem"><span style="flex: none; display: inline-flex; color: var(--m-color-accent-default)">${icon(I.check, 16, 2.5)}</span>${text}</li>`;
 const plan = (
   id: string,
   name: string,
@@ -504,7 +528,7 @@ const plan = (
           <div class="m-cluster" data-justify="between"><h2 id="lg-plan-${id}" style="font-size: var(--m-font-size-xl); ${bold}">${name}</h2>${best ? '<span class="m-badge" data-tone="info">Best for families</span>' : ''}</div>
           <p class="m-cluster" data-gap="1" data-align="baseline"><span style="font-size: var(--m-font-size-4xl); ${bold}; letter-spacing: var(--m-font-tracking-tight); font-variant-numeric: tabular-nums">${price}</span><span style="${sm}; ${muted}">${per}</span></p>
           <p style="${muted}">${line}</p>
-          <ul class="m-stack" data-gap="2" style="flex: 1; padding: 0; list-style: none; ${sm}">${list.map(tick).join('')}</ul>
+          <ul class="m-stack" data-gap="0" style="flex: 1; padding: 0; list-style: none; ${sm}">${list.map(tick).join('<li aria-hidden="true" style="margin-inline-start: 1.75rem; border-block-start: var(--m-border-width-thin) solid var(--m-color-border-default)"></li>')}</ul>
           <a href="#" class="m-button" data-variant="${best ? 'primary' : 'secondary'}" style="inline-size: 100%">${cta}</a>
         </div>
       </section>`;
@@ -513,19 +537,7 @@ const no = `<span role="img" aria-label="Not included" style="color: var(--m-col
 const rowHead = (text: string) => `<th scope="row" style="font-weight: var(--m-font-weight-regular)">${text}</th>`;
 
 const pricing = `<div style="min-block-size: 100vh; background: var(--m-color-bg-sunken)">
-  <header class="m-navbar" style="--m-navbar-bg: var(--m-color-bg-sunken)">
-    <a class="m-navbar-brand" href="#" style="color: inherit; text-decoration: none">${brand}</a>
-    <nav class="m-navbar-nav" aria-label="Site">
-      <a class="m-navbar-link" href="#">Features</a>
-      <a class="m-navbar-link" href="#" aria-current="page">Plans</a>
-      <a class="m-navbar-link" href="#">Safety</a>
-      <a class="m-navbar-link" href="#">Help</a>
-    </nav>
-    <div class="m-navbar-actions">
-      <a class="m-button" data-variant="ghost" href="#">Sign in</a>
-      <a class="m-button" data-variant="primary" href="#">Get Natter</a>
-    </div>
-  </header>
+  ${siteBar('Plans', 'var(--m-color-bg-sunken)')}
   <main>
     <section class="m-container m-stack" data-gap="4" data-align="center" style="padding-block: var(--m-space-16) var(--m-space-10); text-align: center" aria-labelledby="lg-pricing">
       <h1 id="lg-pricing" style="max-inline-size: 40rem; font-size: clamp(var(--m-font-size-3xl), 5vw, 3rem); ${bold}; letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Free to chat. Plus when you want more.</h1>
@@ -575,54 +587,160 @@ const errorPage = (code: string, ic: string, title: string, body: string, action
         <div class="m-cluster" data-gap="2" data-justify="center" style="margin-block-start: var(--m-space-3)">${actions}</div>
       </section>`;
 
-const errors = `<main style="min-block-size: 100vh; padding-block: var(--m-space-10); background: var(--m-color-bg-sunken)">
-  <div class="m-container m-stack" data-gap="8">
-    <h1 style="font-size: var(--m-font-size-3xl); ${bold}; letter-spacing: var(--m-font-tracking-tight)">When something goes wrong</h1>
-    <div class="m-grid" style="--m-layout-grid-min: 20rem; --m-layout-grid-gap: var(--m-space-6); align-items: start">
-      <div class="m-stack" data-gap="6">
-        <section class="m-card" style="padding: var(--m-space-4) var(--m-space-5)" aria-label="A message that didn’t send">
-          <div class="m-chat" role="log" aria-label="Messages">
-            ${bubble('in', 'Are you still bringing the folding chairs?', { last: true })}
-            <div class="m-cluster" data-gap="3" data-justify="end" style="flex-wrap: nowrap; margin-block-start: var(--m-space-2)">
-              <div style="flex: 1">${bubble('out', 'Yes, all four. Leaving now', { last: true })}</div>
-              <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="Not sent. Try again" style="flex: none; inline-size: 1.75rem; block-size: 1.75rem; padding: 0; color: var(--m-color-danger-fg)">${icon(I.alert, 22, 2)}</button>
-            </div>
-            <p style="align-self: end; margin-inline-end: 2.5rem; ${xs}; color: var(--m-color-danger-fg)"><span style="${semi}">Not sent.</span> Click the icon to try again.</p>
-          </div>
-        </section>
+const errorList = [
+  row('NH', 'success', 'Noor Haddad', '9:41 AM', 'Thursday works. I’ll book the table by the window'),
+  row('GO', 'info', 'Gus Okafor', '9:38 AM', 'You: Yes, all four. Leaving now', { current: true }),
+  row('DV', 'grey', 'Dmitri Volkov', '8:30 AM', 'Photo'),
+  row('AE', 'danger', 'Amara Eze', 'Yesterday', 'Thanks for lending the tent! It survived the storm'),
+  row('RA', 'success', 'Ruth Abernathy', 'Tuesday', 'Did the parcel ever turn up?'),
+];
+
+// The errors live where they happen: in the window, the offline notice at the top of the thread, the
+// message that didn't send with its red mark, and a banner at the top right, where the system's
+// notifications arrive; then a sheet with field errors and the
+// full-page errors, on the grouped grey below
+const errors = `${shell(
+  sidebar(
+    'Conversations',
+    `${sidebarTop(`${glass(I.filter, 'Show only')}${glass(I.compose, 'New chat')}`)}
+      ${searchField('lg-err-search', 'Search')}
+      ${rows(errorList)}`,
+  ),
+  `<main class="m-stack" data-gap="0" style="position: relative; min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+      ${threadTop('GO', 'info', 'Gus Okafor', glass(I.panel, 'Hide the sidebar'), `${glass(I.video, 'Video call')}${glass(I.info, 'Details')}`)}
+      <div class="m-toast-region" data-static aria-live="polite" style="position: absolute; inset-block-start: 4.75rem; inset-inline: auto var(--m-space-4); inline-size: min(22rem, calc(100% - 2 * var(--m-space-4))); padding: 0">
+        <div class="m-toast" role="alert" style="inline-size: 100%; max-inline-size: none"><div class="m-toast-content"><p class="m-toast-title">Couldn’t send the photo</p><p class="m-toast-body">It’s larger than 100 MB. Send it as a link instead.</p><div class="m-toast-actions"><button type="button" class="m-button" data-size="sm">Send as a link</button></div></div><button type="button" class="m-button" data-variant="ghost" data-icon-only data-size="sm" aria-label="Dismiss" style="color: var(--m-color-fg-muted)">${icon(I.close, 14, 2)}</button></div>
+      </div>
+      <div style="padding: 0 clamp(var(--m-space-4), 4%, var(--m-space-10))">
         <div class="m-alert" data-tone="warning" role="status">
           <span class="m-alert-icon">${icon(I.wifiOff, 18)}</span>
           <div class="m-alert-content"><div class="m-alert-title">You’re offline</div><div class="m-alert-body">Messages will send as soon as you reconnect.</div></div>
         </div>
-        <div class="m-toast-region" data-static aria-live="polite" style="position: static">
-          <div class="m-toast" role="alert" style="inline-size: 100%; max-inline-size: none"><div class="m-toast-content"><p class="m-toast-title">Couldn’t send the photo</p><p class="m-toast-body">It’s larger than 100 MB. Send it as a link instead.</p><div class="m-toast-actions"><button type="button" class="m-button" data-size="sm">Send as a link</button></div></div><button type="button" class="m-button" data-variant="ghost" data-icon-only data-size="sm" aria-label="Dismiss" style="color: var(--m-color-fg-muted)">${icon(I.close, 14, 2)}</button></div>
+      </div>
+      <div style="flex: 1; padding: 0 clamp(var(--m-space-4), 4%, var(--m-space-10))">
+        <div class="m-chat" role="log" aria-label="Messages with Gus Okafor">
+          ${stamp('Today', '9:30 AM')}
+          ${bubble('in', 'Are you still bringing the folding chairs?', { last: true })}
+          <div class="m-cluster" data-gap="3" data-justify="end" style="flex-wrap: nowrap; margin-block-start: var(--m-space-2)">
+            <div style="flex: 1">${bubble('out', 'Yes, all four. Leaving now', { last: true })}</div>
+            <button type="button" class="m-button" data-variant="ghost" data-icon-only aria-label="Not sent. Try again" style="flex: none; inline-size: 1.75rem; block-size: 1.75rem; padding: 0; color: var(--m-color-danger-fg)">${icon(I.alert, 22, 2)}</button>
+          </div>
+          <p style="align-self: end; margin-inline-end: 2.5rem; ${xs}; color: var(--m-color-danger-fg)"><span style="${semi}">Not sent.</span> Click the mark to try again.</p>
         </div>
       </div>
-      <div class="m-dialog" data-static role="dialog" aria-modal="false" aria-labelledby="lg-err-group" style="inline-size: 100%; max-inline-size: none; margin: 0">
-        <header class="m-dialog-header"><h2 class="m-dialog-title" id="lg-err-group">New group</h2></header>
-        <div class="m-dialog-body m-stack" data-gap="4">
-          <div class="m-alert" data-tone="danger" role="alert">
-            <span class="m-alert-icon">${icon(I.alert, 18)}</span>
-            <div class="m-alert-content"><div class="m-alert-title">The group wasn’t made</div><div class="m-alert-body">Fix the two things below and try again.</div></div>
-          </div>
-          <div class="m-field">
-            <label class="m-field-label" for="lg-err-name">Group name</label>
-            <input class="m-input" id="lg-err-name" value="" aria-invalid="true" aria-describedby="lg-err-name-e">
-            <p class="m-field-error" id="lg-err-name-e">Give the group a name, up to 50 characters.</p>
-          </div>
-          <div class="m-field">
-            <label class="m-field-label" for="lg-err-who">Add people</label>
-            <input class="m-input" id="lg-err-who" value="clara@" aria-invalid="true" aria-describedby="lg-err-who-e">
-            <p class="m-field-error" id="lg-err-who-e">That address isn’t complete. Check the part after the @.</p>
-          </div>
+      ${composer('lg-err-composer', 'Message')}
+    </main>`,
+  true,
+)}
+<div style="padding-block: var(--m-space-10); background: var(--m-color-bg-sunken)">
+  <div class="m-container m-stack" data-gap="8">
+    <div class="m-dialog" data-static role="dialog" aria-modal="false" aria-labelledby="lg-err-group" style="inline-size: 100%; max-inline-size: 30rem; margin: 0 auto">
+      <header class="m-dialog-header"><h2 class="m-dialog-title" id="lg-err-group">New group</h2></header>
+      <div class="m-dialog-body m-stack" data-gap="4">
+        <div class="m-alert" data-tone="danger" role="alert">
+          <span class="m-alert-icon">${icon(I.alert, 18)}</span>
+          <div class="m-alert-content"><div class="m-alert-title">The group wasn’t made</div><div class="m-alert-body">Fix the two things below and try again.</div></div>
         </div>
-        <footer class="m-dialog-footer"><button type="button" class="m-button" data-variant="secondary">Cancel</button><button type="submit" class="m-button" data-variant="primary">Make group</button></footer>
+        <div class="m-field">
+          <label class="m-field-label" for="lg-err-name">Group name</label>
+          <input class="m-input" id="lg-err-name" value="" aria-invalid="true" aria-describedby="lg-err-name-e">
+          <p class="m-field-error" id="lg-err-name-e">Give the group a name, up to 50 characters.</p>
+        </div>
+        <div class="m-field">
+          <label class="m-field-label" for="lg-err-who">Add people</label>
+          <input class="m-input" id="lg-err-who" value="clara@" aria-invalid="true" aria-describedby="lg-err-who-e">
+          <p class="m-field-error" id="lg-err-who-e">That address isn’t complete. Check the part after the @.</p>
+        </div>
       </div>
+      <footer class="m-dialog-footer"><button type="button" class="m-button" data-variant="secondary">Cancel</button><button type="submit" class="m-button" data-variant="primary">Make group</button></footer>
     </div>
     <div class="m-grid" style="--m-layout-grid-min: 17rem; --m-layout-grid-gap: var(--m-space-5)">
       ${errorPage('404', I.search, 'This chat isn’t here', 'It may have been deleted, or the link is out of date.', '<a class="m-button" data-variant="primary" href="#">Back to chats</a>')}
       ${errorPage('500', I.alert, 'Natter isn’t responding', 'Your messages are safe on this device and will send when we’re back.', `<button type="button" class="m-button" data-variant="primary">${icon(I.refresh, 16)} Try again</button>`)}
       ${errorPage('403', I.lock, 'You’re not in this group', 'Only members can read it. Ask someone in the group to add you.', '<button type="button" class="m-button" data-variant="primary">Ask to join</button><a class="m-button" data-variant="secondary" href="#">Go back</a>')}
+    </div>
+  </div>
+</div>`;
+
+// ---- Reading: a public help article --------------------------------------------------------------------
+
+const step = (n: number, text: string) =>
+  `<li class="m-cluster" data-gap="3" data-align="start" style="flex-wrap: nowrap"><span aria-hidden="true" style="flex: none; display: grid; place-items: center; inline-size: 1.5rem; block-size: 1.5rem; margin-block-start: 1px; border-radius: 9999px; background: var(--m-button-secondary-bg); ${sm}; ${semi}">${n}</span><span>${text}</span></li>`;
+
+const reading = `<div style="min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+  ${siteBar('Help')}
+  <div class="m-container" style="--m-layout-container-max-lg: 46rem">
+    <div class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding-block: var(--m-space-3); ${hair()}">
+      <a href="#" style="font-size: var(--m-font-size-lg); ${bold}; color: inherit; text-decoration: none">Natter Help</a>
+      <div style="inline-size: min(16rem, 50%)">${searchField('lg-help-search', 'Search help')}</div>
+    </div>
+  </div>
+  <main class="m-container" style="--m-layout-container-max-lg: 40rem; padding-block: var(--m-space-8) var(--m-space-12)">
+    <article class="m-stack" data-gap="5" aria-labelledby="lg-read-title" style="font-size: var(--m-font-size-lg)">
+      <p style="${sm}; ${muted}"><a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Groups</a> › Start a group</p>
+      <h1 id="lg-read-title" style="font-size: var(--m-font-size-4xl); ${bold}; letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Start a group chat</h1>
+      <p>A group keeps everyone in one conversation: plans, photos and the odd poll. You can start one with up to 32 people and name it later.</p>
+      <div class="m-card" role="img" aria-label="A group chat with three messages" style="padding: var(--m-space-4) var(--m-space-5); background: var(--m-color-bg-sunken); box-shadow: none; font-size: var(--m-font-size-md)">
+        <div class="m-chat" aria-hidden="true">
+          ${bubble('in', 'Who’s free on Saturday?', { who: 'Wen Li', avatar: ['WL', 'info'], last: true })}
+          ${bubble('out', 'Me, after lunch', { last: true })}
+          ${receipt('Read', '10:12 AM')}
+        </div>
+      </div>
+      <section class="m-stack" data-gap="3" aria-labelledby="lg-read-start" style="padding-block-start: var(--m-space-5); ${hair('block-start')}">
+        <h2 id="lg-read-start" style="font-size: var(--m-font-size-2xl); ${bold}; letter-spacing: var(--m-font-tracking-tight)">Start the group</h2>
+        <ol class="m-stack" data-gap="3" style="padding: 0; list-style: none">
+          ${step(1, 'Click the new chat button at the top of your list.')}
+          ${step(2, 'Type the names of the people you want to add. Press Return after each one.')}
+          ${step(3, 'Write your first message and send it. The group appears at the top of your list.')}
+        </ol>
+      </section>
+      <section class="m-stack" data-gap="3" aria-labelledby="lg-read-name" style="padding-block-start: var(--m-space-5); ${hair('block-start')}">
+        <h2 id="lg-read-name" style="font-size: var(--m-font-size-2xl); ${bold}; letter-spacing: var(--m-font-tracking-tight)">Name the group</h2>
+        <p>Open the group’s details, then click Edit. Everyone in the group sees the new name and a line in the chat saying who changed it.</p>
+        <div class="m-alert" data-tone="info" role="note">
+          <span class="m-alert-icon">${icon(I.info, 18)}</span>
+          <div class="m-alert-content"><div class="m-alert-title">Leaving quietly</div><div class="m-alert-body">When you leave a group, the others see one grey line. Nobody is told why.</div></div>
+        </div>
+      </section>
+      <section class="m-cluster" data-gap="3" aria-label="Feedback" style="padding-block-start: var(--m-space-5); ${hair('block-start')}; ${sm}">
+        <span style="${muted}">Was this page helpful?</span>
+        <button type="button" class="m-button" data-size="sm">Yes</button>
+        <button type="button" class="m-button" data-size="sm">No</button>
+      </section>
+    </article>
+  </main>
+  <footer class="m-container" style="--m-layout-container-max-lg: 46rem; padding-block: var(--m-space-5) var(--m-space-10); ${hair('block-start')}; ${xs}; ${muted}">
+    <nav class="m-cluster" data-gap="4" aria-label="Footer"><a href="#" style="color: inherit">Privacy</a><a href="#" style="color: inherit">Terms</a><a href="#" style="color: inherit">Status</a><a href="#" style="color: inherit">Contact us</a></nav>
+  </footer>
+</div>`;
+
+// ---- Sign in: the mark over one grouped card, on the grouped grey ---------------------------------------
+
+const formRow = (id: string, label: string, type: string, attrs: string) =>
+  groupRow(
+    `<label for="${id}" style="flex: none; inline-size: 5.5rem">${label}</label>`,
+    `<input class="m-input" id="${id}" type="${type}" ${attrs} style="flex: 1; min-inline-size: 0; block-size: 1.75rem; padding: 0; border-color: transparent; background: transparent; box-shadow: none">`,
+  );
+
+const signIn = `<main style="min-block-size: 100vh; padding: var(--m-space-16) var(--m-space-4); background: var(--m-color-bg-sunken)">
+  <div class="m-stack" data-gap="6" style="max-inline-size: 24rem; margin-inline: auto">
+    <section class="m-stack" data-gap="3" data-align="center" style="text-align: center">
+      ${mark(4)}
+      <h1 id="lg-signin" style="font-size: var(--m-font-size-3xl); ${bold}; letter-spacing: var(--m-font-tracking-tight); line-height: var(--m-font-leading-tight)">Sign in to Natter</h1>
+      <p style="${muted}">Your chats come with you, on every device you sign in on.</p>
+    </section>
+    <form class="m-stack" data-gap="2" aria-labelledby="lg-signin">
+      <ul class="m-card" aria-label="Your account" style="gap: 0; padding: 0; list-style: none">${[
+        formRow('lg-si-email', 'Email', 'email', 'value="clara.voss@example.com" autocomplete="email"'),
+        formRow('lg-si-pass', 'Password', 'password', 'placeholder="Required" autocomplete="current-password"'),
+      ].join(`<li aria-hidden="true" style="margin-inline-start: var(--m-space-4); ${hair('block-start')}"></li>`)}</ul>
+      <p style="padding-inline: var(--m-space-4); ${xs}; ${muted}">Use the email you signed up with.</p>
+      <button type="submit" class="m-button" data-variant="primary" data-size="lg" style="inline-size: 100%; margin-block-start: var(--m-space-4)">Continue</button>
+    </form>
+    <div class="m-stack" data-gap="3" data-align="center" style="${sm}">
+      <a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Forgot your password?</a>
+      <span style="${muted}">New to Natter? <a href="#" style="color: var(--m-color-accent-text); text-decoration: none">Make an account</a></span>
     </div>
   </div>
 </main>`;
@@ -676,5 +794,19 @@ export const lagoonRecipes: ArchetypeRecipe[] = [
     description:
       'A message that didn’t send, the offline notice, a banner, a sheet with field errors, and full pages for 404, 500 and no access.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A public help article: the site bar, the help name with a capsule search over a hairline, a 34px bold title, 17px text, a sample thread on the grouped grey, numbered steps, sections between hairlines and a small footer.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The blue mark over a 28px bold title on the grouped grey, one grouped card with the email and password rows, a full-width blue capsule and two blue text links.',
+    html: signIn,
   },
 ];

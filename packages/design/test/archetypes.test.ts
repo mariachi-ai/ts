@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { buildCatalog, packageAssets, packageRoot } from '../src/build';
 import { componentList, tokenList } from '../src/contract';
 import { lucidePaths } from '../src/archetypes/lucide';
-import { type Theme, archetypes, checkTheme, iconActions, presets, recipeNames } from '../src/index';
+import { type Theme, archetypes, checkTheme, extraRecipeNames, iconActions, presets, recipeNames } from '../src/index';
 
 const assets = packageAssets().files;
 // Every class the package's CSS defines (the CSS files only, never the catalog, which holds the recipes)
@@ -25,8 +25,11 @@ describe.each(archetypes.map((a) => [a.id, a] as const))('archetype %s', (id, ar
     expect(check.unchecked).toEqual([]);
   });
 
-  it('has all six recipes, in order', () => {
-    expect(archetype.recipes.map((r) => r.name)).toEqual([...recipeNames]);
+  it('has the required recipes in order, then only the optional extras, in order', () => {
+    const names = archetype.recipes.map((r) => r.name);
+    expect(names.slice(0, recipeNames.length)).toEqual([...recipeNames]);
+    const extras = names.slice(recipeNames.length);
+    expect(extras).toEqual(extraRecipeNames.filter((n) => extras.includes(n)));
   });
 
   it.each(archetype.recipes.map((r) => [r.name, r] as const))(

@@ -49,7 +49,7 @@ export const transit = extendTheme(minimal, {
         active: { light: '#4b4b4b', dark: '#c6c6c6' },
         subtle: { light: '#f3f3f3', dark: '#292929' },
         fg: { light: '#ffffff', dark: '#000000' },
-        // Links are black and underlined, never blue
+        // Links are black and underlined (a help article links to other answers in the info blue)
         text: { light: '#000000', dark: '#ffffff' },
       },
       // The design system's own brand token is a blue (promo banners, safety, brand panels)
@@ -463,13 +463,13 @@ export const transit = extendTheme(minimal, {
       function: 'var(--m-color-fg-default)',
       comment: 'var(--m-color-fg-subtle)',
     },
-    // Accordion: rows on a faint rule, 16px medium questions, no box
+    // Accordion: rows on a faint rule, about 72px tall, 16px medium questions, no box
     accordion: {
       bg: 'transparent',
       border: 'var(--m-color-border-muted)',
       radius: '0',
       paddingX: 'var(--m-space-5)',
-      paddingY: 'var(--m-space-4)',
+      paddingY: 'var(--m-space-6)',
       summaryWeight: 'var(--m-font-weight-medium)',
       hoverBg: { light: '#f6f6f6', dark: '#1f1f1f' },
       contentFg: 'var(--m-color-fg-default)',

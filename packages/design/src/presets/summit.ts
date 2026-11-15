@@ -126,7 +126,7 @@ export const summit = extendTheme(minimal, {
       leading: { tight: '1.1', normal: '1.3', relaxed: '1.5' },
       tracking: { tight: '-0.01em', normal: '0', wide: '0.08em' },
       body: { weight: '400' },
-      heading: { weight: '700', tracking: '0' },
+      heading: { weight: '600', tracking: '0' },
     },
     control: {
       // Buttons: 32px small, 40px default (the header's Log In), 44px large (the text input)
@@ -263,7 +263,7 @@ export const summit = extendTheme(minimal, {
       thumbCheckedBg: '#ffffff',
       thumbShadow: '0 1px 3px rgb(0 0 0 / 0.25)',
     },
-    // White cards with 4px corners, a warm hairline and the long faint shadow; titles bold
+    // White cards with 4px corners, a warm hairline and the long faint shadow; titles semibold
     card: {
       radius: '4px',
       border: { light: '#f2f2f0', dark: '#2e2e2b' },
@@ -274,7 +274,7 @@ export const summit = extendTheme(minimal, {
       padding: { sm: 'var(--m-space-4)', md: 'var(--m-space-6)', lg: 'var(--m-space-8)' },
       titleFamily: 'var(--m-font-family-sans)',
       titleSize: 'var(--m-font-size-lg)',
-      titleWeight: 'var(--m-font-weight-bold)',
+      titleWeight: 'var(--m-font-weight-semibold)',
       descriptionFg: 'var(--m-color-fg-muted)',
       outline: { bg: 'var(--m-color-bg-surface)', border: hair },
       sunken: { bg: fill, border: 'transparent' },
@@ -318,7 +318,7 @@ export const summit = extendTheme(minimal, {
       },
       heading: {
         fg: 'var(--m-color-fg-subtle)',
-        size: '0.6875rem',
+        size: 'var(--m-font-size-xs)',
         weight: 'var(--m-font-weight-semibold)',
         transform: 'uppercase',
         tracking: '0.04em',
@@ -332,7 +332,7 @@ export const summit = extendTheme(minimal, {
       border: { light: '#f2f2f0', dark: '#2e2e2b' },
       shadow: 'var(--m-shadow-sm)',
       brandFamily: 'var(--m-font-family-display)',
-      brandWeight: '700',
+      brandWeight: '600',
       brandSize: 'var(--m-font-size-xl)',
       brandTransform: 'uppercase',
       // Links fill the bar's height, so the current one's orange line sits on its bottom edge
@@ -386,6 +386,7 @@ export const summit = extendTheme(minimal, {
       fg: 'var(--m-color-fg-default)',
       hoverFg: orangeText,
       currentFg: 'var(--m-color-fg-subtle)',
+      currentWeight: 'var(--m-font-weight-regular)',
     },
     // Tags: 4px corners, 12px; "New" and subscriber tags are orange, small and bold
     badge: {
@@ -435,7 +436,7 @@ export const summit = extendTheme(minimal, {
       radius: '4px',
       shadow: 'var(--m-shadow-lg)',
       fontSize: 'var(--m-font-size-sm)',
-      titleWeight: 'var(--m-font-weight-bold)',
+      titleWeight: 'var(--m-font-weight-semibold)',
     },
     // The modal: white, 8px corners, the long navy-tinted shadow over a 70% black scrim
     dialog: {
@@ -445,7 +446,7 @@ export const summit = extendTheme(minimal, {
       padding: 'var(--m-space-6)',
       titleFamily: 'var(--m-font-family-display)',
       titleSize: 'var(--m-font-size-xl)',
-      titleWeight: '700',
+      titleWeight: '600',
       descriptionFg: 'var(--m-color-fg-subtle)',
     },
     // Menus: 4px corners, a hairline border, 14px items that highlight in the hairline grey
@@ -500,7 +501,7 @@ export const summit = extendTheme(minimal, {
       track: { light: 'rgb(67 66 63 / 0.25)', dark: 'rgb(194 193 187 / 0.25)' },
       duration: '1.2s',
     },
-    kbd: { radius: '4px', shadow: 'none', fontWeight: 'var(--m-font-weight-medium)' },
+    kbd: { radius: '4px', shadow: 'none', fontWeight: 'var(--m-font-weight-semibold)' },
     code: {
       radius: '4px',
       inlineRadius: '2px',

@@ -1,13 +1,16 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Transit's seven layout recipes: framework-free HTML using only @mariachi/design classes and
+ * Transit's nine layout recipes: framework-free HTML using only @mariachi/design classes and
  * tokens (no colour literals), with sample data from an invented rides-and-parcels service,
  * "Roundabout". They follow the language's real screen patterns: a white app header with a 4px
  * underline on the current tab, a bordered booking panel beside a map (always a token-drawn
  * placeholder, never a real map), grey-filled fields with a dot and a square for the two ends of
  * a trip, option rows where the chosen one gets a 2px black edge, black 48px actions, pill chips,
- * big bold headings, and full-bleed black blocks on marketing pages.
+ * big bold headings, and full-bleed black blocks on marketing pages. Habits kept on every page (measured
+ * on the source's public pages): three weights (400, 500, 700), four to six sizes, 16px icons in rows
+ * and buttons, edges drawn as borders (never a shadow on a panel), panels nested one level, and list
+ * rows about 72px tall.
  */
 
 // Lucide icons, outlined at 2px: the reference's own glyphs are chunky and solid-feeling
@@ -70,7 +73,7 @@ const chip = (text: string, on = false, lead = '') =>
   `<button type="button" class="m-button" data-size="sm"${on ? ' data-variant="primary"' : ''} style="${pill}; font-size: var(--m-font-size-sm)"${on ? ' aria-pressed="true"' : ' aria-pressed="false"'}>${lead}${text}</button>`;
 // A square icon tile on the grey fill (vehicle and place images are never used)
 const tile = (ic: string, size = '3.5rem', round = false) =>
-  `<span class="m-cluster" data-justify="center" style="flex: none; inline-size: ${size}; block-size: ${size}; background: var(--m-color-bg-sunken); border-radius: ${round ? 'var(--m-radius-full)' : 'var(--m-radius-md)'}">${icon(ic, 24)}</span>`;
+  `<span class="m-cluster" data-justify="center" style="flex: none; inline-size: ${size}; block-size: ${size}; background: var(--m-color-bg-sunken); border-radius: ${round ? 'var(--m-radius-full)' : 'var(--m-radius-md)'}">${icon(ic, 20)}</span>`;
 
 // The two ends of a trip: a black dot for pickup, a black square for drop-off, joined by a line
 const endDot =
@@ -103,7 +106,7 @@ const map = (h: string, eta = '6 min') => `<svg viewBox="0 0 800 600" width="100
           <circle cx="210" cy="470" r="11" style="fill: var(--m-color-fg-default)"/><circle cx="210" cy="470" r="4" style="fill: var(--m-color-bg-canvas)"/>
           <rect x="580" y="176" width="20" height="20" style="fill: var(--m-color-fg-default)"/><rect x="586" y="182" width="8" height="8" style="fill: var(--m-color-bg-canvas)"/>
           <rect x="230" y="396" width="92" height="40" rx="4" style="fill: var(--m-color-fg-default)"/>
-          <text x="276" y="422" text-anchor="middle" style="fill: var(--m-color-bg-canvas); font: var(--m-font-weight-medium) 18px var(--m-font-family-sans)">${eta}</text>
+          <text x="276" y="422" text-anchor="middle" style="fill: var(--m-color-bg-canvas); font: var(--m-font-weight-medium) 16px var(--m-font-family-sans)">${eta}</text>
         </svg>`;
 
 // The app header: the brand, then tabs with a 4px bar under the current one, then account actions
@@ -117,13 +120,13 @@ const appHeader = (current: string) => {
     <div class="m-cluster" data-gap="8" style="min-inline-size: 0">
       <span style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-medium); letter-spacing: var(--m-font-tracking-tight)">Roundabout</span>
       <div class="m-tabs"><div class="m-tab-list" role="tablist" aria-label="Services" style="margin-block-end: -4px">
-${tabs.map(([ic, l]) => `        <button type="button" class="m-tab" role="tab" aria-selected="${l === current}"${l === current ? '' : ' tabindex="-1"'} style="block-size: 3.75rem">${icon(I[ic as keyof typeof I], 18)} ${l}</button>`).join('\n')}
+${tabs.map(([ic, l]) => `        <button type="button" class="m-tab" role="tab" aria-selected="${l === current}"${l === current ? '' : ' tabindex="-1"'} style="block-size: 3.75rem">${icon(I[ic as keyof typeof I], 16)} ${l}</button>`).join('\n')}
       </div></div>
     </div>
     <div class="m-cluster" data-gap="2">
       <button type="button" class="m-button" data-variant="ghost" data-size="sm" style="${pill}; font-size: var(--m-font-size-sm)">${icon(I.receipt, 16)} Activity</button>
-      <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Notifications" style="${pill}">${icon(I.bell, 18)}</button>
-      <span class="m-avatar" data-size="sm" aria-label="Noor Haddad">NH</span>
+      <button type="button" class="m-button" data-variant="ghost" data-size="sm" data-icon-only aria-label="Notifications" style="${pill}">${icon(I.bell, 16)}</button>
+      <span class="m-avatar" data-size="sm" aria-label="Noor Haddad" style="font-size: var(--m-font-size-sm)">NH</span>
     </div>
   </header>`;
 };
@@ -137,16 +140,15 @@ const option = (
   timing: string,
   price: string,
   opts: { on?: boolean; tag?: [string, string]; was?: string } = {},
-) => `            <label class="m-cluster" data-gap="3" style="flex-wrap: nowrap; padding: var(--m-space-3) var(--m-space-4); border-radius: var(--m-radius-lg); cursor: pointer${opts.on ? '; box-shadow: inset 0 0 0 2px var(--m-color-accent-default)' : ''}">
+) => `            <label class="m-cluster" data-gap="3" style="flex-wrap: nowrap; padding: calc(var(--m-space-3) - 2px) var(--m-space-4); border-radius: var(--m-radius-lg); cursor: pointer; border: 2px solid ${opts.on ? 'var(--m-color-accent-default)' : 'transparent'}">
               <input class="m-radio m-sr-only" type="radio" name="tr-ride"${opts.on ? ' checked' : ''}>
-              ${tile(I[ic as keyof typeof I], '3.5rem')}
+              ${tile(I[ic as keyof typeof I], '3rem')}
               <span class="m-stack" data-gap="0" style="flex: 1; min-inline-size: 0">
-                <span class="m-cluster" data-gap="2"><span style="${label}; font-size: var(--m-font-size-lg)">${name}</span><span class="m-cluster" data-gap="1" style="${small}">${icon(I.user, 14)}${seats}</span></span>
+                <span class="m-cluster" data-gap="2"><span style="${label}">${name}</span><span class="m-cluster" data-gap="1" style="${small}">${icon(I.user, 16)}${seats}</span>${opts.tag ? `<span class="m-badge" data-tone="${opts.tag[0]}">${opts.tag[1]}</span>` : ''}</span>
                 <span style="${small}">${timing}</span>
-                ${opts.tag ? `<span><span class="m-badge" data-tone="${opts.tag[0]}">${opts.tag[1]}</span></span>` : ''}
               </span>
               <span class="m-stack" data-gap="0" data-align="end" style="text-align: end">
-                <span style="${figure}; font-size: var(--m-font-size-lg)">${price}</span>
+                <span style="${figure}">${price}</span>
                 ${opts.was ? `<span style="${small}; text-decoration: line-through">${opts.was}</span>` : ''}
               </span>
             </label>`;
@@ -154,11 +156,11 @@ const option = (
 const suggestion = (title: string, body: string, ic: string) => `          <section class="m-card" data-variant="sunken" aria-label="${title}">
             <div class="m-card-body m-cluster" data-justify="between" data-align="start" style="flex-wrap: nowrap">
               <div class="m-stack" data-gap="2">
-                <h3 style="${label}; font-size: var(--m-font-size-lg)">${title}</h3>
+                <h3 style="${display('xl')}">${title}</h3>
                 <p style="font-size: var(--m-font-size-sm)">${body}</p>
                 <div style="padding-block-start: var(--m-space-3)"><button type="button" class="m-button" data-size="sm" style="${pill}; background: var(--m-color-bg-surface); font-size: var(--m-font-size-sm)">Details</button></div>
               </div>
-              <span style="color: var(--m-color-fg-default)">${icon(I[ic as keyof typeof I], 48)}</span>
+              <span style="color: var(--m-color-fg-default)">${icon(I[ic as keyof typeof I], 40)}</span>
             </div>
           </section>`;
 
@@ -174,13 +176,11 @@ const dashboard = `<div style="min-block-size: 100vh">
             ${placeField('tr-from', 'Pickup', 'Larch Street Library', endDot, icon(I.locate, 18))}
             ${placeField('tr-to', 'Drop-off', 'Harbourside Arena, Gate C', endSquare)}
           </div>
-          <button type="button" class="m-button" style="justify-content: start; background: var(--m-color-bg-sunken)">${icon(I.clock, 18)} Leave now <span style="margin-inline-start: auto; display: inline-flex">${icon(I.down, 16)}</span></button>
-          <div class="m-cluster" data-gap="2">${chip('Just me', false, `${icon(I.user, 14)} `)}${chip('Business', false, `${icon(I.briefcase, 14)} `)}</div>
-        </div>
-        <div class="m-stack" data-gap="1" style="${hair}; padding: var(--m-space-3) var(--m-space-2)">
-          <h2 style="${display('lg')}; padding: var(--m-space-2) var(--m-space-2) var(--m-space-1)">Choose a ride</h2>
+          <button type="button" class="m-button" style="justify-content: start; background: var(--m-color-bg-sunken)">${icon(I.clock, 16)} Leave now <span style="margin-inline-start: auto; display: inline-flex">${icon(I.down, 16)}</span></button>
+          <div class="m-cluster" data-gap="2">${chip('Just me', false, `${icon(I.user, 16)} `)}${chip('Business', false, `${icon(I.briefcase, 16)} `)}</div>
+          <h2 style="${display('xl')}; padding-block-start: var(--m-space-3)">Choose a ride</h2>
           <fieldset class="m-stack" data-gap="1" style="border: 0; padding: 0; margin: 0">
-            <legend class="m-sr-only">Ride options</legend>
+            <legend class="m-sr-only" style="font-weight: inherit">Ride options</legend>
 ${option('car', 'Standard', 4, '3 min away · 6:42 pm', '$18.40', { on: true, tag: ['info', 'Fastest'] })}
 ${option('users', 'Roomy', 6, '5 min away · 6:45 pm', '$27.15')}
 ${option('car', 'Quiet', 4, '7 min away · 6:47 pm', '$22.90', { tag: ['success', 'Low emission'] })}
@@ -188,7 +188,7 @@ ${option('bike', 'Two wheels', 1, '2 min away · 6:50 pm', '$9.80', { was: '$11.
           </fieldset>
         </div>
         <div class="m-stack" data-gap="3" style="${hair}; padding: var(--m-space-4)">
-          <button type="button" class="m-button" data-variant="ghost" style="justify-content: start; padding-inline: 0">${icon(I.card, 18)} Card ending 2207 <span style="margin-inline-start: auto; display: inline-flex">${icon(I.right, 16)}</span></button>
+          <button type="button" class="m-button" data-variant="ghost" style="justify-content: start; padding-inline: 0">${icon(I.card, 16)} Card ending 2207 <span style="margin-inline-start: auto; display: inline-flex">${icon(I.right, 16)}</span></button>
           <button type="button" class="m-button" data-variant="primary" style="inline-size: 100%">Book Standard</button>
         </div>
       </section>
@@ -209,7 +209,7 @@ ${suggestion('By the hour', 'Keep one car and driver for errands, a shoot or a l
 // Account pages: a side list where the current row has a grey fill and a 4px black bar
 const accountNav = (current: string, items: [string, string, string?][]) => `<nav class="m-sidebar" aria-label="Account" style="padding-block: var(--m-space-6)">
     <ul class="m-sidebar-section">
-${items.map(([ic, l, count]) => `      <li><a class="m-sidebar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${icon(I[ic as keyof typeof I], 20)} ${l}${count ? ` <span class="m-sidebar-count">${count}</span>` : ''}</a></li>`).join('\n')}
+${items.map(([ic, l, count]) => `      <li><a class="m-sidebar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${icon(I[ic as keyof typeof I], 16)} ${l}${count ? ` <span class="m-sidebar-count">${count}</span>` : ''}</a></li>`).join('\n')}
     </ul>
   </nav>`;
 const accountItems: [string, string, string?][] = [
@@ -228,18 +228,17 @@ const trip = (
   when: string,
   price: string,
   opts: { on?: boolean; status?: [string, string]; ic?: string } = {},
-) => `            <li><a href="#" class="m-cluster" data-gap="4" style="flex-wrap: nowrap; padding: var(--m-space-3); color: inherit; text-decoration: none; border-radius: var(--m-radius-lg)${opts.on ? '; box-shadow: inset 0 0 0 2px var(--m-color-accent-default)' : ''}"${opts.on ? ' aria-current="true"' : ''}>
-              ${tile(I[(opts.ic ?? 'route') as keyof typeof I], '4rem')}
+) => `            <li><a href="#" class="m-cluster" data-gap="4" style="flex-wrap: nowrap; padding: calc(var(--m-space-3) - 2px) var(--m-space-3); color: inherit; text-decoration: none; border-radius: var(--m-radius-lg); border: 2px solid ${opts.on ? 'var(--m-color-accent-default)' : 'transparent'}"${opts.on ? ' aria-current="true"' : ''}>
+              ${tile(I[(opts.ic ?? 'route') as keyof typeof I], '3rem')}
               <span class="m-stack" data-gap="0" style="flex: 1; min-inline-size: 0">
-                <span style="${label}">${place}</span>
+                <span class="m-cluster" data-gap="2"><span style="${label}">${place}</span>${opts.status ? `<span class="m-badge" data-tone="${opts.status[0]}">${opts.status[1]}</span>` : ''}</span>
                 <span style="${small}">${when}</span>
-                ${opts.status ? `<span style="padding-block-start: var(--m-space-1)"><span class="m-badge" data-tone="${opts.status[0]}">${opts.status[1]}</span></span>` : ''}
               </span>
               <span style="${figure}">${price}</span>
             </a></li>`;
 
 const fare = (k: string, v: string, strong = false) =>
-  `<div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-2)${strong ? `; ${hair}; padding-block-start: var(--m-space-3); ${label}; font-size: var(--m-font-size-lg)` : ''}"><dt>${k}</dt><dd style="font-variant-numeric: tabular-nums">${v}</dd></div>`;
+  `<div class="m-cluster" data-justify="between" style="padding-block: var(--m-space-2)${strong ? `; padding-block-start: var(--m-space-3); ${label}` : ''}"><dt>${k}</dt><dd style="font-variant-numeric: tabular-nums">${v}</dd></div>`;
 
 const listDetail = `<div style="min-block-size: 100vh">
   ${appHeader('Rides')}
@@ -273,7 +272,7 @@ ${trip('Quayside Market', 'Oct 19 · 7:20 pm · Standard', '$12.75', { status: [
               <span style="${small}">Tuesday, October 28 · 6:31 pm</span>
             </div>
             <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap">
-              <span class="m-avatar">TO</span>
+              <span class="m-avatar" style="font-size: var(--m-font-size-md)">TO</span>
               <span class="m-stack" data-gap="0" style="flex: 1"><span style="${label}">Tomas Okafor</span><span style="${small}">Grey hatchback · KLM 482</span></span>
               <span class="m-cluster" data-gap="1" style="${label}">${icon(I.star, 16)} 4.96</span>
             </div>
@@ -285,12 +284,12 @@ ${trip('Quayside Market', 'Oct 19 · 7:20 pm · Standard', '$12.75', { status: [
               ${fare('Trip fare', '$15.10')}
               ${fare('Booking fee', '$2.05')}
               ${fare('Tip', '$1.25')}
-              ${fare('Total', '$18.40', true)}
             </dl>
+            <dl style="${hair}">${fare('Total', '$18.40', true)}</dl>
             <div class="m-cluster" data-gap="2">
-              <button type="button" class="m-button">${icon(I.download, 18)} Receipt</button>
-              <button type="button" class="m-button">${icon(I.route, 18)} Ride again</button>
-              <button type="button" class="m-button" data-variant="ghost">${icon(I.help, 18)} Get help</button>
+              <button type="button" class="m-button">${icon(I.download, 16)} Receipt</button>
+              <button type="button" class="m-button">${icon(I.route, 16)} Ride again</button>
+              <button type="button" class="m-button" data-variant="ghost">${icon(I.help, 16)} Get help</button>
             </div>
           </div>
         </section>
@@ -300,7 +299,7 @@ ${trip('Quayside Market', 'Oct 19 · 7:20 pm · Standard', '$12.75', { status: [
   </div>
 </div>`;
 
-const vehicle = (ic: string, name: string, note: string, on = false) => `          <label class="m-cluster" data-gap="4" style="flex-wrap: nowrap; padding: var(--m-space-4); border-radius: var(--m-radius-lg); cursor: pointer; box-shadow: inset 0 0 0 2px ${on ? 'var(--m-color-accent-default)' : 'var(--m-color-border-default)'}">
+const vehicle = (ic: string, name: string, note: string, on = false) => `          <label class="m-cluster" data-gap="4" style="flex-wrap: nowrap; padding: calc(var(--m-space-3) - 2px) var(--m-space-4); border-radius: var(--m-radius-lg); cursor: pointer; border: 2px solid ${on ? 'var(--m-color-accent-default)' : 'var(--m-color-border-default)'}">
             ${tile(I[ic as keyof typeof I], '3rem')}
             <span class="m-stack" data-gap="0" style="flex: 1"><span style="${label}">${name}</span><span style="${small}">${note}</span></span>
             <input class="m-radio" type="radio" name="tr-vehicle"${on ? ' checked' : ''} aria-label="${name}">
@@ -322,7 +321,7 @@ const onboarding = `<div style="min-block-size: 100vh">
         <p class="m-muted">You can add another way later from your courier account.</p>
       </div>
       <fieldset class="m-stack" data-gap="3" style="border: 0; padding: 0; margin: 0">
-        <legend class="m-sr-only">Vehicle</legend>
+        <legend class="m-sr-only" style="font-weight: inherit">Vehicle</legend>
 ${vehicle('car', 'Car', 'Larger orders and longer trips')}
 ${vehicle('bike', 'Bicycle or e-bike', 'Short trips in the centre', true)}
 ${vehicle('users', 'On foot', 'Walking routes under a mile')}
@@ -338,21 +337,32 @@ ${vehicle('users', 'On foot', 'Walking routes under a mile')}
       </div>
       <div class="m-stack" data-gap="2">
         <button type="submit" class="m-button" data-variant="primary" style="inline-size: 100%">Continue</button>
-        <button type="button" class="m-button" data-variant="ghost" style="inline-size: 100%">${icon(I.left, 18)} Back</button>
+        <button type="button" class="m-button" data-variant="ghost" style="inline-size: 100%">${icon(I.left, 16)} Back</button>
       </div>
       <p class="m-subtle" style="font-size: var(--m-font-size-xs)">By continuing you agree to be contacted about your application by phone, text or email.</p>
     </form>
   </main>
 </div>`;
 
-const setting = (name: string, value: string, opts: { control?: string; last?: boolean } = {}) => `          <div class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding-block: var(--m-space-4); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
+const setting = (name: string, value: string, opts: { control?: string; last?: boolean } = {}) => `          <div class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding-block: var(--m-space-3); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
             <div class="m-stack" data-gap="0"><dt style="${label}">${name}</dt><dd class="m-muted">${value}</dd></div>
-            ${opts.control ?? icon(I.right, 20)}
+            ${opts.control ?? icon(I.right, 16)}
           </div>`;
-const toggle = (id: string, name: string, desc: string, on: boolean) => `          <div class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding-block: var(--m-space-4); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
+const toggle = (id: string, name: string, desc: string, on: boolean) => `          <div class="m-cluster" data-justify="between" style="flex-wrap: nowrap; padding-block: var(--m-space-3); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
             <label class="m-stack" data-gap="0" for="${id}"><span style="${label}">${name}</span><span class="m-muted">${desc}</span></label>
             <input class="m-switch" id="${id}" type="checkbox" role="switch"${on ? ' checked' : ''}>
           </div>`;
+
+// A prompt banner: the pale brand tint, 12px corners, a bold line, one sentence, and its action in the
+// brand blue (the one place a button is blue); a white button beside it when there is a second way
+const brandButton = (text: string, href = '') =>
+  href
+    ? `<a class="m-button" href="${href}" style="background: var(--m-color-brand-default); color: var(--m-color-brand-fg)">${text}</a>`
+    : `<button type="button" class="m-button" style="background: var(--m-color-brand-default); color: var(--m-color-brand-fg)">${text}</button>`;
+const prompt = (title: string, body: string, actions: string) => `<section class="m-cluster" data-justify="between" data-gap="4" style="padding: var(--m-space-4); border-radius: var(--m-radius-lg); background: var(--m-color-brand-subtle)" aria-label="${title}">
+        <div class="m-stack" data-gap="1" style="flex: 1 1 16rem"><span style="${display('xl')}">${title}</span><span>${body}</span></div>
+        <div class="m-cluster" data-gap="2">${actions}</div>
+      </section>`;
 
 const settingsNav: [string, string][] = [
   ['user', 'Profile'],
@@ -371,6 +381,7 @@ const settings = `<div style="min-block-size: 100vh">
   <main class="m-container" data-size="md" style="padding-block: var(--m-space-8) var(--m-space-16); margin-inline: 0">
     <div class="m-stack" data-gap="8">
       <h1 style="${display('3xl')}">Profile</h1>
+      ${prompt('Add a recovery phone', 'Get back into your account if you lose access to your email.', brandButton('Add phone'))}
       <div class="m-cluster" data-gap="4">
         <span class="m-avatar" data-size="lg" style="inline-size: 5rem; block-size: 5rem; font-size: var(--m-font-size-2xl)">NH</span>
         <div class="m-stack" data-gap="1"><span style="${display('xl')}">Noor Haddad</span><button type="button" class="m-button" data-size="sm" style="${pill}; font-size: var(--m-font-size-sm); align-self: start">Change photo</button></div>
@@ -403,25 +414,41 @@ ${toggle('tr-s3', 'Offers and news', 'Discounts on rides and parcels, at most on
 
 const emptyState = `<div style="min-block-size: 100vh">
   ${appHeader('By the hour')}
-  <main class="m-container" data-size="sm" style="padding-block: var(--m-space-16)">
-    <div class="m-stack" data-gap="5" data-align="center" style="text-align: center">
-      <span class="m-cluster" data-justify="center" style="inline-size: 6rem; block-size: 6rem; border-radius: var(--m-radius-full); background: var(--m-color-bg-sunken)">${icon(I.calendar, 40)}</span>
-      <h1 style="${display('2xl')}">No hourly bookings yet</h1>
-      <p class="m-muted" style="max-inline-size: 24rem">Keep one car and driver for as long as you need, from 2 to 10 hours. Your bookings show up here.</p>
-      <div class="m-stack" data-gap="2" style="inline-size: 100%; max-inline-size: 20rem">
-        <button type="button" class="m-button" data-variant="primary">Book by the hour</button>
-        <button type="button" class="m-button">See how it works</button>
-      </div>
+  <main class="m-container" style="padding-block: var(--m-space-8) var(--m-space-16)">
+    <div class="m-stack" data-gap="10">
+      <h1 style="${display('3xl')}">By the hour</h1>
+      <section class="m-stack" data-gap="5" data-align="center" style="text-align: center; padding-block: var(--m-space-8)" aria-labelledby="tr-empty">
+        <span class="m-cluster" data-justify="center" style="inline-size: 6rem; block-size: 6rem; border-radius: var(--m-radius-full); background: var(--m-color-bg-sunken)">${icon(I.calendar, 40)}</span>
+        <h2 id="tr-empty" style="${display('xl')}">No hourly bookings yet</h2>
+        <p class="m-muted" style="max-inline-size: 24rem">Keep one car and driver for as long as you need, from 2 to 10 hours. Your bookings show up here.</p>
+        <div class="m-stack" data-gap="2" style="inline-size: 100%; max-inline-size: 20rem">
+          <button type="button" class="m-button" data-variant="primary">Book by the hour</button>
+          <button type="button" class="m-button">See how it works</button>
+        </div>
+      </section>
     </div>
   </main>
 </div>`;
 
-const perk = (text: string) =>
-  `<li class="m-cluster" data-gap="3" style="flex-wrap: nowrap; align-items: start"><span style="display: inline-flex; padding-block-start: 2px">${icon(I.check, 18)}</span>${text}</li>`;
-const plan = (name: string, price: string, per: string, note: string, perks: string[], featured = false) => `      <section class="m-card"${featured ? ' style="border-color: var(--m-color-accent-default)"' : ''} aria-labelledby="tr-plan-${name.toLowerCase()}">
+// The public header: a black bar, the brand, pill links and a white Join pill
+const publicBar = (links: string[], current = '') => `<nav class="m-navbar" aria-label="Main">
+    <span class="m-navbar-brand">Roundabout</span>
+    <div class="m-navbar-nav">
+${links.map((l) => `      <a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${l}</a>`).join('\n')}
+    </div>
+    <div class="m-navbar-actions">
+      <a class="m-navbar-link" href="#">${icon(I.user, 16)} Sign in</a>
+      <a class="m-button" data-size="sm" href="#" style="${pill}; font-size: var(--m-font-size-sm); background: var(--m-color-bg-canvas); color: var(--m-color-fg-default)">Join</a>
+    </div>
+  </nav>`;
+
+// A perk: a 16px tick, the perk in medium weight and one muted line under it
+const perk = ([text, more]: [string, string]) =>
+  `<li class="m-cluster" data-gap="3" style="flex-wrap: nowrap; align-items: start"><span style="display: inline-flex; padding-block-start: 4px">${icon(I.check, 16)}</span><span class="m-stack" data-gap="0"><span style="${label}">${text}</span><span style="${small}">${more}</span></span></li>`;
+const plan = (name: string, price: string, per: string, note: string, perks: [string, string][], featured = false) => `      <section class="m-card"${featured ? ' style="border-color: var(--m-color-accent-default)"' : ''} aria-labelledby="tr-plan-${name.toLowerCase()}">
         <div class="m-card-body m-stack" data-gap="5">
           <div class="m-cluster" data-justify="between">
-            <h2 id="tr-plan-${name.toLowerCase()}" style="${display('xl')}">${name}</h2>
+            <h2 id="tr-plan-${name.toLowerCase()}" style="${display('2xl')}">${name}</h2>
             ${featured ? '<span class="m-badge" data-variant="solid">Most picked</span>' : ''}
           </div>
           <div class="m-stack" data-gap="1">
@@ -436,26 +463,14 @@ ${perks.map((p) => `            ${perk(p)}`).join('\n')}
       </section>`;
 
 const pricing = `<div>
-  <nav class="m-navbar" aria-label="Main">
-    <span class="m-navbar-brand">Roundabout</span>
-    <div class="m-navbar-nav">
-      <a class="m-navbar-link" href="#">Get a ride</a>
-      <a class="m-navbar-link" href="#">Send a parcel</a>
-      <a class="m-navbar-link" href="#" aria-current="page">Plans</a>
-      <a class="m-navbar-link" href="#">For teams</a>
-    </div>
-    <div class="m-navbar-actions">
-      <a class="m-navbar-link" href="#">Sign in</a>
-      <a class="m-button" data-size="sm" href="#" style="${pill}; font-size: var(--m-font-size-sm); background: var(--m-color-bg-canvas); color: var(--m-color-fg-default)">Join</a>
-    </div>
-  </nav>
+  ${publicBar(['Get a ride', 'Send a parcel', 'Plans', 'For teams'], 'Plans')}
   <main>
     <div class="m-container" style="padding-block: var(--m-space-16) var(--m-space-12)">
       <div class="m-stack" data-gap="10">
         <div class="m-cluster" data-justify="between" data-align="end">
           <div class="m-stack" data-gap="4" style="max-inline-size: 36rem">
-            <h1 style="${display('4xl')}">Ride more, pay less every month</h1>
-            <p style="font-size: var(--m-font-size-lg)">One membership for rides and parcels. Cancel from your account at any time.</p>
+            <h1 style="${display('4xl')}; font-size: clamp(var(--m-font-size-3xl), 3.6vw, var(--m-font-size-4xl))">Ride more, pay less every month</h1>
+            <p>One membership for rides and parcels. Cancel from your account at any time.</p>
           </div>
           <div class="m-tabs" data-variant="pill"><div class="m-tab-list" role="tablist" aria-label="Billing">
             <button type="button" class="m-tab" role="tab" aria-selected="true">Monthly</button>
@@ -463,9 +478,9 @@ const pricing = `<div>
           </div></div>
         </div>
         <div class="m-grid" style="--m-layout-grid-min: 18rem; --m-layout-grid-gap: var(--m-space-6); align-items: start">
-${plan('Basic', '$0', 'a month', 'Pay as you go, trip by trip.', ['Book rides and parcels', 'Up to 3 saved places', 'Receipts by email'])}
-${plan('Member', '$7.99', 'a month', 'First month free, then billed monthly.', ['6% back as ride credit', 'No booking fee on parcels over $15', 'Price lock for 10 minutes', 'Priority pickups at busy times'], true)}
-${plan('Household', '$13.99', 'a month', 'Up to 5 people on one bill.', ['Everything in Member', 'Shared payment and trip alerts', 'Teen accounts with limits'])}
+${plan('Basic', '$0', 'a month', 'Pay as you go, trip by trip.', [['Rides and parcels', 'Book either from one account'], ['3 saved places', 'Home, work and one more'], ['Receipts by email', 'Sent when each trip ends']])}
+${plan('Member', '$7.99', 'a month', 'First month free, then billed monthly.', [['6% back', 'As ride credit on every trip'], ['No parcel booking fee', 'On parcels over $15'], ['10-minute price lock', 'Hold a quote while you decide'], ['Priority pickups', 'Matched first at busy times']], true)}
+${plan('Household', '$13.99', 'a month', 'Up to 5 people on one bill.', [['Everything in Member', 'For up to five people'], ['Shared payment', 'With trip alerts for the payer'], ['Teen accounts', 'With limits you set']])}
         </div>
       </div>
     </div>
@@ -474,9 +489,9 @@ ${plan('Household', '$13.99', 'a month', 'Up to 5 people on one bill.', ['Everyt
       <div class="m-container m-cluster" data-justify="between" data-gap="8">
         <div class="m-stack" data-gap="3" style="max-inline-size: 34rem">
           <h2 id="tr-teams" style="${display('3xl')}">Moving a whole team?</h2>
-          <p style="font-size: var(--m-font-size-lg)">Central billing, ride rules by time and place, and one monthly invoice for every trip.</p>
+          <p>Central billing, ride rules by time and place, and one monthly invoice for every trip.</p>
         </div>
-        <a class="m-button" data-size="lg" href="#" style="background: var(--m-color-bg-canvas); color: var(--m-color-fg-default)">Talk to sales ${icon(I.arrow, 18)}</a>
+        <a class="m-button" data-size="lg" href="#" style="background: var(--m-color-bg-canvas); color: var(--m-color-fg-default)">Talk to sales ${icon(I.arrow, 16)}</a>
       </div>
     </section>
     <section class="m-container" data-size="md" style="padding-block: var(--m-space-16)" aria-labelledby="tr-faq">
@@ -495,19 +510,28 @@ ${plan('Household', '$13.99', 'a month', 'Up to 5 people on one bill.', ['Everyt
 // Errors: grey fields turn red-edged with the reason underneath, a tinted banner sums up the form,
 // a dark snackbar reports something that failed elsewhere, and full pages say what to do next
 const errorPage = (code: string, ic: string, title: string, body: string, actions: string) => `  <section class="m-stack" data-gap="4" data-align="start" style="padding-block: var(--m-space-12); ${hair}" aria-labelledby="tr-err-${code}">
-    <span class="m-cluster" data-justify="center" style="inline-size: 4rem; block-size: 4rem; border-radius: var(--m-radius-full); background: var(--m-color-bg-sunken)">${icon(ic, 28)}</span>
-    <span style="${small}; font-family: var(--m-font-family-mono)">Error ${code}</span>
+    <span class="m-cluster" data-justify="center" style="inline-size: 4rem; block-size: 4rem; border-radius: var(--m-radius-full); background: var(--m-color-bg-sunken)">${icon(ic, 24)}</span>
+    <span style="${small}">Error ${code}</span>
     <h1 id="tr-err-${code}" style="${display('3xl')}">${title}</h1>
-    <p style="font-size: var(--m-font-size-lg); max-inline-size: 32rem">${body}</p>
+    <p style="max-inline-size: 32rem">${body}</p>
     <div class="m-cluster" data-gap="2">${actions}</div>
   </section>`;
+// The other full-page errors, smaller: a grey tile each, side by side
+const errorTile = (code: string, ic: string, title: string, body: string, action: string) => `        <section class="m-card" data-variant="sunken" aria-labelledby="tr-err-${code}">
+          <div class="m-card-body m-stack" data-gap="3" data-align="start">
+            <span class="m-cluster" data-gap="2" style="${small}">${icon(ic, 16)} Error ${code}</span>
+            <h2 id="tr-err-${code}" style="${display('xl')}">${title}</h2>
+            <p>${body}</p>
+            <div style="padding-block-start: var(--m-space-2)">${action}</div>
+          </div>
+        </section>`;
 
 const errors = `<div style="min-block-size: 100vh">
   ${appHeader('Parcels')}
   <main class="m-container" data-size="md" style="padding-block: var(--m-space-8) var(--m-space-16)">
     <div class="m-stack" data-gap="8">
       <section class="m-stack" data-gap="4" aria-labelledby="tr-err-form" style="max-inline-size: 30rem">
-        <h1 id="tr-err-form" style="${display('2xl')}">Send a parcel</h1>
+        <h1 id="tr-err-form" style="${display('3xl')}">Send a parcel</h1>
         <div class="m-alert" data-tone="danger" role="alert">
           <span class="m-alert-icon">${icon(I.alert, 20)}</span>
           <div class="m-alert-content"><div class="m-alert-title">Check 2 details</div><div class="m-alert-body">Nothing has been booked yet.</div></div>
@@ -531,9 +555,95 @@ const errors = `<div style="min-block-size: 100vh">
         </div>
       </section>
 ${errorPage('404', I.pin, 'This page took a wrong turn', 'The link may be out of date. Head back home and start again from there.', `<a class="m-button" data-variant="primary" href="#">Go home</a><a class="m-button" href="#">Get help</a>`)}
-${errorPage('500', I.alert, 'We hit a bump on our side', 'Your trip and payment are unchanged. Try again in a minute.', `<button type="button" class="m-button" data-variant="primary">${icon(I.arrow, 18)} Try again</button>`)}
-${errorPage('403', I.lock, 'This trip belongs to another account', 'Sign in with the account that booked it, or ask its owner to share the trip with you.', `<a class="m-button" data-variant="primary" href="#">Switch account</a><a class="m-button" data-variant="ghost" href="#">${icon(I.left, 18)} Back</a>`)}
+      <div class="m-grid" style="--m-layout-grid-min: 18rem; align-items: start">
+${errorTile('500', I.alert, 'We hit a bump on our side', 'Your trip and payment are unchanged. Try again in a minute.', `<button type="button" class="m-button">${icon(I.arrow, 16)} Try again</button>`)}
+${errorTile('403', I.lock, 'This trip belongs to another account', 'Sign in with the account that booked it, or ask its owner to share it with you.', `<a class="m-button" href="#">Switch account</a>`)}
+      </div>
     </div>
+  </main>
+</div>`;
+
+
+// A help row: a 20px icon, the title in medium weight, a chevron; a hairline under the words only
+const helpRow = (ic: string, title: string) => `          <li><a href="#" class="m-cluster" data-gap="0" style="flex-wrap: nowrap; color: inherit; text-decoration: none; min-block-size: 4.5rem">
+            <span style="flex: none; inline-size: 4rem; display: inline-flex; justify-content: center">${icon(ic, 20)}</span>
+            <span class="m-cluster" data-justify="between" style="flex: 1; flex-wrap: nowrap; align-self: stretch; ${label}; border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default); padding-inline-end: var(--m-space-4)">${title}${icon(I.right, 16)}</span>
+          </a></li>`;
+
+const article = '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M10 9H8"/><path d="M16 13H8"/><path d="M16 17H8"/>';
+
+const reading = `<div>
+  ${publicBar([])}
+  <!-- The help bar: its name, then the audiences, the current one a black pill -->
+  <div class="m-cluster" data-gap="6" style="padding: var(--m-space-3) var(--m-layout-container-padding); border-block-end: var(--m-border-width-thin) solid var(--m-color-border-default)">
+    <span style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-xl); ${label}">Help</span>
+    <div class="m-cluster" data-gap="2" style="padding-inline-start: var(--m-space-6); border-inline-start: var(--m-border-width-thin) solid var(--m-color-border-default)">
+      <a class="m-button" data-variant="primary" data-size="sm" href="#" aria-current="page" style="${pill}; font-size: var(--m-font-size-sm)">Passengers</a>
+      <a class="m-button" data-variant="ghost" data-size="sm" href="#" style="${pill}; font-size: var(--m-font-size-sm)">Couriers</a>
+      <a class="m-button" data-variant="ghost" data-size="sm" href="#" style="${pill}; font-size: var(--m-font-size-sm)">Teams</a>
+    </div>
+  </div>
+  <main class="m-container" style="padding-block: var(--m-space-4) var(--m-space-16)">
+    <div class="m-cluster" data-justify="between">
+      <nav class="m-breadcrumb" aria-label="Breadcrumb"><ol><li><a href="#" style="color: var(--m-color-fg-default); text-decoration: underline">Home</a></li><li><a href="#" style="color: var(--m-color-fg-default); text-decoration: underline">Account</a></li><li><span aria-current="page">Payment</span></li></ol></nav>
+      <button type="button" class="m-button" data-icon-only aria-label="Search help" style="${pill}">${icon(I.search, 16)}</button>
+    </div>
+    <div style="max-inline-size: 48rem; padding-block-start: var(--m-space-6)">${prompt('Sign in for help with a trip', 'See your recent trips and get an answer about each one.', `${brandButton('Sign in', '#')}<a class="m-button" href="#" style="background: var(--m-color-bg-canvas)">Join</a>`)}</div>
+    <article class="m-stack" data-gap="6" style="max-inline-size: 48rem; padding-block-start: var(--m-space-10)" aria-labelledby="tr-read">
+      <h1 id="tr-read" style="${display('3xl')}">Change how you pay for a trip</h1>
+      <div class="m-stack" data-gap="4">
+        <p>You can switch the card or wallet for a trip until the driver arrives. After that, the fare goes to the method you booked with.</p>
+        <p><strong>Note:</strong> Work trips always go to your company’s card, so the switch only shows on personal trips.</p>
+        <p><a href="#" style="color: var(--m-color-info-fg); text-decoration: underline; ${label}">I can’t add a new card</a></p>
+      </div>
+      <section class="m-stack" data-gap="3" aria-labelledby="tr-read-app">
+        <h2 id="tr-read-app" style="${display('xl')}">From the app</h2>
+        <ol class="m-stack" data-gap="1" style="padding-inline-start: var(--m-space-5)">
+          <li>Open the trip and tap the payment row under the fare</li>
+          <li>Pick another card, or add one</li>
+          <li>Tap Done; the new method shows on the trip at once</li>
+        </ol>
+      </section>
+      <section class="m-stack" data-gap="3" aria-labelledby="tr-read-web">
+        <h2 id="tr-read-web" style="${display('xl')}">On the web</h2>
+        <p>Sign in, open Trips and choose the trip. The payment row works the same way.</p>
+      </section>
+    </article>
+    <section class="m-stack" data-gap="2" style="max-inline-size: 48rem; padding-block-start: var(--m-space-12)" aria-labelledby="tr-read-more">
+      <h2 id="tr-read-more" style="${display('xl')}">More about payment</h2>
+      <ul style="list-style: none; padding: 0">
+${helpRow(article, 'Remove a card from your account')}
+${helpRow(article, 'Why was I charged twice?')}
+${helpRow(article, 'Pay with ride credit')}
+${helpRow(article, 'Get a receipt for a work trip')}
+      </ul>
+    </section>
+  </main>
+</div>`;
+
+// Sign in: one narrow column under the black bar; one field, the black Continue, then the other ways in on the grey fill
+const otherWay = (ic: string, text: string) =>
+  `<button type="button" class="m-button" style="inline-size: 100%">${ic} ${text}</button>`;
+const signIn = `<div style="min-block-size: 100vh">
+  <header class="m-cluster" style="padding: var(--m-space-4) var(--m-layout-container-padding); background: var(--m-color-bg-inverse); color: var(--m-color-fg-inverse)">
+    <span style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-2xl); ${label}">Roundabout</span>
+  </header>
+  <main class="m-container" data-size="sm" style="max-inline-size: 26rem; padding-block: var(--m-space-12) var(--m-space-16)">
+    <form class="m-stack" data-gap="4" aria-labelledby="tr-in">
+      <h1 id="tr-in" style="${display('xl')}">Sign in with your phone or email</h1>
+      <div class="m-field">
+        <label class="m-sr-only" for="tr-in-id">Phone number or email</label>
+        <input class="m-input" id="tr-in-id" autocomplete="username" placeholder="Phone number or email address">
+      </div>
+      <button type="submit" class="m-button" data-variant="primary" style="inline-size: 100%">Continue</button>
+      <div class="m-cluster" data-gap="3" style="flex-wrap: nowrap; ${small}" role="separator" aria-label="or">
+        <span aria-hidden="true" style="flex: 1; ${hair}"></span>or<span aria-hidden="true" style="flex: 1; ${hair}"></span>
+      </div>
+      ${otherWay(icon('<circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/>', 16), 'Continue with a passkey')}
+      ${otherWay(icon(I.briefcase, 16), 'Continue with work sign-in')}
+      ${otherWay(icon('<rect width="5" height="5" x="3" y="3" rx="1"/><rect width="5" height="5" x="16" y="3" rx="1"/><rect width="5" height="5" x="3" y="16" rx="1"/><path d="M21 16h-3a2 2 0 0 0-2 2v3"/><path d="M21 21v.01"/><path d="M12 7v3a2 2 0 0 1-2 2H7"/><path d="M3 12h.01"/><path d="M12 3h.01"/><path d="M12 16v.01"/><path d="M16 12h1"/><path d="M21 12v.01"/><path d="M12 21v-1"/>', 16), 'Use a one-time code')}
+      <p style="${small}">By continuing, you agree to calls, texts or messages from Roundabout and its partners at the number or address you give, to confirm it’s you.</p>
+    </form>
   </main>
 </div>`;
 
@@ -549,7 +659,7 @@ export const transitRecipes: ArchetypeRecipe[] = [
     name: 'list-detail',
     title: 'List and detail',
     description:
-      'Account nav with a 4px bar on the current row; pill filters over trip rows with icon tiles; the open trip as a card with its map, driver, timeline and fare.',
+      'Account nav with a 4px bar on the current row; pill filters over 72px trip rows with icon tiles; the open trip as a card with its map, driver, timeline and fare.',
     html: listDetail,
   },
   {
@@ -563,27 +673,42 @@ export const transitRecipes: ArchetypeRecipe[] = [
     name: 'settings',
     title: 'Settings',
     description:
-      'Account nav beside a big bold title, label-and-value rows that open with a chevron, switches that act at once, and deletion last.',
+      'Account nav beside a big bold title, a pale-blue prompt banner with its blue action, label-and-value rows that open with a chevron, switches that act at once, and deletion last.',
     html: settings,
   },
   {
     name: 'empty-state',
     title: 'Empty state',
-    description: 'A large icon in a grey circle, a bold heading, one sentence, a black action and a grey one.',
+    description:
+      'The page title stays; under it a large icon in a grey circle, a bold heading, one sentence, a black action and a grey one.',
     html: emptyState,
   },
   {
     name: 'pricing',
     title: 'Pricing',
     description:
-      'The black public header with pill links, a 52px heading beside a segmented switch, three edged plan cards (the picked one in black), a full-bleed black block and an FAQ.',
+      'The black public header with pill links, a 52px headline (36px on a phone) beside a segmented switch, three edged plan cards with two-line perks (the picked one in black), a full-bleed black block and an FAQ with 72px rows.',
     html: pricing,
   },
   {
     name: 'errors',
     title: 'Errors',
     description:
-      'Red-edged fields with the reason below, a tinted banner that says nothing was booked, a dark snackbar with one action, and left-aligned bold pages for 404, 500 and no access.',
+      'Red-edged fields with the reason below, a tinted banner that says nothing was booked, a dark snackbar with one action, a left-aligned bold 404, and 500 and no access as grey tiles.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Reading',
+    description:
+      'A public help article: the black bar, the help bar with the current audience as a black pill, an underlined breadcrumb, a 36px title, 16px text with one blue link, numbered steps and rows of related articles.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'The black bar with the brand alone, one 26rem column: a bold title, one grey field, a full-width black Continue, an "or" rule and other ways in as grey buttons, then the small print.',
+    html: signIn,
   },
 ];

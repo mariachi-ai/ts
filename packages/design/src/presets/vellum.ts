@@ -204,8 +204,9 @@ export const vellum = extendTheme(minimal, {
     field: {
       labelFg: 'var(--m-color-fg-default)',
       labelFontSize: 'var(--m-font-size-sm)',
-      labelFontWeight: 'var(--m-font-weight-medium)',
+      labelFontWeight: 'var(--m-font-weight-semibold)',
       hintFontSize: 'var(--m-font-size-sm)',
+      errorFontWeight: 'var(--m-font-weight-regular)',
       requiredFg: 'var(--m-color-danger-fg)',
     },
     // Rounded squares that fill with the control blue when checked
@@ -272,6 +273,7 @@ export const vellum = extendTheme(minimal, {
     },
     pagination: {
       radius: '9999px',
+      fontWeight: 'var(--m-font-weight-regular)',
       border: 'transparent',
       fg: 'var(--m-color-fg-default)',
       hoverBg: 'var(--m-color-bg-sunken)',
@@ -311,7 +313,7 @@ export const vellum = extendTheme(minimal, {
     },
     // Text tabs: grey until current, the current one in ink with a short bar under it
     tabs: {
-      fontWeight: 'var(--m-font-weight-medium)',
+      fontWeight: 'var(--m-font-weight-semibold)',
       fg: 'var(--m-color-fg-muted)',
       hoverFg: 'var(--m-color-fg-default)',
       activeFg: 'var(--m-color-fg-default)',
@@ -399,7 +401,7 @@ export const vellum = extendTheme(minimal, {
       },
       separator: 'var(--m-color-border-default)',
     },
-    usage: { height: '0.375rem', track: { light: '#f2f2f7', dark: '#2c2c2e' }, okFill: '#248bd9' },
+    usage: { labelWeight: 'var(--m-font-weight-semibold)', height: '0.375rem', track: { light: '#f2f2f7', dark: '#2c2c2e' }, okFill: '#248bd9' },
     tooltip: {
       radius: '6px',
       shadow: 'var(--m-shadow-md)',
@@ -411,7 +413,7 @@ export const vellum = extendTheme(minimal, {
       radius: '5px',
       border: 'var(--m-color-border-default)',
       shadow: 'none',
-      fontWeight: 'var(--m-font-weight-medium)',
+      fontWeight: 'var(--m-font-weight-regular)',
     },
     code: { radius: '10px', inlineRadius: '4px', border: 'transparent', bg: 'var(--m-color-bg-sunken)' },
     // Questions as hairline rows on white
@@ -448,6 +450,7 @@ export const vellum = extendTheme(minimal, {
     },
     composer: { radius: '22px', shadow: 'var(--m-shadow-md)' },
     citation: { chipRadius: '9999px' },
-    toolCall: { radius: '14px' },
+    toolCall: { radius: '14px', nameWeight: 'var(--m-font-weight-semibold)' },
+    thinking: { summaryWeight: 'var(--m-font-weight-regular)' },
   },
 });

@@ -8,7 +8,7 @@ links. For developer platforms and admin tools that should feel quiet, technical
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `meridian` preset of `@mariachi/design` (`data-theme="meridian"`,
@@ -59,7 +59,8 @@ The tokens are in the `meridian` preset of `@mariachi/design` (`data-theme="meri
 - **Layout.**
   - A 256px sidebar on background-200 with a hairline edge; the content on background-100.
   - A 56px breadcrumb bar over the content, with a hairline under it.
-  - Pages to 1200px with a 24px margin; settings to 64rem; forms 30rem.
+  - Pages to 1200px with a 24px margin; settings to 64rem; a form card to 40rem; sign-in a 20rem
+    column.
   - Grids gap 24px (16px between job cards).
 - **Density.** 1 by default. For log and table screens, set `--m-density: 0.875` on the page: 32px
   controls and tighter rows.
@@ -76,8 +77,11 @@ are in the reference at the end.
   - secondary text, labels and log lines 13px;
   - badges and captions 12px;
   - card and section titles 16px at 600; setting titles 20px at 600;
-  - page titles 32px at 600, tracked −0.04em;
-  - marketing headings and prices 56–64px at 500, tracked −0.06em, line height 1.
+  - page titles 32px at 600, tracked −0.04em, on every app page, sign-in and first-use step: the
+    largest text is 2.3 times the 14px body;
+  - a public article's title 40px at 600 over 16px text (2.5 times);
+  - marketing headings and prices 56–64px at 500, tracked −0.06em, line height 1 (pricing only);
+  - four to six sizes on a screen: 12, 13, 14, 16, then 20 or 32.
 - **Weights.** 400 for text, 500 for buttons, tabs that matter and table headers, 600 for headings.
   Never 700 in the product.
 - **Tracking.** Headings track in: −0.02em at 14–20px, −0.04em at 24–32px, −0.06em above that. Body
@@ -127,7 +131,7 @@ are in the reference at the end.
   is disabled (a settings Save stays disabled until something changes).
 - **Error.**
   - The control's border turns red.
-  - A red 13px line with a 14px `circle-alert` replaces the help text and says how to fix it.
+  - A red 13px line with a 16px `circle-alert` replaces the help text and says how to fix it.
 - **Loading.**
   - A button keeps its width; `aria-busy="true"` swaps the label for a spinner.
   - Lists and cards show skeleton bars in grey-200 with 5px corners; never a spinner over the page.
@@ -141,7 +145,7 @@ are in the reference at the end.
 All 36 of the library's components, as Meridian draws them. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
-- `m-container`, the content column: 1200px, or 64rem for settings and 30rem for forms;
+- `m-container`, the content column: 1200px, or 64rem for settings and 30rem around a sign-in;
 - `m-split`, the 256px sidebar beside the content, and inside pages a side column (a settings list,
   a usage column) beside the main one;
 - `m-grid`, for cards: 24px gaps (16px for job cards), 17–18rem columns;
@@ -149,7 +153,8 @@ All 36 of the library's components, as Meridian draws them. Every one is in `gal
 
 **Actions and forms**
 - **Button.** A rectangle with 6px corners, weight 500 at 14px: 32px (`sm`) in bars, cards and
-  footers, 36px by default, 40px (`lg`) for the one action at the end of a flow.
+  footers, 36px by default, 40px (`lg`) for the one action at the end of a flow. Large buttons
+  carry a 16px label (the published large button size); the others 14px.
   - **Primary:** grey-1000 with background-100 text (black in light, white in dark). One per view.
   - **Secondary** (the default): background-100 with a hairline ring, default text.
   - **Ghost:** text only; a grey step on hover. For toolbars, nav and "more".
@@ -274,40 +279,98 @@ All 36 of the library's components, as Meridian draws them. Every one is in `gal
 
 ## Page shapes (recipes)
 
-- **Dashboard.**
-  - The app shell: sidebar, breadcrumb bar.
-  - One toolbar row: a search with `/`, a filter icon button, a grid/list view switch and the primary
-    "New job" with a chevron.
-  - A 22rem column with a Usage card (ring gauges on alternating background-200 rows) and recent runs
-    with dots; beside it, job cards: avatar, name, endpoint in mono, a repository badge, the last
-    change and "when on branch".
-- **List and detail.**
-  - A 32px title with its sentence, secondary and primary actions on the right.
-  - Filters in one row (date button, search with `/`, a select, a status button with a count), then
-    the runs in a hairline frame and a full-width Load more.
-  - A run opens to a back link, its id in mono with a status badge, a details card (label over value
-    in a grid, a background-200 footer with the endpoint) and a monospace log with warn and error
-    lines on their tints.
-- **Onboarding.** On background-200: a 48px heading, the source and steps in a side column, and one
-  configuration card with fields, collapsible sections and a full-width large primary button in its
-  footer.
-- **Settings.** A list of sections beside stacked cards. Each card has a 20px title, a sentence and
-  its control, with a note and the Save in a background-200 footer. Deleting the workspace is last,
-  in a red-bordered card with a red footer.
-- **Empty state.** Under the page's tabs, a dashed hairline frame: a 48px bordered icon tile, a 16px
-  title, one sentence, a secondary action and a "Read the guide" link.
-- **Pricing.**
-  - The public navbar; a 64px heading at 500 tracked −0.06em and a monthly/yearly pill switch.
-  - One frame with 2px corners split into three columns by hairlines; the middle one on
-    background-100 against background-200.
-  - Plan name with a badge, a 56px price at 500, a sentence, a hairline, an icon feature list, and
-    pill actions (primary in the middle).
-  - A comparison table and questions below.
-- **Errors.** The field, form, toast and full-page errors above, as one page.
+### The families
+
+| | The app (dashboard, list and detail, settings, empty state, errors) | First use (onboarding, sign-in) | Public pages (pricing, reading) |
+| --- | --- | --- | --- |
+| Frame | The 256px sidebar on background-200 with a hairline edge beside the content on background-100; a 56px breadcrumb bar over the content. Errors and empty states keep it | No sidebar: on background-200, a 56px bar with the mark (and the step) and nothing else, or just the mark and a small secondary button in the corners | The 64px site bar on background-200: the mark and name, 14px grey links, secondary small buttons and one primary. Reading adds the docs sidebar (no tint, no edge) and the page's contents on the right |
+| Column | Pages to 1200px with a 24px margin; settings cards beside a 12rem list of sections; forms to 40rem | One card of fields beside the steps, or one 20rem centred column | Pricing to 1200px; an article to 46rem between the docs sidebar and a 14rem contents column |
+| Titles | A 32px page title at 600 over a 14px muted sentence; card titles 16px (20px on settings cards). The dashboard alone has no page title: its toolbar opens the page | 32px at 600 | Reading 40px at 600 over a 20px lead; pricing's headline 64px at 500, prices 56px |
+| Text | 14px, labels and metadata 13px, badges 12px | 14px; large buttons 16px | Articles 16px; pricing 14px |
+| Buttons | Rectangles with 6px corners; one primary (grey-1000) per view, at the top right of the page or in a card's footer | One full-width 40px primary with a 16px label; other ways in as full-width secondary buttons | Pricing's plan buttons are pills; everything else is a rectangle |
+| On a phone | The page comes first and the sidebar follows it (the source's sidebars fold away behind a menu at phone width); settings show the cards before the list of sections | The column fills the width | The site bar keeps the mark and its two buttons; the docs sidebar and the contents follow the article |
+
+### Signature moves
+
+1. **The primary is the ink.** The one main action is grey-1000, the same colour as the text (white in
+   dark); nothing on a button is a brand colour, and blue is only for links and focus.
+2. **Hairline rings on two whites.** Content and cards on background-100, the sidebar, card footers and
+   wells on background-200, every edge a 1px hairline; shadows are 2–6% and vanish in dark.
+3. **A 10px dot beside the state's name.** Ready, building, failed, queued: a dot and the word, never
+   colour alone, never a filled row.
+4. **Mono for anything a machine made.** Ids, commits, endpoints, cron lines, request ids and every log
+   line in Geist Mono at 13px.
+5. **Cards that end in a background-200 footer** holding a note on the left and the action on the right.
+6. **One page title size, 2.3 times the text.** A 32px page title over 14px on every app and first-use
+   page; only public pages go larger.
+7. **Pills only for badges and marketing calls to action;** every product button, input, menu row and
+   tab is a rectangle with 6px corners.
+
+### How a screen is assembled
+
+- **It opens with** the frame: the sidebar (workspace switcher, a search with `⌘K`, 36px rows), the
+  breadcrumb bar (workspace / page, a status link, the bell and the avatar), then the page's 32px title
+  and one muted sentence with the page's actions on the right. The dashboard opens with its toolbar
+  (search, filter, view switch, the primary) instead of a title.
+- **Reading order:** title, then filters in one row, then the thing itself in a hairline frame (a table,
+  a card grid, stacked settings cards), then "Load more". Details open below a back link: the id in mono
+  with a badge, a details card, the log.
+- **How much one screen does:** one list, one thing, or one section of settings. One primary per view.
+- **When narrow:** the sidebar stays until phone width; side columns (usage, the settings list) stack
+  under the main one. At phone width the page comes first.
+- **Too much content:** lists end in a full-width secondary "Load more"; logs scroll inside their card;
+  long settings stay one column of cards.
+- **None:** the frame and the page's title and tabs stay; a dashed hairline frame takes the list's place
+  with a bordered icon tile, a 16px title, one sentence, one secondary action and a guide link.
+- **Two families, one type system:** public pages keep Geist, the three weights, the hairlines and the
+  grey primary; they add the site bar, larger titles, 16px article text and pill calls to action.
+
+### The recipes
+
+- **Dashboard.** The app shell; one toolbar row (a search with `/`, a filter icon button, a grid/list
+  view switch, the primary "New job" with a chevron); a 22rem column with a Usage card (ring gauges on
+  alternating background-200 rows) and recent runs with dots; beside it, job cards: avatar, name,
+  endpoint in mono, a repository badge, the last change and "when on branch".
+- **List and detail.** A 32px title with its sentence, secondary and primary actions on the right;
+  filters in one row (date button, search with `/`, a select, a status button with a count); the runs
+  in a hairline frame and a full-width Load more; a run opens to a back link, its id in mono with a
+  status badge, a details card (label over value, a background-200 footer with the endpoint) and a
+  monospace log with warn and error lines on their tints.
+- **Onboarding.** On background-200: a 56px bar with the mark and "Step 2 of 3"; a back link, the 32px
+  title and a sentence; the source and steps in a side column; one configuration card (16px title,
+  fields, collapsible sections) with a full-width large primary in its background-200 footer.
+- **Settings.** The shell; a 32px title; a list of sections beside stacked cards. Each card has a 20px
+  title, a sentence and its control, with a note and "Save changes" in a background-200 footer.
+  Deleting the workspace is last, in a red-bordered card with a red footer. On a phone the cards come
+  first.
+- **Empty state.** The shell, the 32px title with its primary, underline tabs, then a dashed hairline
+  frame: a 48px bordered icon tile, a 16px title, one sentence, a secondary action and a "Read the guide"
+  link; a neutral note below.
+- **Pricing.** The site bar; a 64px heading at 500 tracked −0.06em and a monthly/yearly pill switch; one
+  frame with 2px corners split into three columns by hairlines, the middle one on background-100
+  against background-200; plan name with a badge, a 56px price at 500, a sentence, a hairline, an icon
+  feature list (20px rows, 12px apart) and pill actions (primary in the middle); a comparison table and
+  questions below.
+- **Errors.** In the app: a "New secret" page (32px title and sentence) with a form card: a danger note
+  that says nothing was saved, red field errors with 16px icons, checkboxes and a background-200 footer
+  with Cancel and a busy Save; a toast at the bottom right; below the form, full pages for 404, 500 and
+  no access (a 40px outline icon, the code and its name in mono, a 24px title, a sentence, buttons, the
+  request id in mono).
+- **Reading.** A public guide: the site bar with "/ Docs"; a docs sidebar (a search with `⌘K`, 36px rows,
+  the current one on the grey step); the article (a 40px title, a 20px muted lead, a primary and a
+  "Copy page" button, 16px text with 24px section headings, a terminal block with its file name, a
+  neutral note, a hairline footer with the update date and "Was this helpful?"); the page's contents on
+  the right as 32px rows on a hairline, the current one marked by a 2px bar.
+- **Sign-in.** On background-200: the mark top left and a small secondary "Sign up" top right; a centred
+  20rem column: a 32px title, the email field, a full-width 40px primary with a 16px label, a hairline,
+  three full-width secondary ways in with 16px icons, a ghost "Show other options", a sign-up link in
+  blue; a 12px footer.
 
 ## Words
 
 - Short, plain and technical; sentence case everywhere: "Trigger run", "Load more", "Add webhook".
+- A button says the verb and its object: "Save changes", "Add webhook", "Rerun latest"; one word only
+  where the object is plain from the row ("Edit", "Upgrade").
 - Name things by their real names (ids, branches, regions), in mono. Times relative in lists ("22m
   ago"), absolute in details ("Nov 11, 14:02").
 

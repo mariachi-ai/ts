@@ -1,11 +1,12 @@
 import type { ArchetypeRecipe } from '../types';
 
 /*
- * Cadence's seven page shapes: framework-free HTML using only @mariachi/design classes and tokens (no
+ * Cadence's nine page shapes: framework-free HTML using only @mariachi/design classes and tokens (no
  * colour literals), with sample data from a made-up listening app, "Wavelet". They follow the
- * language's real screen patterns: near-black 8px panels in a black frame with a top bar and a
- * now-playing bar, cover-art tiles (token gradients stand in for real art), huge bold titles over a
- * colour wash, dense track lists without rules, a green round play button, white and outlined pills.
+ * language's real screen patterns: near-black 8px panels in a fixed black frame with a top bar and a
+ * pinned now-playing bar, cover-art tiles (token gradients stand in for real art), huge bold titles
+ * over a colour wash, dense track lists without rules, a green round play button, green, white and
+ * outlined pills; public pages under a black site header with a green pill and over the site footer.
  * Every name, number, label and nav item is invented.
  */
 
@@ -63,6 +64,11 @@ const I = {
   cloudOff:
     '<path d="m2 2 20 20"/><path d="M5.782 5.782A7 7 0 0 0 9 19h8.5a4.5 4.5 0 0 0 1.307-.193"/><path d="M21.532 16.5A4.5 4.5 0 0 0 17.5 10h-1.79A7.008 7.008 0 0 0 10 5.07"/>',
   x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  globe: '<circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/>',
+  user: '<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>',
+  key: '<path d="m15.5 7.5 2.3 2.3a1 1 0 0 0 1.4 0l2.1-2.1a1 1 0 0 0 0-1.4L19 4"/><path d="m21 2-9.6 9.6"/><circle cx="7.5" cy="15.5" r="5.5"/>',
+  phone: '<rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>',
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
 };
 
 // Text styles (the published scale): 96/800 page titles, 48 and 32 bold headings, 24 shelf titles
@@ -173,15 +179,17 @@ ${rows.map(([n, g, t, m, round, pinned]) => libRow(n, g, t, m, t === current, ro
   </nav>`;
 };
 
-// The now-playing bar: the track, the transport with its scrubber, and device controls
-const nowPlaying = `  <footer class="m-cluster" data-justify="between" aria-label="Now playing" style="min-block-size: 4.5rem; padding: var(--m-space-2); flex-wrap: nowrap; gap: var(--m-space-4)">
-    <div class="m-cluster" data-gap="3" style="flex: 1 1 0; min-inline-size: 0; flex-wrap: nowrap">
+// The now-playing bar: the track, the transport with its scrubber, and device controls. It is one
+// 72px row: when the window is too narrow for all three, the device controls and then the transport
+// wrap out of the bar and are clipped, leaving the track (and the transport where it fits)
+const nowPlaying = `  <footer class="m-cluster" data-justify="between" aria-label="Now playing" style="flex: none; block-size: 4.5rem; padding: var(--m-space-2); flex-wrap: wrap; align-content: flex-start; overflow: hidden; gap: var(--m-space-4)">
+    <div class="m-cluster" data-gap="3" style="flex: 1 1 7rem; min-inline-size: 0; flex-wrap: nowrap">
       ${art(0, '3.5rem', I.music)}
       <div class="m-stack" data-gap="0" style="min-inline-size: 0"><a href="#" style="color: var(--m-color-fg-default); text-decoration: none; font-size: var(--m-font-size-sm); ${clip}">Paper Lanterns</a><span style="${tiny}; ${clip}">Mara Solene</span></div>
       <span style="color: var(--m-color-accent-default); display: inline-flex" aria-label="In your collection">${icon(I.saved, 16)}</span>
     </div>
-    <div class="m-stack" data-gap="1" data-align="center" style="flex: 2 1 0; max-inline-size: 45rem">
-      <div class="m-cluster" data-gap="4" data-justify="center">
+    <div class="m-stack" data-gap="1" data-align="center" style="flex: 2 1 15rem; max-inline-size: 45rem">
+      <div class="m-cluster" data-gap="4" data-justify="center" style="flex-wrap: nowrap">
         ${iconBtn('Shuffle is on', I.shuffle, 16, ' aria-pressed="true" style="--m-button-ghost-fg: var(--m-color-accent-text)"')}
         ${iconBtn('Previous', I.back, 16)}
         <button type="button" class="m-button" data-variant="primary" data-size="sm" data-icon-only aria-label="Pause" style="${whitePill}">${icon(I.pause, 16, true)}</button>
@@ -194,7 +202,7 @@ const nowPlaying = `  <footer class="m-cluster" data-justify="between" aria-labe
         <span>3:54</span>
       </div>
     </div>
-    <div class="m-cluster" data-gap="1" data-justify="end" style="flex: 1 1 0; flex-wrap: nowrap">
+    <div class="m-cluster" data-gap="1" data-justify="end" style="flex: 1 1 17rem; flex-wrap: nowrap">
       ${iconBtn('Lyrics', I.lyrics)}${iconBtn('Up next', I.queue)}${iconBtn('Play on a speaker', I.speaker)}${iconBtn('Volume', I.volume)}
       <progress class="m-progress" data-size="sm" value="70" max="100" aria-label="Volume 70%" style="inline-size: 5.5rem; --m-progress-fill: var(--m-color-fg-default)">70%</progress>
       ${iconBtn('Full screen', I.expand)}
@@ -202,15 +210,42 @@ const nowPlaying = `  <footer class="m-cluster" data-justify="between" aria-labe
   </footer>`;
 
 const panel = 'background: var(--m-color-bg-canvas); border-radius: var(--m-radius-lg); overflow: hidden; min-inline-size: 0';
-const shell = (current: string, main: string, aside = '') => `<div class="m-stack" data-gap="0" style="min-block-size: 100vh; background: var(--m-color-bg-sunken); padding-inline: var(--m-space-2)">
-${topBar}
-  <div class="m-split" style="--m-layout-split-side: 21rem; --m-layout-split-gap: var(--m-space-2); flex: 1">
-${library(current)}
-    <div style="display: flex; flex-wrap: wrap; gap: var(--m-space-2); align-items: stretch">
-      <main style="${panel}; flex: 999 1 32rem">
+// The app is a fixed frame the height of the window: the top bar, the panels, and the now-playing bar
+// pinned at the bottom. Each panel scrolls inside itself; the page never scrolls.
+// The main view comes first in the source order and the row is reversed, so the collection sits on the
+// left when wide and drops below the main view when narrow: on a phone the screen is the main view, as
+// in the phone app, where the collection is a tab of its own
+const scrolls = 'max-block-size: 100%; min-block-size: 0; overflow-y: auto';
+
+// The foot of the main view, under every app page's content: four columns of links in 30px rows under
+// bold 16px titles, a rule, and the fine print
+const appCol = (title: string, links: string[]) =>
+  `            <nav class="m-stack" data-gap="2" aria-label="${title}" style="flex: 0 1 10.5rem">
+              <h2 style="${title16}">${title}</h2>
+              <ul class="m-stack" data-gap="0">
+${links.map((l) => `                <li style="min-block-size: 1.875rem"><a href="#" style="color: var(--m-color-fg-muted); text-decoration: none">${l}</a></li>`).join('\n')}
+              </ul>
+            </nav>`;
+const appFooter = `        <footer style="padding: var(--m-space-2) var(--m-space-6) var(--m-space-10)">
+          <div class="m-cluster" data-align="start" data-gap="6" style="padding-block-end: var(--m-space-8)">
+${appCol('Company', ['About us', 'Careers', 'Press room'])}
+${appCol('Communities', ['For performers', 'For show makers', 'For developers'])}
+${appCol('Useful links', ['Help center', 'Get the app', 'Gift cards'])}
+${appCol('Plans', ['Solo', 'Pair', 'Household', 'Free'])}
+          </div>
+          <hr class="m-divider">
+          <p style="padding-block-start: var(--m-space-4); ${small}">© 2026 Wavelet</p>
+        </footer>`;
+const shell =(current: string, main: string, aside = '') => `<div class="m-stack" data-gap="0" style="block-size: 100vh; overflow: hidden; background: var(--m-color-bg-sunken); padding-inline: var(--m-space-2)">
+${topBar.replace('style="min-block-size: 4rem;', 'style="flex: none; min-block-size: 4rem;')}
+  <div style="display: flex; flex-wrap: wrap; flex-direction: row-reverse; gap: var(--m-space-2); flex: 1 1 0; min-block-size: 0; overflow-y: auto">
+    <div style="display: flex; flex-wrap: wrap; gap: var(--m-space-2); align-items: stretch; flex: 999 1 0; min-inline-size: 60%; ${scrolls}">
+      <main style="${panel}; flex: 999 1 32rem; ${scrolls}">
 ${main}
+${appFooter}
       </main>${aside}
     </div>
+${library(current).replace('style="inline-size: auto;', `style="inline-size: auto; flex: 1 1 21rem; ${scrolls};`)}
   </div>
 ${nowPlaying}
 </div>`;
@@ -292,7 +327,7 @@ const th = 'border-block-end: var(--m-border-width-thin) solid var(--m-color-bor
 
 // The detail: the now-playing panel on the right, big art, title, the performer's card and credits
 const nowPanel = `
-      <aside aria-labelledby="en-np-title" style="${panel}; flex: 1 1 20rem; max-inline-size: 26rem">
+      <aside aria-labelledby="en-np-title" style="${panel}; flex: 1 1 20rem; max-inline-size: 26rem; ${scrolls}">
         <div class="m-stack" data-gap="4" style="padding: var(--m-space-4)">
           <div class="m-cluster" data-justify="between"><span style="${bold}">Slow Coffee</span>${iconBtn('Close the panel', I.x)}</div>
           ${artFill(0, I.music, false, 64)}
@@ -360,7 +395,7 @@ ${track(7, 'Half Light', 'Mara Solene, Teo Brandt', 'Harbour Hours', 'Oct 22, 20
 // a back chevron beside the step, one bold question, then round performer picks with a green tick
 const pick = (n: number, name: string, on = false) =>
   `<button type="button" aria-pressed="${on}" class="m-stack" data-gap="2" data-align="center" style="background: none; border: 0; padding: 0; color: var(--m-color-fg-default); font: inherit; font-size: var(--m-font-size-sm); cursor: pointer">
-          <span style="position: relative; display: block; inline-size: 100%">${artFill(n, I.mic, true, 32)}${on ? `<span style="position: absolute; inset-block-start: var(--m-space-1); inset-inline-end: var(--m-space-1); display: inline-grid; place-items: center; inline-size: 1.75rem; block-size: 1.75rem; border-radius: 50%; background: var(--m-color-accent-default); color: var(--m-color-accent-fg)">${icon(I.check, 16)}</span>` : ''}</span>
+          <span style="position: relative; display: block; inline-size: 100%">${artFill(n, I.mic, true)}${on ? `<span style="position: absolute; inset-block-start: var(--m-space-1); inset-inline-end: var(--m-space-1); display: inline-grid; place-items: center; inline-size: 1.75rem; block-size: 1.75rem; border-radius: 50%; background: var(--m-color-accent-default); color: var(--m-color-accent-fg)">${icon(I.check, 16)}</span>` : ''}</span>
           <span style="${clip}; max-inline-size: 100%">${name}</span>
         </button>`;
 
@@ -491,21 +526,45 @@ const emptyState = shell(
         </div>`,
 );
 
-// Pricing: the public page. A black header, a huge title, then plan cards on the highlight grey with
-// a coloured tag, the tier name in its colour, a rule, plain bullets and a full-width pill in that
-// colour, small print centred under it; questions as hairline rows
-const navbar = `<header class="m-navbar">
+// Pricing: the public page. A black header with bold 16px links and the green pill, a hero that fills
+// the first window with a huge title, then plan cards on the highlight grey with a coloured tag, the
+// tier name in its colour, a rule, plain bullets and a full-width pill in that colour, small print
+// centred under it; questions as hairline rows; the site footer
+const navbar = (current = 'Plans', extra = '') => `<header class="m-navbar">
   <a class="m-navbar-brand m-cluster" data-gap="2" href="#">${mark()} Wavelet</a>
   <nav class="m-navbar-nav" aria-label="Main">
-    <a class="m-navbar-link" href="#">For creators</a>
-    <a class="m-navbar-link" href="#" aria-current="page">Plans</a>
-    <a class="m-navbar-link" href="#">Help center</a>
+${['Plans', 'Get the app', 'Help center'].map((l) => `    <a class="m-navbar-link" href="#"${l === current ? ' aria-current="page"' : ''}>${l}</a>`).join('\n')}
+    <a class="m-navbar-link" href="#" style="margin-inline-start: auto">Create account</a>
   </nav>
-  <div class="m-navbar-actions">
-    <a class="m-button" data-variant="ghost" href="#" style="--m-button-ghost-fg: var(--m-color-fg-muted)">Create account</a>
-    <a class="m-button" data-variant="primary" href="#" style="${big}; ${whitePill}">Sign in</a>
+  <div class="m-navbar-actions">${extra}
+    <a class="m-button" data-variant="primary" href="#" style="${big}">Sign in</a>
   </div>
 </header>`;
+
+// The site footer under every public page: the mark, four columns of links in 40px rows under small
+// bold capitals, then the fine print. Black, with 64px above
+const footCol = (title: string, links: string[]) =>
+  `      <nav class="m-stack" data-gap="2" aria-label="${title}" style="flex: 1 1 10rem">
+        <h2 style="font-size: var(--m-font-size-xs); font-weight: var(--m-font-weight-bold); text-transform: uppercase; letter-spacing: 0.08em; color: var(--m-color-fg-muted)">${title}</h2>
+        <ul class="m-stack" data-gap="0">
+${links.map((l) => `          <li style="min-block-size: 2.5rem; display: flex; align-items: center"><a href="#" style="color: var(--m-color-fg-default); text-decoration: none">${l}</a></li>`).join('\n')}
+        </ul>
+      </nav>`;
+const siteFooter = `<footer style="background: var(--m-color-bg-sunken); padding-block: var(--m-space-16) var(--m-space-12)">
+  <div class="m-container m-stack" data-gap="12">
+    <div class="m-cluster" data-align="start" data-gap="8">
+      <a href="#" aria-label="Wavelet" style="display: inline-flex; flex: 0 0 8rem">${mark('2.5rem')}</a>
+${footCol('Company', ['About us', 'Careers', 'Press room'])}
+${footCol('Communities', ['For performers', 'For show makers', 'For developers', 'For venues'])}
+${footCol('Useful links', ['Help center', 'Get the app', 'Gift cards'])}
+${footCol('Plans', ['Solo', 'Pair', 'Household', 'Free'])}
+    </div>
+    <div class="m-cluster" data-justify="between" style="${tiny}; padding-block-start: var(--m-space-8); border-block-start: var(--m-border-width-thin) solid var(--m-color-border-default)">
+      <div class="m-cluster" data-gap="4"><a href="#" style="color: inherit; text-decoration: none">Legal</a><a href="#" style="color: inherit; text-decoration: none">Privacy</a><a href="#" style="color: inherit; text-decoration: none">Cookie choices</a><a href="#" style="color: inherit; text-decoration: none">Accessibility</a></div>
+      <span>© 2026 Wavelet</span>
+    </div>
+  </div>
+</footer>`;
 
 const plan = (
   id: string,
@@ -541,12 +600,12 @@ const blue =
   '--m-button-primary-bg: var(--m-color-info-solid); --m-button-primary-border: var(--m-color-info-solid); --m-button-primary-hover-bg: var(--m-color-info-solid); --m-button-primary-active-bg: var(--m-color-info-solid); --m-button-primary-fg: var(--m-color-info-on-solid)';
 
 const pricing = `<div style="min-block-size: 100vh; background: var(--m-color-bg-canvas)">
-${navbar}
+${navbar()}
 <main>
-  <section class="m-container" style="padding-block: var(--m-space-16) var(--m-space-12)" aria-labelledby="en-price-title">
+  <section class="m-container" style="min-block-size: calc(100vh - 4rem); display: flex; flex-direction: column; justify-content: center; padding-block: var(--m-space-16)" aria-labelledby="en-price-title">
     <div class="m-stack" data-gap="6" style="max-inline-size: 52rem">
       <h1 id="en-price-title" style="${hero}">Hear it all. Skip nothing.</h1>
-      <p style="font-size: var(--m-font-size-lg); ${bold}">Plus is $0 for 30 days, then from $11.49 a month. Cancel whenever you like.</p>
+      <p style="${bold}">Plus is $0 for 30 days, then from $11.49 a month. Cancel whenever you like.</p>
       <div class="m-cluster" data-gap="3">
         <a class="m-button" data-variant="primary" href="#" style="${big}">Start 30 days free</a>
         <a class="m-button" href="#" style="${big}">Compare plans</a>
@@ -578,6 +637,7 @@ ${plan('home', 'Household', 'var(--m-color-info-fg)', blue, '', '$19.49 / month'
     </div>
   </section>
 </main>
+${siteFooter}
 </div>`;
 
 // Errors: the field (red ring, red line with an icon), the form banner in the negative subdued set,
@@ -625,6 +685,97 @@ const errors = `<div style="min-block-size: 100vh; background: var(--m-color-bg-
 ${errorPage('404', 'Page not found', 'We can’t find the page you’re looking for.', 'Back to Discover', 'Help center')}
 ${errorPage('500', 'Something went wrong', 'It’s on our side, and nothing in your collection changed. Try again in a minute.', 'Try again', 'Service status', I.cloudOff)}
 ${errorPage('403', 'This mix is private', 'Only Ivy Calder and the people she invited can open it. Ask her for a link.', 'Back to Discover', 'Why can’t I see this?', I.lock)}
+  </div>
+</main>
+</div>`;
+
+// Reading: a public help article. The site header with a globe, a breadcrumb of bold links with
+// chevrons, an outlined search box, a topic card, then the article on the highlight grey (8px
+// corners, a 48px bold title, 24px bold section titles, numbered steps) beside the topics as hairline
+// rows on the same grey; related articles in 44px rows; the site footer
+const crumbSep = `<span aria-hidden="true" style="display: inline-flex; color: var(--m-color-fg-muted)">${icon(I.right, 16)}</span>`;
+const topic = (title: string, open = false, subs: string[] = []) =>
+  `        <details class="m-accordion-item"${open ? ' open' : ''}><summary>${title}</summary>${subs.length ? `<div class="m-accordion-content"><ul class="m-stack" data-gap="0">${subs.map((s, i) => `<li style="min-block-size: 2.5rem; display: flex; align-items: center"><a href="#"${i === 0 ? ' aria-current="page"' : ''} style="color: ${i === 0 ? 'var(--m-color-fg-default)' : 'var(--m-color-fg-muted)'}; text-decoration: none">${s}</a></li>`).join('')}</ul></div>` : ''}</details>`;
+const step = (t: string) => `              <li>${t}</li>`;
+
+const reading = `<div class="m-stack" data-gap="0" style="min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+${navbar('Help center', `\n    ${iconBtn('Choose a language', I.globe, 20)}`)}
+<main class="m-container" style="padding-block: var(--m-space-8) var(--m-space-16); max-inline-size: 64rem">
+  <div class="m-stack" data-gap="6">
+    <nav aria-label="Breadcrumb" class="m-cluster" data-gap="3" style="${bold}"><a href="#" style="color: var(--m-color-fg-muted); text-decoration: none">Help center</a>${crumbSep}<a href="#" style="color: var(--m-color-fg-muted); text-decoration: none">Using the app</a>${crumbSep}</nav>
+    <div style="display: flex; flex-wrap: wrap; gap: var(--m-space-16); align-items: flex-start">
+      <div class="m-stack" data-gap="6" style="flex: 1 1 32rem; min-inline-size: 0">
+        <div role="search" class="m-cluster" data-gap="3" style="min-block-size: 4.5rem; padding-inline: var(--m-space-6); border: var(--m-border-width-thin) solid var(--m-color-border-strong); border-radius: 1rem; color: var(--m-color-fg-muted); flex-wrap: nowrap">${icon(I.search, 16)}<span style="${clip}">What can we help with?</span></div>
+        <a href="#" class="m-cluster" data-gap="4" style="padding: var(--m-space-4) var(--m-space-5); border-radius: var(--m-radius-lg); background: var(--m-color-bg-surface); color: var(--m-color-fg-default); text-decoration: none; flex-wrap: nowrap">
+          ${art(5, '3rem', I.user)}
+          <span class="m-stack" data-gap="0" style="flex: 1; min-inline-size: 0"><span style="${bold}">Your account</span><span style="${small}">Your profile, payments and more.</span></span>
+          <span style="display: inline-flex; color: var(--m-color-fg-muted)">${icon(I.right, 16)}</span>
+        </a>
+        <article class="m-stack" data-gap="6" aria-labelledby="en-read-title" style="padding: var(--m-space-6); border-radius: var(--m-radius-lg); background: var(--m-color-bg-surface)">
+          <h1 id="en-read-title" style="font-family: var(--m-font-family-display); font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-semibold); line-height: var(--m-font-leading-tight)">Make and change a mix</h1>
+          <p>Gather songs for a long drive, a quiet morning or a dinner with friends, and change them whenever you like.</p>
+          <div class="m-cluster" data-gap="2" role="group" aria-label="Device">${chip('Computer', true)}${chip('Phone and tablet')}</div>
+          <section class="m-stack" data-gap="3" aria-labelledby="en-read-make">
+            <h2 id="en-read-make" style="${shelf}">Make a mix</h2>
+            <ol class="m-stack" data-gap="1" style="padding-inline-start: var(--m-space-5); list-style: decimal">
+${[step('Select <strong>New</strong> at the top of your collection.'), step('Choose <strong>Mix</strong>.'), step('Give it a name, then add songs from search or from any record.')].join('\n')}
+            </ol>
+          </section>
+          <section class="m-stack" data-gap="3" aria-labelledby="en-read-change">
+            <h2 id="en-read-change" style="${shelf}">Change a mix</h2>
+            <ol class="m-stack" data-gap="1" style="padding-inline-start: var(--m-space-5); list-style: decimal">
+${[step('Open the mix from your collection.'), step('Select the more button beside a song.'), step('Choose <strong>Remove from this mix</strong>, or drag songs into a new order.')].join('\n')}
+            </ol>
+            <p style="${small}">Changes reach everyone you shared the mix with straight away.</p>
+          </section>
+          <div class="m-cluster" data-gap="3" style="padding-block-start: var(--m-space-4); border-block-start: var(--m-border-width-thin) solid var(--m-color-border-default)"><span style="${bold}">Did this help?</span><button type="button" class="m-button" data-size="sm" style="${greyPill}">Yes</button><button type="button" class="m-button" data-size="sm" style="${greyPill}">No</button></div>
+        </article>
+        <section class="m-stack" data-gap="2" aria-labelledby="en-read-related">
+          <h2 id="en-read-related" style="${shelf}">Related</h2>
+          <ul class="m-stack" data-gap="0">
+${['Find a mix you saved', 'Share a mix with friends', 'Make a mix together', 'Bring back a removed mix'].map((t) => `            <li style="min-block-size: 2.75rem; display: flex; align-items: center"><a href="#" style="color: var(--m-color-fg-default)">${t}</a></li>`).join('\n')}
+          </ul>
+        </section>
+      </div>
+      <nav aria-label="Help topics" style="flex: 0 1 19rem; min-inline-size: 16rem">
+        <div class="m-accordion" style="background: var(--m-color-bg-surface); border: 0; border-radius: var(--m-radius-lg); overflow: hidden">
+${topic('Payments and plans')}
+${topic('Your account')}
+${topic('Plans for households')}
+${topic('Using the app', true, ['Make and change a mix', 'Find mixes', 'Listen offline', 'Sound settings'])}
+${topic('Safety and privacy')}
+        </div>
+      </nav>
+    </div>
+  </div>
+</main>
+${siteFooter}
+</div>`;
+
+// Sign in: the public form. A dark wash behind one centred panel: the mark, one bold title, the email
+// field, the full-width green pill, an "or" rule, outlined pills for other ways in, then the way to
+// create an account and the fine print. No header or footer
+const other = (label: string, ic: string) =>
+  `      <button type="button" class="m-button" style="inline-size: 100%; ${big}; gap: var(--m-space-3); padding-inline: var(--m-space-6)"><span style="display: inline-flex; flex: none">${icon(ic, 24)}</span><span style="flex: 1; text-align: center">${label}</span></button>`;
+const signIn = `<div style="min-block-size: 100vh; background: linear-gradient(to bottom, var(--m-color-bg-surface), var(--m-color-bg-sunken)); padding: var(--m-space-8) var(--m-space-2)">
+<main aria-labelledby="en-sign-title" style="max-inline-size: 46rem; margin-inline: auto; background: var(--m-color-bg-canvas); border-radius: var(--m-radius-lg); padding: var(--m-space-12) var(--m-space-6)">
+  <div class="m-stack" data-gap="8" style="max-inline-size: 20.25rem; margin-inline: auto">
+    <div class="m-stack" data-gap="6" data-align="center" style="text-align: center">${mark('2.5rem')}<h1 id="en-sign-title" style="${h1}">Welcome back</h1></div>
+    <form class="m-stack" data-gap="4" aria-labelledby="en-sign-title">
+      <div class="m-field">
+        <label class="m-field-label" for="en-sign-email">Email</label>
+        <input class="m-input" id="en-sign-email" type="email" autocomplete="email" placeholder="name@domain.com">
+      </div>
+      <button type="submit" class="m-button" data-variant="primary" style="inline-size: 100%; ${big}">Continue</button>
+    </form>
+    <div class="m-cluster" data-gap="4" style="flex-wrap: nowrap; ${small}" role="separator"><span style="flex: 1; border-block-start: var(--m-border-width-thin) solid var(--m-color-border-default)"></span>or<span style="flex: 1; border-block-start: var(--m-border-width-thin) solid var(--m-color-border-default)"></span></div>
+    <div class="m-stack" data-gap="2">
+${other('Continue with a passkey', I.key)}
+${other('Continue with a phone number', I.phone)}
+${other('Send me a sign-in link', I.mail)}
+    </div>
+    <p style="${small}; text-align: center">New to Wavelet? <a href="#" style="color: var(--m-color-fg-default); ${bold}">Create an account</a></p>
+    <p style="${tiny}; text-align: center">We check each sign-in for automated attempts.</p>
   </div>
 </main>
 </div>`;
@@ -678,5 +829,19 @@ export const cadenceRecipes: ArchetypeRecipe[] = [
     description:
       'A red ring and a red line with an icon under the field, a banner above the form saying nothing changed, the blue snackbar, and full pages for 404, 500 and no access with a white pill.',
     html: errors,
+  },
+  {
+    name: 'reading',
+    title: 'Help article',
+    description:
+      'A public reading page: the site header, a breadcrumb with chevrons, an outlined search box and a topic card, the article on the highlight grey with a 48px bold title and numbered steps, the topics as hairline rows beside it, and the site footer.',
+    html: reading,
+  },
+  {
+    name: 'sign-in',
+    title: 'Sign in',
+    description:
+      'A dark wash behind one centred panel: the mark, a 32px bold title, the email field, the full-width green pill, an "or" rule, outlined pills for other ways in, and the way to create an account.',
+    html: signIn,
   },
 ];

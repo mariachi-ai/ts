@@ -9,7 +9,7 @@ encouraging.
 This file is the design language in words; follow it for anything visual. Beside it:
 - **`gallery.html`** draws every foundation, every icon, every component and every state, in light
   and dark;
-- **`recipes/`** holds the seven page shapes as HTML using only the library's classes;
+- **`recipes/`** holds the nine page shapes as HTML using only the library's classes;
 - **the generated reference** at the end of this file gives every exact value.
 
 The tokens are in the `solace` preset of `@mariachi/design` (`data-theme="solace"`,
@@ -45,8 +45,9 @@ The tokens are in the `solace` preset of `@mariachi/design` (`data-theme="solace
 | Success, danger | green `#02873e`; red `#e01919`, red text `#bf0000` | `#31cc66`; `#ff5a5a` |
 
 - **Radius.** 4px for small labels; 8px for tiles and thumbnails; 12px for inputs, the player,
-  plan options, alerts and menus; 16px for cards and dialogs; 24px for big brand panels. Every button
-  is a pill.
+  plan options, alerts, menus, the byline box and an article's picture; 16px for cards, dialogs and a
+  course's picture band; 24px for big brand panels and the empty and error bands; 32px for the
+  sign-in sheet. Every button is a pill.
 - **Borders.** 2px. Cards and tiles take the soft warm border; controls take the stronger one so
   they read.
 - **Shadow.** Pills have a 2px hard press-shadow (`0 2px 0` at 20%) that goes when pressed. Raised
@@ -81,7 +82,10 @@ Use tokens, never colour literals: `var(--m-color-accent-default)`, `var(--m-col
   - body 16px with a 1.5 line height; large body 18px for intros;
   - meta and help 14px; labels on cards and badges 12px;
   - card titles 20px bold; section headings 24px; page titles 32px;
-  - marketing headings 48px, tight leading (1.1), always bold.
+  - 48px with tight leading (1.1), always bold, for the big titles: a public page's heading, an
+    article's title, an empty place and a whole-page error.
+- **How many.** A first window uses four to six sizes and two or three weights (500 only for small
+  labels). The source keeps both: 3–6 sizes and 2–3 weights on every studied screen.
 - **Tracking.** Headings, labels and buttons are tracked in by 3% (`-0.03em`); body text is not.
 - **Case.** Sentence case. Small capitals only for row actions in settings ("EDIT", "MANAGE"), in
   the link blue.
@@ -147,7 +151,8 @@ Sections are 40–64px apart.
 **Actions and forms**
 - **Button.** Always a bold pill (700, tracked in) with the 2px press-shadow. 48px by default, 40px
   `sm`, 56px `lg` for the one big step at the bottom of a flow.
-  - **Primary:** the blue with white text, one per view, often full width.
+  - **Primary:** the blue with white text, one per app view, often full width. A public page may
+    show two: the header's pill and the opening's own.
   - **Secondary** (the default): the warm off-white with charcoal text, no border.
   - **Ghost:** text only, warm fill on hover, for icon buttons in the header and "Skip for now".
   - **Danger:** solid red, only to confirm something destructive.
@@ -179,8 +184,8 @@ Sections are 40–64px apart.
   - **Pill** (the segmented control): a warm off-white pill track with 4px padding, the selected
     segment raised in white. For a two-choice switch on a coloured panel ("Yearly · Monthly"), a
     solid charcoal segment is used in the reference; express it with the charcoal button.
-- **Breadcrumb.** 14px charcoal links with "/" between, the current page subtle. Prefer a round back
-  button in the app.
+- **Breadcrumb.** On public reading pages: links with ">" between (`--m-breadcrumb-separator: '>'`),
+  the parents muted, the current page charcoal. In the app, prefer a round back button.
 - **Pagination.** 32px round buttons on the warm off-white; the current page solid charcoal with
   white text; chevrons for previous and next.
 
@@ -195,8 +200,8 @@ Sections are 40–64px apart.
   - neutral on the warm off-white, or outlined with the soft border ("Course");
   - solid blue for an offer ("Save 55%", sitting on the edge of the card);
   - solid charcoal for "Up next"; green tint for "Done".
-- **Avatar.** Round, initials in bold charcoal on the pale orange (`brand.subtle`). 32px in rows,
-  40px beside choices, 64px in a header.
+- **Avatar.** Round, initials in bold charcoal on the pale orange (`brand.subtle`). 32px in rows and
+  beside choices, 40px in a byline, 64px in a header.
 - **Divider.** A 2px soft warm rule. Settings rows and list rows are separated by it.
 - **Accordion.** Separated warm off-white rows with 12px corners, the question 18px bold, a chevron
   on the right that turns.
@@ -253,9 +258,10 @@ Sections are 40–64px apart.
   saved · Retry").
 - **Before something can't be undone:** the confirm sheet, with the red pill first and a kind way
   out.
-- **A whole page:** centred in a 30rem column.
+- **A whole page:** a warm off-white band with 24px corners, everything centred in it.
   - Flat token shapes (circles, a rising disc, a padlock made of a block and an arc), the error number
-    in small mono, a 24px bold title, one kind sentence and one or two pills.
+    in small mono, a 48px bold title, one kind sentence and one or two pills (the second white on the
+    band).
   - **404:** "We can't find that page" with Back home.
   - **500:** "Something went wrong on our side" and "Your progress is saved", with Try again and Get
     help.
@@ -265,33 +271,89 @@ Sections are 40–64px apart.
 
 ## Page shapes (recipes)
 
+### The two families
+
+| | The app (dashboard, list and detail, settings, empty state, errors) | Flows and signing in (onboarding, sign-in) | Public pages (pricing, reading) |
+| --- | --- | --- | --- |
+| Frame | The 80px white app header: the mark, five links (the current on the warm pill), ghost icon buttons and the avatar | Onboarding: back, "2 of 4" and close, no header. Sign-in: the mark alone at the top left over a sky that pales from the info tint to a soft blue | The site header: the mark, links, "Log in" as a ghost and the blue pill; or the mark alone, centred, on a page that sells. Reading pages end with the warm off-white footer |
+| Column | 72.5rem; settings 60rem; the empty band across the column | One 30rem column; the sign-in sheet 25rem with 32px corners and the overlay shadow | Plans in a 43rem column; an article's 48rem column beside its 15rem contents |
+| Titles | 32px bold page titles, 20px card titles; 48px for an empty place or a whole-page error | 32px bold question; 24px "Log in" | 48px bold, one word may be orange on a page that sells; an article's title 48px with the date in 12px under it |
+| Text | 16px; 14px meta with a small icon; 18px for one sentence under a title | 18px under the question; 14px on the sheet | 18px for articles and ledes |
+| The blue | One pill per view: Begin, Begin course, Switch to yearly, Browse the library | Full width at the foot (Continue) | The header's pill, and at most one more in the opening |
+| On a phone | Links scroll sideways; side columns drop under the main one | The column and the sheet take the width less 16px | The contents column drops under the article; plans stack |
+
+### Signature moves
+
+1. **One bright blue pill moves you forward**, and it is in the first window of every screen: the
+   header's offer on a public page, Begin on the day's card, Continue at the foot of a flow. Nothing
+   else is filled blue. `observed`: one action hue on all 60 studied source screens, 1–2 primary
+   actions in every first window.
+2. **Orange is the brand, never a button.** The mark's tile, one word of a big heading, the round play
+   button, streak dots and the current step.
+3. **The warm off-white holds things.** The player, the byline, choice rows, the membership panel, the
+   empty and error bands, quiet pills and the footer. `observed`: most separated panels on the source
+   are set apart by a tint (68%).
+4. **Bold, round and tracked in.** 700 headings and pill labels at −3%; fully round pills with a 2px
+   press-shadow; 12–16px corners on fields and cards, 24–32px on big bands and sheets.
+5. **Flat shapes for pictures:** a disc over a hill in orange, sun yellow, blue or midnight, never a
+   drawn face.
+6. **Time as a line of dots:** the day's timeline, the week's streak, the trial's steps and a course's
+   sessions all mark done (green tick), now (orange) and later (empty).
+
+### How a screen is assembled
+
+- **It opens with** the header (app or site), then a greeting or a breadcrumb, then the title. A flow
+  opens with its step count; a sign-in page with the mark alone.
+- **Reading order:** the title (with its one muted line), the main thing (the day's cards, the rows,
+  the question's choices, the article), then what sits beside it (the streak and player, the contents).
+- **How much one screen does:** one day, one list and the item it opens, one question, one settings
+  area, one article. The blue pill names the single next step.
+- **When narrow:** side columns drop under the main column; the header's links scroll sideways; flows
+  and sheets take the width less 16px.
+- **Too much content:** rows page with round pagination; a long article keeps one column with its
+  contents first on a phone; settings sections stack.
+- **None:** the frame stays, and the warm off-white band says so (see
+  [say-nothing-is-here](./patterns/say-nothing-is-here.md)).
+
+### The recipes
+
 - **Dashboard.**
   - "Good evening, Priya" at 20px muted, then "Your evening" at 32px bold.
   - The day as a timeline: a soft vertical rule with a green check, an orange dot or an empty ring
-    beside each big session card; the first card raised.
+    beside each big session card; the session up next is raised and holds the blue Begin pill.
   - A side column with the streak (orange dots for the week, the count with a flame), the player and
     four flat colour tiles.
 - **List and detail.**
   - Search with the icon inside, a segmented filter, and rows with a picture shape, a bold title, a
     meta line and a chevron, separated by 2px rules; round pagination.
   - The detail: a picture band with a round back button, a badge, a 32px title, the meta line, the
-    guide choice as pills (the chosen one charcoal), a large blue pill, the player and the course's
-    sessions.
+    guide choice as pills (the chosen one charcoal, 32px avatars, an 18px bold label above), a large
+    blue pill, the player and the course's sessions.
 - **Onboarding.** One 30rem column: back, a step count and close; a thin orange progress bar; a sun
   shape; a bold 32px question; warm off-white choice rows with checkboxes on the right; a
-  full-width blue pill and "Skip for now".
-- **Settings.** A side list of sections with icons, the current one on the warm pill; account rows
-  with a bold label, the value in muted text and a small capital blue action; reminder switches; and
-  deleting the account last with a red pill.
-- **Empty state.** Flat shapes, a 24px bold heading, one kind sentence, a blue pill and a warm
-  off-white one.
+  full-width blue pill and "Skip for now". Two weights only (400 and 700).
+- **Settings.** A side list of sections with icons, the current one on the warm pill; the membership
+  panel (warm off-white, the plan, one blue pill); account rows with a bold label, the value in muted
+  text and a small capital blue action; reminder switches; and deleting the account last with a red
+  pill.
+- **Empty state.** The warm off-white band with 24px corners: flat shapes, a 48px bold heading, one
+  kind sentence, a blue pill and a white one.
 - **Pricing.**
-  - A centred kicker and a 48px bold heading with one orange word.
+  - The mark alone, centred; a 24px bold muted kicker and a 48px bold heading with one orange word.
   - Two plan options side by side: the chosen one filled sun yellow with a blue offer badge on its
     edge, the other white with a thin charcoal border; a small renewal line; one blue pill.
-  - How the trial works as an orange-dot timeline, "What you get" in a warm off-white panel,
-    questions in separated rows, and secondary pills for household and student pricing.
-- **Errors.** The field, form, toast, confirm sheet and full-page errors above, as one page.
+  - How the trial works as an orange-dot timeline (18px bold steps), "What you get" in a warm
+    off-white panel, questions in separated rows, and secondary pills for household and student
+    pricing.
+- **Errors.** The field, form, toast, confirm sheet and whole-page bands above, as one page.
+- **Reading.** The site header; "In this article" and its sections in a 15rem side column; a ">"
+  breadcrumb, a 48px title and the date; the byline in a warm off-white box (avatar, "Written by" and
+  a blue name); a sun-yellow picture band; 18px text with a 24px heading and a blue underlined link; a
+  session to try in the player; "Keep reading" as three picture cards; the warm off-white footer.
+- **Sign-in.** The mark alone over the soft blue sky; a white sheet with 32px corners and the overlay
+  shadow: "Log in" at 24px, a 14px line with the link to join, the email field, the full-width blue
+  Continue, the terms checkbox, an "or" rule, two warm off-white pills for other ways in, and three
+  round shapes for what the product holds.
 
 ## Words
 
