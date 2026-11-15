@@ -49,7 +49,8 @@ export abstract class RateLimiting implements Instrumentable {
   /**
    * Checks `action` against the tenant's tier. The tier is `tierName`, else `resolveTier(ctx)`
    * (e.g. the tenant's plan), else `default`; anonymous contexts use `anonymous` when defined.
-   * Each tenant has its own counter per action.
+   * Each tenant has its own counter per action; so does a signed-in caller who is in no tenant.
+   * Callers with no identity at all share one.
    */
   async checkTier(ctx: Context, action: string, tiers: Record<string, RateLimitTier>, tierName?: string): Promise<RateLimitResult> {
     const explicit = tierName ?? (ctx.tenantId ? await this.resolveTier?.(ctx) : undefined);
@@ -59,8 +60,10 @@ export abstract class RateLimiting implements Instrumentable {
     const name = explicit ?? (!ctx.tenantId && tiers.anonymous ? 'anonymous' : 'default');
     const tier = tiers[name];
     if (!tier) throw new RateLimitError('rate-limit/unknown-tier', `No rate limit tier named ${name}`);
-    const key = `tenant:${ctx.tenantId ?? 'anonymous'}:${action}`;
-    return this.check(ctx, key, tier.rule);
+    // Someone signed in who is in no tenant gets a counter of their own: sharing the anonymous one would let
+    // one such user use up everyone's allowance
+    const who = ctx.tenantId ? `tenant:${ctx.tenantId}` : ctx.apiKeyId ? `key:${ctx.apiKeyId}` : ctx.userId ? `user:${ctx.userId}` : 'tenant:anonymous';
+    return this.check(ctx, `${who}:${action}`, tier.rule);
   }
 
   /** Like `checkTier`, but throws `RateLimitError('rate-limit/exceeded')` when over the limit. */

@@ -4,6 +4,7 @@
 '@mariachi/auth': minor
 '@mariachi/audit': minor
 '@mariachi/core': minor
+'@mariachi/rate-limit': patch
 ---
 
 Organizations over HTTP: a request's named organization becomes its tenant once the membership is
@@ -28,6 +29,8 @@ confirmed.
   context is someone signed in who is in no tenant. Audit reads, exports, retention and chain checks
   refuse such a caller (`audit/tenant-required`), and API keys can't be rotated or revoked by one.
   Before, those paths read a missing tenant as "all tenants", which only the system ever reached.
+- `rateLimiting.checkTier` counts a signed-in caller who is in no tenant on their own (`user:<id>`
+  or `key:<id>`), not in the one counter all anonymous callers share.
 
 **Changed:**
 - `audit.verifyChain(ctx, tenantId)` and `audit.retain(ctx, …)` cover only the context's own tenant
