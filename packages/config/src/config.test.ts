@@ -232,6 +232,16 @@ describe('loadConfig', () => {
       expect(shown({ SENTRY_DSN: 'https://0123456789abcdef:dsn-secret-0123@o42.ingest.sentry.io/4242' }).observability.errors.dsn).toBe(
         'https://0123456789abcdef:***@o42.ingest.sentry.io/4242',
       );
+      // A gateway or proxy address often carries its credential
+      const gateways = shown({
+        EMAIL_ADAPTER: 'postmark',
+        EMAIL_API_URL: 'https://mailer:gw-pass-0123@mail-gateway.internal/v1',
+        AI_BASE_URL: 'https://llm-gateway.internal/v1?api_key=gw-key-0123',
+        TYPESENSE_URL: 'https://search.internal:8108',
+      });
+      expect(gateways.email.apiUrl).toBe('https://mailer:***@mail-gateway.internal/v1');
+      expect(gateways.ai.baseUrl).toBe('https://llm-gateway.internal/v1?api_key=***');
+      expect(gateways.search.url).toBe('https://search.internal:8108');
       const plain = 'postgres://db.internal/app?sslmode=require&application_name=api';
       expect(shown({ DATABASE_URL: plain }).database.url).toBe(plain);
       // Not a URL the parser accepts, but something sits where a password would: all of it is hidden

@@ -41,7 +41,7 @@ JSON.stringify(config.billing);               // the same
 ```
 
 Every key, secret and API key in the built-in config shows as `[REDACTED]`, and a URL
-(`database.url`, `redis.url`, `email.smtpUrl`, the Sentry DSN) keeps everything but its password
+(`database.url`, `redis.url`, `email.smtpUrl`, `email.apiUrl`, `ai.baseUrl`, `search.url`, the Sentry DSN) keeps everything but its password
 and any query parameter named like a credential (`?password=`, `?sslkey=`, `?access_token=`). The
 secrets store shows as `[Secrets]`, whatever it holds. Mark the secrets
 in your own sections the same way:
