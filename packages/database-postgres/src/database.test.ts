@@ -54,6 +54,25 @@ describe('database-postgres compiler', () => {
     expect(ddl).toMatch(/FOREIGN KEY \("org_id"\) REFERENCES "public"\."orgs"\("id"\) ON DELETE cascade/);
   });
 
+  it('generates a tsvector column and GIN indexes, and refuses a unique one', async () => {
+    const notes = defineTable(
+      'search_notes',
+      { id: column.uuid().primaryKey(), body: column.json().notNull(), words: column.tsvector().notNull(), title: column.text() },
+      {
+        tenantColumn: false,
+        indexes: [index('search_notes_words_idx').on('words').using('gin'), index('search_notes_body_idx').on('body').using('gin'), index('search_notes_title_idx').on('title')],
+      },
+    );
+    const ddl = (await schemaSql([notes])).join('\n');
+    expect(ddl).toMatch(/"words" "?tsvector"? NOT NULL/);
+    expect(ddl).toMatch(/CREATE INDEX "search_notes_words_idx" ON "search_notes" USING gin \("words"\)/);
+    expect(ddl).toMatch(/CREATE INDEX "search_notes_body_idx" ON "search_notes" USING gin \("body"\)/);
+    expect(ddl).toMatch(/CREATE INDEX "search_notes_title_idx" ON "search_notes" USING btree \("title"\)/);
+    expect(() =>
+      defineTable('bad_unique_gin', { id: column.uuid().primaryKey(), words: column.tsvector() }, { tenantColumn: false, indexes: [index('bad_idx').on('words').using('gin').unique()] }),
+    ).toThrow(/can't be both unique and gin/);
+  });
+
   it('memoizes compiled tables', () => {
     expect(compileTable(projects)).toBe(compileTable(projects));
   });

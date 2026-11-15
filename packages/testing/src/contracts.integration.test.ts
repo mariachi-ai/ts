@@ -7,6 +7,7 @@ import { sql } from 'drizzle-orm';
 import { notificationsTable } from '@mariachi/notifications';
 import { DrizzleNotificationStore } from '@mariachi/notifications/postgres';
 import { TypesenseSearchAdapter } from '@mariachi/search';
+import { createPostgresSearch, searchDocumentsTable, searchIndexesTable } from '@mariachi/search/postgres';
 import { S3StorageAdapter } from '@mariachi/storage';
 import { startMinio, startPostgres, startRedis, startTypesense, stopAll } from '../../../test/setup';
 import { TestCacheClient } from './adapters/cache';
@@ -53,7 +54,7 @@ beforeAll(async () => {
   infra.redisUrl = redisUrl;
   infra.database = createPostgresDatabase({ url: pgUrl });
   await infra.database.connect();
-  await applySchema(infra.database.db, [notificationsTable]);
+  await applySchema(infra.database.db, [notificationsTable, searchIndexesTable, searchDocumentsTable]);
   await infra.database.db.execute(sql`drop table if exists contract_notes`);
   await applySchema(infra.database.db, [contractNotes]);
 }, 300_000);
@@ -77,6 +78,7 @@ storageContract('s3 (minio)', () =>
 );
 
 searchContract('typesense', () => new TypesenseSearchAdapter(infra.typesense!));
+searchContract('postgres', () => createPostgresSearch(infra.database!.db));
 
 inboxContract('postgres', () => new DrizzleNotificationStore(infra.database!.db));
 repositoryContract('postgres', () => new ContractNotes(contractNotes, infra.database!.db));

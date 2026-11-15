@@ -41,6 +41,9 @@ export function defineTable<T extends Record<string, ColumnBuilder<ColumnType, b
     for (const c of built.columns) {
       if (!(c in resolved)) throw new ConfigError('database/invalid-index', `Index ${built.name} references unknown column ${c}`);
     }
+    if (built.unique && built.using && built.using !== 'btree') {
+      throw new ConfigError('database/invalid-index', `Index ${built.name} can't be both unique and ${built.using}: only btree indexes enforce uniqueness`);
+    }
     indexes.push(built);
   }
   for (const c of options.primaryKey ?? []) {
