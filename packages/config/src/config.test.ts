@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { format, inspect } from 'node:util';
 import { z } from 'zod';
 import { ConfigError } from '@mariachi/core';
 import {
@@ -11,6 +12,8 @@ import {
   createFeatureFlags,
   EnvSecretsAdapter,
   Secrets,
+  REDACTED,
+  secret,
 } from './index';
 
 beforeEach(() => resetConfig());
@@ -119,6 +122,82 @@ describe('loadConfig', () => {
     // A signing secret too short to sign anything safely is refused
     expect(() => loadConfig({}, { env: { STORAGE_SIGNING_SECRET: 'short' } })).toThrow(ConfigError);
     expect(() => loadConfig({}, { env: { LOG_PRETTY: 'sometimes' } })).toThrow(/LOG_PRETTY must be true or false/);
+  });
+
+  describe('secrets in the loaded config', () => {
+    const secrets = {
+      DATABASE_URL: 'postgres://app:db-pass-0123456789@db.internal:5432/app',
+      REDIS_URL: 'rediss://default:redis-pass-0123456789@cache.internal:6380',
+      JWT_SECRET: 'jwt-secret-0123456789-0123456789-0123',
+      SESSION_SECRET: 'session-secret-0123456789-0123456789',
+      ENCRYPTION_KEY: 'encryption-key-0123456789-0123456789',
+      STORAGE_SIGNING_SECRET: 'storage-signing-0123456789-0123456789',
+      STRIPE_SECRET_KEY: 'sk_live_stripe_0123456789',
+      STRIPE_WEBHOOK_SECRET: 'whsec_stripe_0123456789',
+      RESEND_API_KEY: 're_email_key_0123456789',
+      SMTP_URL: 'smtps://mailer:smtp-pass-0123456789@smtp.example.com:465',
+      TYPESENSE_API_KEY: 'ts_search_key_0123456789',
+      OPENAI_API_KEY: 'sk-openai-0123456789',
+      ANTHROPIC_API_KEY: 'sk-ant-0123456789',
+    };
+    // Every value that must never be printed: the keys, and the password inside each URL
+    const forbidden = Object.values(secrets).map((v) => (/^[a-z]+:\/\//.test(v) ? new URL(v).password : v));
+    const load = () => loadConfig({}, { env: { ...secrets, EMAIL_ADAPTER: 'resend', SEARCH_ADAPTER: 'typesense' } });
+    const clean = (text: string) => {
+      for (const value of forbidden) expect(text, value).not.toContain(value);
+    };
+
+    it('still gives code the real values', () => {
+      const config = load();
+      expect(config.auth?.jwtSecret).toBe(secrets.JWT_SECRET);
+      expect(config.database?.url).toBe(secrets.DATABASE_URL);
+      expect(config.billing?.secretKey).toBe(secrets.STRIPE_SECRET_KEY);
+      // Every secret given above did reach the config, so the checks below are checking something
+      const found = JSON.stringify(Object.fromEntries(Object.entries(config).map(([k, v]) => [k, v && typeof v === 'object' ? { ...v } : v])));
+      for (const value of forbidden) expect(found, value).toContain(value);
+    });
+
+    it('never shows them when the config, or any part of it, is turned into JSON', () => {
+      const config = load();
+      const json = JSON.stringify(config);
+      clean(json);
+      clean(JSON.stringify({ config }));
+      clean(JSON.stringify(config.auth));
+      clean(JSON.stringify([config.billing, config.email, config.ai, config.search, config.storage, config.encryption]));
+      // Shown as redacted, not dropped, and what isn't secret stays readable
+      const shown = JSON.parse(json);
+      expect(shown.auth).toMatchObject({ jwtSecret: REDACTED, sessionSecret: REDACTED, jwtExpiresIn: '1h' });
+      expect(shown.database.url).toBe('postgres://app:***@db.internal:5432/app');
+      expect(shown.redis.url).toBe('rediss://default:***@cache.internal:6380');
+      expect(shown.email.smtpUrl).toBe('smtps://mailer:***@smtp.example.com:465');
+      expect(shown.serviceName).toBe(config.serviceName);
+    });
+
+    it('never shows them when it is printed: console.log, util.inspect, a template, an error message', () => {
+      const config = load();
+      clean(inspect(config, { depth: null }));
+      clean(inspect(config.auth));
+      clean(inspect({ nested: { deeper: [config.database] } }, { depth: null }));
+      clean(format('%o %O %j', config, config.billing, config.ai));
+      expect(inspect(config.auth)).toContain(REDACTED);
+    });
+
+    it('leaves an unset secret unset, so a missing one can be told from a hidden one', () => {
+      const config = loadConfig({}, { env: { STRIPE_SECRET_KEY: 'sk_live_only_this_one' } });
+      expect(JSON.parse(JSON.stringify(config)).billing).toEqual({ adapter: 'stripe', secretKey: REDACTED });
+    });
+
+    it("hides a package section's own secrets, marked with secret()", () => {
+      registerConfigSection('payments', {
+        // Optional, because a registered section stays registered for the tests that follow
+        schema: z.object({ apiKey: secret(z.string()).optional(), region: z.string().default('eu') }),
+        fromEnv: (read) => ({ apiKey: read('PAYMENTS_API_KEY') }),
+      });
+      const config = loadConfig({}, { env: { PAYMENTS_API_KEY: 'pay_live_0123456789' } });
+      expect(useConfigSection<{ apiKey: string }>('payments').apiKey).toBe('pay_live_0123456789');
+      expect(JSON.stringify(config)).not.toContain('pay_live_0123456789');
+      expect(inspect(useConfigSection('payments'))).toBe(`{ apiKey: '${REDACTED}', region: 'eu' }`);
+    });
   });
 
   it('defaults observability adapters to noop', () => {

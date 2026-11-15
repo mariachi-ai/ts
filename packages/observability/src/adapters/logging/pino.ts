@@ -1,6 +1,6 @@
 import pino from 'pino';
 import type { Logger } from '@mariachi/core';
-import { currentContext, loadOptionalPeer } from '@mariachi/core';
+import { currentContext, loadOptionalPeer, redactForOutput } from '@mariachi/core';
 
 /** Adds the ambient Context's identifiers to every log line. */
 export function contextBindings(): Record<string, unknown> {
@@ -65,22 +65,22 @@ export class PinoLoggerAdapter implements Logger {
   }
 
   info(obj: Record<string, unknown>, msg?: string): void {
-    this.#instance.info(obj, msg);
+    this.#instance.info(redactForOutput(obj), msg);
   }
 
   warn(obj: Record<string, unknown>, msg?: string): void {
-    this.#instance.warn(obj, msg);
+    this.#instance.warn(redactForOutput(obj), msg);
   }
 
   error(obj: Record<string, unknown>, msg?: string): void {
-    this.#instance.error(obj, msg);
+    this.#instance.error(redactForOutput(obj), msg);
   }
 
   debug(obj: Record<string, unknown>, msg?: string): void {
-    this.#instance.debug(obj, msg);
+    this.#instance.debug(redactForOutput(obj), msg);
   }
 
   child(bindings: Record<string, unknown>): Logger {
-    return new PinoLoggerAdapter({ __pino: this.#instance.child(bindings) });
+    return new PinoLoggerAdapter({ __pino: this.#instance.child(redactForOutput(bindings)) });
   }
 }

@@ -2,6 +2,7 @@ import { ConfigError, fromZodError, isZodError, loadOptionalPeer } from '@mariac
 import type { z } from 'zod';
 import { AppConfigSchema, type AppConfig, type AppConfigInput } from './schema';
 import { buildConfigFromEnv, readEnv } from './env';
+import { protectSecrets } from './redact';
 import type { ConfigOptions, SecretsAdapter, FeatureFlagAdapter } from './types';
 import { EnvSecretsAdapter } from './adapters/env';
 import { Secrets } from './secrets';
@@ -79,9 +80,12 @@ export function loadConfig(overrides?: AppConfigInput, options: LoadConfigOption
       (section.fromEnv?.(read) ?? {}) as Record<string, unknown>,
       ((config.sections[name] as Record<string, unknown>) ?? {}),
     );
-    config.sections[name] = parse(section.schema, raw, `config section "${name}"`);
+    // A section's own secrets (marked with secret() in its schema) are hidden the same way
+    config.sections[name] = protectSecrets(parse(section.schema, raw, `config section "${name}"`), section.schema);
   }
 
+  // From here on, logging or serialising the config (or any part of it) shows secrets as [REDACTED]
+  protectSecrets(config, AppConfigSchema);
   cachedConfig = config;
   return config;
 }
@@ -128,6 +132,7 @@ export type { AppConfig, AppConfigInput, ConfigOptions, SecretsAdapter, FeatureF
 export type { FlagContext, FeatureFlagRecord, FeatureFlagStore, TenantFlagOverride } from './types';
 export { AppConfigSchema };
 export { buildConfigFromEnv, readEnv };
+export { REDACTED, secret, secretUrl } from './redact';
 export { EnvSecretsAdapter } from './adapters/env';
 export { Secrets } from './secrets';
 export { CachedFeatureFlags, StoreFeatureFlagAdapter, StaticFeatureFlagAdapter } from './flags/adapters';

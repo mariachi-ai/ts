@@ -108,4 +108,6 @@ export {
 
 export { loadOptionalPeer } from './optional';
 
+export { REDACT, type Redactable, redactForOutput } from './redaction';
+
 export { type IdempotencyStore, type IdempotencyClaim, InMemoryIdempotencyStore, runOnce } from './idempotency';
