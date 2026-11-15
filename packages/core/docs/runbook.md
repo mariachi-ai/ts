@@ -49,7 +49,15 @@ fail the boot with `ConfigError`.
 | `LOG_ADAPTER`, `LOG_LEVEL` | logging (`pino` or `console`) | `pino`, `info` |
 | `TRACING_ADAPTER`, `OTEL_EXPORTER_OTLP_ENDPOINT` / `..._TRACES_ENDPOINT` | OpenTelemetry tracing | off |
 | `METRICS_ADAPTER`, `METRICS_PREFIX`, `ERRORS_ADAPTER`, `SENTRY_DSN` | metrics and error tracking | noop |
-| `STORAGE_*`, `EMAIL_*`, `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
+| `STORAGE_*`, `EMAIL_*` (`EMAIL_ADAPTER`, `EMAIL_API_KEY`, `EMAIL_FROM`, `EMAIL_API_URL`), `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
+
+A value that can't be read is refused at start (`config/invalid`, naming the variable): a number
+that isn't one, a boolean that isn't `true`/`false` (or `1`/`0`, `yes`/`no`, `on`/`off`), or an
+environment name other than the three. `ENV` decides over `NODE_ENV`, so when other tooling needs
+`NODE_ENV=staging`, set `ENV=production` for the app.
+
+**Production sets `ENV=production`** (or `NODE_ENV=production`). With neither set, the app runs as
+`development` and says so once at start (a process warning, code `MARIACHI_ENV_UNSET`).
 
 ## Developing the framework
 

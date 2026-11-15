@@ -1,8 +1,7 @@
 import { existsSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, join, relative, resolve } from 'node:path';
+import { dirname, relative } from 'node:path';
 import type { Command } from 'commander';
-import { createJiti } from 'jiti';
 import { readEnv } from '@mariachi/config';
 import { ConfigError, createContext, type Logger } from '@mariachi/core';
 import {
@@ -10,11 +9,11 @@ import {
   runMigrations,
   runSeeds,
   schemaSql,
-  toDrizzleImports,
   type DrizzleDb,
 } from '@mariachi/database-postgres';
 import type { SeedDefinition } from '@mariachi/database';
-import { drizzleConfigSource, planMigration, schemaShimSource, writeMigration } from '../db/migrations';
+import { planMigration } from '../db/migrations';
+import { importModule, writePlannedMigration } from '../db/project';
 
 import { DIM, GREEN, RED, RESET, YELLOW } from '../colors';
 import { fail } from '../output';
@@ -32,13 +31,6 @@ const consoleLogger: Logger = {
   debug: () => {},
   child: () => consoleLogger,
 } as unknown as Logger;
-
-async function importModule(path: string): Promise<Record<string, unknown>> {
-  const abs = resolve(path);
-  if (!existsSync(abs)) throw new ConfigError('cli/file-not-found', `File not found: ${relative(process.cwd(), abs)}`);
-  const jiti = createJiti(import.meta.url, { interopDefault: true });
-  return (await jiti.import(abs)) as Record<string, unknown>;
-}
 
 function databaseUrl(options: DbOptions): string {
   const url = options.url ?? readEnv('DATABASE_URL');
@@ -85,16 +77,9 @@ export function registerDbCommand(program: Command): void {
           );
           process.exit(1);
         }
-        const file = await writeMigration(options.out, plan, options.name);
-        console.log(`${GREEN}Wrote${RESET} ${file} ${DIM}(${plan.statements.length} statements)${RESET}`);
-
-        const shimPath = join(options.out, 'meta', 'schema.ts');
-        const schemaImport = relative(dirname(shimPath), resolve(options.schema)).replace(/\.ts$/, '');
-        await writeFile(shimPath, schemaShimSource(schemaImport.startsWith('.') ? schemaImport : `./${schemaImport}`, Object.keys(toDrizzleImports(schema))));
-        if (!existsSync('drizzle.config.ts')) {
-          await writeFile('drizzle.config.ts', drizzleConfigSource({ out: `./${options.out}`, schemaShim: `./${shimPath}` }));
-          console.log(`${GREEN}Wrote${RESET} drizzle.config.ts`);
-        }
+        const written = await writePlannedMigration({ schema: options.schema, out: options.out, name: options.name, plan });
+        console.log(`${GREEN}Wrote${RESET} ${written.file ? relative(process.cwd(), written.file) : ''} ${DIM}(${plan.statements.length} statements)${RESET}`);
+        if (written.wroteConfig) console.log(`${GREEN}Wrote${RESET} drizzle.config.ts`);
       } catch (err) {
         fail(err);
       }

@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { Readable } from 'node:stream';
 import Fastify from 'fastify';
 import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
 import type { Logger } from '@mariachi/core';
@@ -18,6 +19,7 @@ import type {
   ServerRoute,
 } from '../types';
 import { HttpResponse } from '../types';
+import { encodeSse, SseResponse, StreamResponse } from '../stream';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -177,6 +179,11 @@ export class FastifyServerAdapter implements ServerAdapter {
       const tp = req.headers.traceparent;
       const traceId = traceIdFromTraceparent(Array.isArray(tp) ? tp[0] : tp) ?? req.id;
       const logger = this.logger.child({ requestId: req.id, traceId, server: cfg.name });
+      // The response's 'close' comes when it's finished or when the connection drops; only the second aborts
+      const gone = new AbortController();
+      reply.raw.once('close', () => {
+        if (!reply.raw.writableFinished) gone.abort();
+      });
       req.serverCtx = {
         traceId,
         requestId: req.id,
@@ -185,6 +192,8 @@ export class FastifyServerAdapter implements ServerAdapter {
         ip: req.ip,
         startedAt: Date.now(),
         responseHeaders: {},
+        responseCookies: [],
+        signal: gone.signal,
       };
       reply.header(requestIdHeader, req.id);
       if (security) applySecurityHeaders(reply, security);
@@ -206,6 +215,8 @@ export class FastifyServerAdapter implements ServerAdapter {
     fastify.addHook('onSend', async (req, reply, payload) => {
       const headers = req.serverCtx?.responseHeaders;
       if (headers) for (const [k, v] of Object.entries(headers)) reply.header(k, v);
+      // Fastify adds to set-cookie where it replaces other headers, so each cookie gets its own header
+      for (const cookie of req.serverCtx?.responseCookies ?? []) reply.header('set-cookie', cookie);
       return payload;
     });
 
@@ -276,6 +287,35 @@ export class FastifyServerAdapter implements ServerAdapter {
               result = await route.handler(ctx, incoming);
             };
             await run(0);
+            if (result instanceof SseResponse || result instanceof StreamResponse) {
+              const { options } = result;
+              for (const [k, v] of Object.entries(options.headers ?? {})) reply.header(k, v);
+              reply.status(options.status ?? 200);
+              let source: AsyncIterable<string | Uint8Array> | Readable;
+              if (result instanceof SseResponse) {
+                reply.header('content-type', 'text/event-stream; charset=utf-8');
+                reply.header('cache-control', 'no-cache, no-transform');
+                // nginx and its kin buffer responses unless told not to
+                reply.header('x-accel-buffering', 'no');
+                source = encodeSse(
+                  result.events,
+                  result.options.heartbeatMs ?? 15_000,
+                  (error) => {
+                    const envelope = toErrorEnvelope(error, ctx.traceId);
+                    if (envelope.status >= 500) ctx.logger.error({ err: error }, 'event stream failed');
+                    return { event: 'error', data: envelope.body };
+                  },
+                  result.options.done ?? true,
+                );
+              } else {
+                reply.header('content-type', result.options.contentType ?? 'application/octet-stream');
+                source = result.body;
+              }
+              const readable = source instanceof Readable ? source : Readable.from(source, { objectMode: false });
+              // After the first byte there is no error response to send: Fastify cuts the connection, and this says why
+              readable.once('error', (err) => ctx.logger.error({ err }, 'response stream failed'));
+              return reply.send(readable);
+            }
             if (result instanceof HttpResponse) {
               for (const [k, v] of Object.entries(result.headers)) reply.header(k, v);
               reply.status(result.status);

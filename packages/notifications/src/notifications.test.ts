@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createContext } from '@mariachi/core';
+import { providerFailure } from './adapters/email/failure';
 import { DefaultNotifications } from './notifications';
 import { MemoryDeliveryStore, MemoryInAppStore, MemoryPreferenceStore } from './store/memory';
 import type { EmailAdapter, EmailMessage, NotificationQueue } from './types';
@@ -66,6 +67,23 @@ describe('notify', () => {
       variables: {},
     });
     expect(queued).toEqual(['email', 'in_app']);
+  });
+
+  it("doesn't retry a message the provider refused", async () => {
+    let calls = 0;
+    const email: EmailAdapter = { async send() { calls += 1; throw providerFailure('test', 'address is suppressed', { status: 422 }); } };
+    const deliveries = new MemoryDeliveryStore();
+    const notifications = new DefaultNotifications({ email, deliveries, attempts: 3 }, { logger: silent });
+    await expect(notifications.notify(createContext({ logger: silent }), {
+      recipientUserId: 'u1',
+      recipientTenantId: 't1',
+      category: 'billing',
+      channels: ['email'],
+      email: 'a@b.c',
+      template: { id: 't', name: 't', subject: 'S', body: 'B', channel: 'email' },
+      variables: {},
+    })).rejects.toMatchObject({ code: 'notifications/rejected', metadata: { retryable: false } });
+    expect(calls).toBe(1);
   });
 
   it('keeps one delivery row per channel and counts retries', async () => {
