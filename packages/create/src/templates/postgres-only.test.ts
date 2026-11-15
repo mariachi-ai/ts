@@ -31,10 +31,11 @@ describe.each(Object.entries(VARIANTS))('a generated project (%s) needs only Pos
   });
 
   it('wires search on Postgres, tenant-scoped, and creates the indexes the app lists', () => {
-    expect(app).toContain('const search = new DefaultSearch({ client: searchClient, tenantScoped: true }, instrumentation);');
+    expect(app).toContain('new DefaultSearch({ client: createPostgresSearch(database.db), tenantScoped: true }, instrumentation),');
     expect(app).toContain('registerServices(communication, { db: database.db, jobs, search });');
-    expect(app).toContain('for (const index of options.searchIndexes ?? searchIndexes) {');
-    expect(app).toContain("if (error.code !== 'search/index-exists') throw error;");
+    // Managed, so a database without the search tables says so at start; then the app's indexes are made sure of
+    expect(app).toMatch(/const search = lifecycle\.manage\(\s+'search',/);
+    expect(app).toContain('await search.ensureIndexes(options.searchIndexes ?? searchIndexes)');
     expect(files['src/schema/search.ts']).toContain("export { searchDocumentsTable, searchIndexesTable } from '@mariachi/search/schema';");
     expect(files['src/schema/index.ts']).toContain("export * from './search';");
     expect(files['src/search/index.ts']).toContain('export const searchIndexes: SearchIndex[] = [];');

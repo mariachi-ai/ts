@@ -3,6 +3,7 @@
 '@mariachi/cli': minor
 '@mariachi/auth': minor
 '@mariachi/jobs': patch
+'@mariachi/search': minor
 ---
 
 A new project needs only Postgres, starts with one command, and can be called right away.
@@ -22,5 +23,10 @@ A new project needs only Postgres, starts with one command, and can be called ri
   come back in `identity.claims`. Claims the adapter writes itself can't be given there.
 - The Postgres job queue, started on a database without its tables, says which tables are missing
   and how to add them (`jobs/tables-missing`) instead of a bare SQL error.
+
+- `search.ensureIndexes(indexes)` (`@mariachi/search`) makes sure an app's indexes exist when it
+  starts: it creates the missing ones, leaves existing ones as they are, and reports and warns when
+  an existing index's fields differ from the code's, without applying them. Search clients gain an
+  optional `getIndex(name)`; the Postgres and memory adapters have it.
 
 An existing project is not changed by upgrading: this is about what `mariachi init` generates.

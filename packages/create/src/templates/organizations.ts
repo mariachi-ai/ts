@@ -160,6 +160,9 @@ export const organizationsAppSetup = (auth: ProjectAuth): string => `
       : createRateLimiter({ adapter: 'memory' }),
     { priority: 20 },
   );
+  if (!config.redis && config.env === 'production') {
+    logger.warn({ setting: 'REDIS_URL' }, 'Rate limits on creating organizations, inviting and accepting are counted per process: set REDIS_URL so every process shares them');
+  }
   const { organizations, access } = setupOrganizations({
     db: database.db,
     communication,

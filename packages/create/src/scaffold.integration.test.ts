@@ -196,15 +196,16 @@ describe('generated project', () => {
       JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
     });
     expect(status).toBeNull();
-    expect(output).toContain('jobs/tables-missing');
-    expect(output).toContain('mariachi db migrate');
+    // The first thing to look for its tables says they are missing and what to do
+    expect(output).toContain('The search tables are not there');
+    expect(output).toContain('migrate');
   }, 180_000);
 
   it('runs its jobs on Redis when REDIS_URL is set, and is ready with both', async () => {
     const { status, output } = await bootReady(project, {
       SERVICE_NAME: 'scaffold-app',
       NODE_ENV: 'development',
-      DATABASE_URL: await startPostgres(),
+      DATABASE_URL: await migratedDatabase(project),
       REDIS_URL: await startRedis(),
       JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
     });

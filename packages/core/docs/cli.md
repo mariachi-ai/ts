@@ -130,6 +130,10 @@ files like every other command, so it is for projects that verify HS256 tokens: 
   user accept an invitation sent to that address.
 - It does nothing when `NODE_ENV` is `production`. It gives no access the secret doesn't already
   give; in production, tokens come from wherever your users sign in.
+- **Never point it at a deployed app's secret.** A token signed with it is a real sign-in as anyone,
+  with no record of who made it. Keep a development secret in `.env` and the real one out of reach.
+- **In your own code, never sign `email_verified: true` because a request said so.** Sign it only
+  after you have confirmed the address yourself: it is what lets someone accept an invitation.
 
 ## doctor
 

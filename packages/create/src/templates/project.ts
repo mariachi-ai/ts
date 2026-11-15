@@ -177,8 +177,8 @@ const SEARCH_INDEXES = `import type { SearchIndex } from '@mariachi/search';
  * Then, in a service: \`deps.search.indexDocument(ctx, 'notes', { id, title })\` when a note is written
  * (inside withTransaction it commits with the write), \`removeDocument\` when it is deleted, and
  * \`deps.search.search(ctx, 'notes', { query })\` to find. Every call sees only the documents of
- * ctx.tenantId. An index that exists is left as it is: after changing its fields, reindex
- * (node_modules/@mariachi/core/docs/search.md).
+ * ctx.tenantId. An index that exists is left as it is: change its fields here and the app warns at
+ * start, and the stored fields stay in use until you reindex (node_modules/@mariachi/core/docs/search.md).
  */
 export const searchIndexes: SearchIndex[] = [];
 `;
@@ -215,13 +215,20 @@ describe('search, as the app wires it', () => {
     const theirs = await search.search<{ title: string }>(inTenant('tenant-b'), 'e2e_articles', { query: 'wool' });
     expect(theirs.hits.map((hit) => hit.document.title)).toEqual(['Their own wool hat']);
     expect((await search.search(inTenant('tenant-c'), 'e2e_articles', { query: 'wool' })).total).toBe(0);
+    // Removing is by tenant too: their document 1 goes, the first tenant's stays
+    await search.removeDocument(inTenant('tenant-b'), 'e2e_articles', '1');
+    expect((await search.search(inTenant('tenant-b'), 'e2e_articles', { query: 'wool' })).total).toBe(0);
+    expect((await search.search(inTenant('tenant-a'), 'e2e_articles', { query: 'wool' })).total).toBe(1);
     await expect(search.search(createTestContext(), 'e2e_articles', { query: 'wool' })).rejects.toMatchObject({ code: 'search/tenant-required' });
   });
 
-  it('leaves an index that already exists as it is, and still starts', async () => {
-    // The second is found there when the app starts, as an index is on every start after the first
-    const again = await startApp({ searchIndexes: [articles, articles] });
-    await again.stop();
+  it('leaves an index that already exists as it is, and says when its fields here have changed', async () => {
+    const { search } = running.app;
+    expect(await search.ensureIndexes([articles])).toEqual({ created: [], unchanged: ['e2e_articles'], changed: [] });
+    const edited = { ...articles, fields: [...articles.fields, { name: 'tags', type: 'string[]', facet: true }] } satisfies SearchIndex;
+    // Reported, not applied: the stored fields stay in use until a reindex
+    expect(await search.ensureIndexes([edited])).toEqual({ created: [], unchanged: [], changed: ['e2e_articles'] });
+    await expect(search.search(inTenant('tenant-a'), 'e2e_articles', { query: 'wool', facets: ['tags'] })).rejects.toMatchObject({ code: 'search/invalid-input' });
   });
 });
 `;
@@ -540,21 +547,15 @@ ${orgs
 
   // Search in Postgres too (src/schema/search.ts), each tenant's documents kept apart: a call reads and
   // writes only those of ctx.tenantId, and one with no tenant is refused. The indexes are in src/search/index.ts.
-  const searchClient = createPostgresSearch(database.db);
-  const search = new DefaultSearch({ client: searchClient, tenantScoped: true }, instrumentation);
+  const search = lifecycle.manage(
+    'search',
+    new DefaultSearch({ client: createPostgresSearch(database.db), tenantScoped: true }, instrumentation),
+    { priority: 25 },
+  );
   container.register(KEYS.Search, search);
-  lifecycle.startup.register({
-    name: 'search-indexes',
-    priority: 30,
-    fn: async () => {
-      for (const index of options.searchIndexes ?? searchIndexes) {
-        await searchClient.createIndex(index).catch((error: { code?: string }) => {
-          // Already there, from an earlier start: left as it is
-          if (error.code !== 'search/index-exists') throw error;
-        });
-      }
-    },
-  });
+  // Creates the indexes that aren't there yet. One that exists is left as it is, and a warning says so
+  // when its fields here have changed: they take effect when you reindex.
+  lifecycle.startup.register({ name: 'search-indexes', priority: 30, fn: async () => void (await search.ensureIndexes(options.searchIndexes ?? searchIndexes)) });
 
   // One communication layer per process: handlers register on it, controllers call through it.
   const communication = createCommunication({}, instrumentation);

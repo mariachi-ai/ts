@@ -49,8 +49,11 @@ const json = (value: unknown): unknown => (typeof value === 'string' ? JSON.pars
 
 /** Postgres's "relation does not exist" (42P01), on the error or on what it wraps. */
 function isUndefinedTable(error: unknown): boolean {
-  for (let e = error as { code?: unknown; cause?: unknown } | null | undefined; e; e = e.cause as typeof e) {
+  // A few steps and no more: a cause chain can loop
+  let e = error as { code?: unknown; cause?: unknown } | null | undefined;
+  for (let depth = 0; e && depth < 10; depth++) {
     if (e.code === '42P01') return true;
+    e = e.cause as typeof e;
   }
   return false;
 }

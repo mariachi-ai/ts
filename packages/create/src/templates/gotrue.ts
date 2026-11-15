@@ -303,21 +303,15 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
 
   // Search in Postgres too (src/schema/search.ts), each tenant's documents kept apart: a call reads and
   // writes only those of ctx.tenantId, and one with no tenant is refused. The indexes are in src/search/index.ts.
-  const searchClient = createPostgresSearch(database.db);
-  const search = new DefaultSearch({ client: searchClient, tenantScoped: true }, instrumentation);
+  const search = lifecycle.manage(
+    'search',
+    new DefaultSearch({ client: createPostgresSearch(database.db), tenantScoped: true }, instrumentation),
+    { priority: 25 },
+  );
   container.register(KEYS.Search, search);
-  lifecycle.startup.register({
-    name: 'search-indexes',
-    priority: 30,
-    fn: async () => {
-      for (const index of options.searchIndexes ?? searchIndexes) {
-        await searchClient.createIndex(index).catch((error: { code?: string }) => {
-          // Already there, from an earlier start: left as it is
-          if (error.code !== 'search/index-exists') throw error;
-        });
-      }
-    },
-  });
+  // Creates the indexes that aren't there yet. One that exists is left as it is, and a warning says so
+  // when its fields here have changed: they take effect when you reindex.
+  lifecycle.startup.register({ name: 'search-indexes', priority: 30, fn: async () => void (await search.ensureIndexes(options.searchIndexes ?? searchIndexes)) });
 
   // One communication layer per process: handlers register on it, controllers call through it.
   const communication = createCommunication({}, instrumentation);

@@ -3,6 +3,7 @@ import { sql } from 'drizzle-orm';
 import type { Context } from '@mariachi/core';
 import { applySchema, createPostgresDatabase, withTransaction, type PostgresDatabase } from '@mariachi/database-postgres';
 import { startPostgres, stopAll } from '../../../../test/setup';
+import { DefaultSearch } from '../search';
 import type { SearchIndex } from '../types';
 import { createPostgresSearch, PostgresSearchAdapter, searchDocumentsTable, searchIndexesTable } from './index';
 
@@ -409,6 +410,26 @@ describe('PostgresSearchAdapter', () => {
     // The name is free again
     await search.createIndex(articles(name));
     expect((await search.search(name, { query: '*' })).total).toBe(0);
+  });
+
+  it('gives back the definition an index is stored with, and lets ensureIndexes notice changed fields', async () => {
+    const name = await seeded();
+    expect(await search.getIndex(name)).toEqual(articles(name));
+    expect(await search.getIndex(unique('no_such'))).toBeUndefined();
+    // A tenant's client reads the same definition: it is every tenant's
+    expect(await search.forTenant('tenant-a').getIndex(name)).toEqual(articles(name));
+
+    const warnings: string[] = [];
+    const logger = { info() {}, error() {}, debug() {}, warn: (_fields: unknown, message?: string) => void warnings.push(message ?? ''), child: () => logger };
+    const wired = new DefaultSearch({ client: search, tenantScoped: true }, { logger });
+    const fresh = unique('fresh');
+    expect(await wired.ensureIndexes([articles(name), articles(fresh)])).toEqual({ created: [fresh], unchanged: [name], changed: [] });
+    const edited = { ...articles(name), fields: [...articles(name).fields, { name: 'author', type: 'string' }] } satisfies SearchIndex;
+    expect(await wired.ensureIndexes([edited])).toEqual({ created: [], unchanged: [], changed: [name] });
+    expect(warnings).toHaveLength(1);
+    // Nothing was applied: the stored definition and the documents are as they were
+    expect(await search.getIndex(name)).toEqual(articles(name));
+    expect((await search.search(name, { query: 'trumpets' })).total).toBe(2);
   });
 
   it('is one search for every process on the database', async () => {
