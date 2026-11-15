@@ -67,9 +67,11 @@ export function generateOpenApi(
       ...(route.tags ? { tags: route.tags } : {}),
       ...(route.deprecated ? { deprecated: true } : {}),
       parameters: [...parameters(route.schema?.params, 'path'), ...parameters(route.schema?.query, 'query')],
-      ...(route.schema?.body
-        ? { requestBody: { required: true, content: { 'application/json': { schema: toSchema(route.schema.body) } } } }
-        : {}),
+      ...(route.upload
+        ? { requestBody: { required: true, content: { 'multipart/form-data': { schema: route.schema?.body ? toSchema(route.schema.body) : { type: 'object' } } } } }
+        : route.schema?.body
+          ? { requestBody: { required: true, content: { 'application/json': { schema: toSchema(route.schema.body) } } } }
+          : {}),
       responses: {
         [status]: {
           description: 'Success',

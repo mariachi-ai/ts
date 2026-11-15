@@ -873,8 +873,20 @@
     color: var(--m-color-fg-muted);
   }
 
+  /* A page's own breadcrumb (not the library's component shown on its page): 24px link targets, since the
+     category link sits just under it (WCAG 2.2 target size) */
+  .x-crumbs a {
+    display: inline-flex;
+    align-items: center;
+    min-block-size: 1.5rem;
+  }
+
+  /* A link in the eyebrow is a 24px target, clear of the breadcrumb above it (WCAG 2.2 target size) */
   .x-eyebrow-link {
+    display: inline-flex;
+    align-items: center;
     inline-size: fit-content;
+    min-block-size: 1.5rem;
     text-decoration: none;
   }
 

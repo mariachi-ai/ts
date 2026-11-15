@@ -7,6 +7,20 @@
 export { FastifyServerAdapter, joinPath } from './adapters/fastify';
 export { contextFromRequest, traceIdFromTraceparent, type RequestIdentity } from './context';
 export { HttpResponse, httpResponse } from './types';
+export { type CookieOptions, parseCookies, serializeClearedCookie, serializeCookie } from './cookies';
+export {
+  encodeSse,
+  formatSseEvent,
+  type ServerSentEvent,
+  type SseOptions,
+  SseResponse,
+  sseResponse,
+  type StreamChunk,
+  type StreamOptions,
+  StreamResponse,
+  streamResponse,
+} from './stream';
+export { isMultipart, type MultipartLimits, type ParsedMultipart, parseMultipart, safeFilename, type UploadedFile, UploadError } from './multipart';
 export type {
   HttpMethod,
   CorsOptions,

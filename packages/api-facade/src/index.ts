@@ -3,6 +3,12 @@ export { BaseController } from './controller';
 export { generateOpenApi } from './openapi';
 export {
   bearerStrategy,
+  cookieStrategy,
+  assertSameOrigin,
+  CrossSiteRequestError,
+  type BearerOptions,
+  type CookieStrategyOptions,
+  type SameOriginOptions,
   apiKeyStrategy,
   serviceTokenStrategy,
   hmacSignatureStrategy,
@@ -10,8 +16,8 @@ export {
   type ServiceTokenOptions,
   type HmacSignatureOptions,
 } from './auth/strategies';
-export { HttpResponse, httpResponse } from '@mariachi/server';
-export type { ServerConfig, CorsOptions } from '@mariachi/server';
+export { HttpResponse, httpResponse, SseResponse, sseResponse, StreamResponse, streamResponse, UploadError, safeFilename } from '@mariachi/server';
+export type { ServerConfig, CorsOptions, CookieOptions, MultipartLimits, ServerSentEvent, SseOptions, StreamOptions, UploadedFile } from '@mariachi/server';
 export type {
   ApiServerConfig,
   AuthStrategy,
