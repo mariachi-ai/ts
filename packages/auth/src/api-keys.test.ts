@@ -16,6 +16,24 @@ describe('ApiKeyService', () => {
     await expect(service.verify(issued.key)).rejects.toMatchObject({ code: 'auth/invalid-api-key' });
     expect((await service.verify(rotated.key)).apiKeyId).toBe(rotated.id);
   });
+
+  it('lets nobody rotate or revoke a key from outside its tenant, including someone in no tenant', async () => {
+    const service = new ApiKeyService(new MemoryApiKeyStore());
+    const owner = createContext({ logger: silent, tenantId: 't1', userId: 'u1' });
+    const issued = await service.issue(owner, { name: 'ci', scopes: ['read:users'] });
+    const missing = { code: 'auth/api-key-not-found' };
+    const elsewhere = createContext({ logger: silent, tenantId: 't2', userId: 'u2' });
+    // Signed in, on a route where the tenant is optional: no tenant is not every tenant
+    const nowhere = createContext({ logger: silent, userId: 'u9', identityType: 'session' });
+    for (const ctx of [elsewhere, nowhere]) {
+      await expect(service.rotate(ctx, issued.id)).rejects.toMatchObject(missing);
+      await expect(service.revoke(ctx, issued.id)).rejects.toMatchObject(missing);
+    }
+    expect((await service.verify(issued.key)).apiKeyId).toBe(issued.id);
+    // The system, with nobody signed in, can
+    await service.revoke(createContext({ logger: silent }), issued.id);
+    await expect(service.verify(issued.key)).rejects.toMatchObject({ code: 'auth/invalid-api-key' });
+  });
 });
 
 describe('CachedRoleStore', () => {

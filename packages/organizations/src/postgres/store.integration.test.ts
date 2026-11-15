@@ -51,6 +51,45 @@ describe('DrizzleOrganizationStore', () => {
     expect(rows(await database.db.execute(sql`select 1 from organization_invitations where organization_id = ${organization.id}::uuid`))).toHaveLength(0);
   });
 
+  it('keeps the table and column names the docs promise to readers such as a token hook', async () => {
+    const columns = async (table: string) =>
+      Object.fromEntries(
+        rows<{ column_name: string; data_type: string }>(await database.db.execute(sql`select column_name, data_type from information_schema.columns where table_name = ${table}`)).map((column) => [column.column_name, column.data_type]),
+      );
+    expect(await columns('tenants')).toMatchObject({ id: 'uuid', name: 'text', slug: 'text', status: 'USER-DEFINED' });
+    expect(await columns('organization_memberships')).toMatchObject({
+      organization_id: 'uuid',
+      user_id: 'text',
+      role: 'text',
+      status: 'text',
+      email: 'text',
+      name: 'text',
+      created_at: 'timestamp with time zone',
+      updated_at: 'timestamp with time zone',
+    });
+
+    // The query the docs give a hook: a user's organizations they can work in, the first joined on top
+    const orgs = new DefaultOrganizations({ store: new DrizzleOrganizationStore(database.db) }, { logger: silent });
+    const user = `hook-${crypto.randomUUID()}`;
+    const first = await orgs.create(as(user), { name: 'First' });
+    const second = await orgs.create(as(user), { name: 'Second' });
+    const third = await orgs.create(as(user), { name: 'Third' });
+    await orgs.suspend(as(user), second.organization.id);
+    const mine = rows<{ id: string; slug: string; name: string; role: string }>(
+      await database.db.execute(sql`
+        select t.id, t.slug, t.name, m.role
+        from organization_memberships m
+        join tenants t on t.id = m.organization_id
+        where m.user_id = ${user} and m.status = 'active' and t.status = 'active'
+        order by m.created_at, m.organization_id
+      `),
+    );
+    expect(mine.map((row) => [row.id, row.name, row.role])).toEqual([
+      [first.organization.id, 'First', 'owner'],
+      [third.organization.id, 'Third', 'owner'],
+    ]);
+  });
+
   it('refuses a second open invitation for one address, whatever the service does', async () => {
     const store = new DrizzleOrganizationStore(database.db);
     const ctx = as('someone');

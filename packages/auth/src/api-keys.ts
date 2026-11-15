@@ -1,4 +1,4 @@
-import { AuthError, type Context } from '@mariachi/core';
+import { AuthError, isTenantlessCaller, type Context } from '@mariachi/core';
 import { createApiKey, hashApiKey, type GeneratedApiKey } from './adapters/api-key';
 import type { ResolvedIdentity } from './types';
 
@@ -116,7 +116,8 @@ export class ApiKeyService {
 
   private async requireOwned(ctx: Context, id: string): Promise<ApiKeyRecord> {
     const record = await this.store.findById(id);
-    if (!record || (ctx.tenantId && record.tenantId !== ctx.tenantId)) {
+    // Someone signed in who is in no tenant owns no key; only the system (nobody signed in) reaches across tenants
+    if (!record || isTenantlessCaller(ctx) || (ctx.tenantId && record.tenantId !== ctx.tenantId)) {
       throw new AuthError('auth/api-key-not-found', `API key ${id} not found`);
     }
     return record;

@@ -117,12 +117,17 @@ export class OrganizationAccess {
       throw new TenancyError('tenancy/mismatch', 'The request names a different organization from the one in the token');
     }
 
-    if (this.source === 'token') return identity;
+    if (this.source === 'token') {
+      // The token is the only say here. A request that names an organization the token doesn't would run in
+      // the identity's own tenant while the client believes it is in the named one: refused, not passed through
+      if (named && !fromToken) throw new TenancyError('tenancy/mismatch', 'The request names an organization and the token names none');
+      return identity;
+    }
 
     const organizationId = named ?? fromToken;
     if (!organizationId) {
       // No organization named: the personal tenant, where the one person is the owner, or no tenant at all
-      if (isPersonalTenant(identity.tenantId) && !claimsReservedTenant(identity)) return { ...identity, roles: withRole(identity.roles, 'owner') };
+      if (isPersonalTenant(identity.tenantId) && !claimsReservedTenant(identity)) return { ...identity, roles: withRole(identity.roles, 'owner'), scopes: withoutRoles(identity.scopes) };
       return identity;
     }
     // A personal tenant's id, or anything else that isn't an organization's id, is not an organization
@@ -130,7 +135,7 @@ export class OrganizationAccess {
     const found = await this.lookup(identity, organizationId);
     if (!found) throw notFound();
     if (found.status !== 'active') throw new TenancyError('tenancy/suspended', 'This organization is suspended');
-    return { ...identity, tenantId: organizationId, roles: withRole(identity.roles, found.role) };
+    return { ...identity, tenantId: organizationId, roles: withRole(identity.roles, found.role), scopes: withoutRoles(identity.scopes) };
   }
 }
 
@@ -139,6 +144,16 @@ export class OrganizationAccess {
  * `admin` or `owner` that came in with the token says nothing about this organization, and must not
  * pass a check that the membership wouldn't.
  */
+/**
+ * The identity's scopes without any organization role's name. Some verifiers copy a provider's roles
+ * into scopes (`rolesAsScopes`), and a route that asks for the scope `admin` must not be passed by a
+ * provider's `admin` in an organization where the user is a plain member. The membership's role is
+ * not added here: ask for organization roles as roles, not scopes.
+ */
+function withoutRoles(scopes: string[]): string[] {
+  return scopes.filter((scope) => !(ORGANIZATION_ROLES as readonly string[]).includes(scope));
+}
+
 function withRole(roles: string[] | undefined, role: OrganizationRole): string[] {
   return [...(roles ?? []).filter((existing) => !(ORGANIZATION_ROLES as readonly string[]).includes(existing)), role];
 }

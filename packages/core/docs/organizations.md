@@ -80,8 +80,9 @@ anything:
 | names one organization while the token names another | refused: `tenancy/mismatch` (403) |
 
 - **It never chooses.** A user in three organizations who names none is placed in none of them.
-- **Only the membership gives an organization role.** An `admin` or `owner` among the token's own
-  roles is dropped: it says nothing about this organization.
+- **Only the membership gives an organization role.** An `admin`, `owner` or `member` among the
+  token's own roles is dropped, and among its scopes too (some verifiers copy a provider's roles into
+  scopes): it says nothing about this organization. Ask for organization roles as roles, not scopes.
 - **Only people are resolved.** An API key or a service stays in the tenant its credential was
   issued for.
 - **A removed member is out on their next request,** though their token is still valid. A lookup is
@@ -89,14 +90,56 @@ anything:
   With several processes, another one sees a removal within those five seconds; to make it
   immediate, publish from `organizations.onChange` and call `access.forget(organizationId)` where
   it arrives.
+- **The check runs on every route, the organization routes included.** A client still sending the id
+  of an organization its user has been removed from gets the 404 on `GET /organizations` too. That is
+  deliberate: a header that names an organization is never quietly ignored. The client drops the
+  header and lists again.
 - Read the organization from somewhere else with `organizationStrategy(strategy, access, {
-  organizationFrom: (req) => … })`: a subdomain, a path segment. For realtime, call
-  `access.resolve(identity, organizationId)` on the identity before `handleConnect`.
+  organizationFrom: (req) => … })`: a subdomain, a path segment.
+- **Realtime.** Call `access.resolve(identity, organizationId)` on the identity before
+  `handleConnect`. That checks the membership when the connection opens and not again: a socket
+  already open is not re-checked by itself. Listen to `organizations.onChange` and close the
+  connections of a member who was removed, or whose organization was suspended or deleted.
 
 **When the identity provider keeps the memberships** (WorkOS, Clerk, a token hook of your own) and
 puts the organization in the token, say so: `createOrganizationAccess({ organizations, source:
-'token' })`. The token's organization is then the tenant and this module's tables are never read.
-An app has one source of memberships, not both.
+'token' })`. The token's organization is then the tenant and this module's tables are never read. A
+request that names an organization the token doesn't is refused (`tenancy/mismatch`), as one that
+names a different organization is. An app has one source of memberships, not both.
+
+Mind how long the token lives: with the token as the source, a removed member keeps their access
+until the token expires, not for five seconds. If something of your own issues the token's
+organization claim (a token hook), have it read this module's tables and keep `source: 'module'`:
+the claim is then only a default, which the check confirms on every request.
+
+### Reading the tables yourself
+
+A token hook, a report or an admin screen may read the tables directly. These names and meanings
+are a contract: a release that changes one is a breaking change and says so.
+
+| Table | Column | Holds |
+| --- | --- | --- |
+| `tenants` | `id` (uuid) | the organization's id, which is the tenant id |
+| | `name`, `slug` | `slug` is unique across all tenants |
+| | `status` | `active`, `suspended` or `deleted` |
+| `organization_memberships` | `organization_id` (uuid) | references `tenants.id` |
+| | `user_id` (text) | the user's id as the verified token states it |
+| | `role` | `owner`, `admin` or `member` |
+| | `status` | `active` or `removed` |
+| | `email`, `name` | copies taken when the user joined; may be null |
+| | `created_at`, `updated_at` | when the user joined, and the last change |
+
+```sql
+-- A user's organizations: the ones they can work in, the one they joined first on top
+select t.id, t.slug, t.name, m.role
+from organization_memberships m
+join tenants t on t.id = m.organization_id
+where m.user_id = $1 and m.status = 'active' and t.status = 'active'
+order by m.created_at, m.organization_id;
+```
+
+Write through `Organizations`, not with SQL: the last-owner rule, the audit entries and the cache
+are all in the service.
 
 ### The endpoints
 

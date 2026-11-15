@@ -49,8 +49,12 @@ describe('OrganizationAccess', () => {
   it('takes no organization role from the token: only the membership says who is an admin or an owner', async () => {
     const { access, id } = await setup();
     // A provider's own "admin" or "owner" role says nothing about this organization
-    const resolved = await access.resolve(person('ben', '', { roles: ['owner', 'admin', 'authenticated', 'billing'] }), id);
+    const resolved = await access.resolve(person('ben', '', { roles: ['owner', 'admin', 'authenticated', 'billing'], scopes: ['admin', 'notes:read', 'owner', 'member'] }), id);
     expect(resolved.roles).toEqual(['authenticated', 'billing', 'member']);
+    // Nor as a scope, for a verifier that copies a provider's roles into scopes
+    expect(resolved.scopes).toEqual(['notes:read']);
+    const personal = await access.resolve(markPersonalTenant(person('ben', personalTenantId('main', 'ben'), { scopes: ['admin', 'notes:read'] })));
+    expect(personal.scopes).toEqual(['notes:read']);
   });
 
   it('gives one refusal to a non-member, an unknown organization and anything that is not an id', async () => {
@@ -112,7 +116,12 @@ describe('OrganizationAccess', () => {
     const fromProvider = person('zed', id, { roles: ['admin'] });
     expect(await access.resolve(fromProvider)).toBe(fromProvider);
     expect(await access.resolve(fromProvider, id)).toBe(fromProvider);
-    expect(await access.resolve(person('zed'), id)).toEqual(person('zed'));
+    // A request that names an organization the token doesn't is refused: passed through, it would run in the
+    // identity's own tenant while the client believed it was in the named one
+    await expect(access.resolve(person('zed'), id)).rejects.toMatchObject({ code: 'tenancy/mismatch' });
+    const personal = markPersonalTenant(person('zed', personalTenantId('main', 'zed')));
+    await expect(access.resolve(personal, id)).rejects.toMatchObject({ code: 'tenancy/mismatch' });
+    expect(await access.resolve(personal)).toBe(personal);
     expect(reads()).toBe(0);
   });
 

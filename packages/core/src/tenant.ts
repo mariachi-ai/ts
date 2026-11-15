@@ -79,3 +79,14 @@ export function claimsReservedTenant(identity: { tenantId?: string | null }): bo
   if (!isReservedTenantId(identity.tenantId)) return false;
   return (identity as Record<symbol, unknown>)[PERSONAL_TENANT_MARK] !== identity.tenantId;
 }
+
+/**
+ * Whether a context is someone signed in who is in no tenant: a caller on a route where the tenant
+ * is optional (`tenant: 'optional'`), before they have created or joined an organization.
+ *
+ * Such a caller is not the system. Code that reads "no tenant" as "every tenant", as a maintenance
+ * job may, must refuse them: check this before falling back to an unscoped query.
+ */
+export function isTenantlessCaller(ctx: { userId?: string | null; tenantId?: string | null; apiKeyId?: string | null }): boolean {
+  return !ctx.tenantId && Boolean(ctx.userId || ctx.apiKeyId);
+}

@@ -198,8 +198,8 @@ describe('organizations over HTTP', () => {
     expect((await call(`user:ada:${fromProvider}`, 'GET', '/notes')).body).toEqual({ tenantId: fromProvider, userId: 'ada', roles: ['authenticated'] });
     expect((await call(`user:ada:${fromProvider}`, 'GET', '/notes', undefined, { 'x-organization-id': fromProvider })).status).toBe(200);
     expect((await call(`user:ada:${fromProvider}`, 'GET', '/notes', undefined, { 'x-organization-id': crypto.randomUUID() })).body.error.code).toBe('tenancy/mismatch');
-    // A header alone names nothing the token doesn't
-    expect((await call('user:ada', 'GET', '/notes', undefined, { 'x-organization-id': fromProvider })).body.error.code).toBe('tenancy/missing-tenant');
+    // A header that names an organization the token doesn't is refused, not run somewhere else
+    expect((await call('user:ada', 'GET', '/notes', undefined, { 'x-organization-id': fromProvider })).body.error.code).toBe('tenancy/mismatch');
   });
 
   it('sends an invitation through the app\'s delivery when there is one, and then keeps the token from the inviter', async () => {
