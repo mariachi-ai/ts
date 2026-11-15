@@ -3,15 +3,36 @@ import type { AppConfigInput } from './schema';
 
 type Env = Record<string, string | undefined>;
 
-function num(v: string | undefined): number | undefined {
-  if (v === undefined || v === '') return undefined;
+/** A value that can't be read is a config error naming the variable, not a silent default. */
+const unreadable = (name: string, expected: string) => new ConfigError('config/invalid', `Invalid configuration: ${name} must be ${expected}`, { variable: name });
+
+function num(v: string | undefined, name: string): number | undefined {
+  if (v === undefined || v.trim() === '') return undefined;
   const n = Number(v);
-  return Number.isFinite(n) ? n : undefined;
+  if (!Number.isFinite(n)) throw unreadable(name, 'a number');
+  return n;
 }
 
-function bool(v: string | undefined): boolean | undefined {
-  if (v === undefined || v === '') return undefined;
-  return v === 'true' || v === '1';
+const TRUE = new Set(['true', '1', 'yes', 'on']);
+const FALSE = new Set(['false', '0', 'no', 'off']);
+
+function bool(v: string | undefined, name: string): boolean | undefined {
+  if (v === undefined || v.trim() === '') return undefined;
+  const value = v.trim().toLowerCase();
+  if (TRUE.has(value)) return true;
+  if (FALSE.has(value)) return false;
+  throw unreadable(name, 'true or false');
+}
+
+const ENVIRONMENTS = ['development', 'test', 'production'] as const;
+
+/** `ENV`, else `NODE_ENV`. An unknown value is refused: read as "development" it would switch production safeguards off. */
+function environment(env: Env): (typeof ENVIRONMENTS)[number] | undefined {
+  const name = env.ENV ? 'ENV' : 'NODE_ENV';
+  const value = env.ENV || env.NODE_ENV;
+  if (value === undefined || value === '') return undefined;
+  if ((ENVIRONMENTS as readonly string[]).includes(value)) return value as (typeof ENVIRONMENTS)[number];
+  throw unreadable(name, `development, test or production${name === 'NODE_ENV' ? ' (set ENV to one of them if NODE_ENV has to stay as it is)' : ''}`);
 }
 
 function list(v: string | undefined): string[] | undefined {
@@ -52,26 +73,25 @@ function compact<T extends Record<string, unknown>>(obj: T): T | undefined {
 
 /** Maps well-known environment variables onto the config shape. The only place `process.env` is read. */
 export function buildConfigFromEnv(env: Env = process.env): AppConfigInput {
-  const nodeEnv = env.ENV ?? env.NODE_ENV;
   return {
-    env: nodeEnv === 'development' || nodeEnv === 'test' || nodeEnv === 'production' ? nodeEnv : undefined,
+    env: environment(env),
     serviceName: env.SERVICE_NAME,
     server: compact({
       host: env.HOST,
-      port: num(env.PORT),
-      adminPort: num(env.ADMIN_PORT),
-      webhookPort: num(env.WEBHOOK_PORT),
-      trustProxy: bool(env.TRUST_PROXY),
-      bodyLimitBytes: num(env.BODY_LIMIT_BYTES),
+      port: num(env.PORT, 'PORT'),
+      adminPort: num(env.ADMIN_PORT, 'ADMIN_PORT'),
+      webhookPort: num(env.WEBHOOK_PORT, 'WEBHOOK_PORT'),
+      trustProxy: bool(env.TRUST_PROXY, 'TRUST_PROXY'),
+      bodyLimitBytes: num(env.BODY_LIMIT_BYTES, 'BODY_LIMIT_BYTES'),
       corsOrigins: list(env.CORS_ORIGINS),
-      shutdownTimeoutMs: num(env.SHUTDOWN_TIMEOUT_MS),
+      shutdownTimeoutMs: num(env.SHUTDOWN_TIMEOUT_MS, 'SHUTDOWN_TIMEOUT_MS'),
     }),
     database: env.DATABASE_URL
       ? compact({
           url: env.DATABASE_URL,
           adapter: env.DATABASE_ADAPTER,
-          poolMin: num(env.DATABASE_POOL_MIN),
-          poolMax: num(env.DATABASE_POOL_MAX),
+          poolMin: num(env.DATABASE_POOL_MIN, 'DATABASE_POOL_MIN'),
+          poolMax: num(env.DATABASE_POOL_MAX, 'DATABASE_POOL_MAX'),
         }) as NonNullable<AppConfigInput['database']>
       : undefined,
     redis: env.REDIS_URL ? { url: env.REDIS_URL } : undefined,
@@ -86,7 +106,7 @@ export function buildConfigFromEnv(env: Env = process.env): AppConfigInput {
     encryption: compact({
       adapter: env.ENCRYPTION_ADAPTER as 'local' | 'aws-kms' | 'gcp-kms' | undefined,
       key: env.ENCRYPTION_KEY,
-      keyVersion: num(env.ENCRYPTION_KEY_VERSION),
+      keyVersion: num(env.ENCRYPTION_KEY_VERSION, 'ENCRYPTION_KEY_VERSION'),
     }),
     storage: compact({
       adapter: env.STORAGE_ADAPTER,
