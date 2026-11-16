@@ -1,5 +1,6 @@
-// The probe on small pages in a real browser (it measures layout, so it needs one). Chrome from MARIACHI_CHROME, else
-// the installed Chrome channel; without a browser these tests are skipped.
+// The probe on small pages in a real browser (it measures layout, so it needs one): the browser at MARIACHI_CHROME,
+// else Playwright's bundled Chromium (never the machine's own Chrome). Without a browser, or when one is slow to
+// start, these tests are skipped: the launch gives up well inside the hook's timeout.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page } from 'playwright-core';
 import { probeSource } from '../src/fingerprint';
@@ -11,10 +12,12 @@ let page: Page | undefined;
 beforeAll(async () => {
   try {
     const { chromium } = await import('playwright-core');
-    browser = await chromium.launch(process.env.MARIACHI_CHROME ? { executablePath: process.env.MARIACHI_CHROME } : { channel: 'chrome' });
+    browser = await chromium.launch({ timeout: 20_000, ...(process.env.MARIACHI_CHROME ? { executablePath: process.env.MARIACHI_CHROME } : {}) });
     page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
   } catch {
+    await browser?.close().catch(() => {});
     browser = undefined;
+    page = undefined;
   }
 }, 30_000);
 afterAll(async () => { await browser?.close(); });

@@ -7,7 +7,8 @@
 //   pnpm --filter @mariachi/design fingerprint --matrix   (rebuild the matrix from the saved screens, no browser)
 //   pnpm --filter @mariachi/design fingerprint --print-scales   (print a fresh MEASURE_SCALE table from the saved
 //     screens, for a spec bump; no browser, no matrix)
-//   MARIACHI_CHROME=/path/to/chrome to use a specific browser (default: the installed Chrome channel)
+//   MARIACHI_CHROME=/path/to/chrome to use a specific browser (default: Playwright's bundled Chromium; install it with
+//     `pnpm --filter @mariachi/design exec playwright-core install chromium-headless-shell`. The machine's own Chrome is never used unless named here)
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -29,7 +30,7 @@ const screensOf = {};
 if (matrixOnly) {
   for (const id of ids) { const f = path.join(out, `${id}.screens.json`); if (fs.existsSync(f)) screensOf[id] = JSON.parse(fs.readFileSync(f, 'utf8')); }
 } else {
-const browser = await chromium.launch(process.env.MARIACHI_CHROME ? { executablePath: process.env.MARIACHI_CHROME } : { channel: 'chrome' });
+const browser = await chromium.launch(process.env.MARIACHI_CHROME ? { executablePath: process.env.MARIACHI_CHROME } : {});
 const { archetypes } = await import('../dist/index.js');
 const darkFirst = new Set(archetypes.filter((a) => a.tags.mode === 'dark-first').map((a) => a.id));
 const ctx = await browser.newContext({ deviceScaleFactor: 1, reducedMotion: 'no-preference', colorScheme: 'light' });
