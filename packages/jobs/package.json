@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/jobs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Background jobs and cron on BullMQ or Postgres, with context propagation, retries, dedup and a dead-letter queue.",
   "repository": {
     "type": "git",

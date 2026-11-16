@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/communication",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Typed in-process procedure calls between controllers and services, with middleware, timeouts and scope checks.",
   "repository": {
     "type": "git",

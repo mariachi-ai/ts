@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/cache",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Redis or in-memory cache with stampede protection, SCAN-based invalidation, owned locks and an idempotency store.",
   "repository": {
     "type": "git",
