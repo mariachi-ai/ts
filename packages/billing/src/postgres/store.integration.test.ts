@@ -100,11 +100,17 @@ describe('DrizzleBillingStore', () => {
     const confirmedAt = new Date();
     await store.markUsageForwarded('t_settle', 'confirmed', confirmedAt);
 
+    // A row from before records were marked as waiting: never pending, never confirmed
+    await store.recordUsage({ tenantId: 't_settle', customerId: 'cus_settle', metricName: 'tokens', quantity: 50, timestamp: at, idempotencyKey: 'legacy', dimensions: { project: 'old' } });
+
     const settledAt = new Date();
-    await store.settleUsage('t_settle', 'has-it', { outcome: 'provider-has-it', at: settledAt, by: 'staff-ada' });
-    await store.settleUsage('t_settle', 'lost', { outcome: 'written-off', at: settledAt, by: 'key:k_1', note: 'no event at the provider' });
-    // A record the provider confirmed is not rewritten
-    await store.settleUsage('t_settle', 'confirmed', { outcome: 'written-off', at: settledAt, by: 'staff-ada', note: 'too late' });
+    expect(await store.settleUsage('t_settle', 'has-it', { outcome: 'provider-has-it', at: settledAt, by: 'staff-ada' })).toBe(true);
+    expect(await store.settleUsage('t_settle', 'lost', { outcome: 'written-off', at: settledAt, by: 'key:k_1', note: 'no event at the provider' })).toBe(true);
+    // A record the provider confirmed is not rewritten, and neither is one already settled or never waiting: nothing changed, and it says so
+    expect(await store.settleUsage('t_settle', 'confirmed', { outcome: 'written-off', at: settledAt, by: 'staff-ada', note: 'too late' })).toBe(false);
+    expect(await store.settleUsage('t_settle', 'has-it', { outcome: 'written-off', at: settledAt, by: 'staff-lin', note: 'second thoughts' })).toBe(false);
+    expect(await store.settleUsage('t_settle', 'legacy', { outcome: 'written-off', at: settledAt, by: 'staff-lin', note: 'old' })).toBe(false);
+    expect(await store.settleUsage('t_settle', 'no-such-key', { outcome: 'provider-has-it', at: settledAt, by: 'staff-lin' })).toBe(false);
 
     expect(await store.findUsageRecord('t_settle', 'has-it')).toMatchObject({ forwardPending: false, forwardedAt: null, settlement: 'provider-has-it', settledBy: 'staff-ada', settlementNote: null });
     expect((await store.findUsageRecord('t_settle', 'has-it'))?.settledAt?.getTime()).toBe(settledAt.getTime());
@@ -115,10 +121,17 @@ describe('DrizzleBillingStore', () => {
     expect(await store.findUsageRecord('t_settle_other', 'has-it')).toMatchObject({ forwardPending: true, settlement: null });
 
     const range = { from: new Date(0), to: new Date(Date.now() + 60_000) };
-    expect((await store.summarizeUsage('t_settle', 'tokens', range)).totalQuantity).toBe(15);
-    // Billed: the provider confirmed it, or a person found that it has it
-    expect((await store.summarizeUsage('t_settle', 'tokens', range, { only: 'billed' })).totalQuantity).toBe(8);
+    expect((await store.summarizeUsage('t_settle', 'tokens', range)).totalQuantity).toBe(65);
+    // Billed: everything that is neither still waiting nor written off. The provider confirmed it (1), a
+    // person found that it has it (7), or it was never marked as waiting and so was sent when made (50).
+    expect((await store.summarizeUsage('t_settle', 'tokens', range, { only: 'billed' })).totalQuantity).toBe(58);
     expect((await store.summarizeUsage('t_settle', 'tokens', range, { only: 'written-off' })).totalQuantity).toBe(5);
+    // The same by dimension
+    expect(await store.summarizeUsageByDimension('t_settle', 'tokens', range, 'project', { only: 'billed' })).toEqual([
+      { value: 'old', totalQuantity: 50 },
+      { value: null, totalQuantity: 8 },
+    ]);
+    expect(await store.summarizeUsageByDimension('t_settle', 'tokens', range, 'project', { only: 'written-off' })).toEqual([{ value: null, totalQuantity: 5 }]);
 
     // Still waiting: only what nobody settled, and one tenant's when asked
     const waiting = async (tenantId?: string) =>

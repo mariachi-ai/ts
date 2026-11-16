@@ -9,8 +9,9 @@ resend, used to sit in `billing_usage_records` with nothing able to clear it.
 - `billing.settleStaleUsage(ctx, { tenantId, idempotencyKeys, outcome, note? })` records what a
   person found: `provider-has-it` or `written-off` (a note is required). It returns `{ settled,
   skipped }`, and settles only records that are still waiting and past the resend window.
-- The usage stays in the totals. `getUsage(ctx, metric, range, { only: 'billed' | 'written-off' })`
-  tells the two apart.
+- The usage stays in the totals. `getUsage` and `getUsageBreakdown` take `only: 'billed' |
+  'written-off'`. Billed is everything that is neither still waiting for the provider nor written
+  off, so records from before the upgrade count as billed.
 - `billing_usage_records` gains `settlement`, `settled_at`, `settled_by` and `settlement_note`
   (all nullable): generate a migration after upgrading. `forwarded_at` still means the provider's
   own confirmation. A custom `BillingStore` can add `settleUsage` and the `tenantId` option of

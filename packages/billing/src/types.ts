@@ -195,8 +195,11 @@ export type UsageSettlement = 'provider-has-it' | 'written-off';
 /** Which records a usage total counts. Default: all of them. */
 export interface UsageSummaryOptions {
   /**
-   * `billed`: only what the provider has (it confirmed the record, or a person settled it as
-   * `provider-has-it`). `written-off`: only what was settled as written off.
+   * `billed`: everything that is neither still waiting for the provider nor written off. That is
+   * what the provider confirmed, what a person settled as `provider-has-it`, and every record that
+   * was never marked as waiting: those from before records were marked, and those written by
+   * something other than `reportUsage`, which were sent when they were made.
+   * `written-off`: only what was settled as written off.
    */
   only?: 'billed' | 'written-off';
 }
@@ -505,12 +508,13 @@ export interface BillingStore {
   countPendingUsage?(options: { before: Date }): Promise<number>;
   /**
    * Records a person's settlement of a record and stops it waiting. Leaves `forwardedAt` alone:
-   * that is the provider's own confirmation. Does nothing to a record that isn't waiting.
+   * that is the provider's own confirmation. Changes only a record that is still waiting, and
+   * returns whether it changed one, so of two settlements made at once only one is told it did.
    */
-  settleUsage?(tenantId: string, idempotencyKey: string, settlement: { outcome: UsageSettlement; at: Date; by: string; note?: string }): Promise<void>;
+  settleUsage?(tenantId: string, idempotencyKey: string, settlement: { outcome: UsageSettlement; at: Date; by: string; note?: string }): Promise<boolean>;
   summarizeUsage(tenantId: string, metricName: string, range: DateRange, options?: UsageSummaryOptions): Promise<UsageSummary>;
   /** Sums usage per value of `dimensions[groupBy]` (`null` for records without it). */
-  summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string): Promise<UsageBreakdown['groups']>;
+  summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string, options?: UsageSummaryOptions): Promise<UsageBreakdown['groups']>;
 
   /**
    * Appends a ledger entry atomically. Rejects with `billing/insufficient-credits`

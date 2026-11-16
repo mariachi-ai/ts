@@ -378,11 +378,57 @@ describe('Billing service', () => {
         expect((await billing.getUsage(t1, 'tokens', far)).totalQuantity).toBe(13);
         expect((await billing.getUsage(t1, 'tokens', far, { only: 'billed' })).totalQuantity).toBe(8);
         expect((await billing.getUsage(t1, 'tokens', far, { only: 'written-off' })).totalQuantity).toBe(5);
+        expect((await billing.getUsageBreakdown(t1, 'tokens', { ...far, groupBy: 'project', only: 'written-off' })).groups).toEqual([{ value: null, totalQuantity: 5 }]);
+
+        // A row from before records were marked as waiting (no pending mark, no confirmation time) was
+        // sent when it was made: it is billed, like everything that is neither waiting nor written off
+        await store.recordUsage({ tenantId: 't1', customerId: 'cus_legacy', metricName: 'tokens', quantity: 50, timestamp: new Date(), idempotencyKey: 'legacy' });
+        expect((await billing.getUsage(t1, 'tokens', far)).totalQuantity).toBe(63);
+        expect((await billing.getUsage(t1, 'tokens', far, { only: 'billed' })).totalQuantity).toBe(58);
+        expect((await billing.getUsage(t1, 'tokens', far, { only: 'written-off' })).totalQuantity).toBe(5);
+
+        // A write-off is recorded against someone: a context with no user and no API key can't make one
+        const system = createContext({ logger: silent, identityType: 'system' });
+        await expect(billing.settleStaleUsage(system, { tenantId: 't2', idempotencyKeys: ['lost-3'], outcome: 'written-off', note: 'nobody decided this' })).rejects.toMatchObject({
+          code: 'billing/invalid-input',
+        });
 
         // Settling sent nothing to the provider, and only the other tenant's record is still unsettled
         expect(adapter.usage.map((u) => u.idempotencyKey)).toEqual(['fine']);
         expect(await keys()).toEqual(['t2:lost-3']);
         expect(await billing.forwardPendingUsage(createContext({ logger: silent, identityType: 'system' }), { olderThanMs: 1 })).toEqual({ forwarded: 0, failed: 0, stale: 1 });
+      } finally {
+        vi.useRealTimers();
+      }
+    });
+
+    it('tells only one of two people settling the same record at once that they did', async () => {
+      await billing.ensureCustomer(t1, { email: 'a@t1' });
+      failing(1);
+      await billing.reportUsage(t1, { metricName: 'tokens', quantity: 9, idempotencyKey: 'raced' }).catch(() => undefined);
+      vi.useFakeTimers({ now: Date.now() + 25 * 60 * 60 * 1000 });
+      try {
+        const ada = createContext({ logger: silent, userId: 'staff-ada', identityType: 'session' });
+        const lin = createContext({ logger: silent, userId: 'staff-lin', identityType: 'session' });
+        // Both look, both find it unsettled, both write
+        const [first, second] = await Promise.all([
+          billing.settleStaleUsage(ada, { tenantId: 't1', idempotencyKeys: ['raced'], outcome: 'provider-has-it' }),
+          billing.settleStaleUsage(lin, { tenantId: 't1', idempotencyKeys: ['raced'], outcome: 'written-off', note: 'not at the provider' }),
+        ]);
+        expect(first).toEqual({ settled: ['raced'], skipped: [] });
+        expect(second).toEqual({ settled: [], skipped: [{ key: 'raced', reason: 'settled-differently' }] });
+        expect(await store.findUsageRecord('t1', 'raced')).toMatchObject({ settlement: 'provider-has-it', settledBy: 'staff-ada' });
+
+        // And two who agree: one settles, the other finds it done
+        failing(1);
+        vi.useRealTimers();
+        await billing.reportUsage(t1, { metricName: 'tokens', quantity: 4, idempotencyKey: 'raced-2' }).catch(() => undefined);
+        vi.useFakeTimers({ now: Date.now() + 25 * 60 * 60 * 1000 });
+        const both = await Promise.all([ada, lin].map((who) => billing.settleStaleUsage(who, { tenantId: 't1', idempotencyKeys: ['raced-2'], outcome: 'provider-has-it' })));
+        expect(both).toEqual([
+          { settled: ['raced-2'], skipped: [] },
+          { settled: [], skipped: [{ key: 'raced-2', reason: 'already-settled' }] },
+        ]);
       } finally {
         vi.useRealTimers();
       }

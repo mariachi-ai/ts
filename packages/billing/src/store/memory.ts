@@ -189,10 +189,18 @@ export class MemoryBillingStore implements BillingStore {
     return this.usage.filter((u) => u.forwardPending && u.idempotencyKey && (this.usageRecordedAt.get(u) ?? new Date(0)) < options.before).length;
   }
 
-  async settleUsage(tenantId: string, idempotencyKey: string, settlement: { outcome: UsageSettlement; at: Date; by: string; note?: string }): Promise<void> {
+  async settleUsage(tenantId: string, idempotencyKey: string, settlement: { outcome: UsageSettlement; at: Date; by: string; note?: string }): Promise<boolean> {
     const found = this.usage.find((u) => u.tenantId === tenantId && u.idempotencyKey === idempotencyKey && u.forwardPending);
-    if (!found) return;
+    if (!found) return false;
     Object.assign(found, { forwardPending: false, settlement: settlement.outcome, settledAt: settlement.at, settledBy: settlement.by, settlementNote: settlement.note ?? null });
+    return true;
+  }
+
+  /** Whether a total asked for with `only` counts this record. */
+  private counted(u: UsageRecord, options: UsageSummaryOptions): boolean {
+    if (options.only === 'billed') return !u.forwardPending && u.settlement !== 'written-off';
+    if (options.only === 'written-off') return u.settlement === 'written-off';
+    return true;
   }
 
   private usageIn(tenantId: string, metricName: string, range: DateRange): UsageRecord[] {
@@ -200,16 +208,15 @@ export class MemoryBillingStore implements BillingStore {
   }
 
   async summarizeUsage(tenantId: string, metricName: string, range: DateRange, options: UsageSummaryOptions = {}): Promise<UsageSummary> {
-    const counted = (u: UsageRecord): boolean =>
-      options.only === 'billed' ? Boolean(u.forwardedAt) || u.settlement === 'provider-has-it' : options.only === 'written-off' ? u.settlement === 'written-off' : true;
     const totalQuantity = this.usageIn(tenantId, metricName, range)
-      .filter(counted)
+      .filter((u) => this.counted(u, options))
       .reduce((sum, u) => sum + u.quantity, 0);
     return { metricName, totalQuantity, periodStart: range.from, periodEnd: range.to };
   }
 
-  async summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string): Promise<UsageBreakdown['groups']> {
-    return groupByDimension(this.usageIn(tenantId, metricName, range), groupBy).map(([value, rows]) => ({
+  async summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string, options: UsageSummaryOptions = {}): Promise<UsageBreakdown['groups']> {
+    const records = this.usageIn(tenantId, metricName, range).filter((u) => this.counted(u, options));
+    return groupByDimension(records, groupBy).map(([value, rows]) => ({
       value,
       totalQuantity: rows.reduce((sum, u) => sum + u.quantity, 0),
     }));

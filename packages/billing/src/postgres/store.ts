@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
 import { BillingError, type Context } from '@mariachi/core';
 import { compileTable, currentTransaction, mapPgError, withTransaction, type DrizzleDb } from '@mariachi/database-postgres';
 import {
@@ -463,23 +463,28 @@ export class DrizzleBillingStore implements BillingStore {
     return Number(rows[0]?.n ?? 0);
   }
 
-  async settleUsage(tenantId: string, idempotencyKey: string, settlement: { outcome: UsageSettlement; at: Date; by: string; note?: string }): Promise<void> {
-    await this.run('settleUsage', () =>
+  async settleUsage(tenantId: string, idempotencyKey: string, settlement: { outcome: UsageSettlement; at: Date; by: string; note?: string }): Promise<boolean> {
+    const rows = await this.run('settleUsage', () =>
       this.db
         .update(usage)
         .set({ forwardPending: false, settlement: settlement.outcome, settledAt: settlement.at, settledBy: settlement.by, settlementNote: settlement.note ?? null })
-        // Only a record still waiting: one the provider confirmed meanwhile is not rewritten
-        .where(and(eq(usage.tenantId, tenantId), eq(usage.idempotencyKey, idempotencyKey), eq(usage.forwardPending, true))),
+        // Only a record still waiting: one the provider confirmed, or someone else settled, meanwhile is not rewritten
+        .where(and(eq(usage.tenantId, tenantId), eq(usage.idempotencyKey, idempotencyKey), eq(usage.forwardPending, true)))
+        .returning({ id: usage.id }),
     );
+    return rows.length > 0;
+  }
+
+  /** The condition a total asked for with `only` adds. */
+  private onlyUsage(options: UsageSummaryOptions): SQL | undefined {
+    // Billed: not waiting, and not written off. A row that was never marked as waiting was sent when it was made.
+    if (options.only === 'billed') return sql`(${usage.forwardPending} = false and ${usage.settlement} is distinct from 'written-off')`;
+    if (options.only === 'written-off') return eq(usage.settlement, 'written-off');
+    return undefined;
   }
 
   async summarizeUsage(tenantId: string, metricName: string, range: DateRange, options: UsageSummaryOptions = {}): Promise<UsageSummary> {
-    const only =
-      options.only === 'billed'
-        ? sql`(${usage.forwardedAt} is not null or ${usage.settlement} = 'provider-has-it')`
-        : options.only === 'written-off'
-          ? eq(usage.settlement, 'written-off')
-          : undefined;
+    const only = this.onlyUsage(options);
     const rows = await this.run('summarizeUsage', () =>
       this.db
         .select({ total: sql<string>`coalesce(sum(${usage.quantity}), 0)` })
@@ -489,12 +494,12 @@ export class DrizzleBillingStore implements BillingStore {
     return { metricName, totalQuantity: Number(rows[0]?.total ?? 0), periodStart: range.from, periodEnd: range.to };
   }
 
-  async summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string): Promise<UsageBreakdown['groups']> {
+  async summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string, options: UsageSummaryOptions = {}): Promise<UsageBreakdown['groups']> {
     const rows = await this.run('summarizeUsageByDimension', () =>
       this.db
         .select({ value: sql<string | null>`${usage.dimensions}->>${groupBy}`, total: sql<string>`coalesce(sum(${usage.quantity}), 0)` })
         .from(usage)
-        .where(and(eq(usage.tenantId, tenantId), eq(usage.metricName, metricName), gte(usage.timestamp, range.from), lt(usage.timestamp, range.to)))
+        .where(and(eq(usage.tenantId, tenantId), eq(usage.metricName, metricName), gte(usage.timestamp, range.from), lt(usage.timestamp, range.to), this.onlyUsage(options)))
         // By position: the key is a bind parameter, so repeating the expression wouldn't match.
         .groupBy(sql`1`)
         .orderBy(sql`1 asc nulls last`),

@@ -504,7 +504,8 @@ export abstract class Billing implements Instrumentable {
    *
    * Either way the usage stays in the totals (`getUsage`), because it happened; `getUsage(…, {
    * only })` separates what was billed from what was written off. `forwardedAt` is left alone: it
-   * means the provider itself answered.
+   * means the provider itself answered. A write-off is recorded against a person or an API key, so
+   * a context with neither can't make one.
    *
    * Only a record that is still waiting and past the resend window is settled. Inside the window
    * it can still be sent, so settling it could bill it twice or not at all. A record settled with
@@ -520,6 +521,8 @@ export abstract class Billing implements Instrumentable {
     if (!input.tenantId) throw invalid('tenantId is required');
     const note = input.note?.trim();
     if (input.outcome === 'written-off' && !note) throw invalid('Writing usage off needs a note saying why');
+    // A write-off is a decision about money: it is recorded against whoever made it, never against "system"
+    if (input.outcome === 'written-off' && !ctx.userId && !ctx.apiKeyId) throw invalid('Writing usage off needs a signed-in person or an API key to record it against');
     const find = this.store.findUsageRecord?.bind(this.store);
     const settle = this.store.settleUsage?.bind(this.store);
     if (!find || !settle) throw new BillingError('billing/config', 'This billing store cannot settle usage: it needs findUsageRecord and settleUsage');
@@ -544,8 +547,13 @@ export abstract class Billing implements Instrumentable {
         skipped.push({ key, reason });
         continue;
       }
-      await settle(input.tenantId, key, { outcome: input.outcome, at: new Date(), by, note });
-      settled.push(key);
+      if (await settle(input.tenantId, key, { outcome: input.outcome, at: new Date(), by, note })) {
+        settled.push(key);
+        continue;
+      }
+      // Nothing was written: between the look and the write, someone else settled it or the provider confirmed it
+      const now = await find(input.tenantId, key);
+      skipped.push({ key, reason: !now ? 'not-found' : !now.settlement ? 'not-pending' : now.settlement === input.outcome ? 'already-settled' : 'settled-differently' });
     }
     if (settled.length) {
       this.metrics?.increment('billing.usage.settled', settled.length, { outcome: input.outcome });
@@ -559,11 +567,11 @@ export abstract class Billing implements Instrumentable {
     return this.store.summarizeUsage(requireTenant(ctx), metricName, range, options);
   }
 
-  /** Usage of `metricName` per value of the `groupBy` dimension; records without it are grouped under `null`. */
-  async getUsageBreakdown(ctx: Context, metricName: string, options: DateRange & { groupBy: string }): Promise<UsageBreakdown> {
+  /** Usage of `metricName` per value of the `groupBy` dimension; records without it are grouped under `null`. `only` as in `getUsage`. */
+  async getUsageBreakdown(ctx: Context, metricName: string, options: DateRange & { groupBy: string } & UsageSummaryOptions): Promise<UsageBreakdown> {
     const groupBy = checkGroupBy(options.groupBy);
     const range = { from: options.from, to: options.to };
-    const groups = await this.store.summarizeUsageByDimension(requireTenant(ctx), metricName, range, groupBy);
+    const groups = await this.store.summarizeUsageByDimension(requireTenant(ctx), metricName, range, groupBy, { only: options.only });
     return { metricName, groupBy, periodStart: range.from, periodEnd: range.to, groups };
   }
 
