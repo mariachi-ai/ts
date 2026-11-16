@@ -45,12 +45,20 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@mariachi/core": "workspace:*",
+    "@mariachi/core": "workspace:*"
+  },
+  "peerDependencies": {
     "ioredis": "^5"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.7",
     "tsup": "^8",
-    "vitest": "^3"
+    "vitest": "^3",
+    "ioredis": "^5"
   }
 }

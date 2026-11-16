@@ -1,17 +1,13 @@
 import { Readable } from 'node:stream';
-import {
-  S3Client,
-  PutObjectCommand,
-  GetObjectCommand,
-  DeleteObjectCommand,
-  HeadObjectCommand,
-  CopyObjectCommand,
-  ListObjectsV2Command,
-  HeadBucketCommand,
-} from '@aws-sdk/client-s3';
-import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import { Upload } from '@aws-sdk/lib-storage';
-import { ConfigError, StorageError } from '@mariachi/core';
+import type { S3Client } from '@aws-sdk/client-s3';
+import { ConfigError, StorageError, loadOptionalPeer } from '@mariachi/core';
+
+// The AWS SDK, loaded when the adapter is first made or used: an app that stores files on S3 has
+// it installed (`pnpm add @aws-sdk/client-s3 @aws-sdk/lib-storage @aws-sdk/s3-request-presigner`).
+const FEATURE = 'The S3 storage adapter';
+const s3 = (): typeof import('@aws-sdk/client-s3') => loadOptionalPeer('@aws-sdk/client-s3', FEATURE, import.meta.url);
+const presigner = (): typeof import('@aws-sdk/s3-request-presigner') => loadOptionalPeer('@aws-sdk/s3-request-presigner', FEATURE, import.meta.url);
+const multipart = (): typeof import('@aws-sdk/lib-storage') => loadOptionalPeer('@aws-sdk/lib-storage', FEATURE, import.meta.url);
 import { normalizeKey, normalizePrefix } from '../keys';
 import type {
   ListOptions,
@@ -53,7 +49,7 @@ export class S3StorageAdapter implements StorageClient {
     }
     this.client =
       client ??
-      new S3Client({
+      new (s3().S3Client)({
         region: config.region,
         endpoint: config.endpoint,
         forcePathStyle: config.forcePathStyle,
@@ -84,7 +80,7 @@ export class S3StorageAdapter implements StorageClient {
     const body = typeof data === 'string' ? Buffer.from(data, 'utf-8') : data;
     try {
       await this.client.send(
-        new PutObjectCommand({
+        new (s3().PutObjectCommand)({
           Bucket: this.bucket,
           Key: this.fullKey(key),
           Body: body,
@@ -113,7 +109,7 @@ export class S3StorageAdapter implements StorageClient {
    */
   async putStream(key: string, body: Readable, options: PutOptions = {}): Promise<void> {
     try {
-      await new Upload({
+      await new (multipart().Upload)({
         client: this.client,
         params: {
           Bucket: this.bucket,
@@ -135,7 +131,7 @@ export class S3StorageAdapter implements StorageClient {
 
   async get(key: string): Promise<Buffer | null> {
     try {
-      const response = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: this.fullKey(key) }));
+      const response = await this.client.send(new (s3().GetObjectCommand)({ Bucket: this.bucket, Key: this.fullKey(key) }));
       if (!response.Body) return null;
       return Buffer.from(await response.Body.transformToByteArray());
     } catch (err) {
@@ -146,7 +142,7 @@ export class S3StorageAdapter implements StorageClient {
 
   async getStream(key: string): Promise<Readable | null> {
     try {
-      const response = await this.client.send(new GetObjectCommand({ Bucket: this.bucket, Key: this.fullKey(key) }));
+      const response = await this.client.send(new (s3().GetObjectCommand)({ Bucket: this.bucket, Key: this.fullKey(key) }));
       const body = response.Body;
       if (!body) return null;
       if (body instanceof Readable) return body;
@@ -162,7 +158,7 @@ export class S3StorageAdapter implements StorageClient {
 
   async head(key: string): Promise<ObjectInfo | null> {
     try {
-      const r = await this.client.send(new HeadObjectCommand({ Bucket: this.bucket, Key: this.fullKey(key) }));
+      const r = await this.client.send(new (s3().HeadObjectCommand)({ Bucket: this.bucket, Key: this.fullKey(key) }));
       return {
         key,
         size: r.ContentLength ?? 0,
@@ -179,7 +175,7 @@ export class S3StorageAdapter implements StorageClient {
 
   async delete(key: string): Promise<void> {
     try {
-      await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: this.fullKey(key) }));
+      await this.client.send(new (s3().DeleteObjectCommand)({ Bucket: this.bucket, Key: this.fullKey(key) }));
     } catch (err) {
       if (!isNotFound(err)) throw wrap('delete', key, err);
     }
@@ -192,7 +188,7 @@ export class S3StorageAdapter implements StorageClient {
   async copy(from: string, to: string): Promise<void> {
     const source = `${this.bucket}/${this.fullKey(from).split('/').map(encodeURIComponent).join('/')}`;
     try {
-      await this.client.send(new CopyObjectCommand({ Bucket: this.bucket, Key: this.fullKey(to), CopySource: source }));
+      await this.client.send(new (s3().CopyObjectCommand)({ Bucket: this.bucket, Key: this.fullKey(to), CopySource: source }));
     } catch (err) {
       if (isNotFound(err)) throw new StorageError('storage/not-found', `Object ${from} not found`);
       throw wrap('copy', from, err);
@@ -202,7 +198,7 @@ export class S3StorageAdapter implements StorageClient {
   async list(prefix: string, options: ListOptions = {}): Promise<ListResult> {
     try {
       const r = await this.client.send(
-        new ListObjectsV2Command({
+        new (s3().ListObjectsV2Command)({
           Bucket: this.bucket,
           Prefix: `${this.prefix}${normalizePrefix(prefix)}`,
           MaxKeys: Math.min(Math.max(options.limit ?? 100, 1), 1000),
@@ -224,19 +220,19 @@ export class S3StorageAdapter implements StorageClient {
   }
 
   async signedUrl(key: string, options: SignedUrlOptions = {}): Promise<string> {
-    const command = new GetObjectCommand({
+    const command = new (s3().GetObjectCommand)({
       Bucket: this.bucket,
       Key: this.fullKey(key),
       ResponseContentDisposition: options.downloadAs
         ? `attachment; filename="${options.downloadAs.replace(/["\\\r\n]/g, '_')}"`
         : undefined,
     });
-    return getSignedUrl(this.client, command, { expiresIn: Math.min(options.expiresIn ?? 3600, MAX_EXPIRES) });
+    return presigner().getSignedUrl(this.client, command, { expiresIn: Math.min(options.expiresIn ?? 3600, MAX_EXPIRES) });
   }
 
   async signedUploadUrl(key: string, options: SignedUploadOptions = {}): Promise<string> {
-    const command = new PutObjectCommand({ Bucket: this.bucket, Key: this.fullKey(key), ContentType: options.contentType });
-    return getSignedUrl(this.client, command, { expiresIn: Math.min(options.expiresIn ?? 900, MAX_EXPIRES) });
+    const command = new (s3().PutObjectCommand)({ Bucket: this.bucket, Key: this.fullKey(key), ContentType: options.contentType });
+    return presigner().getSignedUrl(this.client, command, { expiresIn: Math.min(options.expiresIn ?? 900, MAX_EXPIRES) });
   }
 
   publicUrl(key: string): string {
@@ -245,7 +241,7 @@ export class S3StorageAdapter implements StorageClient {
 
   async isHealthy(): Promise<boolean> {
     try {
-      await this.client.send(new HeadBucketCommand({ Bucket: this.bucket }));
+      await this.client.send(new (s3().HeadBucketCommand)({ Bucket: this.bucket }));
       return true;
     } catch {
       return false;

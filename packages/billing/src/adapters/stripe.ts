@@ -1,5 +1,13 @@
-import Stripe from 'stripe';
-import { BillingError } from '@mariachi/core';
+import type Stripe from 'stripe';
+import { BillingError, loadOptionalPeer } from '@mariachi/core';
+
+type StripeConstructor = typeof import('stripe').default;
+
+/** stripe, loaded when the adapter is first made: an app that bills with Stripe has it installed (`pnpm add stripe`). */
+function stripe(): StripeConstructor {
+  const loaded = loadOptionalPeer<StripeConstructor & { default?: StripeConstructor }>('stripe', 'The Stripe billing adapter', import.meta.url);
+  return loaded.default ?? loaded;
+}
 import type {
   BillingAdapter,
   Charge,
@@ -43,14 +51,26 @@ function itemParam(item: SubscriptionItemInput): { price: string; quantity?: num
 /** Stripe accepts at most 10 lookup keys per price list request. */
 const LOOKUP_KEYS_PER_REQUEST = 10;
 
+/**
+ * Whether this is an error the Stripe SDK threw, told by its shape and not its class. The SDK ships
+ * a CommonJS build and an ES module build, each with its own `StripeError` class; a client the app
+ * made with `import Stripe from 'stripe'` throws the other build's errors, which `instanceof`
+ * against this package's copy would miss.
+ */
+export function isStripeError(err: unknown): err is Stripe.errors.StripeError {
+  if (!err || typeof err !== 'object') return false;
+  const candidate = err as { type?: unknown; rawType?: unknown };
+  return typeof candidate.type === 'string' && candidate.type.startsWith('Stripe') && 'rawType' in candidate;
+}
+
 function isMissing(err: unknown): boolean {
-  return err instanceof Stripe.errors.StripeError && (err.code === 'resource_missing' || err.statusCode === 404);
+  return isStripeError(err) && (err.code === 'resource_missing' || err.statusCode === 404);
 }
 
 /** Maps Stripe SDK errors to typed billing errors with HTTP-meaningful codes. */
 export function mapStripeError(err: unknown, operation: string): BillingError {
   if (err instanceof BillingError) return err;
-  if (!(err instanceof Stripe.errors.StripeError)) {
+  if (!isStripeError(err)) {
     return new BillingError('billing/upstream-failed', `${operation} failed`, { cause: String(err) });
   }
   const meta = { operation, stripeCode: err.code, declineCode: (err as { decline_code?: string }).decline_code, requestId: err.requestId };
@@ -132,7 +152,7 @@ export class StripeAdapter implements BillingAdapter {
     }
     this.stripe =
       config.client ??
-      new Stripe(config.secretKey, {
+      new (stripe())(config.secretKey, {
         apiVersion: config.apiVersion as Stripe.LatestApiVersion | undefined,
         maxNetworkRetries: config.maxNetworkRetries ?? 2,
         timeout: config.timeoutMs ?? 20_000,

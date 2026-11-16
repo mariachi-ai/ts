@@ -1,11 +1,21 @@
-import Redis from 'ioredis';
+import { loadOptionalPeer } from '@mariachi/core';
+import type Redis from 'ioredis';
+
+type RedisConstructor = typeof import('ioredis').default;
+
+/** ioredis, loaded when a client is first made: an app that uses Redis has it installed (`pnpm add ioredis`). */
+function redisConstructor(feature: string): RedisConstructor {
+  const loaded = loadOptionalPeer<RedisConstructor & { default?: RedisConstructor }>('ioredis', feature, import.meta.url);
+  return loaded.default ?? loaded;
+}
 
 /**
  * Creates an ioredis client that does not connect until `connect()` is called, so constructing
  * services never opens sockets and lifecycle startup controls when connections happen.
  */
 export function createRedisClient(url = 'redis://localhost:6379'): Redis {
-  return new Redis(url, { lazyConnect: true, maxRetriesPerRequest: 3, enableOfflineQueue: true });
+  const RedisClient = redisConstructor('The Redis cache');
+  return new RedisClient(url, { lazyConnect: true, maxRetriesPerRequest: 3, enableOfflineQueue: true });
 }
 
 export async function connectRedis(client: Redis): Promise<void> {

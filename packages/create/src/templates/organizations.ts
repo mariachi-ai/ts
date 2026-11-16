@@ -152,7 +152,7 @@ export const ORGANIZATIONS_APP_FIELD = `  organizations: DefaultOrganizations;
 export const organizationsAppSetup = (auth: ProjectAuth): string => `
   // Organizations, memberships and invitations, in this app's own database: see src/organizations.ts.
   // The limits are counted in this process's memory, which is right for one process. With REDIS_URL
-  // set they are counted in Redis, and so shared by every process that serves the API.
+  // set (and ioredis installed) they are counted in Redis, and so shared by every process that serves the API.
   const limiter = lifecycle.manage(
     'rate-limit',
     config.redis
@@ -257,7 +257,8 @@ curl -X POST localhost:3000/api/organizations/$ORGANIZATION_ID/invitations -H "a
       : 'The address is read from the token: issue tokens with `email`, and with `email_verified: true` once you have confirmed it. `mariachi token --email <address>` signs a development token that says both.'
   }
 - Creating, inviting and accepting are rate limited, per user and per organization. The counts are
-  in this process's memory; set \`REDIS_URL\` when more than one process serves the API, so they share them.
+  in this process's memory; when more than one process serves the API, \`pnpm add ioredis\` and set
+  \`REDIS_URL\`, so they share them.
 ${
   auth === 'gotrue'
     ? "- **Leave the organization out of the token.** If a hook of yours puts one there (`AUTH_ORG_CLAIM`), a request runs in that organization without naming it (the membership here still admits it, and the role comes from the membership, never the token), but a request that names a different one is refused (`tenancy/mismatch`), so a user in two organizations could not switch. Let the header name the organization.\n"
