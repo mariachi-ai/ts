@@ -23,6 +23,8 @@ export interface JWTAdapterOptions {
 }
 
 const HMAC: Algorithm[] = ['HS256', 'HS384', 'HS512'];
+/** Claims `sign` writes from the identity or the adapter's options; extra claims can't take their names. */
+const OWN_CLAIMS = new Set(['sub', 'iss', 'aud', 'exp', 'nbf', 'iat', 'jti', 'userId', 'tenantId', 'tid', 'scopes', 'scope', 'roles', 'apiKeyId', 'sessionId', 'sid']);
 
 const claimsSchema = z
   .object({
@@ -105,8 +107,15 @@ export class JWTAdapter implements AuthenticationAdapter {
     };
   }
 
-  async sign(payload: IdentityPayload, expiresIn?: string | number): Promise<string> {
+  /**
+   * Signs a token for an identity. `claims` adds claims of your own beside the identity's (an `email`,
+   * say), which come back in `ResolvedIdentity.claims` on verify. A claim the adapter writes itself
+   * can't be given there.
+   */
+  async sign(payload: IdentityPayload, expiresIn?: string | number, claims?: Record<string, unknown>): Promise<string> {
     if (!this.signKey) throw new ConfigError('auth/jwt-config', 'Signing requires secret or privateKey');
+    const taken = Object.keys(claims ?? {}).filter((name) => OWN_CLAIMS.has(name));
+    if (taken.length) throw new ConfigError('auth/jwt-config', `These claims are the adapter's own to write: ${taken.join(', ')}`);
     const options: SignOptions = {
       algorithm: this.algorithms[0],
       expiresIn: (expiresIn ?? this.options.expiresIn ?? '1h') as SignOptions['expiresIn'],
@@ -119,6 +128,7 @@ export class JWTAdapter implements AuthenticationAdapter {
     }
     return jwt.sign(
       {
+        ...claims,
         userId: payload.userId,
         ...(payload.tenantId ? { tenantId: payload.tenantId } : {}),
         scopes: payload.scopes,

@@ -47,7 +47,8 @@ const ENV_EXAMPLE = (name: string, db: string) => `SERVICE_NAME=${name}
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/${db}
-REDIS_URL=redis://localhost:6379
+# Jobs run in Postgres. Set REDIS_URL to run them on Redis (BullMQ) instead.
+# REDIS_URL=redis://localhost:6379
 # Apply the committed migrations (drizzle/) at start. Handy where nothing else runs them.
 MIGRATE_ON_START=false
 
@@ -210,6 +211,9 @@ import { bootstrap, type BootstrapOptions } from '@mariachi/lifecycle';
 import { createCommunication, type CommunicationLayer } from '@mariachi/communication';
 import { createPostgresDatabase, runMigrations, type PostgresDatabase } from '@mariachi/database-postgres';
 import { createJobQueue, DefaultJobs } from '@mariachi/jobs';
+import { createPostgresJobQueue } from '@mariachi/jobs/postgres';
+import { DefaultSearch, type SearchIndex } from '@mariachi/search';
+import { createPostgresSearch } from '@mariachi/search/postgres';
 import { withPersonalTenants, type ResolvedIdentity } from '@mariachi/auth';
 import { createGoTrueAuth${orgs ? ', goTrueVerifiedEmail' : ''} } from '@mariachi/auth-gotrue';
 import { createTenancy, createTenancyMiddleware } from '@mariachi/tenancy';
@@ -219,6 +223,7 @@ import { goTrueConfig } from './auth';
 import { createControllers } from './api/controllers/index';
 import { registerServices } from './services/index';
 import { jobs as jobDefinitions } from './jobs/index';
+import { searchIndexes } from './search/index';
 ${orgs ? organizationsAppImports('gotrue') : ''}
 const MIGRATIONS = 'drizzle';
 
@@ -235,6 +240,8 @@ export interface AppOptions {
    * middleware or rate limits without editing this file.
    */
   configureApi?: (api: FastifyAdapter) => void;
+  /** The search indexes to keep, in place of the ones in src/search/index.ts. Tests pass their own. */
+  searchIndexes?: SearchIndex[];
 ${orgs ? ORGANIZATIONS_APP_OPTION : ''}}
 
 export interface App {
@@ -242,6 +249,8 @@ export interface App {
   communication: CommunicationLayer;
   database: PostgresDatabase;
   jobs: DefaultJobs;
+  /** Search over the app's own Postgres. Every call reads and writes only the documents of ctx.tenantId. */
+  search: DefaultSearch;
 ${orgs ? ORGANIZATIONS_APP_FIELD : ''}  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
   start(): Promise<string>;
   /** Stops listening, then closes the worker and the connections. */
@@ -255,7 +264,6 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
   const app = useConfigSection<AppSettings>(APP_CONFIG);
 
   if (!config.database) throw new ConfigError('app/database-required', 'DATABASE_URL is required');
-  if (!config.redis) throw new ConfigError('app/redis-required', 'REDIS_URL is required');
 
   // Startup runs in ascending priority; shutdown runs in reverse.
   const database = lifecycle.manage(
@@ -278,21 +286,37 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
     });
   }
 
-  const jobs = new DefaultJobs(
-    { queue: createJobQueue({ adapter: 'bullmq', redisUrl: config.redis.url, prefix: config.serviceName }, logger) },
-    instrumentation,
-  );
+  // Repositories, the job queue and search take the Drizzle client when they're built, so connect first (the startup connect is then a no-op).
+  await database.connect();
+
+  // Jobs run in Postgres (the tables in src/schema/job-queue.ts), so the app needs nothing but its
+  // database, and a job enqueued inside withTransaction commits with the write. With REDIS_URL set
+  // they run on Redis (BullMQ) instead.
+  const queue = config.redis
+    ? createJobQueue({ adapter: 'bullmq', redisUrl: config.redis.url, prefix: config.serviceName }, logger)
+    : createPostgresJobQueue(database.db, { prefix: config.serviceName }, logger);
+  const jobs = new DefaultJobs({ queue }, instrumentation);
   for (const job of jobDefinitions) jobs.registerJob(job);
   lifecycle.manage('jobs', jobs, { priority: 20 });
   lifecycle.startup.register({ name: 'jobs-worker', priority: 90, fn: () => jobs.start() });
   container.register(KEYS.JobQueue, jobs);
 
+  // Search in Postgres too (src/schema/search.ts), each tenant's documents kept apart: a call reads and
+  // writes only those of ctx.tenantId, and one with no tenant is refused. The indexes are in src/search/index.ts.
+  const search = lifecycle.manage(
+    'search',
+    new DefaultSearch({ client: createPostgresSearch(database.db), tenantScoped: true }, instrumentation),
+    { priority: 25 },
+  );
+  container.register(KEYS.Search, search);
+  // Creates the indexes that aren't there yet. One that exists is left as it is, and a warning says so
+  // when its fields here have changed: they take effect when you reindex.
+  lifecycle.startup.register({ name: 'search-indexes', priority: 30, fn: async () => void (await search.ensureIndexes(options.searchIndexes ?? searchIndexes)) });
+
   // One communication layer per process: handlers register on it, controllers call through it.
   const communication = createCommunication({}, instrumentation);
   container.register(KEYS.Communication, communication);
-  // Repositories take the Drizzle client when they're built, so connect first (the startup connect is then a no-op).
-  await database.connect();
-  registerServices(communication, { db: database.db, jobs });
+  registerServices(communication, { db: database.db, jobs, search });
 ${orgs ? organizationsAppSetup('gotrue') : ''}
   // Sign-in is GoTrue's: its ES256 tokens are checked against its JWKS, issuer and audience.
   const provider = options.verifier ?? createGoTrueAuth(goTrueConfig(app.auth));
@@ -335,6 +359,7 @@ ${orgs ? ORGANIZATIONS_STRATEGY_COMMENT : ''}    .withAuthStrategy('session', ${
     communication,
     database,
     jobs,
+    search,
 ${orgs ? '    organizations,\n' : ''}    start: async () => {
       await lifecycle.start();
       return address;
@@ -365,7 +390,7 @@ const owner = { sub: 'c2a1f0de-7b6c-4e59-8d3a-1f0e9b8c7d62', role: 'authenticate
 const solo = { sub: 'e4b7a9c1-2d3f-4a5b-8c6d-7e8f9a0b1c23', email: 'solo@example.test', role: 'authenticated' };
 
 describe('the app, started as main.ts starts it', () => {
-  it('is ready: the database and the job queue are connected', async () => {
+  it('is ready: the database, which holds the job queue and search, is connected', async () => {
     const res = await running.request('/api/health/ready');
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ status: 'healthy' });
@@ -456,7 +481,7 @@ const member = { userId: LIN, tenantId: 'acme' };
 const solo = { sub: 'e4b7a9c1-2d3f-4a5b-8c6d-7e8f9a0b1c23', email: 'solo@example.test', role: 'authenticated' };
 
 describe('the app, started as main.ts starts it', () => {
-  it('is ready: the database and the job queue are connected', async () => {
+  it('is ready: the database, which holds the job queue and search, is connected', async () => {
     const res = await running.request('/api/health/ready');
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ status: 'healthy' });
@@ -1305,7 +1330,7 @@ const AGENTS_AUTH_TESTS = `## Tests
 
 \`\`\`bash
 pnpm test          # unit tests (src/**/*.test.ts): no services needed
-pnpm test:e2e      # the whole app over HTTP (src/**/*.e2e.test.ts): starts a throwaway Postgres and Redis in Docker
+pnpm test:e2e      # the whole app over HTTP (src/**/*.e2e.test.ts): starts a throwaway Postgres in Docker
 \`\`\`
 
 - An end-to-end test calls \`startApp()\` from \`src/testing/e2e.ts\`: the same \`createApp()\` that
@@ -1340,6 +1365,11 @@ ${e2e ? '| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and t
 | \`src/services/<name>/\` | Service, repository and communication handlers for one domain |
 | \`src/schema/\` | \`defineTable\` tables; \`mariachi db generate\` turns them into migrations |
 | \`src/jobs/\` | \`defineJob\` background jobs |
+| \`src/search/\` | The search indexes; services reach search as \`deps.search\` |
+
+Postgres is the only service the app itself needs: jobs and search run in it
+(\`@mariachi/jobs/postgres\`, \`@mariachi/search/postgres\`). Don't add Redis or a search server to
+make either work. \`pnpm dev\` starts Postgres, applies migrations and runs the app with reload.
 
 ${e2e ? AGENTS_AUTH_TESTS : ''}## Sign-in, tenants and roles
 
@@ -1377,12 +1407,14 @@ token names, or the user's own personal tenant when it names none.
 ## Run
 
 \`\`\`bash
-cp .env.example .env    # then set AUTH_URL, e.g. https://<project>.supabase.co${AUTH_PATH}
-docker compose up -d    # Postgres and Redis
 pnpm install
-pnpm db:generate && pnpm db:migrate
+cp .env.example .env    # then set AUTH_URL, e.g. https://<project>.supabase.co${AUTH_PATH}
 pnpm dev
 \`\`\`
+
+\`pnpm dev\` (\`mariachi dev\`) starts Postgres with Docker Compose, writes and applies the first
+migration, and runs the app, reloading on changes. Postgres is the only service the app itself
+needs: jobs and search run in it (set \`REDIS_URL\` to run jobs on Redis instead).
 
 The API listens on \`PORT\` (default 3000) under \`/api\`. Health checks: \`/api/health/live\`,
 \`/api/health/ready\`, \`/api/health/startup\`. OpenAPI: \`/api/openapi.json\`.

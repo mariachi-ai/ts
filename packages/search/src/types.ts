@@ -60,6 +60,11 @@ export interface SearchIndex {
 
 export interface SearchClient {
   createIndex(index: SearchIndex): Promise<void>;
+  /**
+   * The definition an index is stored with, or undefined when there is none. For clients that can
+   * say (the Postgres and memory adapters); `ensureIndexes` uses it to notice changed fields.
+   */
+  getIndex?(name: string): Promise<SearchIndex | undefined>;
   deleteIndex(name: string): Promise<void>;
   indexDocument(indexName: string, document: SearchDocument): Promise<void>;
   indexDocuments(

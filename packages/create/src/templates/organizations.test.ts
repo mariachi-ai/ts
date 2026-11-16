@@ -47,7 +47,7 @@ describe('a project with --orgs', () => {
     for (const auth of AUTHS) {
       const app = orgs[auth]['src/app.ts'] as string;
       expect(app).toContain('const { organizations, access } = setupOrganizations({');
-      expect(app).toMatch(/return \{\s+api,\s+communication,\s+database,\s+jobs,\s+organizations,/);
+      expect(app).toMatch(/return \{\s+api,\s+communication,\s+database,\s+jobs,\s+search,\s+organizations,/);
       // The organizations are built after the services are registered and before the API is
       expect(app.indexOf('registerServices(communication')).toBeLessThan(app.indexOf('setupOrganizations({'));
       expect(app.indexOf('setupOrganizations({')).toBeLessThan(app.indexOf('createApiServer({'));
@@ -57,7 +57,9 @@ describe('a project with --orgs', () => {
   it('limits creating, inviting and accepting, and emails an invitation only when there is a page to send people to', () => {
     for (const auth of AUTHS) {
       const app = orgs[auth]['src/app.ts'] as string;
-      expect(app).toContain("createRateLimiter({ adapter: 'redis', url: config.redis.url");
+      // In memory with only Postgres; in Redis, shared between processes, once there is one
+      expect(app).toContain("? createRateLimiter({ adapter: 'redis', url: config.redis.url");
+      expect(app).toContain(": createRateLimiter({ adapter: 'memory' }),");
       expect(app).toContain('mailer: options.mailer ?? (config.email ? createEmailAdapter({ email: config.email }) : undefined),');
       expect(app).toContain('invitationUrl: app.invitationUrl,');
       const wiring = orgs[auth]['src/organizations.ts'] as string;

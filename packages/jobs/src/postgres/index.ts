@@ -47,6 +47,17 @@ interface ClaimedRow {
 const rows = <T>(result: unknown): T[] => (Array.isArray(result) ? (result as T[]) : (((result as { rows?: T[] } | undefined)?.rows ?? []) as T[]));
 const json = (value: unknown): unknown => (typeof value === 'string' ? JSON.parse(value) : value);
 
+/** Postgres's "relation does not exist" (42P01), on the error or on what it wraps. */
+function isUndefinedTable(error: unknown): boolean {
+  // A few steps and no more: a cause chain can loop
+  let e = error as { code?: unknown; cause?: unknown } | null | undefined;
+  for (let depth = 0; e && depth < 10; depth++) {
+    if (e.code === '42P01') return true;
+    e = e.cause as typeof e;
+  }
+  return false;
+}
+
 function nextRun(cron: string, timezone: string | undefined, after: Date): Date {
   try {
     return cronParser.parseExpression(cron, { currentDate: after, tz: timezone }).next().toDate();
@@ -208,7 +219,18 @@ export class PostgresJobAdapter implements JobQueue, JobWorker, JobScheduler {
 
   async start(): Promise<void> {
     if (this.running) return;
-    await this.syncSchedules();
+    try {
+      await this.syncSchedules();
+    } catch (error) {
+      // The first statement a worker runs: a database that was never migrated fails here
+      if (isUndefinedTable(error)) {
+        throw new JobsError(
+          'jobs/tables-missing',
+          "The job queue's tables are not in this database. Export jobsTable and jobSchedulesTable from '@mariachi/jobs/schema' in your schema, then migrate (mariachi db generate, mariachi db migrate; mariachi dev does both on a first run)",
+        );
+      }
+      throw error;
+    }
     this.abort = new AbortController();
     this.running = true;
     this.loop = this.work();

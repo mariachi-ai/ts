@@ -10,11 +10,19 @@ npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e,
 ```
 
 Creates the [project layout](./architecture.md#project-layout): `src/app.ts` (`createApp()`: config, lifecycle,
-Postgres, BullMQ jobs, communication, API server with JWT auth, health and OpenAPI), a `src/main.ts`
-that starts it, registry files, `docker-compose.yml` (Postgres + Redis), `.env.example`,
+Postgres, jobs, search, communication, API server with JWT auth, health and OpenAPI), a `src/main.ts`
+that starts it, registry files, `docker-compose.yml` (Postgres), `.env.example`,
 `vitest.config.ts`, end-to-end test support (`pnpm test:e2e`, see [testing.md](./testing.md#end-to-end-tests)),
 `AGENTS.md`, and an example `note` entity wired end to end. Dependencies are pinned to the framework version that generated the
 project. The directory must be empty or not exist.
+
+**Postgres is the only service a new project needs.** Jobs run in it (`@mariachi/jobs/postgres`,
+so a job enqueued in a transaction commits with the write) and so does search
+(`@mariachi/search/postgres`, tenant-scoped: `deps.search` in a service sees only the documents of
+`ctx.tenantId`; the indexes are listed in `src/search/index.ts`). Set `REDIS_URL` and jobs run on
+Redis (BullMQ) instead. The project's `pnpm dev` is [`mariachi dev`](#dev), so after `pnpm install`
+that one command is the whole setup, and [`mariachi token`](#token) signs a token to call the API
+with.
 
 `--no-e2e` leaves out the end-to-end test support (`pnpm test:e2e`, `src/testing/`, the
 `@mariachi/testing` and `testcontainers` devDependencies), for environments with no Docker.
@@ -101,6 +109,31 @@ skipped:
 Every `mariachi` command then loads those (variables already set in the environment still win),
 `dev` starts the app with them and never copies `.env.example`, and `doctor` checks what they
 produce. `--env-file <file>` (repeatable) replaces the list for one run of `dev` or `doctor`.
+
+## token
+
+```bash
+mariachi token                                         # user dev-user in tenant dev-tenant, good for an hour
+mariachi token --user ada --tenant acme --role admin --scope notes:read --expires 7d
+mariachi token --user ada --no-tenant --email ada@example.com
+curl -H "authorization: Bearer $(pnpm -s mariachi token)" localhost:3000/api/notes
+```
+
+Signs a token the project's API accepts, for calling it in development as any user. It signs with
+the project's own `JWT_SECRET` (and `JWT_ISSUER` and `JWT_AUDIENCE` when set), read from its env
+files like every other command, so it is for projects that verify HS256 tokens: the default
+`--auth jwt`. The token alone goes to stdout; who it is for goes to stderr.
+
+- `--no-tenant` names no tenant: a user in no organization, which is what a project made with
+  `--orgs` expects (there the request names the organization, in `x-organization-id`).
+- `--email` adds the address and marks it verified. You are vouching for it: that is what lets the
+  user accept an invitation sent to that address.
+- It does nothing when `NODE_ENV` is `production`. It gives no access the secret doesn't already
+  give; in production, tokens come from wherever your users sign in.
+- **Never point it at a deployed app's secret.** A token signed with it is a real sign-in as anyone,
+  with no record of who made it. Keep a development secret in `.env` and the real one out of reach.
+- **In your own code, never sign `email_verified: true` because a request said so.** Sign it only
+  after you have confirmed the address yourself: it is what lets someone accept an invitation.
 
 ## doctor
 

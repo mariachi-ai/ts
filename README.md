@@ -25,9 +25,8 @@ Status: pre-1.0. See [ROADMAP.md](ROADMAP.md) for what's stable, what's alpha, a
 ```bash
 npx @mariachi/cli init my-app
 cd my-app && pnpm install
-docker compose up -d && cp .env.example .env
-pnpm db:generate && pnpm db:migrate
-pnpm dev                                   # http://localhost:3000/api/health/ready, /api/openapi.json
+pnpm dev                                   # .env, Postgres (Docker Compose), migrations, then http://localhost:3000/api/health/ready
+curl -H "authorization: Bearer $(pnpm -s mariachi token)" localhost:3000/api/notes
 
 npx mariachi generate entity order         # schema, contract, repository, service, handler, controller, test
 npx mariachi validate                      # architecture and convention checks

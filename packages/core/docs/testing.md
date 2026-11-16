@@ -35,8 +35,9 @@ Types come from the real packages, so a double that drifts from its interface fa
 
 ## End-to-end tests
 
-A generated project tests itself over HTTP. `pnpm test:e2e` starts one throwaway Postgres and one
-Redis in Docker, and each test file starts the whole app against its own empty database:
+A generated project tests itself over HTTP. `pnpm test:e2e` starts one throwaway Postgres in
+Docker, and each test file starts the whole app against its own empty database, which holds its job
+queue and search too:
 
 ```ts
 import { afterAll, beforeAll, expect, it } from 'vitest';
@@ -62,8 +63,8 @@ The pieces, all in the generated project so you can change them:
 
 | File | What it does |
 | --- | --- |
-| `src/app.ts` | `createApp(options)` builds the app and returns it with `start()` (resolves to the address) and `stop()`. `main.ts` starts it; so do the tests. Options: `bootstrap` (config and environment), `verifier` (who checks tokens), `migrateOnStart`, and `configureApi` (add auth strategies, middleware or rate limits without editing the file) |
-| `src/testing/global-setup.ts` | Starts the containers once per run with `startPostgres()` and `startRedis()` from `@mariachi/testing` |
+| `src/app.ts` | `createApp(options)` builds the app and returns it with `start()` (resolves to the address) and `stop()`. `main.ts` starts it; so do the tests. Options: `bootstrap` (config and environment), `verifier` (who checks tokens), `migrateOnStart`, and `configureApi` (add auth strategies, middleware or rate limits without editing the file), and `searchIndexes` (the indexes to keep, in place of the app's own) |
+| `src/testing/global-setup.ts` | Starts Postgres once per run with `startPostgres()` from `@mariachi/testing` |
 | `src/testing/e2e.ts` | `startApp({ env?, migrateOnStart?, configureApi? })`: creates a database, calls `createApp()` with a test environment and `createTestAuth()`, creates the tables in `src/schema` with `applySchema`, and listens on a free port. Returns `request(path, { as, json, method, headers })`, `auth`, `app` and `stop()` |
 | `vitest.e2e.config.ts` | Runs `src/**/*.e2e.test.ts`; `pnpm test` leaves them out |
 

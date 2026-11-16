@@ -45,6 +45,10 @@ export class MemorySearchAdapter implements SearchClient {
     return this.state.connected;
   }
 
+  async getIndex(name: string): Promise<SearchIndex | undefined> {
+    return this.state.collections.get(name)?.index;
+  }
+
   async createIndex(index: SearchIndex): Promise<void> {
     for (const field of index.fields) mapFieldType(field.type);
     if (this.state.collections.has(index.name)) throw new SearchError('search/index-exists', `Collection ${index.name} already exists`);

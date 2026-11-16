@@ -6,7 +6,8 @@ import type {
   Instrumentable,
 } from '@mariachi/core';
 import { withSpan, SearchError, resolveInstrumentation, type InstrumentationDeps } from '@mariachi/core';
-import type { SearchClient, SearchQuery, SearchResult, SearchDocument } from './types';
+import { sameFields } from './field-types';
+import type { SearchClient, SearchIndex, SearchQuery, SearchResult, SearchDocument } from './types';
 import { SearchIndexer } from './indexer';
 import type { SearchAnalytics } from './analytics';
 
@@ -79,6 +80,37 @@ export abstract class Search implements Instrumentable {
       this.logger.info({ traceId: ctx.traceId, index: indexName, docId: documentId }, 'Document removed');
       this.metrics?.increment('search.document.removed', 1, { index: indexName });
     });
+  }
+
+  /**
+   * Makes sure each index exists, for an app to call when it starts with the indexes it keeps. One
+   * that isn't there is created. One that is there is left exactly as it is: its definition belongs
+   * to every tenant, and their stored documents were indexed under it. If its fields differ from the
+   * ones given, that is reported (`changed`, and a warning in the log) rather than applied: the new
+   * fields take effect when you reindex. Never throws for an index that exists.
+   */
+  async ensureIndexes(indexes: SearchIndex[]): Promise<{ created: string[]; unchanged: string[]; changed: string[] }> {
+    const result = { created: [] as string[], unchanged: [] as string[], changed: [] as string[] };
+    for (const index of indexes) {
+      try {
+        await this.client.createIndex(index);
+        result.created.push(index.name);
+        continue;
+      } catch (error) {
+        if (!(error instanceof SearchError) || error.code !== 'search/index-exists') throw error;
+      }
+      const stored = await this.client.getIndex?.(index.name);
+      if (stored && !sameFields(stored, index)) {
+        result.changed.push(index.name);
+        this.logger.warn(
+          { index: index.name },
+          `Search index ${index.name}: its fields in the code differ from the stored ones. The stored ones stay in use (documents are checked and searched by them) until you reindex`,
+        );
+      } else {
+        result.unchanged.push(index.name);
+      }
+    }
+    return result;
   }
 
   async connect(): Promise<void> {

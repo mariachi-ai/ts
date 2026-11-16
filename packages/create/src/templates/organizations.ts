@@ -151,11 +151,18 @@ export const ORGANIZATIONS_APP_FIELD = `  organizations: DefaultOrganizations;
 /** The statements of `createApp()` that build the organizations, after the services are registered. */
 export const organizationsAppSetup = (auth: ProjectAuth): string => `
   // Organizations, memberships and invitations, in this app's own database: see src/organizations.ts.
+  // The limits are counted in this process's memory, which is right for one process. With REDIS_URL
+  // set they are counted in Redis, and so shared by every process that serves the API.
   const limiter = lifecycle.manage(
     'rate-limit',
-    createRateLimiter({ adapter: 'redis', url: config.redis.url, prefix: \`\${config.serviceName}:rate-limit\` }),
+    config.redis
+      ? createRateLimiter({ adapter: 'redis', url: config.redis.url, prefix: \`\${config.serviceName}:rate-limit\` })
+      : createRateLimiter({ adapter: 'memory' }),
     { priority: 20 },
   );
+  if (!config.redis && config.env === 'production') {
+    logger.warn({ setting: 'REDIS_URL' }, 'Rate limits on creating organizations, inviting and accepting are counted per process: set REDIS_URL so every process shares them');
+  }
   const { organizations, access } = setupOrganizations({
     db: database.db,
     communication,
@@ -222,7 +229,7 @@ database by \`@mariachi/organizations\` (wired in \`src/organizations.ts\`; the 
 \`node_modules/@mariachi/core/docs/organizations.md\`).
 
 \`\`\`bash
-# Create one: the caller becomes its owner
+${auth === 'jwt' ? '# A user in no organization yet (the default development token names a tenant, which is not an organization)\nTOKEN=$(pnpm -s mariachi token --user ada --no-tenant --email ada@example.com)\n' : ''}# Create one: the caller becomes its owner
 curl -X POST localhost:3000/api/organizations -H "authorization: Bearer $TOKEN" -H 'content-type: application/json' -d '{"name":"Acme Rockets"}'
 # Work in it: name it on each request
 curl localhost:3000/api/organizations/$ORGANIZATION_ID/members -H "authorization: Bearer $TOKEN" -H "x-organization-id: $ORGANIZATION_ID"
@@ -247,9 +254,10 @@ curl -X POST localhost:3000/api/organizations/$ORGANIZATION_ID/invitations -H "a
 - **Only the invited address can accept**, and only once it is verified. ${
     auth === 'gotrue'
       ? "GoTrue's token states that only inside `user_metadata`, which a user can rewrite, so the app needs another source. Either set `AUTH_SERVICE_KEY` (a service-role key, a secret) and it reads the user's record; a GoTrue that confirms sign-ups without sending mail (`GOTRUE_MAILER_AUTOCONFIRM`) then counts every address as unverified, because anyone can sign up as any address there. Or have an access token hook add a top-level `email_verified` claim and set `AUTH_EMAIL_VERIFIED_CLAIM=required`: the app then holds no service key and looks nothing up. With neither, accepting answers `auth/verified-email-unavailable`."
-      : 'The address is read from the token: issue tokens with `email`, and with `email_verified: true` once you have confirmed it.'
+      : 'The address is read from the token: issue tokens with `email`, and with `email_verified: true` once you have confirmed it. `mariachi token --email <address>` signs a development token that says both.'
   }
-- Creating, inviting and accepting are rate limited (in Redis), per user and per organization.
+- Creating, inviting and accepting are rate limited, per user and per organization. The counts are
+  in this process's memory; set \`REDIS_URL\` when more than one process serves the API, so they share them.
 ${
   auth === 'gotrue'
     ? "- **Leave the organization out of the token.** If a hook of yours puts one there (`AUTH_ORG_CLAIM`), a request runs in that organization without naming it (the membership here still admits it, and the role comes from the membership, never the token), but a request that names a different one is refused (`tenancy/mismatch`), so a user in two organizations could not switch. Let the header name the organization.\n"

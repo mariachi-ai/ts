@@ -60,6 +60,7 @@
     "@mariachi/notifications": "workspace:*",
     "@mariachi/organizations": "workspace:*",
     "@mariachi/rate-limit": "workspace:*",
+    "@mariachi/search": "workspace:*",
     "@mariachi/tenancy": "workspace:*",
     "@mariachi/testing": "workspace:*",
     "@types/node": "^22",

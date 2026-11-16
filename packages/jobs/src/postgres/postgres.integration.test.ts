@@ -31,6 +31,7 @@ class HookedJobs extends Jobs {
 }
 
 let database: PostgresDatabase;
+let serverUrl: string;
 const running: Jobs[] = [];
 const ctx = createContext({ logger, traceId: 'trace-pg', tenantId: 't1', userId: 'u1', identityType: 'user' });
 
@@ -46,7 +47,8 @@ function make(config: PostgresJobConfig = {}) {
 const stored = (queue: string) => database.db.select().from(jobTables.jobs).where(eq(jobTables.jobs.queue, queue));
 
 beforeAll(async () => {
-  database = createPostgresDatabase({ url: await startPostgres() });
+  serverUrl = await startPostgres();
+  database = createPostgresDatabase({ url: serverUrl });
   await database.connect();
   await database.db.execute(sql`drop table if exists mariachi_jobs, mariachi_job_schedules`);
   await applySchema(database.db, [jobsTable, jobSchedulesTable]);
@@ -485,5 +487,24 @@ describe('Postgres job queue', () => {
     expect(await jobs.isHealthy()).toBe(true);
     const down = { execute: async () => Promise.reject(new MariachiError('database/down', 'connection refused')) };
     expect(await new PostgresJobAdapter(down as never, {}, logger).isHealthy()).toBe(false);
+  });
+});
+
+describe('a database that was never migrated', () => {
+  it('says which tables are missing and how to get them, instead of a bare SQL error', async () => {
+    const name = `jobs_bare_${randomUUID().replaceAll('-', '')}`;
+    await database.db.execute(sql.raw(`create database ${name}`));
+    const url = new URL(serverUrl);
+    url.pathname = `/${name}`;
+    const bare = createPostgresDatabase({ url: url.href });
+    await bare.connect();
+    try {
+      const backend = new PostgresJobAdapter(bare.db, { queue: 'q' }, logger);
+      const failure = await backend.start().catch((error: MariachiError) => error);
+      expect(failure).toMatchObject({ code: 'jobs/tables-missing' });
+      expect((failure as Error).message).toContain('@mariachi/jobs/schema');
+    } finally {
+      await bare.disconnect();
+    }
   });
 });
