@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/design-kits",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Every @mariachi/design language and preset as a kit a project copies in and owns: tokens, base styles, self-hosted fonts, motion and DESIGN.md, with a sha256 per file.",
   "mariachi": {
     "category": "design",

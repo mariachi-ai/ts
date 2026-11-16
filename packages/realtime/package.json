@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/realtime",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "WebSockets with channel authorization, heartbeats, presence and cross-instance fanout.",
   "repository": {
     "type": "git",
@@ -47,13 +47,21 @@
   "dependencies": {
     "@mariachi/core": "workspace:*",
     "ws": "^8",
-    "ioredis": "^5",
     "zod": "^3.24"
+  },
+  "peerDependencies": {
+    "ioredis": "^5"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.7",
     "tsup": "^8",
     "@types/ws": "^8",
-    "vitest": "^3"
+    "vitest": "^3",
+    "ioredis": "^5"
   }
 }

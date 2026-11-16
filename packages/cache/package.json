@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/cache",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Redis or in-memory cache with stampede protection, SCAN-based invalidation, owned locks and an idempotency store.",
   "repository": {
     "type": "git",
@@ -45,12 +45,20 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@mariachi/core": "workspace:*",
+    "@mariachi/core": "workspace:*"
+  },
+  "peerDependencies": {
     "ioredis": "^5"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.7",
     "tsup": "^8",
-    "vitest": "^3"
+    "vitest": "^3",
+    "ioredis": "^5"
   }
 }

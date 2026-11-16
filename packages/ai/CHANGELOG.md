@@ -1,5 +1,23 @@
 # @mariachi/ai
 
+## 0.1.1
+
+### Patch Changes
+
+- a31310b: Adapters say whether their streams carry tool calls: `adapter.streamsToolCalls`.
+
+  It is true on `AISdkAdapter` (so on the OpenAI, Anthropic and Google adapters), and on a
+  `FallbackAdapter` when every provider in it reports tool calls. `AIAdapter` declares it as an
+  optional property, so a caller that needs tool calls can stream when it is true and call
+  `generate` otherwise, without a cast.
+
+- Updated dependencies [f04e223]
+- Updated dependencies [0964659]
+- Updated dependencies [8486aa5]
+- Updated dependencies [867c6ca]
+  - @mariachi/core@0.1.1
+  - @mariachi/database@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

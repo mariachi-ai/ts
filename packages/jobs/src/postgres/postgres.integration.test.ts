@@ -193,10 +193,10 @@ describe('Postgres job queue', () => {
       await sleep(120);
       expect(ran).toEqual([]);
     });
-    await waitFor(() => ran.length === 1);
+    // The handler runs before the finished job's row is deleted, so wait for the row to go too
+    await waitFor(async () => ran.length === 1 && (await stored(queue)).length === 0);
     await sleep(120);
     expect(ran).toEqual(['committed']);
-    expect(await stored(queue)).toEqual([]);
   });
 
   it('shares a queue between workers: every job runs once', async () => {

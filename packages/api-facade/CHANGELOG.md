@@ -1,5 +1,60 @@
 # @mariachi/api-facade
 
+## 0.1.1
+
+### Patch Changes
+
+- 8486aa5: Organizations over HTTP: a request's named organization becomes its tenant once the membership is
+  confirmed.
+  - `createOrganizationAccess({ organizations })` and `organizationStrategy(strategy, access)`
+    (`@mariachi/organizations/http`): the organization a client names in `x-organization-id` becomes
+    `ctx.tenantId` only after the signed-in user's membership is found, and the member's role joins
+    the identity's roles. A non-member and an unknown organization get the same 404; a suspended
+    organization is 403; a request and a token that name different organizations are refused. A
+    request that names none keeps the identity's own tenant: nothing is chosen for the user.
+    `source: 'token'` is for providers that keep memberships themselves.
+  - `registerOrganizationProcedures(communication, organizations)` registers the `organizations.*`
+    procedures, with rate limits on creating, inviting and accepting when given a limiter, and
+    `deliverInvitation` to send the link so the token reaches only the invited address.
+  - `OrganizationsController`: endpoints under `/organizations` for all of it.
+  - `@mariachi/api-facade`: a route option `tenant: 'optional'` lets a signed-in user with no tenant
+    onto a route, with `ctx.tenantId` null. The default still refuses them.
+  - `@mariachi/auth`: `withUserNamespace(verifier, namespace)` prefixes the user ids a verifier
+    returns, for apps that accept sign-ins from more than one identity provider.
+  - **No tenant is not every tenant.** `isTenantlessCaller(ctx)` in `@mariachi/core` says whether a
+    context is someone signed in who is in no tenant. Audit reads, exports, retention and chain checks
+    refuse such a caller (`audit/tenant-required`), and API keys can't be rotated or revoked by one.
+    Before, those paths read a missing tenant as "all tenants", which only the system ever reached.
+  - `rateLimiting.checkTier` counts a signed-in caller who is in no tenant on their own (`user:<id>`
+    or `key:<id>`), not in the one counter all anonymous callers share.
+
+  **Changed:**
+  - `audit.verifyChain(ctx, tenantId)` and `audit.retain(ctx, …)` cover only the context's own tenant
+    when it has one. Before, a tenant's context could name another tenant's chain, and the in-memory
+    audit log's `retain` deleted every tenant's entries whatever the context.
+
+- aea145a: The API server can send pages and the files they load.
+  - `root: true` on a route mounts it at the server's root, outside its prefix (`/`, not `/api/…`),
+    and keeps it out of the OpenAPI document. `@mariachi/server` routes take `root` too.
+  - `html` is a template that escapes what is put into it; `raw` vouches for markup; `safeHref` keeps
+    a link from data to this site, `http:`, `https:` or `mailto:`; `htmlResponse` sends a page with a
+    Content-Security-Policy that loads from its own origin only and runs no inline script.
+  - `api.withStatic(urlPath, directory)` serves a directory's files, for the app's own styles,
+    scripts, fonts and images: regular files inside the directory only (no `..`, no link out of it, no
+    listings, no dotfiles), with a type by extension, `nosniff` and an `ETag`. `staticFiles` is the
+    handler alone.
+
+- Updated dependencies [f04e223]
+- Updated dependencies [0964659]
+- Updated dependencies [8486aa5]
+- Updated dependencies [867c6ca]
+- Updated dependencies [aea145a]
+  - @mariachi/core@0.1.1
+  - @mariachi/rate-limit@0.1.1
+  - @mariachi/server@0.1.1
+  - @mariachi/communication@0.1.1
+  - @mariachi/observability@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

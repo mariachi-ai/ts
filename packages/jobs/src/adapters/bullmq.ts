@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
-import { Queue, Worker, UnrecoverableError, type Job, type MinimalJob, type ConnectionOptions } from 'bullmq';
-import { JobsError, type Logger } from '@mariachi/core';
+import type { ConnectionOptions, Job, MinimalJob, Queue, UnrecoverableError, Worker } from 'bullmq';
+import { JobsError, loadOptionalPeer, type Logger } from '@mariachi/core';
 import type {
   DeadLetterEntry,
   EnqueueOptions,
@@ -15,6 +15,9 @@ import type {
 } from '../types';
 import { DEFAULT_RETRY, buildJobContext, isNonRetryable, priorityValue, retryDelay, runWithTimeout, unwrap, wrap } from '../envelope';
 
+/** bullmq, loaded when the queue is first made: an app that runs jobs on Redis has it installed (`pnpm add bullmq ioredis`). */
+const bullmq = (): typeof import('bullmq') => loadOptionalPeer<typeof import('bullmq')>('bullmq', 'The BullMQ job queue', import.meta.url);
+
 /** BullMQ rejects custom ids containing `:` or made only of digits; hash those deterministically. */
 export function toBullJobId(key: string | undefined): string | undefined {
   if (key === undefined) return undefined;
@@ -24,7 +27,7 @@ export function toBullJobId(key: string | undefined): string | undefined {
 
 /** An UnrecoverableError that keeps the original `code` for listeners and the DLQ. */
 function unrecoverable(code: string | undefined, message: string): UnrecoverableError {
-  return Object.assign(new UnrecoverableError(message), { code });
+  return Object.assign(new (bullmq().UnrecoverableError)(message), { code });
 }
 
 function connectionFromUrl(url: string | undefined): ConnectionOptions {
@@ -85,10 +88,10 @@ export class BullMQAdapter implements JobQueue, JobWorker, JobScheduler {
 
   async connect(): Promise<void> {
     if (this.queue) return;
-    this.queue = new Queue(this.queueName, { connection: this.connection, prefix: this.prefix });
+    this.queue = new (bullmq().Queue)(this.queueName, { connection: this.connection, prefix: this.prefix });
     this.queue.on('error', (err) => this.logger.error({ err }, 'job queue error'));
     if (this.config.deadLetter !== false) {
-      this.dlq = new Queue(`${this.queueName}-dead`, { connection: this.connection, prefix: this.prefix });
+      this.dlq = new (bullmq().Queue)(`${this.queueName}-dead`, { connection: this.connection, prefix: this.prefix });
     }
     await this.queue.waitUntilReady();
   }
@@ -222,7 +225,7 @@ export class BullMQAdapter implements JobQueue, JobWorker, JobScheduler {
 
   private async handleFailure(job: Job | undefined, error: Error): Promise<void> {
     if (!job) return;
-    const final = error instanceof UnrecoverableError || error.name === 'UnrecoverableError' || job.attemptsMade >= (job.opts.attempts ?? 1);
+    const final = error instanceof bullmq().UnrecoverableError || error.name === 'UnrecoverableError' || job.attemptsMade >= (job.opts.attempts ?? 1);
     const { context: envelope } = unwrap(job.data);
     for (const l of this.failureListeners) {
       try {
@@ -264,7 +267,7 @@ export class BullMQAdapter implements JobQueue, JobWorker, JobScheduler {
     }
 
     if (this.definitions.size === 0) return;
-    this.worker = new Worker(this.queueName, (job) => this.process(job), {
+    this.worker = new (bullmq().Worker)(this.queueName, (job) => this.process(job), {
       connection: this.connection,
       prefix: this.prefix,
       concurrency: this.config.concurrency ?? 5,

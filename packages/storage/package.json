@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/storage",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Object storage (S3 and compatibles, local disk, memory) with path-safe keys, streaming, presigned uploads and signed URLs.",
   "repository": {
     "type": "git",
@@ -46,14 +46,30 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@mariachi/core": "workspace:*"
+  },
+  "peerDependencies": {
     "@aws-sdk/client-s3": "^3.1138.0",
     "@aws-sdk/lib-storage": "^3.1138.0",
-    "@aws-sdk/s3-request-presigner": "^3.1138.0",
-    "@mariachi/core": "workspace:*"
+    "@aws-sdk/s3-request-presigner": "^3.1138.0"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-s3": {
+      "optional": true
+    },
+    "@aws-sdk/lib-storage": {
+      "optional": true
+    },
+    "@aws-sdk/s3-request-presigner": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "tsup": "^8",
     "typescript": "^5.7",
-    "vitest": "^3"
+    "vitest": "^3",
+    "@aws-sdk/client-s3": "^3.1138.0",
+    "@aws-sdk/lib-storage": "^3.1138.0",
+    "@aws-sdk/s3-request-presigner": "^3.1138.0"
   }
 }

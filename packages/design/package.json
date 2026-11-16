@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/design",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Framework-agnostic design library: one token contract, interchangeable presets, component CSS, and overrides at any granularity.",
   "repository": {
     "type": "git",

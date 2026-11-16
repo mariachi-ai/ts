@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/search",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Full-text search on Postgres, Typesense or memory, with typed fields, alias-based reindexing and query analytics.",
   "repository": {
     "type": "git",
@@ -58,18 +58,21 @@
   },
   "dependencies": {
     "@mariachi/core": "workspace:*",
-    "@mariachi/database": "workspace:*",
-    "typesense": "^1.8"
+    "@mariachi/database": "workspace:*"
   },
   "peerDependencies": {
     "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
-    "drizzle-orm": "^0.38"
+    "drizzle-orm": "^0.38",
+    "typesense": "^1.8"
   },
   "peerDependenciesMeta": {
     "@mariachi/database-postgres": {
       "optional": true
     },
     "drizzle-orm": {
+      "optional": true
+    },
+    "typesense": {
       "optional": true
     }
   },
@@ -78,6 +81,7 @@
     "tsup": "^8",
     "vitest": "^3",
     "@mariachi/database-postgres": "workspace:*",
-    "drizzle-orm": "^0.38"
+    "drizzle-orm": "^0.38",
+    "typesense": "^1.8"
   }
 }

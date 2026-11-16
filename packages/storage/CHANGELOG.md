@@ -1,5 +1,21 @@
 # @mariachi/storage
 
+## 0.1.1
+
+### Patch Changes
+
+- df6d8df: The three AWS SDK packages storage uses are asked for at one version line (`^3.1138.0`).
+
+  `@aws-sdk/lib-storage` 3.1138 needs `@aws-sdk/client-s3` of at least the same version, and storage
+  asked for any 3.x of each, so an install could pair a new upload library with an older client and
+  warn about an unmet peer.
+
+- Updated dependencies [f04e223]
+- Updated dependencies [0964659]
+- Updated dependencies [8486aa5]
+- Updated dependencies [867c6ca]
+  - @mariachi/core@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

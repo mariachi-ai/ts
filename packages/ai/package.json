@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/ai",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "LLM sessions persisted in Postgres, with token budgets, streaming, tools, agents, RAG, provider fallback and cost tracking.",
   "repository": {
     "type": "git",
@@ -65,29 +65,32 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.73",
     "@mariachi/core": "workspace:*",
     "@mariachi/database": "workspace:*",
     "ai": "^7.0.112",
     "zod": "^3.25.76"
   },
   "peerDependencies": {
-    "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
-    "drizzle-orm": "^0.38",
     "@ai-sdk/anthropic": "^4",
-    "@ai-sdk/google": "^4"
+    "@ai-sdk/google": "^4",
+    "@ai-sdk/openai": "^4.0.73",
+    "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
+    "drizzle-orm": "^0.38"
   },
   "peerDependenciesMeta": {
-    "@mariachi/database-postgres": {
-      "optional": true
-    },
-    "drizzle-orm": {
-      "optional": true
-    },
     "@ai-sdk/anthropic": {
       "optional": true
     },
     "@ai-sdk/google": {
+      "optional": true
+    },
+    "@ai-sdk/openai": {
+      "optional": true
+    },
+    "@mariachi/database-postgres": {
+      "optional": true
+    },
+    "drizzle-orm": {
       "optional": true
     }
   },
@@ -98,6 +101,7 @@
     "drizzle-orm": "^0.38",
     "tsup": "^8",
     "typescript": "^5.7",
-    "vitest": "^3"
+    "vitest": "^3",
+    "@ai-sdk/openai": "^4.0.73"
   }
 }

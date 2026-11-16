@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull, isNull, lt, lte, or, sql, type SQL } from 'drizzle-orm';
 import { BillingError, type Context } from '@mariachi/core';
 import { compileTable, currentTransaction, mapPgError, withTransaction, type DrizzleDb } from '@mariachi/database-postgres';
 import {
@@ -28,7 +28,9 @@ import type {
   SubscriptionStatus,
   UsageBreakdown,
   UsageRecord,
+  UsageSettlement,
   UsageSummary,
+  UsageSummaryOptions,
   StoredWebhookEvent,
   WebhookEventStatus,
 } from '../types';
@@ -110,6 +112,10 @@ function toUsageRecord(r: typeof usage.$inferSelect): UsageRecord {
     forwardPending: r.forwardPending,
     forwardedAt: r.forwardedAt ?? null,
     recordedAt: r.createdAt,
+    settlement: (r.settlement as UsageSettlement | null) ?? null,
+    settledAt: r.settledAt ?? null,
+    settledBy: r.settledBy ?? null,
+    settlementNote: r.settlementNote ?? null,
   };
 }
 
@@ -427,12 +433,20 @@ export class DrizzleBillingStore implements BillingStore {
     );
   }
 
-  async listPendingUsage(options: { after: Date; before: Date; limit: number }): Promise<UsageRecord[]> {
+  async listPendingUsage(options: { after: Date; before: Date; limit: number; tenantId?: string }): Promise<UsageRecord[]> {
     const rows = await this.run('listPendingUsage', () =>
       this.db
         .select()
         .from(usage)
-        .where(and(eq(usage.forwardPending, true), isNotNull(usage.idempotencyKey), gte(usage.createdAt, options.after), lt(usage.createdAt, options.before)))
+        .where(
+          and(
+            eq(usage.forwardPending, true),
+            isNotNull(usage.idempotencyKey),
+            gte(usage.createdAt, options.after),
+            lt(usage.createdAt, options.before),
+            options.tenantId ? eq(usage.tenantId, options.tenantId) : undefined,
+          ),
+        )
         .orderBy(asc(usage.createdAt))
         .limit(options.limit),
     );
@@ -449,22 +463,43 @@ export class DrizzleBillingStore implements BillingStore {
     return Number(rows[0]?.n ?? 0);
   }
 
-  async summarizeUsage(tenantId: string, metricName: string, range: DateRange): Promise<UsageSummary> {
+  async settleUsage(tenantId: string, idempotencyKey: string, settlement: { outcome: UsageSettlement; at: Date; by: string; note?: string }): Promise<boolean> {
+    const rows = await this.run('settleUsage', () =>
+      this.db
+        .update(usage)
+        .set({ forwardPending: false, settlement: settlement.outcome, settledAt: settlement.at, settledBy: settlement.by, settlementNote: settlement.note ?? null })
+        // Only a record still waiting: one the provider confirmed, or someone else settled, meanwhile is not rewritten
+        .where(and(eq(usage.tenantId, tenantId), eq(usage.idempotencyKey, idempotencyKey), eq(usage.forwardPending, true)))
+        .returning({ id: usage.id }),
+    );
+    return rows.length > 0;
+  }
+
+  /** The condition a total asked for with `only` adds. */
+  private onlyUsage(options: UsageSummaryOptions): SQL | undefined {
+    // Billed: not waiting, and not written off. A row that was never marked as waiting was sent when it was made.
+    if (options.only === 'billed') return sql`(${usage.forwardPending} = false and ${usage.settlement} is distinct from 'written-off')`;
+    if (options.only === 'written-off') return eq(usage.settlement, 'written-off');
+    return undefined;
+  }
+
+  async summarizeUsage(tenantId: string, metricName: string, range: DateRange, options: UsageSummaryOptions = {}): Promise<UsageSummary> {
+    const only = this.onlyUsage(options);
     const rows = await this.run('summarizeUsage', () =>
       this.db
         .select({ total: sql<string>`coalesce(sum(${usage.quantity}), 0)` })
         .from(usage)
-        .where(and(eq(usage.tenantId, tenantId), eq(usage.metricName, metricName), gte(usage.timestamp, range.from), lt(usage.timestamp, range.to))),
+        .where(and(eq(usage.tenantId, tenantId), eq(usage.metricName, metricName), gte(usage.timestamp, range.from), lt(usage.timestamp, range.to), only)),
     );
     return { metricName, totalQuantity: Number(rows[0]?.total ?? 0), periodStart: range.from, periodEnd: range.to };
   }
 
-  async summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string): Promise<UsageBreakdown['groups']> {
+  async summarizeUsageByDimension(tenantId: string, metricName: string, range: DateRange, groupBy: string, options: UsageSummaryOptions = {}): Promise<UsageBreakdown['groups']> {
     const rows = await this.run('summarizeUsageByDimension', () =>
       this.db
         .select({ value: sql<string | null>`${usage.dimensions}->>${groupBy}`, total: sql<string>`coalesce(sum(${usage.quantity}), 0)` })
         .from(usage)
-        .where(and(eq(usage.tenantId, tenantId), eq(usage.metricName, metricName), gte(usage.timestamp, range.from), lt(usage.timestamp, range.to)))
+        .where(and(eq(usage.tenantId, tenantId), eq(usage.metricName, metricName), gte(usage.timestamp, range.from), lt(usage.timestamp, range.to), this.onlyUsage(options)))
         // By position: the key is a bind parameter, so repeating the expression wouldn't match.
         .groupBy(sql`1`)
         .orderBy(sql`1 asc nulls last`),

@@ -1,15 +1,8 @@
-import {
-  AckPolicy,
-  DeliverPolicy,
-  StringCodec,
-  connect,
-  nanos,
-  type ConsumerMessages,
-  type JetStreamClient,
-  type JetStreamManager,
-  type NatsConnection,
-} from 'nats';
-import { EventsError, type Logger } from '@mariachi/core';
+import type { Codec, ConsumerMessages, JetStreamClient, JetStreamManager, NatsConnection } from 'nats';
+import { EventsError, loadOptionalPeer, type Logger } from '@mariachi/core';
+
+/** nats, loaded when the bus is first made: an app that uses NATS has it installed (`pnpm add nats`). */
+const nats = (): typeof import('nats') => loadOptionalPeer<typeof import('nats')>('nats', 'The NATS JetStream event bus', import.meta.url);
 import { decodeEnvelope, encodeEnvelope } from '../envelope';
 import type { BusSubscribeOptions, BusSubscription, EnvelopeHandler, EventBus, EventEnvelope } from '../types';
 
@@ -43,7 +36,7 @@ export class NATSJetStreamAdapter implements EventBus {
   private connection: NatsConnection | null = null;
   private js: JetStreamClient | null = null;
   private jsm: JetStreamManager | null = null;
-  private readonly sc = StringCodec();
+  private readonly sc: Codec<string> = nats().StringCodec();
   private readonly registrations = new Set<Registration>();
   private readonly prefix: string;
   private readonly logger?: Logger;
@@ -59,7 +52,7 @@ export class NATSJetStreamAdapter implements EventBus {
 
   async connect(): Promise<void> {
     if (this.connection) return;
-    this.connection = await connect({ servers: this.config.servers });
+    this.connection = await nats().connect({ servers: this.config.servers });
     this.jsm = await this.connection.jetstreamManager();
     this.js = this.connection.jetstream();
     try {
@@ -121,15 +114,15 @@ export class NATSJetStreamAdapter implements EventBus {
     const jsm = this.jsm!;
     const js = this.js!;
     const base = {
-      ack_policy: AckPolicy.Explicit,
+      ack_policy: nats().AckPolicy.Explicit,
       filter_subject: reg.subject,
-      ack_wait: nanos(this.config.ackWaitMs ?? 30_000),
+      ack_wait: nats().nanos(this.config.ackWaitMs ?? 30_000),
       max_deliver: this.config.maxDeliveries ?? 10,
-      deliver_policy: DeliverPolicy.New,
+      deliver_policy: nats().DeliverPolicy.New,
     };
     const info = reg.group
       ? await jsm.consumers.add(this.config.stream, { ...base, durable_name: sanitize(`${reg.group}-${reg.eventName}`) })
-      : await jsm.consumers.add(this.config.stream, { ...base, inactive_threshold: nanos(5 * 60_000) });
+      : await jsm.consumers.add(this.config.stream, { ...base, inactive_threshold: nats().nanos(5 * 60_000) });
     reg.consumerName = info.name;
     const consumer = await js.consumers.get(this.config.stream, info.name);
     const messages = await consumer.consume();

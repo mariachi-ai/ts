@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/notifications",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Email (Resend, SMTP, Postmark, SendGrid), SMS (Twilio), push (FCM) and in-app notifications with preferences, per-channel queued delivery and delivery tracking.",
   "repository": {
     "type": "git",
@@ -58,13 +58,13 @@
   "dependencies": {
     "@mariachi/core": "workspace:*",
     "@mariachi/database": "workspace:*",
-    "resend": "^4",
     "zod": "^3.25.76"
   },
   "peerDependencies": {
     "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
     "drizzle-orm": "^0.38",
-    "nodemailer": ">=6"
+    "nodemailer": ">=6",
+    "resend": "^4"
   },
   "peerDependenciesMeta": {
     "@mariachi/database-postgres": {
@@ -75,6 +75,9 @@
     },
     "nodemailer": {
       "optional": true
+    },
+    "resend": {
+      "optional": true
     }
   },
   "devDependencies": {
@@ -83,6 +86,7 @@
     "nodemailer": "^10.5.0",
     "tsup": "^8",
     "typescript": "^5.7",
-    "vitest": "^3"
+    "vitest": "^3",
+    "resend": "^4"
   }
 }

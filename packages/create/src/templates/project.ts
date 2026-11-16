@@ -242,7 +242,7 @@ const ENV_EXAMPLE = (name: string) => `SERVICE_NAME=${name}
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/${databaseName(name)}
-# Jobs run in Postgres. Set REDIS_URL to run them on Redis (BullMQ) instead.
+# Jobs run in Postgres. To run them on Redis (BullMQ) instead: pnpm add bullmq, then set REDIS_URL.
 # REDIS_URL=redis://localhost:6379
 # At least 32 characters. Tokens are verified with HS256.
 JWT_SECRET=change-me-change-me-change-me-change-me
@@ -258,7 +258,7 @@ const DOCKER_COMPOSE = (db: string) => `services:
       POSTGRES_DB: ${db}
     ports: ["5432:5432"]
   # Postgres is all the app needs: jobs and search run in it. To run jobs on Redis (BullMQ) instead,
-  # add this service and set REDIS_URL in .env.
+  # add this service, pnpm add bullmq, and set REDIS_URL in .env.
   # redis:
   #   image: redis:7-alpine
   #   ports: ["6379:6379"]
@@ -434,7 +434,8 @@ In production the tokens come from wherever your users sign in: an identity prov
 ## Jobs and search
 
 - **Jobs** (\`src/jobs/\`) run in Postgres, so a job enqueued inside \`withTransaction\` commits or rolls
-  back with the write beside it. Set \`REDIS_URL\` and they run on Redis (BullMQ) instead.
+  back with the write beside it. With \`pnpm add bullmq\` and \`REDIS_URL\` set they run on Redis
+  (BullMQ) instead.
 - **Search** is in Postgres too, and tenant-scoped: declare an index in \`src/search/index.ts\`, then
   \`deps.search.indexDocument(ctx, …)\` and \`deps.search.search(ctx, …)\` in a service. A call sees
   only the documents of \`ctx.tenantId\`.

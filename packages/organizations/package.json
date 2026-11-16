@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/organizations",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Organizations, memberships and invitations kept in the app's own database, for apps whose identity provider supplies none.",
   "repository": {
     "type": "git",

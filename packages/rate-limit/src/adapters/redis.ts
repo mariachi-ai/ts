@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
-import Redis from 'ioredis';
-import { RateLimitError } from '@mariachi/core';
+import type Redis from 'ioredis';
+import { RateLimitError, loadOptionalPeer } from '@mariachi/core';
 import type { RateLimitConfig, RateLimiter, RateLimitResult, RateLimitRule } from '../types';
 
 // Uses Redis server TIME so instances with skewed clocks share one timeline.
@@ -78,6 +78,14 @@ if allowed == 1 then resetAt = now + math.ceil((capacity - tokens) * windowMs / 
 return {allowed, math.floor(tokens), resetAt, now}
 `;
 
+type RedisConstructor = typeof import('ioredis').default;
+
+/** ioredis, loaded when a client is first made: an app that uses Redis has it installed (`pnpm add ioredis`). */
+function redisConstructor(feature: string): RedisConstructor {
+  const loaded = loadOptionalPeer<RedisConstructor & { default?: RedisConstructor }>('ioredis', feature, import.meta.url);
+  return loaded.default ?? loaded;
+}
+
 export class RedisRateLimiter implements RateLimiter {
   private readonly redis: Redis;
   private readonly ownsClient: boolean;
@@ -87,7 +95,7 @@ export class RedisRateLimiter implements RateLimiter {
 
   constructor(config: Pick<RateLimitConfig, 'url' | 'client' | 'prefix'> | string = {}) {
     const cfg = typeof config === 'string' ? { url: config } : config;
-    this.redis = cfg.client ?? new Redis(cfg.url ?? 'redis://localhost:6379', { lazyConnect: true, maxRetriesPerRequest: 3 });
+    this.redis = cfg.client ?? new (redisConstructor('RedisRateLimiter'))(cfg.url ?? 'redis://localhost:6379', { lazyConnect: true, maxRetriesPerRequest: 3 });
     this.ownsClient = !cfg.client;
     this.prefix = cfg.prefix ?? 'ratelimit';
   }

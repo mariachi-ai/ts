@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/rate-limit",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Rate limiting on Redis or memory: sliding window, fixed window and token bucket, with per-tenant tiers.",
   "repository": {
     "type": "git",
@@ -45,12 +45,20 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@mariachi/core": "workspace:*",
+    "@mariachi/core": "workspace:*"
+  },
+  "peerDependencies": {
     "ioredis": "^5"
+  },
+  "peerDependenciesMeta": {
+    "ioredis": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.7",
     "tsup": "^8",
-    "vitest": "^3"
+    "vitest": "^3",
+    "ioredis": "^5"
   }
 }

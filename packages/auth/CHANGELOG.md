@@ -1,5 +1,70 @@
 # @mariachi/auth
 
+## 0.1.1
+
+### Patch Changes
+
+- df09ec1: A new project needs only Postgres, starts with one command, and can be called right away.
+  - **Generated projects run jobs and search in Postgres.** `createApp()` builds the Postgres job
+    queue (`@mariachi/jobs/postgres`) unless `REDIS_URL` is set, and tenant-scoped search
+    (`@mariachi/search/postgres`, `deps.search` in services, indexes listed in `src/search/index.ts`).
+    The Compose file and `.env.example` no longer ask for Redis, and the end-to-end tests start one
+    container, not two. With `--orgs`, rate limits are counted in memory until `REDIS_URL` is set.
+  - **`pnpm dev` is `mariachi dev`** in a generated project: it makes `.env`, starts Postgres, writes
+    and applies the first migration, and runs the app with reload. `init` now says so in two steps.
+  - **`mariachi token`** signs a development token with the project's `JWT_SECRET`, so a fresh
+    `--auth jwt` project can be called at once: `curl -H "authorization: Bearer $(pnpm -s mariachi
+token)" …`. `--user`, `--tenant` or `--no-tenant`, `--email`, `--role`, `--scope`, `--expires`.
+    It does nothing when `NODE_ENV` is `production`.
+  - `JWTAdapter.sign(payload, expiresIn, claims)` takes claims of your own (an `email`, say), which
+    come back in `identity.claims`. Claims the adapter writes itself can't be given there.
+  - The Postgres job queue, started on a database without its tables, says which tables are missing
+    and how to add them (`jobs/tables-missing`) instead of a bare SQL error.
+  - `search.ensureIndexes(indexes)` (`@mariachi/search`) makes sure an app's indexes exist when it
+    starts: it creates the missing ones, leaves existing ones as they are, and reports and warns when
+    an existing index's fields differ from the code's, without applying them. Search clients gain an
+    optional `getIndex(name)`; the Postgres and memory adapters have it.
+
+  An existing project is not changed by upgrading: this is about what `mariachi init` generates.
+
+- 8486aa5: Organizations over HTTP: a request's named organization becomes its tenant once the membership is
+  confirmed.
+  - `createOrganizationAccess({ organizations })` and `organizationStrategy(strategy, access)`
+    (`@mariachi/organizations/http`): the organization a client names in `x-organization-id` becomes
+    `ctx.tenantId` only after the signed-in user's membership is found, and the member's role joins
+    the identity's roles. A non-member and an unknown organization get the same 404; a suspended
+    organization is 403; a request and a token that name different organizations are refused. A
+    request that names none keeps the identity's own tenant: nothing is chosen for the user.
+    `source: 'token'` is for providers that keep memberships themselves.
+  - `registerOrganizationProcedures(communication, organizations)` registers the `organizations.*`
+    procedures, with rate limits on creating, inviting and accepting when given a limiter, and
+    `deliverInvitation` to send the link so the token reaches only the invited address.
+  - `OrganizationsController`: endpoints under `/organizations` for all of it.
+  - `@mariachi/api-facade`: a route option `tenant: 'optional'` lets a signed-in user with no tenant
+    onto a route, with `ctx.tenantId` null. The default still refuses them.
+  - `@mariachi/auth`: `withUserNamespace(verifier, namespace)` prefixes the user ids a verifier
+    returns, for apps that accept sign-ins from more than one identity provider.
+  - **No tenant is not every tenant.** `isTenantlessCaller(ctx)` in `@mariachi/core` says whether a
+    context is someone signed in who is in no tenant. Audit reads, exports, retention and chain checks
+    refuse such a caller (`audit/tenant-required`), and API keys can't be rotated or revoked by one.
+    Before, those paths read a missing tenant as "all tenants", which only the system ever reached.
+  - `rateLimiting.checkTier` counts a signed-in caller who is in no tenant on their own (`user:<id>`
+    or `key:<id>`), not in the one counter all anonymous callers share.
+
+  **Changed:**
+  - `audit.verifyChain(ctx, tenantId)` and `audit.retain(ctx, …)` cover only the context's own tenant
+    when it has one. Before, a tenant's context could name another tenant's chain, and the in-memory
+    audit log's `retain` deleted every tenant's entries whatever the context.
+
+- Updated dependencies [f04e223]
+- Updated dependencies [0964659]
+- Updated dependencies [8486aa5]
+- Updated dependencies [867c6ca]
+  - @mariachi/core@0.1.1
+  - @mariachi/cache@0.1.1
+  - @mariachi/communication@0.1.1
+  - @mariachi/database@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes
