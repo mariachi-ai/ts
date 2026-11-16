@@ -27,6 +27,7 @@ import type { RateLimitRule } from '@mariachi/rate-limit';
 import type { z } from 'zod';
 import type { BaseController } from './controller';
 import { generateOpenApi } from './openapi';
+import { staticFiles, type StaticOptions } from './static';
 import type {
   ApiServerConfig,
   AuthStrategy,
@@ -131,6 +132,16 @@ export class FastifyAdapter {
 
   registerController(controller: BaseController): this {
     return this.register(controller.routes());
+  }
+
+  /**
+   * Serves the files of `directory` under `urlPath`, at the server's root: `withStatic('/assets',
+   * 'public')` answers `GET /assets/app.css` with `public/app.css`. Public, and not rate limited.
+   * For the app's own styles, scripts, fonts and images, never for files users upload. What is and
+   * isn't sent is in `staticFiles`.
+   */
+  withStatic(urlPath: string, directory: string, options: StaticOptions = {}): this {
+    return this.register([{ method: 'GET', path: `${urlPath.replace(/\/+$/, '')}/*`, root: true, auth: false, rateLimit: false, handler: staticFiles(directory, options) }]);
   }
 
   /** Every registered route, for docs and tests. */
@@ -331,6 +342,7 @@ export class FastifyAdapter {
       [...internal, ...this.routes].map((route) => ({
         method: route.method,
         path: route.path,
+        root: route.root,
         bodyLimitBytes: route.bodyLimitBytes,
         handler: this.buildHandler(route),
       })),

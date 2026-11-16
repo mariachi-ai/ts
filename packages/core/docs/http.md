@@ -195,6 +195,57 @@ this.post(
   client declared. Never use the name as a path, and check the bytes when the type matters.
 - The body is parsed after authentication and the rate limit.
 
+## Pages and files
+
+The same server can send HTML pages and the files they load, beside the API. A route with
+`root: true` is mounted at the server's root instead of under its prefix, and is left out of the
+OpenAPI document:
+
+```ts
+import { BaseController, html, htmlResponse, safeHref } from '@mariachi/api-facade';
+
+class PagesController extends BaseController {
+  readonly prefix = '';
+
+  init(): void {
+    this.get('/', { root: true, auth: false }, async () =>
+      htmlResponse(html`<html lang="en"><body><h1 class="m-heading">Hello</h1></body></html>`));
+  }
+}
+
+api.withStatic('/assets', 'public');     // GET /assets/app.css → public/app.css
+```
+
+- **`html` escapes what you put into it.** A title of `<script>`, put in with `${note.title}`, is
+  shown as text. Another `html` piece goes in as it is, a list of pieces is joined, and `null`,
+  `undefined` and booleans are nothing. `raw(markup)` is for markup you vouch for, never for
+  anything a user wrote. `htmlResponse` takes only `html` output, so a plain string can't reach a
+  page unescaped.
+- **Where the escaping holds:** text between tags, and a quoted attribute value. Don't put values
+  anywhere else: not in an unquoted attribute, not inside `<script>` or `<style>`, and never in a
+  `style="…"` attribute (escaped text is still CSS there). Pass data to a script in a `data-`
+  attribute. A link from data goes through `safeHref(url)`, which keeps paths
+  on this site and `http:`, `https:` and `mailto:` addresses and turns the rest (`javascript:`) into `#`.
+- **`htmlResponse` sends a Content-Security-Policy** under which the page loads scripts, styles,
+  fonts and images from its own origin only, and inline script does not run (inline `style="…"`
+  does, since that is how design-token layout is written). So a page's script is a
+  file (`<script type="module" src="/assets/app.js">`), not a `<script>` block. `csp` takes your
+  own policy to allow a named origin.
+- **A page route is a route:** it wants sign-in unless it says `auth: false`, and it gets `ctx`. A
+  browser navigating to a page sends no `Authorization` header, though, so a page that needs the
+  user is either served to anyone and fetches its data from the API with the user's token, or is
+  behind a [cookie strategy](#cookies-and-redirects).
+- **`withStatic(urlPath, directory, { maxAgeSeconds?, immutable? })`** serves a directory's files
+  to anyone, for the app's own styles, scripts, fonts and images. It sends only regular files inside
+  the directory: nothing reached through `..` or a symbolic link that leaves it, no directory
+  listings, no name starting with a dot. Each goes with its type by extension (an unknown one is a
+  download, never guessed), `nosniff` and an `ETag`. Everything in the directory is public, source
+  maps (`.map`) included, and the directory can't be the one the app runs in or one above it
+  (`api/static-directory`). It is not for files users upload: those belong in
+  [storage](./storage.md), and are best served from another origin (a storage or CDN host), so a
+  file someone uploaded can never run as a page of your site. `staticFiles(directory, options)` is the handler alone, for a route of
+  your own ending in `*`.
+
 ## Rate limits
 
 `withRateLimit` applies `default` to authenticated callers and `anonymous` (default: `default`) to

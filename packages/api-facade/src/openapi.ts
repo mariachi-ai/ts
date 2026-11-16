@@ -52,6 +52,8 @@ export function generateOpenApi(
   const prefix = options.prefix ? `/${options.prefix.replace(/^\/+|\/+$/g, '')}` : '';
 
   for (const route of routes) {
+    // Pages and their files are not part of the API
+    if (route.root) continue;
     const path = `${prefix}${route.path}`.replace(/:([A-Za-z0-9_]+)/g, '{$1}') || '/';
     const strategies =
       route.auth === false ? [] : route.auth ? (Array.isArray(route.auth) ? route.auth : [route.auth]) : (options.defaultAuth ?? []);

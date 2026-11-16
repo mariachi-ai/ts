@@ -255,7 +255,7 @@ export class FastifyServerAdapter implements ServerAdapter {
     for (const configure of this.configurers) await configure(fastify);
 
     for (const route of this.routes) {
-      const url = joinPath(cfg.prefix, route.path);
+      const url = route.root ? joinPath(route.path) : joinPath(cfg.prefix, route.path);
       fastify.route({
         method: route.method,
         url,
