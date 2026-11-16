@@ -50,6 +50,7 @@
     "@mariachi/observability": "workspace:*"
   },
   "devDependencies": {
+    "@opentelemetry/api": "^1",
     "typescript": "^5.7",
     "tsup": "^8",
     "vitest": "^3"

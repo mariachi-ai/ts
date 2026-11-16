@@ -62,6 +62,22 @@ export class OpenTelemetryTracerAdapter implements TracerAdapter {
   }
 }
 
+/**
+ * The key `@opentelemetry/api` (major version 1) keeps its globals under. It is a `Symbol.for`, so every
+ * copy of the API in the process shares it: a provider registered by a preload (`--require`) or another
+ * SDK is seen here even when that code loaded a different copy of the API.
+ */
+const OTEL_API_GLOBAL = Symbol.for('opentelemetry.js.api.1');
+
+/**
+ * Whether an OpenTelemetry tracer provider is already registered for this process: by a preload, by
+ * an SDK the app started itself, or by `setupOpenTelemetry`. Needs no OpenTelemetry package installed.
+ */
+export function openTelemetryRegistered(): boolean {
+  const globals = (globalThis as Record<symbol, { trace?: unknown } | undefined>)[OTEL_API_GLOBAL];
+  return Boolean(globals?.trace);
+}
+
 export interface OpenTelemetrySetupOptions {
   serviceName: string;
   /** OTLP/HTTP traces endpoint, e.g. http://localhost:4318/v1/traces */
@@ -71,7 +87,8 @@ export interface OpenTelemetrySetupOptions {
 
 /**
  * Starts the OpenTelemetry Node SDK with an OTLP/HTTP exporter. Requires the optional peers
- * `@opentelemetry/sdk-node` and `@opentelemetry/exporter-trace-otlp-http`.
+ * `@opentelemetry/sdk-node` and `@opentelemetry/exporter-trace-otlp-http`. It always starts a new SDK;
+ * check `openTelemetryRegistered()` first if something else may have registered one (`bootstrap` does).
  * Returns a shutdown function to register with the lifecycle ShutdownManager.
  */
 export function setupOpenTelemetry(options: OpenTelemetrySetupOptions): () => Promise<void> {
