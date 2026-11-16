@@ -1,6 +1,9 @@
 // The probe on small pages in a real browser (it measures layout, so it needs one): the browser at MARIACHI_CHROME,
-// else Playwright's bundled Chromium (never the machine's own Chrome). Without a browser, or when one is slow to
-// start, these tests are skipped: the launch gives up well inside the hook's timeout.
+// else Playwright's bundled Chromium (never the machine's own Chrome).
+// - No browser asked for: if the bundled one isn't installed or is slow to start, the tests are skipped (the launch
+//   gives up inside the hook's timeout).
+// - MARIACHI_CHROME set (CI): a browser was asked for, so a launch that fails or times out fails the file instead of
+//   skipping it silently, with more time to start on a slow runner.
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { Browser, Page } from 'playwright-core';
 import { probeSource } from '../src/fingerprint';
@@ -8,18 +11,23 @@ import type { ScreenMeasures } from '../src/fingerprint';
 
 let browser: Browser | undefined;
 let page: Page | undefined;
+const asked = process.env.MARIACHI_CHROME;
 
-beforeAll(async () => {
-  try {
-    const { chromium } = await import('playwright-core');
-    browser = await chromium.launch({ timeout: 20_000, ...(process.env.MARIACHI_CHROME ? { executablePath: process.env.MARIACHI_CHROME } : {}) });
-    page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
-  } catch {
-    await browser?.close().catch(() => {});
-    browser = undefined;
-    page = undefined;
-  }
-}, 30_000);
+beforeAll(
+  async () => {
+    try {
+      const { chromium } = await import('playwright-core');
+      browser = await chromium.launch(asked ? { executablePath: asked, timeout: 60_000 } : { timeout: 20_000 });
+      page = await browser.newPage({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1 });
+    } catch (err) {
+      await browser?.close().catch(() => {});
+      browser = undefined;
+      page = undefined;
+      if (asked) throw err;
+    }
+  },
+  asked ? 90_000 : 30_000,
+);
 afterAll(async () => { await browser?.close(); });
 
 const measure = async (body: string): Promise<ScreenMeasures['measures']> => {
