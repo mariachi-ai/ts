@@ -172,7 +172,9 @@ Sections are 20px apart; a page's body starts 20px under its header.
   - The **area panel** (232px, `#f5f5f5`, 12px corners): the area's title at 18px/600 (with a 24px back
     square in settings), then groups 32px apart under 14px grey labels. Items are 32px tall, 8px corners,
     14px with a 16px icon, 2px apart; hover black at 5%; the current one blue text at 500 on a pale blue fill.
-    Counts are small rounded blue tags. Usage meters sit at the bottom.
+    Counts are small rounded blue tags. Usage meters sit at the bottom. The rail and panel are the window's
+    height and stay put while the page scrolls, so the usage block is always in view (`observed`: the source's
+    main nav pins the sidebar to the viewport and scrolls the content panel).
 - **Navbar** (public pages). White: the wordmark at the left, 14px links with 12px chevrons on menus, the
   current one on a `#f5f5f5` fill with 8px corners, then "Log in" (secondary) and "Sign up" (primary) at the
   right, both 32px with 8px corners.
@@ -187,7 +189,7 @@ Sections are 20px apart; a page's body starts 20px under its header.
     hairline, 8px corners.
 - **Breadcrumb.** Grey parents, a 16px chevron between, the current page in ink at 600. Dialog headers use it
   ("Links › orbt.co/spring-menu").
-- **Pagination.** "Viewing 1–7 of 248 links" at the left in 12px, Previous and Next as small secondary
+- **Pagination.** "Viewing 1–7 of 248 links" at the left in 14px, Previous and Next as small secondary
   buttons at the right.
 
 **Data and content**
@@ -266,10 +268,10 @@ Sections are 20px apart; a page's body starts 20px under its header.
 
 | | The app | Doors (onboarding, sign-in) | Public pages (pricing, reading) |
 | --- | --- | --- | --- |
-| Frame | The grey frame, the 64px rail and the 232px area panel, then the white panel with 12px corners and a 64px header on a hairline. Empty and error states keep it | A split page: the form open on white over a faint 64px square grid, the wordmark centred above it; a `#fafafa` panel at the right with one card | A white site bar; a 64rem column between two hairlines (pricing) or a left nav beside the article (help); a footer of link columns |
-| Column | 80rem with a 24px gutter; settings fields 28rem | One 23.5rem column, no card | Pricing left-aligned in the 64rem column; an article 42rem |
-| Titles | 18px/600 page titles; 16px card titles | 18px/500, centred | 48px display at 500, tracked in, left-aligned; 36px/600 for an article; 24px section titles |
-| Running text | 14px at 400; 12px meta | 14px; a 12px note at the foot | 14px on pricing, 16px prose in articles, a 16–18px muted lede |
+| Frame | The grey frame, the 64px rail and the 232px area panel (pinned to the window's height), then the white panel with 12px corners and a 64px header on a hairline. Empty and error states keep it | Sign-in: a split page, the form open on white over a faint 64px square grid, the wordmark centred above it, a `#fafafa` panel at the right with one card. Onboarding: one centred step on white, the wordmark at the top over a 60px grid that fades out by 320px, who is signed in at the bottom left | A white site bar; a 64rem column between two hairlines (pricing) or a left nav beside the article (help); a footer of link columns |
+| Column | 80rem with a 24px gutter; settings fields 28rem | One column, no card: 23.5rem to sign in, 430px for an onboarding step | Pricing left-aligned in the 64rem column; an article 42rem |
+| Titles | 18px/600 page titles; 16px card titles | 20px/600, centred; onboarding adds a 16px muted line under it | 48px display at 500, tracked in, left-aligned; 36px/600 for an article; 24px section titles |
+| Running text | 14px at 400; 12px meta (usage, keys, counts); tags and pagination stay 14px | 14px labels at 500; 12px field hints and the note at the foot | 14px on pricing, 16px prose in articles, a 16–18px muted lede |
 | Primary | Black, 40px, 8px corners, with its key ("Create link `C`") | Black, full width | Black, 8px corners: "Sign up" in the site bar and the recommended plan; the others white secondaries |
 | Footer | None | A 12px terms line | The site footer |
 | On a phone | The panel comes first and the sidebar drops below; toolbars wrap; rows keep their chip | The form fills the window; the panel follows it | The site bar keeps the wordmark and its two buttons; plans stack |
@@ -298,23 +300,26 @@ Sections are 20px apart; a page's body starts 20px under its header.
 - **How much one screen does:** one area. Lists show 10–25 rows with pagination; analytics shows one chart and
   four breakdowns.
 - **When narrow:** the sidebar drops below the panel; the toolbar wraps, the primary staying last; stat tabs
-  wrap to a column; breakdown cards to one column; dialogs become bottom sheets.
+  stay three across, their figures dropping to 20px and their padding to 12px by 16px; breakdown cards to one column; dialogs become bottom sheets.
 - **Too much content:** pagination under the list ("Viewing 1–7 of 248"); breakdowns cut off with "View all".
 - **None:** the header and toolbar stay; faded placeholder rows, a 16px line, one sentence, the primary and a
   secondary.
 
 ### The recipes
 
-- **Dashboard.** Analytics: "Analytics" with Share; Filter and "Last 30 days" at the left, View events and a
+- **Dashboard.** Analytics: "Analytics" alone in the header (no primary, no Share: the source shows Share only
+  when the view is narrowed to one link or folder); Filter and "Last 30 days" at the left, View events and a
   more button at the right; the stat-tab card (Clicks, Sign-ups, Sales) over the area chart; four breakdown
   cards (Top links, Locations, Devices, Referrers) of tinted bar rows with "View all".
 - **List and detail.** Links: the title with a folder switcher; Filter, Display, search, "Create link `C`"; seven
   link rows as hairline cards, the first one open; "Viewing 1–7 of 248 links" with Previous and Next; then the
   row's menu (Edit `E` … Delete `X`) and the edit dialog (fields left, QR and preview right, feature buttons and
   "Save changes ↵" in the footer).
-- **Onboarding.** The split door: three short step bars, "Create your workspace" and a link; name and slug with
-  its prefix; a full-width black button, an "or" rule, two full-width secondaries; at the right a card listing
-  what gets set up, each step with a tile and a badge.
+- **Onboarding.** One centred step, not the split door (`observed` in the source's onboarding layout and step
+  page): the wordmark at the top over a fading grid; "Create your workspace" at 20px/600 over a 16px muted line
+  with a dotted-underlined link; name, slug with its prefix, and a round 80px logo upload with a 12px "Upload
+  image" button, each with a 12px hint; a full-width black button; at the bottom left who is signed in and a
+  small secondary to switch account, a help button at the bottom right.
 - **Settings.** The settings area panel with its back square; "General"; five cards (name, slug, logo, ID,
   delete), each with its grey footer and button; the last edged in red with the danger button.
 - **Empty state.** Links with nothing yet: the toolbar stays; three faded placeholder rows; "No links yet", one
@@ -328,8 +333,8 @@ Sections are 20px apart; a page's body starts 20px under its header.
 - **Reading.** The help centre: a top bar (wordmark, a round search field, "Contact support", the black
   "Dashboard"), a tab row, the section nav with the blue current page, then the article: a blue section link,
   a 36px/600 title with "Copy page", a 16px lede, 16px prose with steps, a code block and an info alert.
-- **Sign-in.** The split door: "Log in to your Hopline account", work email and the black button, an "or" rule,
-  Google and SSO as full-width secondaries, a line to sign up, the 12px terms line; at the right one customer
+- **Sign-in.** The split door: "Log in to your Hopline account" at 20px/600, work email and the black button, an "or" rule,
+  Google and SSO as full-width secondaries, a 14px/500 line to sign up (the link at 600), the 12px terms line; at the right one customer
   story card and a row of customer names.
 
 ### Motion

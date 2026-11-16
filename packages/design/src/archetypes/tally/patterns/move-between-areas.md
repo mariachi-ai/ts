@@ -9,7 +9,7 @@
 3. Beside it, a 232px area panel on `#f5f5f5` with 12px corners: the area's title at 18px/600, then groups 32px apart under 14px grey labels, items 32px tall with 8px corners and a 16px icon.
 4. The current page is the one blue thing in the chrome: blue text at 500 on a pale blue fill. Counts are small blue tags.
 5. Settings is its own area: the panel's title gains a 24px back square, and its groups (Workspace, Developer, Account) replace the product's.
-6. Usage meters (12px figures over a blue bar) sit at the foot of the panel.
+6. Usage meters (12px/500 labels and figures over a blue bar) sit at the foot of the panel. The rail and panel are the window's height and don't scroll with the page, so the meters stay in view (`observed` in the source's main nav).
 
 ## Where it appears
 

@@ -8,7 +8,7 @@
 2. It often ends in its key: "Create link `C`", "Save changes ↵"; keys are 12px light in a small grey box.
 3. On hover it turns `#171717` and grows a 4px `#e5e5e5` halo.
 4. It sits last: at the right of the toolbar, a card footer, or a dialog footer.
-5. In a door (onboarding, sign-in), it is full width at the end of the grey body.
+5. In a door (onboarding, sign-in), it is full width at the end of the form.
 
 ## Where it appears
 
@@ -25,6 +25,7 @@
 - No coloured primary: never blue, never the chart colours.
 - No two black buttons side by side; the second action is a white secondary.
 - No primary in the page header of a list page; it lives in the toolbar.
+- None on analytics: its header is the title alone and its toolbar holds only secondaries (`observed` in the source's analytics page and toolbar).
 
 ## Why
 

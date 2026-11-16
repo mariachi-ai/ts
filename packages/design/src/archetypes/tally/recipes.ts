@@ -99,7 +99,7 @@ const areaPanel = (area: 'links' | 'settings', current: string) => {
     area === 'links'
       ? `<p style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-semibold); padding: var(--m-space-2) var(--m-space-2) var(--m-space-3)">Short links</p>`
       : `<p class="m-cluster" data-gap="3" style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-semibold); padding: var(--m-space-2) var(--m-space-2) var(--m-space-3); flex-wrap: nowrap"><a class="m-button" data-variant="ghost" data-size="sm" data-icon-only href="#" aria-label="Back to links" style="inline-size: 1.5rem; block-size: 1.5rem; background: var(--m-color-border-default)">${icon(I['chevron-left'], 12)}</a>Settings</p>`;
-  return `<nav class="m-sidebar" aria-label="${area === 'links' ? 'Short links' : 'Settings'}" style="border-radius: var(--m-radius-lg); min-block-size: 100%">
+  return `<nav class="m-sidebar" aria-label="${area === 'links' ? 'Short links' : 'Settings'}" style="border-radius: var(--m-radius-lg); min-block-size: 0; overflow-y: auto">
       ${title}
 ${groups
   .map(
@@ -112,18 +112,19 @@ ${items.map(([ic, l, count]) => `          <li><a class="m-sidebar-link" href="#
   )
   .join('\n')}
       <div class="m-stack" data-gap="2" style="margin-block-start: auto; padding: var(--m-space-2)">
-        <div class="m-cluster" data-justify="between" style="${small}"><span class="m-muted">Events</span><span style="${num}">18.4K of 50K</span></div>
+        <div class="m-cluster" data-justify="between" style="${small}; font-weight: var(--m-font-weight-medium)"><span class="m-muted">Events</span><span style="${num}">18.4K of 50K</span></div>
         <progress class="m-progress" value="37" max="100" aria-label="Events used this month: 37%">37%</progress>
-        <div class="m-cluster" data-justify="between" style="${small}"><span class="m-muted">Links</span><span style="${num}">248 of 1,000</span></div>
+        <div class="m-cluster" data-justify="between" style="${small}; font-weight: var(--m-font-weight-medium)"><span class="m-muted">Links</span><span style="${num}">248 of 1,000</span></div>
         <progress class="m-progress" value="25" max="100" aria-label="Links used this month: 25%">25%</progress>
       </div>
     </nav>`;
 };
 
 // The page: a light grey frame holding the rail and the area panel, and one white panel with 12px corners.
-// On a phone the panel comes first and the sidebar drops below it.
+// The sidebar is the window's height and stays put while the page scrolls, so its usage block always shows at
+// the bottom. On a phone the panel comes first and the sidebar drops below it.
 const shell = (area: 'links' | 'settings', current: string, head: string, body: string) => `<div class="m-split" style="--m-layout-split-side: 19rem; --m-layout-split-gap: 0; min-block-size: 100vh; flex-wrap: wrap-reverse; background: var(--m-color-border-default)">
-  <div style="display: grid; grid-template-columns: 4rem 1fr; padding-block: var(--m-space-2); padding-inline-end: var(--m-space-2)">
+  <div style="display: grid; grid-template-columns: 4rem 1fr; grid-template-rows: minmax(0, 1fr); position: sticky; inset-block-start: 0; align-self: flex-end; block-size: 100vh; box-sizing: border-box; padding-block: var(--m-space-2); padding-inline-end: var(--m-space-2)">
     ${rail(area)}
     ${areaPanel(area, current)}
   </div>
@@ -173,7 +174,7 @@ const LINKS: Link[] = [
   ['R', 'orbt.co/refer', 'orbitcoffee.com/refer?ref=winter', 'TS', 'Jan 30', '1,206', ['Referral']],
   ['W', 'orbt.co/wholesale', 'orbitcoffee.com/wholesale', 'MR', 'Jan 22', '173'],
 ];
-const tagChip = (t: string) => `<span class="m-chip" data-size="sm" style="${small}">${icon(I.tag, 12)} ${t}</span>`;
+const tagChip = (t: string) => `<span class="m-chip" data-size="sm" style="font-size: var(--m-font-size-md)">${icon(I.tag, 12)} ${t}</span>`;
 const linkRow = ([letter, short, dest, who, when, n, tags]: Link, open = false) => `<li><div class="m-row" style="border: ${hair}"${open ? ' aria-current="true"' : ''}>
             <span class="m-row-lead">${logo(letter)}</span>
             <span class="m-row-body">
@@ -202,9 +203,9 @@ const chartSvg = () => {
           </svg>`;
 };
 const statTab = (tone: string, label: string, value: string, selected: boolean, last = false) =>
-  `<button type="button" role="tab" aria-selected="${selected}"${selected ? '' : ' tabindex="-1"'} class="m-stack" data-gap="1" style="position: relative; align-items: flex-start; padding: var(--m-space-6) var(--m-space-8); min-inline-size: 15rem; flex: 1; text-align: start; background: none; border: 0; ${last ? '' : `border-inline-end: ${hair};`} cursor: pointer; color: inherit; font: inherit">
+  `<button type="button" role="tab" aria-selected="${selected}"${selected ? '' : ' tabindex="-1"'} class="m-stack" data-gap="1" style="position: relative; align-items: flex-start; padding: clamp(0.75rem, 2vw, 1.5rem) clamp(1rem, 3vw, 2rem); min-inline-size: 0; text-align: start; background: none; border: 0; ${last ? '' : `border-inline-end: ${hair};`} cursor: pointer; color: inherit; font: inherit">
             <span class="m-cluster m-muted" data-gap="2"><span aria-hidden="true" style="inline-size: 0.5rem; block-size: 0.5rem; border-radius: 2px; background: var(--m-chart-${tone})"></span>${label}</span>
-            <span style="font-size: var(--m-font-size-3xl); font-weight: var(--m-font-weight-medium); ${num}">${value}</span>
+            <span style="font-size: clamp(1.25rem, 4vw, var(--m-font-size-3xl)); font-weight: var(--m-font-weight-medium); ${num}">${value}</span>
             ${selected ? '<span aria-hidden="true" style="position: absolute; inset-inline: 0; inset-block-end: -1px; block-size: 2px; background: var(--m-color-fg-default)"></span>' : ''}
           </button>`;
 type Bar = [string, string, number, string?];
@@ -233,7 +234,7 @@ const facet = (title: string, tabs: string[], tone: string, rows: Bar[], max: nu
 const dashboard = shell(
   'links',
   'Analytics',
-  header('Analytics', btn('Share', { ic: I['arrow-up-right'] })),
+  header('Analytics'),
   `      <div class="m-stack" data-gap="5">
       <div class="m-cluster" data-justify="between" data-gap="2">
         <div class="m-cluster" data-gap="2">
@@ -247,10 +248,10 @@ const dashboard = shell(
       </div>
 
       <section class="m-card" data-variant="outline" aria-label="Clicks, sign-ups and sales" style="padding: 0; overflow: hidden">
-        <div role="tablist" aria-label="Event" style="display: flex; flex-wrap: wrap; border-block-end: ${hair}">
+        <div role="tablist" aria-label="Event" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-block-end: ${hair}">
           ${statTab('1', 'Clicks', '12,847', true)}
           ${statTab('2', 'Sign-ups', '1,906', false)}
-          ${statTab('3', 'Sales', '$38,214.50', false, true)}
+          ${statTab('3', 'Sales', '$3,821', false, true)}
         </div>
         <div style="padding: var(--m-space-8) var(--m-space-8) var(--m-space-6)">
           <div style="display: grid; grid-template-columns: auto 1fr; gap: var(--m-space-3)">
@@ -332,7 +333,7 @@ const listDetail = shell(
       <ul class="m-stack" data-gap="3" aria-label="Links">
 ${LINKS.map((l) => `        ${linkRow(l)}`).join('\n')}
       </ul>
-      <div class="m-cluster" data-justify="between" style="${small}">
+      <div class="m-cluster" data-justify="between">
         <span class="m-muted">Viewing <span style="${num}; color: var(--m-color-fg-default); font-weight: var(--m-font-weight-medium)">1–7</span> of <span style="${num}">248</span> links</span>
         <span class="m-cluster" data-gap="2">${btn('Previous', { size: 'sm', extra: ' disabled' })}${btn('Next', { size: 'sm' })}</span>
       </div>
@@ -447,9 +448,9 @@ const errors = shell(
       </div>`,
 );
 
-/* ------------------------------------------------------------------ onboarding and sign-in: the split door */
+/* ------------------------------------------------------------------ the doors: sign-in (split) and onboarding (centred) */
 
-// The doors (sign-in, onboarding): a split page. The form sits open on white over a faint 64px grid, no card,
+// The sign-in door: a split page. The form sits open on white over a faint 64px grid, no card,
 // the wordmark above it and a 12px note at the foot; a pale panel at the right holds one card. On a phone the
 // form fills the window and the panel follows it.
 const splitDoor = (form: string, note: string, aside: string) => `<div style="display: flex; flex-wrap: wrap; min-block-size: 100vh; background: var(--m-color-bg-canvas)">
@@ -467,42 +468,44 @@ ${aside}
 const rule = `<div class="m-cluster" data-gap="3" style="flex-wrap: nowrap; ${small}"><span style="flex: 1; border-block-start: ${hair}"></span><span class="m-subtle" style="text-transform: uppercase">or</span><span style="flex: 1; border-block-start: ${hair}"></span></div>`;
 const wide = ' style="inline-size: 100%"';
 
-const steps = (n: number) =>
-  `<ol class="m-cluster" data-gap="2" data-justify="center" aria-label="Step ${n} of 3" style="list-style: none; padding: 0">${[1, 2, 3].map((i) => `<li style="inline-size: 1.5rem; block-size: 0.25rem; border-radius: var(--m-radius-full); background: ${i <= n ? 'var(--m-color-fg-default)' : 'var(--m-color-border-default)'}"><span class="m-sr-only">Step ${i}${i <= n ? ', done' : ''}</span></li>`).join('')}</ol>`;
-const setupStep = (ic: string, title: string, text: string, state: 'done' | 'now' | 'next') => `<li class="m-cluster" data-gap="3" style="flex-wrap: nowrap; align-items: flex-start; padding: var(--m-space-4) var(--m-space-5); ${state === 'next' ? '' : `border-block-end: ${hair}`}">
-          <span class="m-tile" data-size="sm" data-tone="neutral" aria-hidden="true" style="border: ${hair}">${icon(ic)}</span>
-          <span class="m-stack" data-gap="1" style="flex: 1"><span style="font-weight: var(--m-font-weight-medium)">${title}</span><span class="m-subtle">${text}</span></span>
-          ${state === 'done' ? `<span class="m-badge" data-tone="success">Done</span>` : state === 'now' ? '<span class="m-badge" data-tone="info">Now</span>' : ''}
-        </li>`;
-const onboarding = splitDoor(
-  `      ${steps(2)}
-      <div class="m-stack" data-gap="2" style="align-items: center; text-align: center"><h1 style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium)">Create your workspace</h1><a href="#" class="m-subtle" style="text-decoration: underline; text-underline-offset: 2px">What is a workspace?</a></div>
-      ${field('Workspace name', '<input class="m-input" aria-label="Workspace name" placeholder="Orbit Coffee">')}
-      <div class="m-field"><label class="m-field-label m-cluster" data-gap="1" for="tl-slug">Workspace slug${help}</label>${prefixed('app.hopline.io/', '<input class="m-input" id="tl-slug" placeholder="orbit-coffee" style="border-start-start-radius: 0; border-end-start-radius: 0">')}<p class="m-field-hint">You can change this later in settings.</p></div>
+// Onboarding is not the split door: one centred step on white. The wordmark at the top, a 60px grid that fades out
+// under it, a 20px semibold title over a 16px line, the form in a 430px column with a full-width primary, and
+// who is signed in at the bottom left (the help button at the right).
+const onboarding = `<div style="position: relative; isolation: isolate; display: flex; flex-direction: column; min-block-size: 100vh; background: var(--m-color-bg-canvas)">
+  <div aria-hidden="true" style="position: absolute; z-index: -1; inset: 0; background-image: linear-gradient(transparent calc(100% - 1px), var(--m-color-border-default) 0), linear-gradient(90deg, transparent calc(100% - 1px), var(--m-color-border-default) 0); background-size: 3.75rem 3.75rem; background-position: center top; mask-image: linear-gradient(black, transparent 20rem); -webkit-mask-image: linear-gradient(black, transparent 20rem)"></div>
+  <header style="display: flex; justify-content: center; padding-block: var(--m-space-8) 0">${wordmark()}</header>
+  <main style="flex: 1; display: flex; flex-direction: column; justify-content: center; padding: var(--m-space-8) var(--m-space-5) var(--m-space-16)">
+    <div class="m-stack" data-gap="8" style="inline-size: min(100%, 26.875rem); margin-inline: auto">
+    <div class="m-stack" data-gap="2" style="align-items: center; text-align: center">
+      <h1 style="font-size: 1.25rem; font-weight: var(--m-font-weight-semibold); line-height: 1.75rem">Create your workspace</h1>
+      <p class="m-subtle" style="font-size: var(--m-font-size-lg); text-wrap: balance">A shared home for your team’s links, domains and analytics. <a href="#" style="color: inherit; font-weight: var(--m-font-weight-medium); text-decoration: underline dotted; text-underline-offset: 2px">What’s a workspace?</a></p>
+    </div>
+    <form class="m-stack" data-gap="6" aria-label="Create your workspace">
+      <div class="m-field"><label class="m-field-label" for="tl-ws-name">Workspace name</label><input class="m-input" id="tl-ws-name" placeholder="Orbit Coffee"><p class="m-field-hint" style="${small}">Your company or product’s name.</p></div>
+      <div class="m-field"><label class="m-field-label" for="tl-slug">Workspace slug</label>${prefixed('app.hopline.io/', '<input class="m-input" id="tl-slug" placeholder="orbit-coffee" style="border-start-start-radius: 0; border-end-start-radius: 0">')}<p class="m-field-hint" style="${small}">Used in your workspace’s address.</p></div>
+      <div class="m-field"><span class="m-field-label">Workspace logo</span><div class="m-cluster" data-gap="5" style="flex-wrap: nowrap">
+        <label style="display: grid; place-items: center; inline-size: 5rem; block-size: 5rem; flex: none; border: 1px solid var(--m-color-border-strong); border-radius: var(--m-radius-full); cursor: pointer"><input type="file" accept="image/*" class="m-sr-only"><span class="m-subtle" style="display: inline-flex">${icon(I.upload, 20, 'Upload a logo')}</span></label>
+        <span class="m-stack" data-gap="1"><span>${btn('Upload image', { size: 'sm', extra: ' style="font-size: var(--m-font-size-sm)"' })}</span><span class="m-subtle" style="${small}">Square, at least 160 × 160 px.</span></span>
+      </div></div>
       ${btn('Create workspace', { variant: 'primary', extra: wide })}
-      ${rule}
-      ${btn('Join an existing workspace', { ic: I.users, extra: wide })}
-      ${btn('Import links from another tool', { ic: I.upload, extra: wide })}`,
-  'Step 2 of 3 · Next: add a custom domain',
-  `    <section class="m-card" data-variant="outline" aria-label="What you’ll set up" style="padding: 0; overflow: hidden">
-      <p style="padding: var(--m-space-4) var(--m-space-5); border-block-end: ${hair}; font-weight: var(--m-font-weight-medium)">What you’ll set up</p>
-      <ol>
-        ${setupStep(I.user, 'Your account', 'Signed in as maya@orbitcoffee.com', 'done')}
-        ${setupStep(I.folder, 'A workspace', 'Where your team’s links, domains and analytics live', 'now')}
-        ${setupStep(I.globe, 'A custom domain', 'Optional: brand your short links, or start with orbt.co', 'next')}
-      </ol>
-    </section>`,
-);
+    </form>
+    </div>
+  </main>
+  <footer class="m-cluster" data-justify="between" data-gap="3" style="padding: var(--m-space-5); align-items: flex-end">
+    <div class="m-stack" data-gap="2"><p class="m-muted" style="${small}">Signed in as <strong style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-semibold)">maya@orbitcoffee.com</strong></p>${btn('Use another account', { size: 'sm', extra: ' style="font-size: var(--m-font-size-sm); align-self: flex-start"' })}</div>
+    <button type="button" class="m-button" data-variant="secondary" data-icon-only aria-label="Help">${icon(I['circle-help'], 20)}</button>
+  </footer>
+</div>`;
 
 // Sign-in: the same split door; the panel holds one customer story and a row of invented customer names
 const signIn = splitDoor(
-  `      <h1 style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium); text-align: center">Log in to your Hopline account</h1>
+  `      <h1 style="font-size: 1.25rem; font-weight: var(--m-font-weight-semibold); line-height: 1.75rem; text-align: center">Log in to your Hopline account</h1>
       ${field('Work email', '<input class="m-input" type="email" aria-label="Work email" autocomplete="email" placeholder="you@orbitcoffee.com">', '', false)}
       ${btn('Log in with email', { variant: 'primary', extra: wide })}
       ${rule}
       ${btn('Continue with Google', { ic: I.globe, extra: wide })}
       ${btn('Continue with SSO', { ic: I.lock, extra: wide })}
-      <p class="m-subtle" style="text-align: center">New to Hopline? <a href="#" style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-medium); text-decoration: none">Sign up</a></p>`,
+      <p class="m-subtle" style="text-align: center; font-weight: var(--m-font-weight-medium)">New to Hopline? <a href="#" style="color: var(--m-color-fg-default); font-weight: var(--m-font-weight-semibold); text-decoration: none">Sign up</a></p>`,
   'By continuing, you agree to the <a href="#" style="color: var(--m-color-fg-default); text-decoration: none">Terms</a> and <a href="#" style="color: var(--m-color-fg-default); text-decoration: none">Privacy policy</a>.',
   `    <figure class="m-card" data-variant="outline" aria-label="A customer story" style="padding: 0; overflow: hidden; margin: 0">
       <div aria-hidden="true" style="block-size: 14rem; background: linear-gradient(135deg, var(--m-chart-1), var(--m-chart-2) 60%, var(--m-chart-3))"></div>
@@ -667,7 +670,7 @@ export const tallyRecipes: ArchetypeRecipe[] = [
     name: 'onboarding',
     title: 'Create a workspace',
     description:
-      'The split door: an open form on a faint grid (step bars, title, name and slug, a full-width primary, other ways in), and a pale panel with what gets set up.',
+      'One centred step on white under a fading grid: the wordmark, a 20px title and a 16px line, name, slug and logo, a full-width primary; who is signed in at the bottom left.',
     html: onboarding,
   },
   {
@@ -709,7 +712,7 @@ export const tallyRecipes: ArchetypeRecipe[] = [
     name: 'sign-in',
     title: 'Log in',
     description:
-      'The same split door: a 18px title, work email and a full-width primary, an "or" rule, providers, then a pale panel with one customer story.',
+      'The split door: a 20px title, work email and a full-width primary, an "or" rule, providers, then a pale panel with one customer story.',
     html: signIn,
   },
 ];

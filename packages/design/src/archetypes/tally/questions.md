@@ -9,4 +9,5 @@ At most ten, about reasons and conflicts, ordered by how much the answer would c
 5. **Status text colours:** the source's green, amber and red text on their own tints read under 4.5:1; the language takes one step darker. Acceptable?
 6. **Settings: cards for everything?** Every studied setting is its own card with a footer. Are there pages of label-and-value rows instead?
 7. **What do the domains and members pages look like signed in?** Only public screenshots and the repo were studied.
-8. **Is the bottom-centre toast the only position?** The toaster is set once at the bottom centre; are there exceptions?
+8. **Do the two doors share a shape?** Sign-in is a split page with a story panel; onboarding is one centred step with no panel (both from the source). The language keeps them different, as the source does. Should a builder's own first-run screens follow onboarding or sign-in?
+9. **Is the bottom-centre toast the only position?** The toaster is set once at the bottom centre; are there exceptions?

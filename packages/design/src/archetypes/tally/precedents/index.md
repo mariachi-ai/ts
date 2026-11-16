@@ -12,7 +12,7 @@ Tally's screens are its nine recipes: the seven every language has, then `readin
 | `pricing` | Three plans in a hairline grid, the period switch, questions | marketing | public | [commit-to-the-main-action](../patterns/commit-to-the-main-action.md) |
 | `errors` | Alert, field error, toast and whole-page states | error | app | [show-an-error](../patterns/show-an-error.md), [edit-a-setting](../patterns/edit-a-setting.md) |
 | `reading` | A help article | detail | public | [move-between-areas](../patterns/move-between-areas.md) |
-| `sign-in` | Log in, in the same door as onboarding | form, firstUse | door | [commit-to-the-main-action](../patterns/commit-to-the-main-action.md) |
+| `sign-in` | Log in, in the split door (onboarding is the centred step) | form, firstUse | door | [commit-to-the-main-action](../patterns/commit-to-the-main-action.md) |
 
 ## Which recipe to start from
 

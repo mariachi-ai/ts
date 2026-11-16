@@ -18,7 +18,7 @@ No coloured primary · no resting shadows on cards or rows · no dark tooltips o
 
 ## Three families
 
-The **app** (the frame, rail and area panel, the white panel with a 64px header, 18px/600 titles, 14px text, no footer), the **doors** (sign-in, onboarding: a split page, the form open on a faint grid with the wordmark above it, a `#fafafa` panel with one card at the right) and **public pages** (a white site bar with a grey current link, left-aligned 48px display headlines at 500, 8px black and white buttons, plans in one `#fafafa` box, the help centre's left nav with the same blue current item). See DESIGN.md, The three families.
+The **app** (the frame, rail and area panel, the white panel with a 64px header, 18px/600 titles, 14px text, no footer), the **doors** (20px/600 centred titles over an open form, no card; sign-in is a split page with a `#fafafa` panel and one card at the right; onboarding is one centred 430px step on white under a fading grid) and **public pages** (a white site bar with a grey current link, left-aligned 48px display headlines at 500, 8px black and white buttons, plans in one `#fafafa` box, the help centre's left nav with the same blue current item). See DESIGN.md, The three families.
 
 ## The five habits that matter most
 

@@ -6,9 +6,9 @@
 
 1. A toolbar: Filter ▾ and Display ▾ as secondary buttons at the left; a search field and the black "Create link `C`" at the right. 8px between.
 2. The list: each item is its own row card, 12px corners, a 1px `#e5e5e5` hairline, 16px across and 10px down, 12px between rows.
-3. A row: a 32px round favicon ring; the short link at 14px/600 with a copy button, feature icons and tags; under it in grey a turn-down arrow, the destination, the creator's 16px avatar and the date.
+3. A row: a 32px round favicon ring; the short link at 14px/600 with a copy button, feature icons and 14px tags; under it in grey a turn-down arrow, the destination, the creator's 16px avatar and the date.
 4. At the right: the clicks chip (6px corners, hairline, `#fafafa`, pointer icon, an abbreviated count) and a vertical-dots menu.
-5. Under the list: "Viewing 1–7 of 248 links" and small Previous / Next buttons.
+5. Under the list: "Viewing 1–7 of 248 links" in 14px and small Previous / Next buttons.
 6. Selecting rows raises a floating white bar at the bottom (12px corners, a hairline and a soft drop) with bulk actions.
 
 ## Where it appears
