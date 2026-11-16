@@ -24,7 +24,10 @@ import {
   type UpdateSubscriptionInput,
   type UsageBreakdown,
   type UsageRecord,
+  type UsageSettleSkip,
+  type UsageSettlement,
   type UsageSummary,
+  type UsageSummaryOptions,
 } from './types';
 
 export interface BillingServiceConfig {
@@ -480,15 +483,95 @@ export abstract class Billing implements Instrumentable {
     return { forwarded, failed, stale };
   }
 
-  async getUsage(ctx: Context, metricName: string, range: DateRange): Promise<UsageSummary> {
-    return this.store.summarizeUsage(requireTenant(ctx), metricName, range);
+  /**
+   * The usage records that are stale: never confirmed by the provider, and too old to resend. The
+   * oldest first. This is an operator's call, not a tenant's: it reads across tenants unless
+   * `tenantId` names one, so put it behind whatever only your staff can reach.
+   */
+  async listStaleUsage(_ctx: Context, options: { tenantId?: string; limit?: number } = {}): Promise<UsageRecord[]> {
+    const list = this.store.listPendingUsage?.bind(this.store);
+    if (!list) return [];
+    return list({ after: new Date(0), before: new Date(Date.now() - RESEND_WINDOW_MS), limit: options.limit ?? 100, tenantId: options.tenantId });
   }
 
-  /** Usage of `metricName` per value of the `groupBy` dimension; records without it are grouped under `null`. */
-  async getUsageBreakdown(ctx: Context, metricName: string, options: DateRange & { groupBy: string }): Promise<UsageBreakdown> {
+  /**
+   * Records what a person found about stale usage records, so they stop counting as unsettled.
+   * Check each against the provider first, then say which it is:
+   *
+   * - `provider-has-it`: the provider did count it. It is billed.
+   * - `written-off`: the provider doesn't have it and it will not be charged. A `note` saying why
+   *   is required.
+   *
+   * Either way the usage stays in the totals (`getUsage`), because it happened; `getUsage(…, {
+   * only })` separates what was billed from what was written off. `forwardedAt` is left alone: it
+   * means the provider itself answered. A write-off is recorded against a person or an API key, so
+   * a context with neither can't make one.
+   *
+   * Only a record that is still waiting and past the resend window is settled. Inside the window
+   * it can still be sent, so settling it could bill it twice or not at all. A record settled with
+   * the same outcome before is left as it is, and one settled with the other outcome is not
+   * changed. Each record left alone is in `skipped` with the reason. An operator's call, like
+   * `listStaleUsage`: `ctx` says who settled it, not which tenant.
+   */
+  async settleStaleUsage(
+    ctx: Context,
+    input: { tenantId: string; idempotencyKeys: string[]; outcome: UsageSettlement; note?: string },
+  ): Promise<{ settled: string[]; skipped: Array<{ key: string; reason: UsageSettleSkip }> }> {
+    if (input.outcome !== 'provider-has-it' && input.outcome !== 'written-off') throw invalid('outcome must be provider-has-it or written-off');
+    if (!input.tenantId) throw invalid('tenantId is required');
+    const note = input.note?.trim();
+    if (input.outcome === 'written-off' && !note) throw invalid('Writing usage off needs a note saying why');
+    // A write-off is a decision about money: it is recorded against whoever made it, never against "system"
+    if (input.outcome === 'written-off' && !ctx.userId && !ctx.apiKeyId) throw invalid('Writing usage off needs a signed-in person or an API key to record it against');
+    const find = this.store.findUsageRecord?.bind(this.store);
+    const settle = this.store.settleUsage?.bind(this.store);
+    if (!find || !settle) throw new BillingError('billing/config', 'This billing store cannot settle usage: it needs findUsageRecord and settleUsage');
+
+    const by = ctx.userId ?? (ctx.apiKeyId ? `key:${ctx.apiKeyId}` : 'system');
+    const settled: string[] = [];
+    const skipped: Array<{ key: string; reason: UsageSettleSkip }> = [];
+    for (const key of [...new Set(input.idempotencyKeys)]) {
+      const record = await find(input.tenantId, key);
+      const reason: UsageSettleSkip | undefined = !record
+        ? 'not-found'
+        : record.settlement
+          ? record.settlement === input.outcome
+            ? 'already-settled'
+            : 'settled-differently'
+          : !record.forwardPending
+            ? 'not-pending'
+            : resendable(record)
+              ? 'not-stale'
+              : undefined;
+      if (reason) {
+        skipped.push({ key, reason });
+        continue;
+      }
+      if (await settle(input.tenantId, key, { outcome: input.outcome, at: new Date(), by, note })) {
+        settled.push(key);
+        continue;
+      }
+      // Nothing was written: between the look and the write, someone else settled it or the provider confirmed it
+      const now = await find(input.tenantId, key);
+      skipped.push({ key, reason: !now ? 'not-found' : !now.settlement ? 'not-pending' : now.settlement === input.outcome ? 'already-settled' : 'settled-differently' });
+    }
+    if (settled.length) {
+      this.metrics?.increment('billing.usage.settled', settled.length, { outcome: input.outcome });
+      ctx.logger.info({ tenantId: input.tenantId, outcome: input.outcome, settled: settled.length, skipped: skipped.length, by }, 'stale usage settled');
+    }
+    return { settled, skipped };
+  }
+
+  /** The tenant's usage of a metric in a range. `only` counts just what was billed, or just what was written off. */
+  async getUsage(ctx: Context, metricName: string, range: DateRange, options: UsageSummaryOptions = {}): Promise<UsageSummary> {
+    return this.store.summarizeUsage(requireTenant(ctx), metricName, range, options);
+  }
+
+  /** Usage of `metricName` per value of the `groupBy` dimension; records without it are grouped under `null`. `only` as in `getUsage`. */
+  async getUsageBreakdown(ctx: Context, metricName: string, options: DateRange & { groupBy: string } & UsageSummaryOptions): Promise<UsageBreakdown> {
     const groupBy = checkGroupBy(options.groupBy);
     const range = { from: options.from, to: options.to };
-    const groups = await this.store.summarizeUsageByDimension(requireTenant(ctx), metricName, range, groupBy);
+    const groups = await this.store.summarizeUsageByDimension(requireTenant(ctx), metricName, range, groupBy, { only: options.only });
     return { metricName, groupBy, periodStart: range.from, periodEnd: range.to, groups };
   }
 

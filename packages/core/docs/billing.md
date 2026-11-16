@@ -145,6 +145,35 @@ here that Stripe may not have, left in `billing_usage_records` with `forward_pen
 person to settle. Only records `reportUsage` itself marked are ever resent, so rows from before
 this existed are left alone.
 
+**Settling stale usage.** A person checks each stale record against the provider and says what
+they found:
+
+```ts
+const stale = await billing.listStaleUsage(ctx, { tenantId });       // every tenant's without tenantId
+await billing.settleStaleUsage(ctx, { tenantId, idempotencyKeys: ['u-123'], outcome: 'provider-has-it' });
+await billing.settleStaleUsage(ctx, { tenantId, idempotencyKeys: ['u-456'], outcome: 'written-off', note: 'No meter event at Stripe' });
+// → { settled: ['u-456'], skipped: [{ key, reason }] }
+```
+
+- `provider-has-it`: the provider did count it, so it is billed. `written-off`: the provider doesn't
+  have it and it won't be charged; a note saying why is required.
+- **The usage stays in the totals either way**, because it happened. `getUsage(ctx, metric, range,
+  { only: 'billed' })` counts everything that is neither still waiting for the provider nor written
+  off, and `{ only: 'written-off' }` what was written off. `getUsageBreakdown` takes `only` too.
+  Records from before records were marked as waiting, and records written by something other than
+  `reportUsage`, count as billed: they were sent when they were made.
+- The record keeps who settled it, when and why (`settlement`, `settled_at`, `settled_by`,
+  `settlement_note`). `forwarded_at` is left alone: it means the provider itself answered.
+- Only a record that is still waiting and more than a day old is settled. A younger one can still
+  be sent, so settling it could bill it twice or not at all. The same outcome twice does nothing,
+  and a settlement is not changed to the other outcome. `skipped` says why each record was left:
+  `not-found`, `not-pending`, `not-stale`, `already-settled` or `settled-differently`.
+- Two people settling the same record at once: one is told it was settled, the other that it
+  already was (`already-settled` or `settled-differently`).
+- **These two are operator calls.** `listStaleUsage` reads across tenants, and `ctx` says who is
+  settling, not which tenant. Put them behind something only your staff can reach. A write-off is
+  recorded against a person or an API key, so a context with neither is refused.
+
 If you call `reportUsage` inside a database transaction that rolls back when it throws, the record
 rolls back with it and there is nothing to resend; your own retry then reports under the same key. Give `reportUsage` a key of your own: without one, each call gets a
 new key, so a retried call is new usage. The credit ledger is
