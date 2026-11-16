@@ -1,4 +1,4 @@
-import { createContainer, getContainer, setContainer, KEYS, type Container, type Logger } from '@mariachi/core';
+import { createContainer, getContainer, setContainer, KEYS, MariachiError, type Container, type Logger } from '@mariachi/core';
 import { loadConfig, createSecrets, type AppConfig, type AppConfigInput, type LoadConfigOptions, type Secrets } from '@mariachi/config';
 import {
   createObservability,
@@ -6,6 +6,7 @@ import {
   NoopTracerAdapter,
   NoopMetricsAdapter,
   NoopErrorTracker,
+  openTelemetryRegistered,
   setupOpenTelemetry,
 } from '@mariachi/observability';
 import type { TracerAdapter, MetricsAdapter, ErrorTracker } from '@mariachi/observability';
@@ -61,8 +62,7 @@ export function bootstrap(options: BootstrapOptions = {}): BootstrapResult {
 
   const tracing = config.observability?.tracing;
   if (tracing && tracing.adapter !== 'noop' && tracing.endpoint) {
-    const stopOtel = setupOpenTelemetry({ serviceName: config.serviceName, endpoint: tracing.endpoint });
-    lifecycle.shutdown.register({ name: 'opentelemetry', priority: -1000, fn: stopOtel });
+    startTracing(config.serviceName, tracing.endpoint, logger, lifecycle);
   }
   if (errors.flush) {
     lifecycle.shutdown.register({ name: 'error-tracker', priority: -1001, fn: async () => void (await errors.flush?.()) });
@@ -97,6 +97,31 @@ export function bootstrap(options: BootstrapOptions = {}): BootstrapResult {
     shutdown: lifecycle.shutdown,
     health: lifecycle.health,
   };
+}
+
+/**
+ * Exports spans to `endpoint`, unless an OpenTelemetry SDK is already registered (a `--require` preload,
+ * or one the app started): then Mariachi's spans go to that one, and a second SDK is not started over it.
+ * Tracing never stops the app from starting: without the SDK packages installed, it warns and spans
+ * are not exported.
+ */
+function startTracing(serviceName: string, endpoint: string, logger: Logger, lifecycle: Lifecycle): void {
+  if (openTelemetryRegistered()) {
+    logger.info({ endpoint }, 'An OpenTelemetry SDK is already registered; using it');
+    return;
+  }
+  let stop: () => Promise<void>;
+  try {
+    stop = setupOpenTelemetry({ serviceName, endpoint });
+  } catch (err) {
+    if (!(err instanceof MariachiError && err.code === 'dependency/missing-peer')) throw err;
+    logger.warn(
+      { err, endpoint },
+      'Tracing is on, but spans are not exported: install @opentelemetry/sdk-node and @opentelemetry/exporter-trace-otlp-http, or register an SDK before the app starts',
+    );
+    return;
+  }
+  lifecycle.shutdown.register({ name: 'opentelemetry', priority: -1000, fn: stop });
 }
 
 /**

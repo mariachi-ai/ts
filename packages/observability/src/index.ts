@@ -14,6 +14,7 @@ export { NoopErrorTracker } from './adapters/errors/noop';
 
 export {
   OpenTelemetryTracerAdapter,
+  openTelemetryRegistered,
   setupOpenTelemetry,
   type OpenTelemetrySetupOptions,
 } from './adapters/tracing/opentelemetry';

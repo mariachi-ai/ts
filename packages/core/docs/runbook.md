@@ -50,7 +50,7 @@ fail the boot with `ConfigError`.
 | `LOG_PRETTY` | human-readable log lines for a terminal; needs `pino-pretty` installed. Not for production | off |
 | `STORAGE_ADAPTER`, `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_BASE_PATH` | file storage | `local`, none, none, none |
 | `STORAGE_SIGNING_SECRET`, `STORAGE_PUBLIC_BASE_URL` | the local adapter's URL-signing secret (32+ characters) and where public objects are served from | none |
-| `TRACING_ADAPTER`, `OTEL_EXPORTER_OTLP_ENDPOINT` / `..._TRACES_ENDPOINT` | OpenTelemetry tracing | off |
+| `TRACING_ADAPTER`, `OTEL_EXPORTER_OTLP_ENDPOINT` / `..._TRACES_ENDPOINT` | OpenTelemetry tracing. `bootstrap` starts an SDK that exports to the endpoint (needs `@opentelemetry/sdk-node` and `@opentelemetry/exporter-trace-otlp-http`), unless one is already registered, for example by a `--require` preload: then Mariachi's spans go to that one. Without the SDK packages it warns and starts without exporting | off |
 | `METRICS_ADAPTER`, `METRICS_PREFIX`, `ERRORS_ADAPTER`, `SENTRY_DSN` | metrics and error tracking | noop |
 | `EMAIL_*` (`EMAIL_ADAPTER`, `EMAIL_API_KEY`, `EMAIL_FROM`, `EMAIL_API_URL`), `RESEND_API_KEY`, `SMTP_URL`, `STRIPE_*`, `SEARCH_ADAPTER`, `TYPESENSE_*`, `AI_*`, `OPENAI_API_KEY` | domain packages | see each package |
 
