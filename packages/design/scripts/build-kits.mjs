@@ -84,7 +84,9 @@ function fontFace(family, { display = false } = {}) {
         [`${s}-latin-${axis}-${style}.woff2`, LATIN, style],
       ].filter(([f]) => has(f)),
     );
-    const stretch = axis === 'wdth' ? '  font-stretch: 62.5% 125%;\n' : '';
+    // The width range the package's own metadata gives (e.g. 62–125 for Archivo)
+    const wdth = axis === 'wdth' ? JSON.parse(fs.readFileSync(path.join(variable, 'metadata.json'), 'utf8')).variable?.wdth : null;
+    const stretch = wdth ? `  font-stretch: ${wdth.min}% ${wdth.max}%;\n` : '';
     // Themes name the variable face first ("Figtree Variable", "Figtree"), so both names point at the same files.
     const css = [`${family} Variable`, family].flatMap((name) =>
       files.map(
@@ -120,13 +122,15 @@ function fontFace(family, { display = false } = {}) {
 function interDisplay() {
   const variable = pkgDir('@fontsource-variable/inter');
   if (!fs.existsSync(variable)) return null;
-  const files = [
-    ['inter-latin-ext-opsz-normal.woff2', LATIN_EXT],
-    ['inter-latin-opsz-normal.woff2', LATIN],
-  ].filter(([f]) => fs.existsSync(path.join(variable, 'files', f)));
+  const files = ['normal', 'italic'].flatMap((style) =>
+    [
+      [`inter-latin-ext-opsz-${style}.woff2`, LATIN_EXT, style],
+      [`inter-latin-opsz-${style}.woff2`, LATIN, style],
+    ].filter(([f]) => fs.existsSync(path.join(variable, 'files', f))),
+  );
   const css = files.map(
-    ([f, range]) =>
-      `@font-face {\n  font-family: 'Inter Display';\n  font-style: normal;\n  font-display: swap;\n  font-weight: 100 900;\n  src: url(./fonts/${f}) format('woff2-variations');\n  unicode-range: ${range};\n}\n`,
+    ([f, range, style]) =>
+      `@font-face {\n  font-family: 'Inter Display';\n  font-style: ${style};\n  font-display: swap;\n  font-weight: 100 900;\n  src: url(./fonts/${f}) format('woff2-variations');\n  unicode-range: ${range};\n}\n`,
   );
   return files.length ? { family: 'Inter Display', source: '@fontsource-variable/inter', license: license(variable, 'inter'), files: files.map(([f]) => [path.join(variable, 'files', f), f]), css } : null;
 }
