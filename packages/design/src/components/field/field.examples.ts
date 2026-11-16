@@ -21,6 +21,21 @@ export default defineExamples('field', [
 </div>`,
   },
   {
+    name: 'Marking optional fields',
+    description:
+      'For languages that keep colour for status: no marker on required fields, and a muted "(optional)" on the rest. Set requiredMarker to none and optionalMarker to " (optional)" in the theme; here they are set inline.',
+    html: `<div class="m-stack" data-gap="4" style="--m-field-required-marker: none; --m-field-optional-marker: ' (optional)'">
+  <div class="m-field">
+    <label class="m-field-label" for="ex-field-full-name">Full name</label>
+    <input class="m-input" id="ex-field-full-name" type="text" required autocomplete="name">
+  </div>
+  <div class="m-field">
+    <label class="m-field-label" for="ex-field-phone">Phone</label>
+    <input class="m-input" id="ex-field-phone" type="tel" autocomplete="tel">
+  </div>
+</div>`,
+  },
+  {
     name: 'Inline rows',
     html: `<fieldset class="m-stack" data-gap="2">
   <legend class="m-field-label">Notifications</legend>

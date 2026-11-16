@@ -128,7 +128,7 @@ reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Zephyr draws them. Every one is in `gallery.html`.
+The library's components, as Zephyr draws them; the five newest, at the end of this section, are not drawn for Zephyr yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: about 76rem, or 42rem for settings and 28rem for forms;
@@ -226,6 +226,10 @@ Sections are 32px apart.
 - **Tool call.** A hairline row with 8px corners, the tool name and a 4px status badge.
 - **Citation.** A small grey chip with 4px corners and a number; the source on hover in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Zephyr's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

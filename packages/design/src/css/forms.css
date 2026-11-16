@@ -10,9 +10,10 @@
     min-inline-size: 0;
   }
 
+  /* A legend reads as its surroundings; give it .m-field-label (or a heading class) to style it. */
   legend {
     padding: 0;
-    font-weight: var(--m-font-weight-semibold);
+    font-weight: inherit;
   }
 
   label {

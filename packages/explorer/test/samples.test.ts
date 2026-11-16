@@ -14,6 +14,15 @@ describe.each(samples.map((s) => [s.name, s] as const))('sample %s', (_name, sam
     expect(missing).toEqual([]);
   });
 
+  it('puts no layout class on a table cell or a card header', () => {
+    // A flex <td> leaves the table grid (its divider lands off the row's rule); a stacked card
+    // header turns the title's 12rem flex basis into a 12rem-tall band. Lay out inside them instead.
+    const layout = /\bm-(stack|cluster|grid|split)\b/;
+    const cells = [...sample.html.matchAll(/<t[dh]\b[^>]*\bclass="([^"]+)"/g)].map((m) => m[1]);
+    const headers = [...sample.html.matchAll(/\bclass="([^"]*\bm-card-header\b[^"]*)"/g)].map((m) => m[1]);
+    expect([...cells, ...headers].filter((c) => layout.test(c))).toEqual([]);
+  });
+
   it('has no duplicate ids', () => {
     const ids = [...sample.html.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
     expect(new Set(ids).size).toBe(ids.length);

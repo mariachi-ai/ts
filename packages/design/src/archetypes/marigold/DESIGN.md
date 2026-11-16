@@ -173,7 +173,7 @@ scales are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Marigold draws them. Every one is in `gallery.html`.
+The library's components, as Marigold draws them; the five newest, at the end of this section, are not drawn for Marigold yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 66rem (public pages), `data-size="md"` 42rem for forms, single
@@ -285,6 +285,10 @@ All 36 of the library's components, as Marigold draws them. Every one is in `gal
   16px corners, an icon, the tool name and an 8px-cornered status badge.
 - **Citation.** A small sky-tint chip with a number, 8px corners; the source in an outlined popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Marigold's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

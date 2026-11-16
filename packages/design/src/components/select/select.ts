@@ -5,7 +5,7 @@ export const select = defineComponent({
   name: 'select',
   title: 'Select',
   category: 'forms',
-  description: 'Native <select> styled to match inputs, with a CSS-only chevron.',
+  description: 'Native <select> styled to match inputs, with a CSS-only indicator (a solid triangle or an open chevron).',
   useWhen: 'Choosing one option from a short, known list. Use radios for two to four options that should all stay visible.',
   anatomy: {
     '.m-select': 'On a native <select>',
@@ -27,7 +27,8 @@ export const select = defineComponent({
     radius: t.length('Corner radius', ref('components.input.radius')),
     borderWidth: t.length('Border width', ref('components.input.borderWidth')),
     shadow: t.shadow('Resting shadow', ref('components.input.shadow')),
-    chevronSize: t.length('Size of each half of the chevron', '0.3125rem'),
+    chevronSize: t.length('Size of each half of the indicator', '0.3125rem'),
+    chevronStroke: t.length('Indicator shape: 50% draws a solid triangle, a length such as 1.5px an open chevron', '50%'),
     height: {
       sm: t.length('Small height', ref('components.input.height.sm')),
       md: t.length('Default height', ref('components.input.height.md')),

@@ -44,8 +44,9 @@
   }
 
   .m-prose h2 {
-    padding-block-end: var(--m-space-2);
-    border-block-end: var(--m-border-width-thin) solid var(--m-prose-h2-border);
+    /* With the rule off (width 0) the gap above it goes too */
+    padding-block-end: min(var(--m-prose-h2-rule-gap), var(--m-prose-h2-rule-width) * 1000);
+    border-block-end: var(--m-prose-h2-rule-width) solid var(--m-prose-h2-border);
     font-size: var(--m-prose-h2-size);
   }
 

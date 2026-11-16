@@ -17,7 +17,7 @@ is the same skeleton in every language: one language makes it rounded and warm, 
 | `dist/motion.js` | `enhance()`, `leave()`, `busy()`, `optimistic()`, `countUp()`, `navigate()` (and `prefersReducedMotion()`): ESM, browser only, 7 KB minified, 3 KB gzipped |
 | `dist/charts.js` | `chart(spec)` → the chart's markup: an SVG in a `<figure class="m-chart">` with its data table (runs in Node and the browser); `updateChart(el, spec)`: 11 KB minified, 5 KB gzipped |
 | `dist/motion.d.ts`, `dist/charts.d.ts` | Their types (copied into kits too, so a TypeScript project's copy typechecks) |
-| `dist/catalog.json` | Every pattern with its markup examples, as `@mariachi/design`'s catalog has them (for `design_reference`): `{ package, version, usage, patterns: [{ name, title, category, description, useWhen, anatomy, a11y, examples: [{ name, html, code? }] }] }` |
+| `dist/catalog.json` | Every pattern with its markup examples, as `@mariachi/design`'s catalog has them (for `mariachi design reference`): `{ package, version, usage, patterns: [{ name, title, category, description, useWhen, anatomy, a11y, examples: [{ name, html, code? }] }] }` |
 | `dist/gallery.html` | Every pattern live, in any language: `dist/gallery.html?theme=terracotta&mode=dark` from the repo, with `@mariachi/design` built beside it (not published) |
 
 In an app, after the kit: `import './design/index.css'; import './design/motion/motion.css'`, and once at start
@@ -95,6 +95,6 @@ identical (a test holds them so), so the library's components keep working with 
 
 ## For coding agents and new projects
 
-- **A coding agent** writes the markup above by default. Every list and card region has a loading state shaped like it, actions that wait use `data-busy`, new content enters, and charts come from `chart()`. `design_reference` reads `dist/catalog.json`.
+- **A coding agent** writes the markup above by default. Every list and card region has a loading state shaped like it, actions that wait use `data-busy`, new content enters, and charts come from `chart()`. `mariachi design reference` reads `dist/catalog.json`.
 - **A new project's copy-in** brings `dist/motion.css`, `dist/motion.js` and `dist/charts.js` (with their `.d.ts`) into `src/design/motion/`, adds their shas and the package version to `kit.json`, and the starter imports the CSS and calls `enhance()` once. `@mariachi/design`'s kit build already does this: every `dist/kits/<id>/` has a `motion/` folder, and its `kit.json` has `motion: { package, version, files }` with each file's sha in `files`.
 - **The checks:** the fingerprint probe gains `loading.skeleton`, `motion.enter` and `charts.animated`, and the rebuild gate fails a one-shot build without them.

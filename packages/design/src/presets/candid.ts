@@ -384,7 +384,7 @@ export const candid = extendTheme(minimal, {
       fontWeight: 'var(--m-font-weight-semibold)',
       ringColor: 'var(--m-color-bg-canvas)',
       ringWidth: '3px',
-      groupOverlap: '-0.625rem',
+      groupOverlap: '0.625rem',
     },
     divider: { color: 'var(--m-color-border-muted)', labelTransform: 'none', labelTracking: '0' },
     // Banners: a dark grey card with 16px corners, no border, no side stripe

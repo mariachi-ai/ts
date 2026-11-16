@@ -130,7 +130,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Relay draws them. Every one is in `gallery.html`.
+The library's components, as Relay draws them; the five newest, at the end of this section, are not drawn for Relay yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 76.5rem, or 48rem for settings and 30rem for forms;
@@ -216,6 +216,10 @@ All 36 of the library's components, as Relay draws them. Every one is in `galler
 - **Tool call.** A hairline-edged row with 12px corners, a 20px icon, the name and a 4px status tag.
 - **Citation.** A small grey pill with a number; the source in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Relay's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

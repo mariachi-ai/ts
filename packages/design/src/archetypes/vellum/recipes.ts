@@ -628,7 +628,7 @@ const reading = `<div style="min-block-size: 100vh; background: var(--m-color-bg
             <p>Open the entry, choose More at the top right, then Move to journal. Pick the journal and the entry moves at once. You can undo it from the notice at the bottom of the window.</p>
             ${photo('sky', 'inline-size: 100%; block-size: auto; aspect-ratio: 16 / 9; border-radius: var(--m-radius-sm)', 'Picture: the Move to journal menu')}
             <h2 style="${sectionTitle}">Related guides</h2>
-            <ul class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-5)">
+            <ul class="m-stack" data-gap="2" style="list-style: disc; padding-inline-start: var(--m-space-5)">
 ${helpLink('Start a new journal')}
 ${helpLink('Choose a colour for a journal')}
 ${helpLink('Find an entry by date or place')}

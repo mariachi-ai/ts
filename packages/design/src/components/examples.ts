@@ -4,14 +4,19 @@ import card from './card/card.examples';
 import divider from './divider/divider.examples';
 import layout from './layout/layout.examples';
 import button from './button/button.examples';
+import chip from './chip/chip.examples';
 import checkbox from './checkbox/checkbox.examples';
+import dropzone from './dropzone/dropzone.examples';
 import field from './field/field.examples';
 import input from './input/input.examples';
 import radio from './radio/radio.examples';
 import select from './select/select.examples';
 import switchComponent from './switch/switch.examples';
+import amount from './amount/amount.examples';
 import avatar from './avatar/avatar.examples';
+import row from './row/row.examples';
 import table from './table/table.examples';
+import tile from './tile/tile.examples';
 import breadcrumb from './breadcrumb/breadcrumb.examples';
 import navbar from './navbar/navbar.examples';
 import pagination from './pagination/pagination.examples';
@@ -38,4 +43,4 @@ import toolCall from './tool-call/tool-call.examples';
 import usage from './usage/usage.examples';
 
 /** Examples for every component. Node-only (imported by the build entry, not the browser entry). */
-export const componentExamples: ComponentExamples[] = [card, divider, layout, button, checkbox, field, input, radio, select, switchComponent, avatar, table, breadcrumb, navbar, pagination, sidebar, tabs, alert, badge, progress, skeleton, spinner, toast, dialog, popover, tooltip, accordion, code, kbd, prose, chat, citation, composer, thinking, toolCall, usage];
+export const componentExamples: ComponentExamples[] = [card, divider, layout, button, chip, checkbox, dropzone, field, input, radio, select, switchComponent, amount, avatar, row, table, tile, breadcrumb, navbar, pagination, sidebar, tabs, alert, badge, progress, skeleton, spinner, toast, dialog, popover, tooltip, accordion, code, kbd, prose, chat, citation, composer, thinking, toolCall, usage];

@@ -47,9 +47,9 @@ const dashboard = `<div class="m-stack" data-gap="6">
       <table class="m-table">
         <thead><tr><th>Session</th><th>Model</th><th>Tokens</th><th>Cost</th><th>Status</th></tr></thead>
         <tbody>
-          <tr><td class="m-cluster" data-gap="2"><span class="m-avatar" data-size="sm">JD</span> Refund policy Q&amp;A</td><td>claude-sonnet-5-5</td><td>18,204</td><td>$0.11</td><td><span class="m-badge" data-tone="success">Done</span></td></tr>
-          <tr><td class="m-cluster" data-gap="2"><span class="m-avatar" data-size="sm">AK</span> Invoice extraction</td><td>claude-haiku-5-5</td><td>4,912</td><td>$0.01</td><td><span class="m-badge" data-tone="info">Running</span></td></tr>
-          <tr><td class="m-cluster" data-gap="2"><span class="m-avatar" data-size="sm">MS</span> Contract review</td><td>claude-opus-5-5</td><td>92,330</td><td>$1.84</td><td><span class="m-badge" data-tone="danger">Failed</span></td></tr>
+          <tr><td><span class="m-cluster" data-gap="2"><span class="m-avatar" data-size="sm">JD</span> Refund policy Q&amp;A</span></td><td>claude-sonnet-5-5</td><td>18,204</td><td>$0.11</td><td><span class="m-badge" data-tone="success">Done</span></td></tr>
+          <tr><td><span class="m-cluster" data-gap="2"><span class="m-avatar" data-size="sm">AK</span> Invoice extraction</span></td><td>claude-haiku-5-5</td><td>4,912</td><td>$0.01</td><td><span class="m-badge" data-tone="info">Running</span></td></tr>
+          <tr><td><span class="m-cluster" data-gap="2"><span class="m-avatar" data-size="sm">MS</span> Contract review</span></td><td>claude-opus-5-5</td><td>92,330</td><td>$1.84</td><td><span class="m-badge" data-tone="danger">Failed</span></td></tr>
         </tbody>
       </table>
     </div>
@@ -170,7 +170,7 @@ const landing = `<div class="m-stack" data-gap="10">
 
 const signIn = `<div style="display: grid; place-items: center; padding-block: var(--m-space-8)">
   <form class="m-card" style="inline-size: min(100%, 24rem)" onsubmit="return false">
-    <div class="m-card-header m-stack" data-gap="1"><div class="m-card-title">Sign in to Acme</div><div class="m-card-description">Use your work email.</div></div>
+    <div class="m-card-header"><div><div class="m-card-title">Sign in to Acme</div><div class="m-card-description">Use your work email.</div></div></div>
     <div class="m-card-body m-stack" data-gap="4">
       <div class="m-field"><label class="m-field-label" for="si-email">Email</label><input class="m-input" id="si-email" type="email" autocomplete="email" placeholder="you@acme.com" /></div>
       <div class="m-field"><label class="m-field-label" for="si-password">Password</label><input class="m-input" id="si-password" type="password" autocomplete="current-password" /></div>

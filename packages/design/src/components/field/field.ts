@@ -9,7 +9,7 @@ export const field = defineComponent({
   useWhen: 'Every form control. It keeps label, hint and error spacing consistent and lines up inline controls with their text.',
   anatomy: {
     '.m-field': 'Wrapper (a <div>, or a <label> for inline rows)',
-    '.m-field-label': 'The <label>; gets a required marker when the field contains a required control or has [data-required]',
+    '.m-field-label': 'The <label>; gets a required marker when the field contains a required control or has [data-required], and the optional marker (off by default) otherwise or with [data-optional]',
     '.m-field-hint': 'Help text under the control; reference it from aria-describedby',
     '.m-field-error': 'Error message; reference it from aria-describedby and set aria-invalid on the control',
     '[data-layout="inline"]': 'Control and text in a row (checkbox, radio, switch)',
@@ -27,7 +27,13 @@ export const field = defineComponent({
     errorFg: t.color('Error colour', ref('color.danger.fg')),
     errorFontWeight: t.fontWeight('Error weight', ref('font.weight.medium')),
     requiredFg: t.color('Required marker colour', ref('color.danger.fg')),
-    requiredMarker: t.keyword('Required marker content (a CSS string)', '" *"'),
+    requiredMarker: t.keyword('Required marker content: a CSS string, or none for no marker', '" *"'),
+    optionalMarker: t.keyword(
+      'Marker after the label of a field with no required control: none (default), or a CSS string such as " (optional)"',
+      'none',
+    ),
+    optionalFg: t.color('Optional marker colour', ref('color.fg.muted')),
+    optionalFontWeight: t.fontWeight('Optional marker weight', ref('font.weight.regular')),
   },
   contrast: [
     { fg: 'labelFg', bg: 'color.bg.canvas', min: 4.5 },
@@ -36,11 +42,13 @@ export const field = defineComponent({
     { fg: 'hintFg', bg: 'color.bg.surface', min: 4.5 },
     { fg: 'errorFg', bg: 'color.bg.canvas', min: 4.5 },
     { fg: 'errorFg', bg: 'color.bg.surface', min: 4.5 },
+    { fg: 'optionalFg', bg: 'color.bg.canvas', min: 4.5 },
+    { fg: 'optionalFg', bg: 'color.bg.surface', min: 4.5 },
   ],
   a11y: [
     'Connect the label with for/id (or wrap the control in the label) so clicking it focuses the control.',
     'Point the control\'s aria-describedby at the hint and error ids so both are read after the label.',
-    'The required marker is visual only; also set the required attribute on the control so it is announced.',
+    'The required and optional markers are visual only; set the required attribute on required controls so it is announced.',
     'Don\'t rely on colour alone for errors: the .m-field-error text says what is wrong and how to fix it.',
   ],
 });

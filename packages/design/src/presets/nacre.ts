@@ -340,7 +340,7 @@ export const nacre = extendTheme(minimal, {
       size: { sm: '1.5rem', md: '2rem', lg: '2.75rem' },
       bg: 'var(--m-color-accent-subtle)',
       fg: 'var(--m-color-accent-text)',
-      groupOverlap: '-0.375rem',
+      groupOverlap: '0.375rem',
     },
     // Tinted callouts, like the tinted groups: no border, no stripe
     alert: {

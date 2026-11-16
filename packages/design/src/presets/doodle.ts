@@ -426,7 +426,7 @@ export const doodle = extendTheme(minimal, {
       fontWeight: 'var(--m-font-weight-semibold)',
       ringColor: 'var(--m-color-bg-surface)',
       ringWidth: '2px',
-      groupOverlap: '-4px',
+      groupOverlap: '4px',
     },
     // Banners: the tone's pale tertiary fill, no border, 5px corners, ink text with a tone icon
     alert: {

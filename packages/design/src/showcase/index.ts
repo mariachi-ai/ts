@@ -1,5 +1,5 @@
 /**
- * Showcases: someone's key component drawn in a design language (New project's look step; `design_reference`'s
+ * Showcases: someone's key component drawn in a design language (a project's look picker; `mariachi design reference`'s
  * named patterns). `drawShowcase(kind, archetype, content)` gives the HTML, to be shown inside a frame that loads
  * the language's kit (`kits/<id>/index.css`) and the library's components (`css/mariachi.css`), with
  * `data-theme="<id>"` and `data-mode` on its root.
@@ -205,7 +205,7 @@ export const exampleContent: ShowcaseContent = {
   },
 };
 
-/** What each kind is called, and the words people use for it, for `design_reference`. */
+/** What each kind is called, and the words people use for it, for `mariachi design reference`. */
 const NAMES: Record<DrawnKind, { aliases: string[]; intent: string }> = {
   player: {
     aliases: ['now playing', 'audio player', 'music player', 'media player', 'podcast player'],

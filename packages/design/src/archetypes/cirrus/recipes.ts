@@ -661,7 +661,7 @@ ${siteHeader('Changelog')}
         <p>One payment can now count toward more than one category. Open it, choose Split, and divide the amount by hand or by percentage; budgets and reports pick up each part on its own.</p>
         <p>Splits are kept with the payment, so if your bank updates it later, the parts stay as you set them. You can undo a split from the same menu at any time.</p>
         <h2 style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-medium); margin-block-start: var(--m-space-4)">Also in this release</h2>
-        <ul class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-5); margin: 0">
+        <ul class="m-stack" data-gap="2" style="list-style: disc; padding-inline-start: var(--m-space-5); margin: 0">
           <li>Search now finds notes as well as payee names.</li>
           <li>Recurring bills show the date they last changed amount.</li>
           <li>Exports include the category emoji, if you want it.</li>

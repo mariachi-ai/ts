@@ -126,7 +126,7 @@ The exact scales are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Saffron draws them. Every one is in `gallery.html`.
+The library's components, as Saffron draws them; the five newest, at the end of this section, are not drawn for Saffron yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 78rem, or 48rem for settings and 30rem for forms;
@@ -210,6 +210,10 @@ All 36 of the library's components, as Saffron draws them. Every one is in `gall
   the tool name and its status badge.
 - **Citation.** A small grey tag with a number; the source in a popover on hover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Saffron's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

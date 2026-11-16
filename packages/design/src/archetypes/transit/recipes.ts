@@ -598,7 +598,7 @@ const reading = `<div>
       </div>
       <section class="m-stack" data-gap="3" aria-labelledby="tr-read-app">
         <h2 id="tr-read-app" style="${display('xl')}">From the app</h2>
-        <ol class="m-stack" data-gap="1" style="padding-inline-start: var(--m-space-5)">
+        <ol class="m-stack" data-gap="1" style="list-style: decimal; padding-inline-start: var(--m-space-5)">
           <li>Open the trip and tap the payment row under the fare</li>
           <li>Pick another card, or add one</li>
           <li>Tap Done; the new method shows on the trip at once</li>

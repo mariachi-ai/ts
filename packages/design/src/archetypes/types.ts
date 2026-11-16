@@ -99,7 +99,7 @@ export interface Archetype {
   category: CategoryId;
   /** Other categories it also appears in (one language can serve two). */
   alsoIn?: CategoryId[];
-  /** What New Project's design step searches, beside the name and category (lowercase words). */
+  /** What a design picker searches, beside the name and category (lowercase words). */
   tags: {
     /** How it feels: calm, bold, warm, playful, quiet, precise… */
     feel: string[];

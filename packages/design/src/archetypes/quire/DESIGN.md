@@ -123,7 +123,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Quire draws them. Every one is in `gallery.html`.
+The library's components, as Quire draws them; the five newest, at the end of this section, are not drawn for Quire yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, a 280px sidebar beside the main column, with no gap and no drawn edge;
@@ -217,6 +217,10 @@ All 36 of the library's components, as Quire draws them. Every one is in `galler
   the tool's name and a status chip.
 - **Citation.** A small grey chip (6px corners) with a number; the source in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Quire's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

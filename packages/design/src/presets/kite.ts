@@ -289,7 +289,7 @@ export const kite = extendTheme(minimal, {
       fontWeight: 'var(--m-font-weight-semibold)',
       ringColor: 'var(--m-color-bg-canvas)',
       ringWidth: '2px',
-      groupOverlap: '-0.375rem',
+      groupOverlap: '0.375rem',
     },
     // Collections: 13px rows split by hairlines, a quiet 13px header in grey, no outer frame
     table: {

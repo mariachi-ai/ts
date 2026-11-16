@@ -272,7 +272,7 @@ export const meridian = extendTheme(minimal, {
       border: 'var(--m-color-border-default)',
       ringColor: 'var(--m-color-bg-surface)',
       ringWidth: '1px',
-      groupOverlap: '-0.625rem',
+      groupOverlap: '0.625rem',
     },
     // Lists sit in a hairline frame: 14px rows split by hairlines, a grey 14px medium header, no fill
     table: {

@@ -5,18 +5,21 @@
 //
 //   pnpm --filter @mariachi/design fingerprint [id,id,…]
 //   pnpm --filter @mariachi/design fingerprint --matrix   (rebuild the matrix from the saved screens, no browser)
+//   pnpm --filter @mariachi/design fingerprint --print-scales   (print a fresh MEASURE_SCALE table from the saved
+//     screens, for a spec bump; no browser, no matrix)
 //   MARIACHI_CHROME=/path/to/chrome to use a specific browser (default: the installed Chrome channel)
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright-core';
-import { buildChecks, buildFingerprint, distance, probeSource, quantile, RECIPE_KINDS, spreads, WIDTHS } from '../dist/build.js';
+import { buildChecks, buildFingerprint, distance, MEASURE_SCALE, probeSource, quantile, RECIPE_KINDS, SPEC_VERSION, spreads, WIDTHS } from '../dist/build.js';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const dist = path.join(root, 'dist');
 const out = path.join(root, '.fingerprints'); // outside dist, so a rebuild keeps the measured screens
-const matrixOnly = process.argv.includes('--matrix');
+const printScales = process.argv.includes('--print-scales');
+const matrixOnly = printScales || process.argv.includes('--matrix');
 const only = process.argv.slice(2).find((a) => !a.startsWith('--'))?.split(',');
 const ids = fs.readdirSync(path.join(dist, 'archetypes')).filter((d) => fs.existsSync(path.join(dist, 'archetypes', d, 'recipes')) && (!only || only.includes(d))).sort();
 let commit = 'unknown';
@@ -69,6 +72,14 @@ const fps = Object.fromEntries(ids.filter((id) => screensOf[id]?.length).map((id
 const PAD = process.env.MARIACHI_SINGLE_PAD === undefined ? undefined : Number(process.env.MARIACHI_SINGLE_PAD);
 const checks = Object.fromEntries(Object.keys(fps).map((id) => [id, buildChecks(fps[id], { singlePad: PAD })]));
 const sp = spreads(Object.values(fps));
+if (printScales) {
+  // The table for MEASURE_SCALE in src/fingerprint/fingerprint.ts: today's spreads over every saved language
+  const lines = Object.keys(sp).sort().map((id) => `  '${id}': ${+sp[id].toFixed(6)},`);
+  const changed = Object.keys(sp).filter((id) => MEASURE_SCALE[id] !== +sp[id].toFixed(6));
+  console.log(`// spreads() over ${Object.keys(fps).length} languages' saved screens, spec ${SPEC_VERSION}\n{\n${lines.join('\n')}\n}`);
+  console.log(`// ${changed.length ? `differs from the frozen table at: ${changed.join(', ')}` : 'same as the frozen table'}`);
+  process.exit(0);
+}
 const med = (xs) => quantile(xs, 0.5);
 const FLOOR = 0.05;
 const rows = [];
@@ -92,6 +103,6 @@ for (const L of measured) {
   row.pass = row.strangerRatio >= 1.5 && row.nearestRatio >= 1.25;
   rows.push(row);
 }
-fs.writeFileSync(path.join(out, 'matrix.json'), `${JSON.stringify({ specVersion: 1, commit, floor: FLOOR, targets: { stranger: 1.5, nearest: 1.25 }, rows }, null, 2)}\n`);
+fs.writeFileSync(path.join(out, 'matrix.json'), `${JSON.stringify({ specVersion: SPEC_VERSION, commit, floor: FLOOR, targets: { stranger: 1.5, nearest: 1.25 }, rows }, null, 2)}\n`);
 console.table(rows);
 console.log(`${rows.filter((r) => r.pass).length}/${rows.length} pass both targets`);

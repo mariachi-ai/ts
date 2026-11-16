@@ -33,4 +33,11 @@ export default defineExamples('alert', [
   </div>
 </div>`,
   },
+  {
+    name: 'Notice on a surface',
+    description: 'The notice tone keeps its own fill and edge, so a neutral message shows on a white card even where the neutral alert takes the surface colour.',
+    html: `<div class="m-card"><div class="m-card-body">
+  ${alert('notice', 'status', 'i', 'Exports run overnight', 'Large exports are queued and emailed to you when they finish.')}
+</div></div>`,
+  },
 ]);

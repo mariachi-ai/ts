@@ -329,7 +329,7 @@ export function packageAssets(root: string = packageRoot()): PackageAssets {
     files[`archetypes/${a.id}/DESIGN.md`] = read(path.join(root, 'src', 'archetypes', a.id, 'DESIGN.md')) + designReference(a, theme);
     files[`archetypes/${a.id}/gallery.html`] = galleryPage(a, theme);
     for (const r of a.recipes) files[`archetypes/${a.id}/recipes/${r.name}.html`] = recipePage(a, r);
-    // Its named patterns (a player, a job card …), drawn in it, for design_reference to read from the build
+    // Its named patterns (a player, a job card …), drawn in it, for design tools to read from the build
     files[`archetypes/${a.id}/showcase.json`] = `${JSON.stringify({ language: a.id, arrangement: arrangementOf(a), patterns: showcasePatterns(a) }, null, 2)}\n`;
   }
   files['css/tailwind.css'] = emitTailwindCss();

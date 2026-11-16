@@ -8,6 +8,7 @@ export {
   ZERO_IS_A_HABIT,
   distance,
   KINDS,
+  MEASURE_SCALE,
   quantile,
   RECIPE_KINDS,
   SPEC_VERSION,

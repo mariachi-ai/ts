@@ -141,7 +141,7 @@ the end.
 
 ## Components
 
-All 36 of the library's components, as Kite draws them. Every one is in `gallery.html`.
+The library's components, as Kite draws them; the five newest, at the end of this section, are not drawn for Kite yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, the 260px panel beside the work (no gap; a hairline between);
@@ -231,6 +231,10 @@ All 36 of the library's components, as Kite draws them. Every one is in `gallery
   in grey.
 - **Citation.** A small grey key-like chip with a number; the source in a raised popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Kite's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

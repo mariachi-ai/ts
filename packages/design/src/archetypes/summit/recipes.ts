@@ -805,7 +805,7 @@ const errors = `<div style="min-block-size: 100vh; background: var(--m-color-bg-
           <span style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-semibold); line-height: 1; color: var(--m-color-accent-text); ${num}">404</span>
           <h2 id="sm-err-404" style="${bold}; font-size: var(--m-font-size-xl)">Wrong turn. This trail doesn't go anywhere.</h2>
           <p style="font-size: var(--m-font-size-sm); color: var(--m-color-fg-muted)">The page moved or never existed. From here you can:</p>
-          <ul class="m-stack" data-gap="1" style="font-size: var(--m-font-size-sm); padding-inline-start: var(--m-space-5)">
+          <ul class="m-stack" data-gap="1" style="list-style: disc; font-size: var(--m-font-size-sm); padding-inline-start: var(--m-space-5)">
             <li>check the address and try again,</li>
             <li>head back to <a href="#" style="color: var(--m-color-accent-text); text-decoration: none; font-weight: var(--m-font-weight-semibold)">your feed</a>,</li>
             <li>or search for a <a href="#" style="color: var(--m-color-accent-text); text-decoration: none; font-weight: var(--m-font-weight-semibold)">route</a> or <a href="#" style="color: var(--m-color-accent-text); text-decoration: none; font-weight: var(--m-font-weight-semibold)">crew</a>.</li>

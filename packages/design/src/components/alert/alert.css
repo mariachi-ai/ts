@@ -22,6 +22,14 @@
     grid-template-columns: auto minmax(0, 1fr);
   }
 
+  /* A neutral notice that keeps its own fill and edge, so it shows on a white surface */
+  .m-alert[data-tone="notice"] {
+    --_bg: var(--m-alert-notice-bg);
+    --_fg: var(--m-alert-notice-fg);
+    --_border: var(--m-alert-notice-border);
+    --_title: var(--m-alert-notice-fg);
+  }
+
   .m-alert[data-tone="accent"] {
     --_bg: var(--m-color-accent-subtle);
     --_fg: var(--m-color-fg-default);

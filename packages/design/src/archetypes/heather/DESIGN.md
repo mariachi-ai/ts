@@ -144,7 +144,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Heather draws them. Every one is in `gallery.html`.
+The library's components, as Heather draws them; the five newest, at the end of this section, are not drawn for Heather yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: fluid to 80rem, 50rem for settings, 30rem for forms;
@@ -253,6 +253,10 @@ Sections are 24px apart.
 - **Tool call.** A hairline row with 8px corners, a 16px icon, the step's name and its status badge.
 - **Citation.** A small pale-blue chip with a number or a timestamp, the source in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Heather's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

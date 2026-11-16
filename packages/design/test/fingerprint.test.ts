@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildChecks, buildFingerprint, checkMessage, clearRange, deltaE2000, distance, parseCssColor, probeSource, quantile, rgbToOklch, spreads } from '../src/fingerprint';
+import { buildChecks, buildFingerprint, checkMessage, clearRange, deltaE2000, distance, MEASURE_SCALE, parseCssColor, probeSource, quantile, rgbToOklch, spreads } from '../src/fingerprint';
 import type { MeasuredScreen } from '../src/fingerprint';
 
 describe('colour', () => {
@@ -27,7 +27,7 @@ describe('colour', () => {
 });
 
 const screen = (id: string, kinds: MeasuredScreen['kinds'], measures: Record<string, number | string | Record<string, number> | null>): MeasuredScreen => ({
-  id, kinds, width: 'wide', result: { specVersion: 1, width: 1440, measures },
+  id, kinds, width: 'wide', result: { specVersion: 1.2, width: 1440, measures },
 });
 
 describe('fingerprint', () => {
@@ -76,14 +76,25 @@ describe('fingerprint', () => {
   });
   it('measures distance outside the range, scaled by the spread across libraries', () => {
     const checks = buildChecks(fp);
-    expect(distance({ 'type.sizes': 4 }, checks, { 'type.sizes': 2 })).toBe(0);
-    expect(distance({ 'type.sizes': 6.5 }, checks, { 'type.sizes': 2 })).toBe(1);
+    expect(distance({ 'type.sizes': 4 }, checks, { 'type.sizes': 2 }, [], {})).toBe(0);
+    expect(distance({ 'type.sizes': 6.5 }, checks, { 'type.sizes': 2 }, [], {})).toBe(1);
     expect(spreads([fp, fp, fp])['type.sizes']).toBe(0);
+  });
+  it('scales by the frozen table, and by the live spread only for a measure missing from it', () => {
+    const checks = buildChecks(fp);
+    expect(distance({ 'type.sizes': 6.5 }, checks, { 'type.sizes': 2 }, [], { 'type.sizes': 4 })).toBe(0.5);
+    expect(distance({ 'type.sizes': 6.5 }, checks, { 'type.sizes': 2 }, [], { 'type.headingRatio': 4 })).toBe(1);
+    // By default the table is MEASURE_SCALE, so the live spread passed in doesn't move the distance
+    const frozen = MEASURE_SCALE['type.sizes'];
+    expect(frozen).toBeGreaterThan(0);
+    expect(distance({ 'type.sizes': 6.5 }, checks, { 'type.sizes': 2 })).toBeCloseTo(2 / frozen, 9);
+    expect(distance({ 'type.sizes': 6.5 }, checks, { 'type.sizes': 50 })).toBeCloseTo(2 / frozen, 9);
   });
   it('leaves out a check every library shares, instead of dividing by no spread', () => {
     const checks = buildChecks(fp);
-    expect(distance({ 'type.sizes': 9 }, checks, { 'type.sizes': 0 })).toBe(0);
-    expect(distance({ 'type.sizes': 9 }, checks, {})).toBeGreaterThan(0);
+    expect(distance({ 'type.sizes': 9 }, checks, { 'type.sizes': 0 }, [], {})).toBe(0);
+    expect(distance({ 'type.sizes': 9 }, checks, { 'type.sizes': 2 }, [], { 'type.sizes': 0 })).toBe(0);
+    expect(distance({ 'type.sizes': 9 }, checks, {}, [], {})).toBeGreaterThan(0);
   });
   it('interpolates quantiles', () => {
     expect(quantile([1, 2, 3, 4], 0.5)).toBe(2.5);

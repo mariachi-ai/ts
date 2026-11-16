@@ -134,7 +134,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Nocturne draws them. Every one is in `gallery.html`.
+The library's components, as Nocturne draws them; the five newest, at the end of this section, are not drawn for Nocturne yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, the 240px side menu beside the scene;
@@ -219,6 +219,10 @@ All 36 of the library's components, as Nocturne draws them. Every one is in `gal
   tool name and a status badge.
 - **Citation.** A small indigo pill with a number; the source in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Nocturne's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

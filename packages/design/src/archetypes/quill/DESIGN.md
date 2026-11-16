@@ -130,7 +130,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Quill draws them. Every one is in `gallery.html`.
+The library's components, as Quill draws them; the five newest, at the end of this section, are not drawn for Quill yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split` twice for the app: the 180px sidebar beside a second split of the 280px note list and
@@ -225,6 +225,10 @@ All 36 of the library's components, as Quill draws them. Every one is in `galler
   8px corners, a 16px icon, the name and a capsule for its status.
 - **Citation.** A small capsule with a number, the source in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Quill's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

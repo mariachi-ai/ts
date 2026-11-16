@@ -144,7 +144,7 @@ scales are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Comet draws them. Every one is in `gallery.html`.
+The library's components, as Comet draws them; the five newest, at the end of this section, are not drawn for Comet yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, a section list or side panel beside content (the rail is a fixed 56px column before
@@ -246,6 +246,10 @@ All 36 of the library's components, as Comet draws them. Every one is in `galler
   result in 13px below.
 - **Citation.** A small warm-grey key-like chip with a number; the source in a raised popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Comet's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

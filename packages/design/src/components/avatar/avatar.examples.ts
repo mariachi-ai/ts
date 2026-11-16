@@ -14,11 +14,20 @@ export default defineExamples('avatar', [
   },
   {
     name: 'Group',
+    description: 'The overlap token is a distance. Initials in a covered avatar centre in the part that shows.',
     html: `<div class="m-avatar-group">
   <span class="m-avatar" aria-label="Ada Lovelace">AL</span>
   <span class="m-avatar" aria-label="Grace Hopper">GH</span>
   <img class="m-avatar" src="${photo}" alt="Margaret Hamilton">
   <span class="m-avatar" aria-label="3 more members">+3</span>
+</div>`,
+  },
+  {
+    name: 'Ring',
+    description: 'A halo a gap away from one avatar, for a story or a live presence. Ring tokens set the width and the gap.',
+    html: `<div class="m-cluster" data-gap="4">
+  <span class="m-avatar" data-ring aria-label="Ada Lovelace, live now">AL</span>
+  <img class="m-avatar" data-size="lg" data-ring src="${photo}" alt="Margaret Hamilton, new story">
 </div>`,
   },
   {

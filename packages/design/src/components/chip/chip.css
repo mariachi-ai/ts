@@ -1,0 +1,92 @@
+@layer mariachi.components {
+  .m-chip {
+    --_height: var(--m-chip-height-md);
+
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    gap: var(--m-chip-gap);
+    block-size: var(--_height);
+    min-block-size: var(--m-control-min-target);
+    padding-inline: var(--m-chip-padding-x);
+    border: var(--m-chip-border-width) solid var(--m-chip-border);
+    border-radius: var(--m-chip-radius);
+    background: var(--m-chip-bg);
+    color: var(--m-chip-fg);
+    font: inherit;
+    font-size: var(--m-chip-font-size);
+    font-weight: var(--m-chip-font-weight);
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+      background-color var(--m-motion-duration-fast) var(--m-motion-easing-standard),
+      border-color var(--m-motion-duration-fast) var(--m-motion-easing-standard);
+  }
+
+  .m-chip[data-size="sm"] {
+    --_height: var(--m-chip-height-sm);
+  }
+
+  :is(a, button, label).m-chip:not(:disabled, [aria-disabled="true"], :has(:disabled)) {
+    cursor: pointer;
+  }
+
+  :is(a, button, label).m-chip:hover:not(:disabled, [aria-disabled="true"], :has(:disabled)) {
+    background: var(--m-chip-hover-bg);
+  }
+
+  :is(a, button, label).m-chip:active:not(:disabled, [aria-disabled="true"], :has(:disabled)) {
+    background: var(--m-chip-active-bg);
+  }
+
+  /* A chip wrapping a checkbox or radio hides the box (it stays focusable) and shows focus on itself */
+  label.m-chip {
+    position: relative;
+  }
+
+  label.m-chip > input:is([type="checkbox"], [type="radio"]) {
+    position: absolute;
+    inset: 0;
+    inline-size: 100%;
+    block-size: 100%;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  label.m-chip:has(> input:focus-visible) {
+    outline: var(--m-focus-width) var(--m-focus-style) var(--m-focus-color);
+    outline-offset: var(--m-focus-offset);
+  }
+
+  .m-chip:is([aria-pressed="true"], :has(> input:checked)) {
+    border-color: var(--m-chip-selected-border);
+    background: var(--m-chip-selected-bg);
+    color: var(--m-chip-selected-fg);
+  }
+
+  .m-chip:is(:disabled, [aria-disabled="true"], :has(> input:disabled)) {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .m-chip-remove {
+    display: inline-grid;
+    place-items: center;
+    inline-size: 1.25em;
+    block-size: 1.25em;
+    margin-inline-end: calc(var(--m-space-1) * -1);
+    padding: 0;
+    border: 0;
+    border-radius: var(--m-radius-full);
+    background: none;
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .m-chip-remove:hover {
+    background: var(--m-chip-hover-bg);
+  }
+}

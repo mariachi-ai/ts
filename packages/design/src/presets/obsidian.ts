@@ -230,7 +230,7 @@ export const obsidian = extendTheme(minimal, {
       fg: '#ffffff',
       fontWeight: 'var(--m-font-weight-medium)',
       ringWidth: '1.5px',
-      groupOverlap: '-0.25rem',
+      groupOverlap: '0.25rem',
     },
     // Lists, not grids: 36px rows, hairlines, a grey group bar instead of a header row
     table: {

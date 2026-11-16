@@ -149,7 +149,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Cirrus draws them. Every one is in `gallery.html`.
+The library's components, as Cirrus draws them; the five newest, at the end of this section, are not drawn for Cirrus yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: up to 76rem, 48rem for settings, 28rem for narrow forms;
@@ -250,6 +250,10 @@ All 36 of the library's components, as Cirrus draws them. Every one is in `galle
   row with a 12px radius, a 16px icon, the tool's name and a status pill.
 - **Citation.** A round pale-blue chip with a number; the source opens in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Cirrus's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

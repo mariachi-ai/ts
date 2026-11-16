@@ -273,7 +273,7 @@ const listDetail = glowPage(
       <div class="m-stack" data-gap="2">
         <h1 id="cb-inc-title" style="font-size: var(--m-font-size-xl); font-weight: var(--m-font-weight-semibold)">Checkout p95 above 2 s</h1>
         <p class="m-muted">Latency on <code class="m-code-inline">POST /cart/confirm</code> climbed after the 14:05 deploy. Rolling back the payment client to 4.18 brought p50 down; p95 is still high on cold instances.</p>
-        <ul class="m-stack" data-gap="1" style="margin: 0; padding-inline-start: var(--m-space-5)">
+        <ul class="m-stack" data-gap="1" style="list-style: disc; margin: 0; padding-inline-start: var(--m-space-5)">
           <li>Pin the client until the retry change is reviewed</li>
           <li>Warm two extra instances before the evening peak</li>
         </ul>

@@ -815,7 +815,7 @@ const reading = `<div style="background: var(--m-color-bg-canvas); min-block-siz
   repository: kestrel-api
   task: Update dependencies with patch releases</code></pre>
         <h2 style="font-size: var(--m-font-size-2xl); font-weight: var(--m-font-weight-regular); letter-spacing: var(--m-font-tracking-tight); margin-block-start: var(--m-space-6)">How a run starts</h2>
-        <ol class="m-stack" data-gap="2" style="padding-inline-start: var(--m-space-5); margin: 0">
+        <ol class="m-stack" data-gap="2" style="list-style: decimal; padding-inline-start: var(--m-space-5); margin: 0">
           <li>Lathe checks out a fresh branch from the base you chose.</li>
           <li>The agent works through the task with the repository's rules.</li>
           <li>Checks run; if they pass, a pull request opens for review.</li>

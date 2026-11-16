@@ -4,7 +4,7 @@
 // a project makes each one when it needs it, from the language's reference (catalog, component CSS, DESIGN.md).
 //
 //   <id>/index.css    imports the three below, in order
-//   <id>/fonts.css    @font-face for the body and heading families, with fonts/*.woff2 and each family's
+//   <id>/fonts.css    @font-face for the body, heading, mono and display families, with fonts/*.woff2 and each family's
 //                     licence as fonts/<family>.LICENSE.txt (the fonts are redistributed, so it goes with them)
 //   <id>/base.css     the reset and base layers (no components)
 //   <id>/tokens.css   the language's tokens, light and dark, scoped to [data-theme="<id>"]
@@ -67,39 +67,75 @@ function license(dir, s) {
   return [file, `${s}.LICENSE.txt`];
 }
 
-/** The woff2 files, the licence and the @font-face rules for one family, or null when there's no open package for it. */
-function fontFace(family) {
+/** The woff2 files, the licence and the @font-face rules for one family, or null when there's no open package for it.
+ * A display face (`display: true`) also gets its italic and, where the package has one, its width axis, because
+ * display type is where languages use them (a wide italic headline). "Inter Display" is Inter's optical-size cut. */
+function fontFace(family, { display = false } = {}) {
+  if (family === 'Inter Display') return interDisplay();
   const s = slug(family);
   const variable = pkgDir(`@fontsource-variable/${s}`);
   if (fs.existsSync(variable)) {
-    const files = [
-      [`${s}-latin-ext-wght-normal.woff2`, LATIN_EXT],
-      [`${s}-latin-wght-normal.woff2`, LATIN],
-    ].filter(([f]) => fs.existsSync(path.join(variable, 'files', f)));
+    const has = (f) => fs.existsSync(path.join(variable, 'files', f));
+    const axis = display && has(`${s}-latin-wdth-normal.woff2`) ? 'wdth' : 'wght';
+    const styles = display ? ['normal', 'italic'] : ['normal'];
+    const files = styles.flatMap((style) =>
+      [
+        [`${s}-latin-ext-${axis}-${style}.woff2`, LATIN_EXT, style],
+        [`${s}-latin-${axis}-${style}.woff2`, LATIN, style],
+      ].filter(([f]) => has(f)),
+    );
+    const stretch = axis === 'wdth' ? '  font-stretch: 62.5% 125%;\n' : '';
     // Themes name the variable face first ("Figtree Variable", "Figtree"), so both names point at the same files.
     const css = [`${family} Variable`, family].flatMap((name) =>
       files.map(
-        ([f, range]) =>
-          `@font-face {\n  font-family: '${name}';\n  font-style: normal;\n  font-display: swap;\n  font-weight: 100 900;\n  src: url(./fonts/${f}) format('woff2-variations');\n  unicode-range: ${range};\n}\n`,
+        ([f, range, style]) =>
+          `@font-face {\n  font-family: '${name}';\n  font-style: ${style};\n  font-display: swap;\n  font-weight: 100 900;\n${stretch}  src: url(./fonts/${f}) format('woff2-variations');\n  unicode-range: ${range};\n}\n`,
       ),
     );
     return { family, source: `@fontsource-variable/${s}`, license: license(variable, s), files: files.map(([f]) => [path.join(variable, 'files', f), f]), css };
   }
   const fixed = pkgDir(`@fontsource/${s}`);
   if (fs.existsSync(fixed)) {
-    const files = [];
-    const css = [];
+    const found = [];
     for (const w of [400, 500, 600, 700]) {
       for (const [sub, range] of [['latin-ext', LATIN_EXT], ['latin', LATIN]]) {
         const f = `${s}-${sub}-${w}-normal.woff2`;
-        if (!fs.existsSync(path.join(fixed, 'files', f))) continue;
-        files.push([path.join(fixed, 'files', f), f]);
-        css.push(`@font-face {\n  font-family: '${family}';\n  font-style: normal;\n  font-display: swap;\n  font-weight: ${w};\n  src: url(./fonts/${f}) format('woff2');\n  unicode-range: ${range};\n}\n`);
+        if (fs.existsSync(path.join(fixed, 'files', f))) found.push([f, range, w]);
       }
     }
-    return files.length ? { family, source: `@fontsource/${s}`, license: license(fixed, s), files, css } : null;
+    // A face drawn at one weight only (a heavy display face like Archivo Black) covers every weight, so a bold
+    // heading uses it as drawn instead of a synthesised bold.
+    const single = new Set(found.map(([, , w]) => w)).size === 1;
+    const css = found.map(
+      ([f, range, w]) =>
+        `@font-face {\n  font-family: '${family}';\n  font-style: normal;\n  font-display: swap;\n  font-weight: ${single ? '100 900' : w};\n  src: url(./fonts/${f}) format('woff2');\n  unicode-range: ${range};\n}\n`,
+    );
+    return found.length ? { family, source: `@fontsource/${s}`, license: license(fixed, s), files: found.map(([f]) => [path.join(fixed, 'files', f), f]), css } : null;
   }
   return null;
+}
+
+/** "Inter Display": Inter's optical-size files under the display name. With optical sizing on (the default), large
+ * type gets the display cut and small type the text cut, as Inter itself does. */
+function interDisplay() {
+  const variable = pkgDir('@fontsource-variable/inter');
+  if (!fs.existsSync(variable)) return null;
+  const files = [
+    ['inter-latin-ext-opsz-normal.woff2', LATIN_EXT],
+    ['inter-latin-opsz-normal.woff2', LATIN],
+  ].filter(([f]) => fs.existsSync(path.join(variable, 'files', f)));
+  const css = files.map(
+    ([f, range]) =>
+      `@font-face {\n  font-family: 'Inter Display';\n  font-style: normal;\n  font-display: swap;\n  font-weight: 100 900;\n  src: url(./fonts/${f}) format('woff2-variations');\n  unicode-range: ${range};\n}\n`,
+  );
+  return files.length ? { family: 'Inter Display', source: '@fontsource-variable/inter', license: license(variable, 'inter'), files: files.map(([f]) => [path.join(variable, 'files', f), f]), css } : null;
+}
+
+/** The first family a font stack names ('"Archivo Variable", "Archivo", …' → "Archivo"), or null for a var() or a generic. */
+function firstFamily(stack) {
+  if (typeof stack !== 'string' || stack.trim().startsWith('var(')) return null;
+  const name = stack.split(',')[0].trim().replace(/^["']|["']$/g, '').replace(/ Variable$/, '');
+  return /^(ui-|system-ui|sans-serif|serif|monospace)/.test(name) ? null : name;
 }
 
 /** Lucide defaults for a plain preset's DESIGN.md (the languages each set their own). */
@@ -126,7 +162,7 @@ function plainDesignMd(theme) {
     '',
     PLAIN_PRINCIPLES[theme.name] ?? '',
     '',
-    `This is one of \`@mariachi/design\`'s plain presets, not a design language: it has no page recipes and no notes on how each component is drawn. Build components on the library's defaults (the design_reference tool), with these tokens, and keep every colour, corner, shadow and font on a token.`,
+    `This is one of \`@mariachi/design\`'s plain presets, not a design language: it has no page recipes and no notes on how each component is drawn. Build components on the library's defaults (\`mariachi design reference <name>\`), with these tokens, and keep every colour, corner, shadow and font on a token.`,
   ].join('\n') + designReference(a, theme);
 }
 
@@ -137,15 +173,15 @@ const header = (kit, what) =>
     ` * Copied from Mariachi's @mariachi/design ${pkg.version}, commit ${COMMIT}.`,
     ` * The library's source for it: ${kit.source} in ${REPO}.`,
     ' * Components aren\'t copied. Make each one when the app needs it, from this language\'s reference:',
-    ' * the design_reference tool, or DESIGN.md beside this file. Keep colours, corners, shadows and fonts on --m-* tokens.',
+    ' * `mariachi design reference <name>`, or DESIGN.md beside this file. Keep colours, corners, shadows and fonts on --m-* tokens.',
     ' * This copy is the project\'s own. Put the project\'s changes in ../design.css, so they stay easy to see',
-    ' * and survive a change of language. Moving to a newer version of the language is a deliberate Change, never automatic.',
+    ' * and survive a change of language. Moving to a newer version of the language is a deliberate change, never automatic.',
     ' */',
     '',
   ].join('\n');
 
 const mdHeader = (kit) =>
-  `<!-- ${kit.label} (${kit.id}), copied from Mariachi's @mariachi/design ${pkg.version}, commit ${COMMIT} (${kit.source} in ${REPO}). This copy is the project's own; components come from the design_reference tool; loading, motion and charts are in motion/ (@mariachi/motion ${motionPkg.version}: import motion/motion.css after index.css, call enhance() from motion/motion.js once); moving to a newer version is a deliberate Change. -->\n\n`;
+  `<!-- ${kit.label} (${kit.id}), copied from Mariachi's @mariachi/design ${pkg.version}, commit ${COMMIT} (${kit.source} in ${REPO}). This copy is the project's own; components are described by \`mariachi design reference <name>\`; loading, motion and charts are in motion/ (@mariachi/motion ${motionPkg.version}: import motion/motion.css after index.css, call enhance() from motion/motion.js once); moving to a newer version is a deliberate change. -->\n\n`;
 
 const read = (...p) => fs.readFileSync(path.join(dist, ...p), 'utf8');
 const stripBanner = (css) => css.replace(/^\/\* @mariachi\/design [^*]*\*\/\n/, '');
@@ -177,8 +213,12 @@ for (const theme of Object.values(presets)) {
   const mono = a && !families.includes(a.type.mono) && fontFace(a.type.mono) ? [a.type.mono] : [];
   const fonts = [];
   const faceCss = [];
-  for (const family of [...families, ...mono]) {
-    const face = fontFace(family);
+  // And its display face, where an open package is installed: headlines otherwise fall back to the system's.
+  const displayFamily = firstFamily(theme.tokens?.['font.family.display']);
+  const display =
+    displayFamily && ![...families, ...mono].some((f) => slug(f) === slug(displayFamily)) && fontFace(displayFamily, { display: true }) ? [displayFamily] : [];
+  for (const family of [...families, ...mono, ...display]) {
+    const face = fontFace(family, { display: display.includes(family) });
     if (!face) {
       fonts.push({ family, files: [], note: 'No open font package; the theme falls back to the next font in its stack.' });
       continue;

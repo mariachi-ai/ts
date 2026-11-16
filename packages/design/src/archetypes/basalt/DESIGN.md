@@ -148,7 +148,7 @@ in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Basalt draws them. Every one is in `gallery.html`.
+The library's components, as Basalt draws them; the five newest, at the end of this section, are not drawn for Basalt yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 80rem with 56px gutters, 48rem for full-page flows and settings
@@ -274,6 +274,10 @@ Sections are 32–40px apart.
 - **Usage**, as above.
 - Suggestions from the assistant are denim notices; a reason is coloured by its tone ("All within
   policy" green, "Receipts requested twice" ochre, "Over the trip limit" an orange-red notice).
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Basalt's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

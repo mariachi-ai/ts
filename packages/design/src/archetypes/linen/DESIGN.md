@@ -135,7 +135,7 @@ scales are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Linen draws them. Every one is in `gallery.html`.
+The library's components, as Linen draws them; the five newest, at the end of this section, are not drawn for Linen yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-split`, a 224px sidebar of lists beside the page, with no gap and no border between;
@@ -234,6 +234,10 @@ Sections are 32px apart; a list title has 48–64px above it.
   radius, with a 16px icon, the tool's name and a status tint.
 - **Citation.** A small grey round chip with a number; the source in a menu-style popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Linen's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

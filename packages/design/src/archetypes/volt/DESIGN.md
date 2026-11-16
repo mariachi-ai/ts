@@ -146,7 +146,7 @@ scales are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Volt draws them. Every one is in `gallery.html`.
+The library's components, as Volt draws them; the five newest, at the end of this section, are not drawn for Volt yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the content column: 76rem, or 46rem for settings and 28rem for forms;
@@ -271,6 +271,10 @@ All 36 of the library's components, as Volt draws them. Every one is in `gallery
   16px-cornered box with a 16px icon, the name, and a pill status badge.
 - **Citation.** A small grey pill with a number, and the source in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Volt's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

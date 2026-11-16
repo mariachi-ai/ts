@@ -875,6 +875,9 @@ importers:
       '@fontsource-variable/albert-sans':
         specifier: 5.3.0
         version: 5.3.0
+      '@fontsource-variable/archivo':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource-variable/dm-sans':
         specifier: 5.3.0
         version: 5.3.0
@@ -908,6 +911,9 @@ importers:
       '@fontsource-variable/inter-tight':
         specifier: 5.3.0
         version: 5.3.0
+      '@fontsource-variable/jura':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource-variable/newsreader':
         specifier: 5.3.0
         version: 5.3.0
@@ -920,12 +926,21 @@ importers:
       '@fontsource-variable/public-sans':
         specifier: 5.3.0
         version: 5.3.0
+      '@fontsource-variable/red-hat-display':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource-variable/roboto':
+        specifier: 5.3.0
+        version: 5.3.0
+      '@fontsource-variable/sofia-sans-condensed':
         specifier: 5.3.0
         version: 5.3.0
       '@fontsource-variable/source-serif-4':
         specifier: 5.3.1
         version: 5.3.1
+      '@fontsource/archivo-black':
+        specifier: 5.3.0
+        version: 5.3.0
       '@fontsource/barlow-condensed':
         specifier: 5.3.0
         version: 5.3.0
@@ -2836,6 +2851,9 @@ packages:
   '@fontsource-variable/albert-sans@5.3.0':
     resolution: {integrity: sha512-Uptsmb61n0fXHHqcdGyarvWAGlMd3UEEY3XjwV5gSZrcRxeM1MVKiTtsWhmWmPt4gYV2NWXyxYKu7llZ1Oz9wg==}
 
+  '@fontsource-variable/archivo@5.3.0':
+    resolution: {integrity: sha512-HogK8FJelrD1o7TlZlkIVtHgc20bO5PZRWE7mUeUTdMN055alznQV6/00J00IBeu8FQAH4s3zW9UJNvKExXf+g==}
+
   '@fontsource-variable/dm-sans@5.3.0':
     resolution: {integrity: sha512-BpUG5bqePiDFMBM4ZtLSlPdAIOM990uB1dlXzIf4aw21yQR7BmykedLXXXMqGWsR18aMLOsbWccwJNh3ztTQaA==}
 
@@ -2869,6 +2887,9 @@ packages:
   '@fontsource-variable/inter@5.3.0':
     resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
 
+  '@fontsource-variable/jura@5.3.0':
+    resolution: {integrity: sha512-/1lf4WDeP9yGqBu9kdI8sUOAsChVqEyLUw6U09u2eWRL+L08Sj/AdoDYtGM3MMOkoW5zEgwQrfSs/vJCKQFfyw==}
+
   '@fontsource-variable/newsreader@5.3.0':
     resolution: {integrity: sha512-rrzYi43qMpbzwuFtf9OkWH8sxAPVPcQQQEwXpPtwaKYeJ8yVg5aLs5kawmo1f2Q1t1M38TLmEKCkGVDsYwgdFw==}
 
@@ -2881,11 +2902,20 @@ packages:
   '@fontsource-variable/public-sans@5.3.0':
     resolution: {integrity: sha512-AVfkmAt50BMXWpOO21FAntiJFKGX6xTc2dSL8dxtDteONe9IuRXJWGbs0EbG955vAMCq23ENeuopuW87cGWDSQ==}
 
+  '@fontsource-variable/red-hat-display@5.3.0':
+    resolution: {integrity: sha512-8u4FI+i3fkB8erlN9lMGa7Hm7aBCRP34y/aPwriBUiDYoxmS/N1QvBrd/hghUBnHJKrVKRg3h4Oubpyl2H8smw==}
+
   '@fontsource-variable/roboto@5.3.0':
     resolution: {integrity: sha512-BoaaZiQf8fgtxv07KXkTwx1bKz/EoqIlTXq2OOKKXINxp6qXWdnlChqV+hSaDANS49yyUASFl3OVBMMDTCIHFA==}
 
+  '@fontsource-variable/sofia-sans-condensed@5.3.0':
+    resolution: {integrity: sha512-pfyjEn5plOBRtnQqXMDVR49QSdP9hYzgUi7J0w1bW5UG01MqQO8WGT9xdbPSt0+eZ6zrmaNzmk8QKUSkVltGMg==}
+
   '@fontsource-variable/source-serif-4@5.3.1':
     resolution: {integrity: sha512-4Rtay22SC4lMvw11r/+9kxANB6P3M0X8s1NudBC2v0J1KU2y3DcMoNcT3lBoZ/CqLirzf+StlO6UlJilyrvaUg==}
+
+  '@fontsource/archivo-black@5.3.0':
+    resolution: {integrity: sha512-7EsTIQ+Blf96ktpzTUpI7msi+u9/AJxM/GZxOSkEubVd1jSTrFSTNxMgfpX/8rQsjZ+19a+qvRbtcTEp5J/72g==}
 
   '@fontsource/barlow-condensed@5.3.0':
     resolution: {integrity: sha512-RA7MmIx0v3eQ6Gcf74qLVLOwLB0GpPOzx+eU9iG/AmCnSJGcIWYeU8y6CEMGZ210MGwGg5CZhzLkkvyZdTTk1g==}
@@ -4064,6 +4094,9 @@ packages:
   '@smithy/smithy-client@4.12.5':
     resolution: {integrity: sha512-UqwYawyqSr/aog8mnLnfbPurS0gi4G7IYDcD28cUIBhsvWs1+rQcL2IwkUQ+QZ7dibaoRzhNF99fAQ9AUcO00w==}
     engines: {node: '>=18.0.0'}
+    deprecated: |-
+      Deprecated due to a bug in custom logger data redaction. Upgrade to the latest version. If you used a custom logger with
+        this version, review your logs and rotate any credentials or other secrets. See https://github.com/aws/aws-sdk-js-v3/issues/8393.
 
   '@smithy/types@4.13.1':
     resolution: {integrity: sha512-787F3yzE2UiJIQ+wYW1CVg2odHjmaWLGksnKQHUrK/lYZSEcy1msuLVvxaR/sI2/aDe9U+TBuLsXnr3vod1g0g==}
@@ -6386,6 +6419,7 @@ packages:
   nkeys.js@1.1.0:
     resolution: {integrity: sha512-tB/a0shZL5UZWSwsoeyqfTszONTt4k2YS0tuQioMOD180+MbombYVgzDUYHlx+gejYK6rgf08n/2Df99WY0Sxg==}
     engines: {node: '>=10.0.0'}
+    deprecated: 'Package moved. Use @nats-io/nkeys instead: https://www.npmjs.com/package/@nats-io/nkeys'
 
   nlcst-to-string@4.0.0:
     resolution: {integrity: sha512-YKLBCcUYKAg0FNlOBT6aI91qFmSiFKiluk655WzPF+DDMA02qIyy8uiRqI8QXtcFpEvll12LpL5MXqEmAZ+dcA==}
@@ -6395,6 +6429,7 @@ packages:
 
   node-abort-controller@3.1.1:
     resolution: {integrity: sha512-AGK2yQKIjRuqnc6VkX2Xj5d+QW8xZ87pa1UK6yA6ouUyuxfHuMP6umE5QK7UmTeOAymo+Zx1Fxiuw9rVx8taHQ==}
+    deprecated: This package is no longer needed on supported Node.js versions. Node.js 16+ includes AbortController and AbortSignal as built-in globals. All Node.js versions requiring this polyfill are end-of-life. Use the built-in globals instead.
 
   node-fetch-native@1.6.7:
     resolution: {integrity: sha512-g9yhqoedzIUm0nTnTqAQvueMPVOuIY16bqgAJJC8XOOubYFNwz6IER9qs0Gq2Xd0+CecCKFjtdDTMA4u4xG06Q==}
@@ -9289,6 +9324,8 @@ snapshots:
 
   '@fontsource-variable/albert-sans@5.3.0': {}
 
+  '@fontsource-variable/archivo@5.3.0': {}
+
   '@fontsource-variable/dm-sans@5.3.0': {}
 
   '@fontsource-variable/figtree@5.3.0': {}
@@ -9311,6 +9348,8 @@ snapshots:
 
   '@fontsource-variable/inter@5.3.0': {}
 
+  '@fontsource-variable/jura@5.3.0': {}
+
   '@fontsource-variable/newsreader@5.3.0': {}
 
   '@fontsource-variable/nunito@5.3.0': {}
@@ -9319,9 +9358,15 @@ snapshots:
 
   '@fontsource-variable/public-sans@5.3.0': {}
 
+  '@fontsource-variable/red-hat-display@5.3.0': {}
+
   '@fontsource-variable/roboto@5.3.0': {}
 
+  '@fontsource-variable/sofia-sans-condensed@5.3.0': {}
+
   '@fontsource-variable/source-serif-4@5.3.1': {}
+
+  '@fontsource/archivo-black@5.3.0': {}
 
   '@fontsource/barlow-condensed@5.3.0': {}
 

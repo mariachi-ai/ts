@@ -135,7 +135,7 @@ are in the reference at the end.
 
 ## Components
 
-All 36 of the library's components, as Folio draws them. Every one is in `gallery.html`.
+The library's components, as Folio draws them; the five newest, at the end of this section, are not drawn for Folio yet. Every one is in `gallery.html`.
 
 **Layout.** Pages use the layout primitives:
 - `m-container`, the page column: 44.25rem (`data-size="md"`), or about 75rem for full-width
@@ -250,6 +250,10 @@ Blocks of text are 2–4px apart; sections 32–48px.
   hairline, the step's name, and a status pill.
 - **Citation.** A small grey numbered pill; the source opens in a popover.
 - **Usage**, as above.
+- **Row, chip, icon tile, amount and drop zone** (`m-row`, `m-chip`, `m-tile`, `m-amount`,
+  `m-dropzone`): newer than this language and not drawn for it yet. Until they are, use them with
+  Folio's tokens and the library defaults, and where a pattern above already describes rows,
+  chips, tiles or money figures, follow the pattern.
 
 ## Error handling
 

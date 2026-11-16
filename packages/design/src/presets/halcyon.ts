@@ -212,7 +212,12 @@ export const halcyon = extendTheme(minimal, {
     dialog: { border: 'transparent' },
     popover: { border: 'transparent', radius: '8px', shadow: 'var(--m-shadow-overlay)' },
     tooltip: { fontSize: 'var(--m-font-size-sm)', fontWeight: 'var(--m-font-weight-regular)', shadow: 'none' },
-    progress: { height: { md: '0.375rem' }, fill: 'var(--m-color-accent-default)' },
+    // The hairline track shows on white cards; in dark the sunken step keeps the bar at 3:1
+    progress: {
+      height: { md: '0.375rem' },
+      fill: 'var(--m-color-accent-default)',
+      track: { light: 'var(--m-color-border-default)', dark: 'var(--m-color-bg-sunken)' },
+    },
     checkbox: { size: '1rem' },
     // Field labels and messages in the running text's weight, not a heavier one
     field: { labelFontWeight: 'var(--m-font-body-weight)', errorFontWeight: 'var(--m-font-body-weight)' },
