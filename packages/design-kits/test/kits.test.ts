@@ -40,6 +40,28 @@ describe("@mariachi/design's kits, packed", () => {
     }
   });
 
+  it("ships each language's display face, with its files and licence", () => {
+    // A renamed or missing font package would otherwise fall back to the system's without a sound
+    const display: Record<string, string> = {
+      brutalist: 'Archivo Black',
+      fennel: 'Sofia Sans Condensed',
+      hearth: 'Archivo',
+      tinker: 'Jura',
+      trellis: 'Red Hat Display',
+      halcyon: 'Inter Display',
+      obsidian: 'Inter Display',
+      doodle: 'Inter Tight',
+    };
+    for (const [id, family] of Object.entries(display)) {
+      const { manifest, files } = store.read(id);
+      const font = manifest.fonts.find((f) => f.family === family);
+      expect(font?.files.length, `${id}: ${family}`).toBeGreaterThan(0);
+      for (const file of font?.files ?? []) expect(files.has(file), `${id}: ${file}`).toBe(true);
+      expect(files.get(font?.license as string)?.toString('utf8'), `${id}: ${family}`).toMatch(/SIL Open Font License/i);
+      expect(files.get('fonts.css')?.toString('utf8'), `${id}: ${family}`).toContain(`font-family: '${family}'`);
+    }
+  });
+
   it('stores motion and each font once', () => {
     const shared = new Set(fs.readdirSync(path.join(root, 'shared')));
     const linen = store.read('linen').manifest;
