@@ -6,12 +6,7 @@
     "category": "design",
     "status": "alpha",
     "useWhen": "Giving a project its own copy of a design language (mariachi design add <kit>), so the look never changes under it",
-    "entry": [
-      "listKits",
-      "readKit",
-      "addKit",
-      "installedKit"
-    ]
+    "entry": ["listKits", "readKit", "addKit", "installedKit"]
   },
   "type": "module",
   "bin": {
@@ -29,15 +24,13 @@
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": [
-    "dist",
-    "README.md"
-  ],
+  "files": ["dist", "README.md"],
   "publishConfig": {
     "access": "public"
   },
   "scripts": {
     "build": "rm -rf dist .build && tsup && node scripts/pack.mjs",
+    "prepublishOnly": "node scripts/check-release.mjs",
     "dev": "tsup --watch",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist .build .turbo",
