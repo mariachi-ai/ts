@@ -1353,6 +1353,10 @@ This is a Mariachi backend. Before writing code, read the framework docs shipped
 - \`node_modules/@mariachi/core/docs/recipes/\` (step-by-step: entity, job, webhook, integration)
 - \`node_modules/@mariachi/core/docs/auth-and-providers.md\` (how identity reaches \`ctx\`, personal tenants)
 
+\`pnpm mariachi docs\` lists them all. \`pnpm mariachi docs <name>#<section>\` prints one section
+(\`pnpm mariachi docs jobs#schedules\`), which is the cheapest way to read, and
+\`pnpm mariachi docs --search <words>\` finds the lines you need and says which section each is in.
+
 ## Layout
 
 | Path | Layer |

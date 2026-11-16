@@ -183,6 +183,45 @@ warnings too; `--timeout <ms>` sets how long to wait for a service.
   secret-looking query parameters, and the values of variables named like secrets (`*_SECRET`,
   `*_TOKEN`, `*_KEY`, `*_PASSWORD`) are replaced by `***`. A variable is named, never quoted.
 
+## docs
+
+```bash
+mariachi docs                              # the list: every doc, by group, with a line about it
+mariachi docs jobs                         # one doc
+mariachi docs http#pages-and-files         # one section (or: mariachi docs http --section "pages and files")
+mariachi docs --search idempotency key     # the lines that have every word, in every doc that has one
+mariachi docs jobs --search retry          # the same, in one doc
+mariachi docs recipes                      # a group's list
+mariachi docs jobs --path                  # where the file is
+```
+
+Reads the framework's docs from the terminal, so a person or a coding agent can find the rule or
+the recipe without opening `node_modules`. In a project it reads the docs of the `@mariachi/core`
+that project has installed, so they match the version in use; anywhere else, the ones the CLI came
+with.
+
+- A doc is named by its path without `.md` (`recipes/add-domain-entity`), by its last part
+  (`add-domain-entity`), or by the start of either when only one doc fits.
+- A section is named by its heading, in any case, its slug (`pages-and-files`), or the start of it.
+  It runs to the next heading of the same level.
+- **A search shows every doc that has a matching line**, with its first five and how many more it
+  has, so a common word can't push the doc you want out of the answer. Docs come likeliest first:
+  one named for a word, then one with a word in a heading, then the rest, with the generated
+  catalogs last. Each line starts with what to read next (`storage#browser-uploads-and-downloads:55`
+  is `mariachi docs storage#browser-uploads-and-downloads`). A quoted phrase is its words:
+  `--search "tables missing"` and `--search tables missing` are the same search. A word matches
+  inside longer words (`auth` finds `authenticate`). A doc named before `--search` limits the
+  search to it.
+- **A name that isn't a doc** gets the lines that mention it, in the same form, and exit code 1. A
+  group's name (`recipes`, `guides`) gets that group's list.
+- `--json` gives the list (`{ dir, docs }`), a doc (`{ name, file, section, summary, text }`) or the
+  search (`{ words, total, docs: [{ name, file, total, matches: [{ ref, line, heading, text }] }] }`)
+  to a tool.
+- The list is `llms.txt`, in the docs folder: an index of the docs in the
+  [llms.txt](https://llmstxt.org) format, generated from this folder's README by `pnpm docs:catalog`
+  and checked by `pnpm docs:check`. A tool that reads that format can be pointed at
+  `node_modules/@mariachi/core/docs/llms.txt`.
+
 ## validate
 
 ```bash
