@@ -52,6 +52,12 @@ still theirs when the token names no organization.
 When the provider has no organizations at all, [`@mariachi/organizations`](./organizations.md) keeps
 them, with memberships and invitations, in your own database.
 
+**Several identity providers in one app.** A user id is unique only within the provider that issued
+it, and it is the key of everything kept about a user. `withUserNamespace(verifier, 'workos')`
+prefixes the ids of the people a verifier verifies (`workos.<subject>`), so two providers can't
+issue the same one. Wrap it inside `withPersonalTenants`. Choose a namespace once: changing it makes
+every user of that provider a new user.
+
 The rules, which are enforced and tested:
 
 - **Namespaced by issuer.** The id is `user.<namespace>.<userId>`, the user id percent-encoded so

@@ -1357,6 +1357,9 @@ importers:
 
   packages/organizations:
     dependencies:
+      '@mariachi/communication':
+        specifier: workspace:*
+        version: link:../communication
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
@@ -1367,9 +1370,18 @@ importers:
         specifier: ^3.24
         version: 3.25.76
     devDependencies:
+      '@mariachi/api-facade':
+        specifier: workspace:*
+        version: link:../api-facade
+      '@mariachi/auth':
+        specifier: workspace:*
+        version: link:../auth
       '@mariachi/database-postgres':
         specifier: workspace:*
         version: link:../database-postgres
+      '@mariachi/rate-limit':
+        specifier: workspace:*
+        version: link:../rate-limit
       drizzle-orm:
         specifier: ^0.38
         version: 0.38.4(@opentelemetry/api@1.9.0)(@types/pg@8.6.1)(postgres@3.4.8)(react@19.2.4)

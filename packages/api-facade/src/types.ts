@@ -85,6 +85,13 @@ export interface RouteOpts<S extends RouteSchemas = RouteSchemas> {
   auth?: AuthStrategy | AuthStrategy[] | false;
   /** Every listed scope is required. */
   scopes?: string[];
+  /**
+   * Whether the caller must be in a tenant. `'required'` (the default) refuses an identity with none
+   * (`tenancy/missing-tenant`). `'optional'` lets one through with `ctx.tenantId` null, for the few
+   * routes a signed-in user needs before they are in any tenant: listing or creating their
+   * organizations, accepting an invitation. A handler on such a route must not touch tenant-scoped data.
+   */
+  tenant?: 'required' | 'optional';
   rateLimit?: RateLimitRule | false;
   schema?: S;
   /** Success status. Default 200 (204 when the handler returns undefined). */

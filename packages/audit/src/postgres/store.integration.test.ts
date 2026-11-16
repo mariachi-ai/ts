@@ -68,6 +68,20 @@ describe('DrizzleAuditLog', () => {
     expect(await audit.findByResource(ctx, 'doc', '1')).toHaveLength(20);
   });
 
+  it('refuses someone signed in who is in no tenant: no tenant is not every tenant', async () => {
+    const nowhere = createContext({ logger: silent, userId: `u-${run}`, identityType: 'session' });
+    const refused = { code: 'audit/tenant-required' };
+    await expect(audit.find(nowhere, {}, { page: 1, pageSize: 10 })).rejects.toMatchObject(refused);
+    await expect(audit.find(nowhere, { tenantId: tenant }, { page: 1, pageSize: 10 })).rejects.toMatchObject(refused);
+    await expect(audit.export(nowhere, {})).rejects.toMatchObject(refused);
+    await expect(audit.verifyChain(nowhere, tenant)).rejects.toMatchObject(refused);
+    const before = Number([...(await database.db.execute(sql`select count(*) as n from audit_logs`))][0]?.n);
+    await expect(audit.retain(nowhere, new Date(Date.now() + 60_000))).rejects.toMatchObject(refused);
+    expect(Number([...(await database.db.execute(sql`select count(*) as n from audit_logs`))][0]?.n)).toBe(before);
+    // The system names a tenant and gets it
+    expect((await audit.find(createContext({ logger: silent }), { tenantId: tenant }, { page: 1, pageSize: 1 })).total).toBeGreaterThan(0);
+  });
+
   it('retention deletes old entries and the rest still verifies', async () => {
     const t = createContext({ logger: silent, tenantId: `${tenant}-r` });
     for (const action of ['old1', 'old2']) await audit.log(t, { actor: 'u', action, resource: 'r', resourceId: '1' });

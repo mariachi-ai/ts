@@ -241,6 +241,7 @@ const ERROR_CODE_TO_HTTP: Record<string, number> = {
   'organizations/invalid-role': 400,
   'organizations/invitation-invalid': 400,
   'organizations/invitation-expired': 410,
+  'audit/tenant-required': 403,
   'rate-limit/exceeded': 429,
   'rate-limit/unknown-tier': 500,
   'rate-limit/backend-failed': 503,

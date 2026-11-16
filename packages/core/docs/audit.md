@@ -55,6 +55,11 @@ every boot and forks across instances. Use `DrizzleAuditLog` in production.
 Reads are tenant-scoped. With `ctx.tenantId` set, only that tenant's entries come back, whatever
 the filter says.
 
+A context with no tenant and nobody signed in is the system: it reads the tenant its filter names,
+or all of them. Someone signed in who is in no tenant (a route with `tenant: 'optional'`) is refused
+with `audit/tenant-required`, for reads, export, retention and chain checks alike: no tenant is not
+every tenant. A tenant's context can't check or clear another tenant's entries either.
+
 ```ts
 await audit.query(ctx, { resource: 'invoice', from: monthStart }, { page: 1, pageSize: 50 });
 await audit.findByResource(ctx, 'invoice', invoice.id);

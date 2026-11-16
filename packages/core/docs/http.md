@@ -59,6 +59,14 @@ export class NotesController extends BaseController {
   for full control.
 - Route options: `auth` (strategy, list, or `false`), `scopes` (all required), `rateLimit` (rule or
   `false`), `status`, `summary`, `description`, `tags`, `deprecated`, `bodyLimitBytes`, `upload`.
+- `tenant: 'optional'` lets a signed-in user who is in no tenant onto a route (`ctx.tenantId` is
+  null there). The default refuses them with `tenancy/missing-tenant`. Use it only for what a user
+  does before they are in a tenant, such as creating or joining an organization.
+  **No tenant is not every tenant.** Tenant-scoped repositories refuse a context without one. The
+  few stores that read across tenants for the system (a maintenance job has no tenant either) refuse
+  a signed-in caller who has none: audit reads and retention (`audit/tenant-required`) and API key
+  management. In code of your own that treats a missing tenant as "all", check
+  `isTenantlessCaller(ctx)` from `@mariachi/core` first.
 - Duplicate `method + path` throws `api/duplicate-route` at registration.
 
 ## Cookies, redirects, streams and uploads

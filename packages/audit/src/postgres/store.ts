@@ -4,6 +4,7 @@ import { compileTable, type DrizzleDb } from '@mariachi/database-postgres';
 import { AUDIT_APPEND_ONLY_SQL, auditCanonical, chainHash, GENESIS_HASH } from '../chain';
 import { auditLogsTable } from '../schema/audit-logs';
 import type { AuditEnqueue } from '../repository-logger';
+import { auditTenantScope } from '../scope';
 import type {
   AuditChainVerification,
   AuditEntry,
@@ -120,7 +121,7 @@ export class DrizzleAuditLog implements AuditLogger, AuditQuery, AuditMaintenanc
   }
 
   private where(ctx: Context, filter: AuditQueryFilter): SQL | undefined {
-    const tenantId = ctx.tenantId ?? filter.tenantId;
+    const tenantId = auditTenantScope(ctx, filter.tenantId);
     const conditions: SQL[] = [];
     if (tenantId) conditions.push(eq(logs.tenantId, tenantId));
     if (filter.actor) conditions.push(eq(logs.actor, filter.actor));
@@ -169,7 +170,8 @@ export class DrizzleAuditLog implements AuditLogger, AuditQuery, AuditMaintenanc
     return this.db.transaction(async (tx) => {
       await tx.execute(sql`select set_config('mariachi.audit_maintenance', 'on', true)`);
       const conditions = [lt(logs.occurredAt, olderThan)];
-      if (ctx.tenantId) conditions.push(eq(logs.tenantId, ctx.tenantId));
+      const tenantId = auditTenantScope(ctx);
+      if (tenantId) conditions.push(eq(logs.tenantId, tenantId));
       const deleted = await tx.delete(logs).where(and(...conditions)).returning({ id: logs.id });
       return deleted.length;
     });
@@ -207,7 +209,9 @@ export class DrizzleAuditLog implements AuditLogger, AuditQuery, AuditMaintenanc
    * Recomputes the tenant's chain and reports the first entry whose hash or link does not match.
    * Defaults to `ctx.tenantId`; pass `null` for entries without a tenant.
    */
-  async verifyChain(ctx: Context, tenantId: string | null | undefined = ctx.tenantId): Promise<AuditChainVerification> {
+  async verifyChain(ctx: Context, requested?: string | null): Promise<AuditChainVerification> {
+    // `undefined` is the context's own tenant; `null` is the entries that have none, which only the system may ask for
+    const tenantId = requested === undefined ? (ctx.tenantId ?? auditTenantScope(ctx, null)) : auditTenantScope(ctx, requested);
     let checked = 0;
     let expectedPrev: string | undefined;
     let afterSeq = 0;

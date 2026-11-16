@@ -8,7 +8,8 @@
     "useWhen": "Users belong to shared organizations and your identity provider doesn't manage them",
     "entry": [
       "DefaultOrganizations",
-      "MemoryOrganizationStore",
+      "createOrganizationAccess",
+      "registerOrganizationProcedures",
       "DrizzleOrganizationStore"
     ]
   },
@@ -28,6 +29,11 @@
       "types": "./dist/postgres.d.ts",
       "import": "./dist/postgres.js",
       "require": "./dist/postgres.cjs"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "import": "./dist/http.js",
+      "require": "./dist/http.cjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -51,6 +57,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@mariachi/communication": "workspace:*",
     "@mariachi/core": "workspace:*",
     "@mariachi/database": "workspace:*",
     "zod": "^3.24"
@@ -60,13 +67,20 @@
     "tsup": "^8",
     "vitest": "^3",
     "@mariachi/database-postgres": "workspace:*",
-    "drizzle-orm": "^0.38"
+    "drizzle-orm": "^0.38",
+    "@mariachi/api-facade": "workspace:*",
+    "@mariachi/auth": "workspace:*",
+    "@mariachi/rate-limit": "workspace:*"
   },
   "peerDependencies": {
+    "@mariachi/api-facade": "workspace:>=0.0.5 <1",
     "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
     "drizzle-orm": "^0.38"
   },
   "peerDependenciesMeta": {
+    "@mariachi/api-facade": {
+      "optional": true
+    },
     "@mariachi/database-postgres": {
       "optional": true
     },
