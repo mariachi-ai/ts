@@ -2,6 +2,11 @@
   "name": "@mariachi/realtime",
   "version": "0.1.0",
   "description": "WebSockets with channel authorization, heartbeats, presence and cross-instance fanout.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/realtime"
+  },
   "mariachi": {
     "category": "async",
     "status": "beta",

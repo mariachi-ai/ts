@@ -3,10 +3,12 @@ import { MARIACHI_VERSION } from '@mariachi/create';
 import { registerDbCommand } from './commands/db';
 import { registerDesignCommand } from './commands/design';
 import { registerDevCommand } from './commands/dev';
+import { registerDocsCommand } from './commands/docs';
 import { registerDoctorCommand } from './commands/doctor';
 import { registerExploreCommand } from './commands/explore';
 import { registerGenerateCommand } from './commands/generate';
 import { registerInitCommand } from './commands/init';
+import { registerTokenCommand } from './commands/token';
 import { registerValidateCommand } from './commands/validate';
 
 /**
@@ -19,8 +21,10 @@ export function createProgram(): Command {
   registerGenerateCommand(program);
   registerValidateCommand(program);
   registerDevCommand(program);
+  registerTokenCommand(program);
   registerDoctorCommand(program);
   registerDbCommand(program);
+  registerDocsCommand(program);
   registerDesignCommand(program);
   registerExploreCommand(program);
   return program;

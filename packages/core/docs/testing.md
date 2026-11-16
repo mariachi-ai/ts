@@ -35,8 +35,9 @@ Types come from the real packages, so a double that drifts from its interface fa
 
 ## End-to-end tests
 
-A generated project tests itself over HTTP. `pnpm test:e2e` starts one throwaway Postgres and one
-Redis in Docker, and each test file starts the whole app against its own empty database:
+A generated project tests itself over HTTP. `pnpm test:e2e` starts one throwaway Postgres in
+Docker, and each test file starts the whole app against its own empty database, which holds its job
+queue and search too:
 
 ```ts
 import { afterAll, beforeAll, expect, it } from 'vitest';
@@ -62,8 +63,8 @@ The pieces, all in the generated project so you can change them:
 
 | File | What it does |
 | --- | --- |
-| `src/app.ts` | `createApp(options)` builds the app and returns it with `start()` (resolves to the address) and `stop()`. `main.ts` starts it; so do the tests. Options: `bootstrap` (config and environment), `verifier` (who checks tokens), `migrateOnStart`, and `configureApi` (add auth strategies, middleware or rate limits without editing the file) |
-| `src/testing/global-setup.ts` | Starts the containers once per run with `startPostgres()` and `startRedis()` from `@mariachi/testing` |
+| `src/app.ts` | `createApp(options)` builds the app and returns it with `start()` (resolves to the address) and `stop()`. `main.ts` starts it; so do the tests. Options: `bootstrap` (config and environment), `verifier` (who checks tokens), `migrateOnStart`, and `configureApi` (add auth strategies, middleware or rate limits without editing the file), and `searchIndexes` (the indexes to keep, in place of the app's own) |
+| `src/testing/global-setup.ts` | Starts Postgres once per run with `startPostgres()` from `@mariachi/testing` |
 | `src/testing/e2e.ts` | `startApp({ env?, migrateOnStart?, configureApi? })`: creates a database, calls `createApp()` with a test environment and `createTestAuth()`, creates the tables in `src/schema` with `applySchema`, and listens on a free port. Returns `request(path, { as, json, method, headers })`, `auth`, `app` and `stop()` |
 | `vitest.e2e.config.ts` | Runs `src/**/*.e2e.test.ts`; `pnpm test` leaves them out |
 
@@ -83,6 +84,12 @@ auth.headersForClaims({ sub: userId, role: 'authenticated', org_id: orgId, org_r
 The `--auth gotrue` project's harness does this: `request('/api/me', { claims: { ... } })`, and
 `{ as: { userId, tenantId } }` writes the claims for you. A wrong claim name or a role that isn't
 where the app looks then fails a test instead of a sign-in.
+
+In a project made with `--orgs`, `{ as: { userId, tenantId: 'acme' } }` is a member of an
+organization the test calls `acme`. The harness creates it, and the membership, the first time
+they are named (the first user named is its owner), and sends its id in `x-organization-id` as a
+client would, so the app's own membership check runs on every test request. `tenantId: ''` is a
+user in no organization. Tests written by `mariachi generate entity` work unchanged.
 
 A project made with `mariachi init --no-e2e` has none of this (no Docker needed); add it later by
 copying these files from a project generated with it.

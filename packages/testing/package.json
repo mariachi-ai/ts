@@ -2,6 +2,11 @@
   "name": "@mariachi/testing",
   "version": "0.1.0",
   "description": "Test doubles kept honest by contract suites shared with the real adapters, plus factories and a harness.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/testing"
+  },
   "mariachi": {
     "category": "tooling",
     "status": "beta",
@@ -63,7 +68,7 @@
     }
   },
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3",
+    "@aws-sdk/client-s3": "^3.1138.0",
     "@mariachi/database-postgres": "workspace:^",
     "drizzle-orm": "^0.38",
     "tsup": "^8",

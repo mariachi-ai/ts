@@ -2,6 +2,11 @@
   "name": "@mariachi/tenancy",
   "version": "0.1.0",
   "description": "Tenant resolution (subdomain, header, token) that fails closed.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/tenancy"
+  },
   "mariachi": {
     "category": "security",
     "status": "beta",

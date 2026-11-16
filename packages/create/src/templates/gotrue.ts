@@ -1,6 +1,17 @@
 import { LAYOUT, MARKERS } from '../layout';
 import { databaseName } from '../names';
 import { E2E_HARNESS_FILE, e2eHarness } from './e2e';
+import {
+  ORGANIZATIONS_APP_FIELD,
+  ORGANIZATIONS_APP_OPTION,
+  ORGANIZATIONS_STRATEGY_COMMENT,
+  organizationsAgents,
+  organizationsAppImports,
+  organizationsAppSetup,
+  organizationsEnv,
+  organizationsReadme,
+} from './organizations';
+import { UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_README, uiAgents } from './ui';
 
 /**
  * `mariachi init --auth gotrue`: sign-in by GoTrue (Supabase Auth, hosted or your own), verified
@@ -12,17 +23,17 @@ import { E2E_HARNESS_FILE, e2eHarness } from './e2e';
 /** GoTrue's path when it's served under the app's own origin; hosted Supabase uses the same path. */
 export const AUTH_PATH = '/auth/v1';
 
-export function gotrueFiles(name: string, e2e = true): Record<string, string> {
+export function gotrueFiles(name: string, e2e = true, orgs = false, ui = false): Record<string, string> {
   return {
-    '.env.example': ENV_EXAMPLE(name, databaseName(name)),
-    'README.md': README(name),
-    'AGENTS.md': AGENTS_AUTH(e2e),
-    'src/config.ts': CONFIG_TS,
+    '.env.example': ENV_EXAMPLE(name, databaseName(name)) + (orgs ? organizationsEnv('gotrue') : ''),
+    'README.md': README(name) + (orgs ? organizationsReadme('gotrue') : '') + (ui ? UI_README : ''),
+    'AGENTS.md': AGENTS_AUTH(e2e) + (orgs ? organizationsAgents('gotrue') : '') + (ui ? uiAgents('gotrue') : ''),
+    'src/config.ts': CONFIG_TS(orgs),
     'src/auth.ts': AUTH_TS,
-    'src/auth.test.ts': AUTH_TEST,
-    [LAYOUT.app]: APP_TS,
-    ...(e2e ? { 'src/app.e2e.test.ts': APP_E2E_TEST, [E2E_HARNESS_FILE]: e2eHarness('gotrue') } : {}),
-    [LAYOUT.controllersIndex]: CONTROLLERS_INDEX,
+    'src/auth.test.ts': AUTH_TEST(orgs),
+    [LAYOUT.app]: APP_TS(orgs, ui),
+    ...(e2e ? { 'src/app.e2e.test.ts': orgs ? ORGANIZATIONS_APP_E2E_TEST : APP_E2E_TEST, [E2E_HARNESS_FILE]: e2eHarness('gotrue', orgs) } : {}),
+    [LAYOUT.controllersIndex]: CONTROLLERS_INDEX(orgs, ui),
     [`${LAYOUT.controllersDir}/me.controller.ts`]: ME_CONTROLLER,
     [`${LAYOUT.controllersDir}/me.controller.test.ts`]: ME_CONTROLLER_TEST,
     [`${LAYOUT.controllersDir}/sign-in.controller.ts`]: SIGN_IN_CONTROLLER,
@@ -37,7 +48,8 @@ const ENV_EXAMPLE = (name: string, db: string) => `SERVICE_NAME=${name}
 NODE_ENV=development
 PORT=3000
 DATABASE_URL=postgres://postgres:postgres@localhost:5432/${db}
-REDIS_URL=redis://localhost:6379
+# Jobs run in Postgres. Set REDIS_URL to run them on Redis (BullMQ) instead.
+# REDIS_URL=redis://localhost:6379
 # Apply the committed migrations (drizzle/) at start. Handy where nothing else runs them.
 MIGRATE_ON_START=false
 
@@ -63,7 +75,7 @@ AUTH_URL=
 # AUTH_LINK_SESSIONS=false
 `;
 
-const CONFIG_TS = `import { registerConfigSection } from '@mariachi/config';
+const CONFIG_TS = (orgs: boolean) => `import { registerConfigSection${orgs ? ', secret' : ''} } from '@mariachi/config';
 import { z } from 'zod';
 
 /** This app's own settings, read from the environment by \`@mariachi/config\` (\`useConfigSection(APP_CONFIG)\`). */
@@ -95,9 +107,13 @@ const appSchema = z.object({
       personalTenants: z.boolean().default(true),
       /** Let the sign-in page take a session from an admin-made link, after asking (\`AUTH_LINK_SESSIONS\`). */
       linkSessions: z.boolean().default(false),
-    })
+${orgs
+  ? "      /** A key that may read users through GoTrue's admin API (`AUTH_SERVICE_KEY`): how an invitee's address is known to be verified. A secret. */\n      serviceKey: secret(z.string()).optional(),\n      /** \"required\" when an access token hook always sets a top-level email_verified claim: no key, no lookup (`AUTH_EMAIL_VERIFIED_CLAIM`). */\n      emailVerifiedClaim: z.enum(['optional', 'required']).default('optional'),\n"
+  : ''}    })
     .default({}),
-  /** Apply the committed migrations (\`drizzle/\`) at start (\`MIGRATE_ON_START\`). */
+${orgs
+  ? '  /** The page that accepts an invitation (`INVITATION_URL`). Invitations are emailed only when this and `EMAIL_ADAPTER` are set. */\n  invitationUrl: z.string().url().optional(),\n'
+  : ''}  /** Apply the committed migrations (\`drizzle/\`) at start (\`MIGRATE_ON_START\`). */
   migrateOnStart: z.boolean().default(false),
 });
 
@@ -118,8 +134,8 @@ registerConfigSection(APP_CONFIG, {
       orgRoleClaim: optional(read('AUTH_ORG_ROLE_CLAIM')),
       personalTenants: flag(read('AUTH_PERSONAL_TENANTS')),
       linkSessions: flag(read('AUTH_LINK_SESSIONS')),
-    },
-    migrateOnStart: flag(read('MIGRATE_ON_START')),
+${orgs ? "      serviceKey: optional(read('AUTH_SERVICE_KEY')),\n      emailVerifiedClaim: optional(read('AUTH_EMAIL_VERIFIED_CLAIM')),\n" : ''}    },
+${orgs ? "    invitationUrl: optional(read('INVITATION_URL')),\n" : ''}    migrateOnStart: flag(read('MIGRATE_ON_START')),
   }),
 });
 `;
@@ -152,10 +168,10 @@ export function browserAuthUrl(auth: AuthSettings): string {
 }
 `;
 
-const AUTH_TEST = `import { describe, expect, it } from 'vitest';
+const AUTH_TEST = (orgs: boolean) => `import { describe, expect, it } from 'vitest';
 import { browserAuthUrl, goTrueConfig } from './auth';
 
-const defaults = { path: '${AUTH_PATH}', internalUrl: 'http://127.0.0.1:9999', orgClaim: 'org_id', orgRoleClaim: 'org_role', personalTenants: true, linkSessions: false };
+const defaults = { path: '${AUTH_PATH}', internalUrl: 'http://127.0.0.1:9999', orgClaim: 'org_id', orgRoleClaim: 'org_role', personalTenants: true, linkSessions: false${orgs ? ", emailVerifiedClaim: 'optional' as const" : ''} };
 const claims = { orgClaim: 'org_id', orgRoleClaim: 'org_role' };
 
 describe('goTrueConfig', () => {
@@ -189,15 +205,18 @@ describe('browserAuthUrl', () => {
 });
 `;
 
-const APP_TS = `import { existsSync } from 'node:fs';
-import { ConfigError, KEYS } from '@mariachi/core';
+const APP_TS = (orgs: boolean, ui: boolean) => `import { existsSync } from 'node:fs';
+${ui ? UI_APP_IMPORTS : ''}import { ConfigError, KEYS } from '@mariachi/core';
 import { useConfigSection } from '@mariachi/config';
 import { bootstrap, type BootstrapOptions } from '@mariachi/lifecycle';
 import { createCommunication, type CommunicationLayer } from '@mariachi/communication';
 import { createPostgresDatabase, runMigrations, type PostgresDatabase } from '@mariachi/database-postgres';
 import { createJobQueue, DefaultJobs } from '@mariachi/jobs';
+import { createPostgresJobQueue } from '@mariachi/jobs/postgres';
+import { DefaultSearch, type SearchIndex } from '@mariachi/search';
+import { createPostgresSearch } from '@mariachi/search/postgres';
 import { withPersonalTenants, type ResolvedIdentity } from '@mariachi/auth';
-import { createGoTrueAuth } from '@mariachi/auth-gotrue';
+import { createGoTrueAuth${orgs ? ', goTrueVerifiedEmail' : ''} } from '@mariachi/auth-gotrue';
 import { createTenancy, createTenancyMiddleware } from '@mariachi/tenancy';
 import { bearerStrategy, createApiServer, type FastifyAdapter } from '@mariachi/api-facade';
 import { APP_CONFIG, type AppSettings } from './config';
@@ -205,7 +224,8 @@ import { goTrueConfig } from './auth';
 import { createControllers } from './api/controllers/index';
 import { registerServices } from './services/index';
 import { jobs as jobDefinitions } from './jobs/index';
-
+import { searchIndexes } from './search/index';
+${orgs ? organizationsAppImports('gotrue') : ''}${ui ? UI_APP_CONSTANTS : ''}
 const MIGRATIONS = 'drizzle';
 
 export interface AppOptions {
@@ -221,14 +241,18 @@ export interface AppOptions {
    * middleware or rate limits without editing this file.
    */
   configureApi?: (api: FastifyAdapter) => void;
-}
+  /** The search indexes to keep, in place of the ones in src/search/index.ts. Tests pass their own. */
+  searchIndexes?: SearchIndex[];
+${orgs ? ORGANIZATIONS_APP_OPTION : ''}}
 
 export interface App {
   api: FastifyAdapter;
   communication: CommunicationLayer;
   database: PostgresDatabase;
   jobs: DefaultJobs;
-  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
+  /** Search over the app's own Postgres. Every call reads and writes only the documents of ctx.tenantId. */
+  search: DefaultSearch;
+${orgs ? ORGANIZATIONS_APP_FIELD : ''}  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
   start(): Promise<string>;
   /** Stops listening, then closes the worker and the connections. */
   stop(): Promise<void>;
@@ -241,7 +265,6 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
   const app = useConfigSection<AppSettings>(APP_CONFIG);
 
   if (!config.database) throw new ConfigError('app/database-required', 'DATABASE_URL is required');
-  if (!config.redis) throw new ConfigError('app/redis-required', 'REDIS_URL is required');
 
   // Startup runs in ascending priority; shutdown runs in reverse.
   const database = lifecycle.manage(
@@ -264,27 +287,43 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
     });
   }
 
-  const jobs = new DefaultJobs(
-    { queue: createJobQueue({ adapter: 'bullmq', redisUrl: config.redis.url, prefix: config.serviceName }, logger) },
-    instrumentation,
-  );
+  // Repositories, the job queue and search take the Drizzle client when they're built, so connect first (the startup connect is then a no-op).
+  await database.connect();
+
+  // Jobs run in Postgres (the tables in src/schema/job-queue.ts), so the app needs nothing but its
+  // database, and a job enqueued inside withTransaction commits with the write. With REDIS_URL set
+  // they run on Redis (BullMQ) instead.
+  const queue = config.redis
+    ? createJobQueue({ adapter: 'bullmq', redisUrl: config.redis.url, prefix: config.serviceName }, logger)
+    : createPostgresJobQueue(database.db, { prefix: config.serviceName }, logger);
+  const jobs = new DefaultJobs({ queue }, instrumentation);
   for (const job of jobDefinitions) jobs.registerJob(job);
   lifecycle.manage('jobs', jobs, { priority: 20 });
   lifecycle.startup.register({ name: 'jobs-worker', priority: 90, fn: () => jobs.start() });
   container.register(KEYS.JobQueue, jobs);
 
+  // Search in Postgres too (src/schema/search.ts), each tenant's documents kept apart: a call reads and
+  // writes only those of ctx.tenantId, and one with no tenant is refused. The indexes are in src/search/index.ts.
+  const search = lifecycle.manage(
+    'search',
+    new DefaultSearch({ client: createPostgresSearch(database.db), tenantScoped: true }, instrumentation),
+    { priority: 25 },
+  );
+  container.register(KEYS.Search, search);
+  // Creates the indexes that aren't there yet. One that exists is left as it is, and a warning says so
+  // when its fields here have changed: they take effect when you reindex.
+  lifecycle.startup.register({ name: 'search-indexes', priority: 30, fn: async () => void (await search.ensureIndexes(options.searchIndexes ?? searchIndexes)) });
+
   // One communication layer per process: handlers register on it, controllers call through it.
   const communication = createCommunication({}, instrumentation);
   container.register(KEYS.Communication, communication);
-  // Repositories take the Drizzle client when they're built, so connect first (the startup connect is then a no-op).
-  await database.connect();
-  registerServices(communication, { db: database.db, jobs });
-
+  registerServices(communication, { db: database.db, jobs, search });
+${orgs ? organizationsAppSetup('gotrue') : ''}
   // Sign-in is GoTrue's: its ES256 tokens are checked against its JWKS, issuer and audience.
   const provider = options.verifier ?? createGoTrueAuth(goTrueConfig(app.auth));
-  // The tenant is the organization the token names (AUTH_ORG_CLAIM). A user in no organization gets a
-  // personal tenant, user.app.<id>, so the app also works for individuals (AUTH_PERSONAL_TENANTS).
-  const auth = app.auth.personalTenants ? withPersonalTenants(provider, { namespace: 'app' }) : provider;
+${orgs
+  ? '  // A user who names no organization works in a personal tenant, user.app.<id>, so the app also works\n  // for individuals (AUTH_PERSONAL_TENANTS).\n'
+  : '  // The tenant is the organization the token names (AUTH_ORG_CLAIM). A user in no organization gets a\n  // personal tenant, user.app.<id>, so the app also works for individuals (AUTH_PERSONAL_TENANTS).\n'}  const auth = app.auth.personalTenants ? withPersonalTenants(provider, { namespace: 'app' }) : provider;
   // A claim or x-tenant-id header that disagrees with the verified identity is refused (tenancy/mismatch).
   const tenancy = createTenancy({ strategy: 'jwt-claim', claimName: app.auth.orgClaim }, instrumentation);
 
@@ -297,10 +336,10 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
     bodyLimitBytes: config.server.bodyLimitBytes,
     cors: config.server.corsOrigins.length > 0 ? { origins: config.server.corsOrigins } : false,
   })
-    .withAuthStrategy('session', bearerStrategy(auth))
+${orgs ? ORGANIZATIONS_STRATEGY_COMMENT : ''}    .withAuthStrategy('session', ${orgs ? 'organizationStrategy(bearerStrategy(auth), access)' : 'bearerStrategy(auth)'})
     .withAuth('session')
     .withMiddleware(createTenancyMiddleware(tenancy))
-    .withHealth(lifecycle.health)
+${ui ? UI_APP_STATIC : ''}    .withHealth(lifecycle.health)
     .withOpenApi({ info: { title: config.serviceName, version: '0.1.0' } });
   options.configureApi?.(api);
   for (const controller of createControllers(communication)) api.registerController(controller);
@@ -321,7 +360,8 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
     communication,
     database,
     jobs,
-    start: async () => {
+    search,
+${orgs ? '    organizations,\n' : ''}    start: async () => {
       await lifecycle.start();
       return address;
     },
@@ -351,7 +391,7 @@ const owner = { sub: 'c2a1f0de-7b6c-4e59-8d3a-1f0e9b8c7d62', role: 'authenticate
 const solo = { sub: 'e4b7a9c1-2d3f-4a5b-8c6d-7e8f9a0b1c23', email: 'solo@example.test', role: 'authenticated' };
 
 describe('the app, started as main.ts starts it', () => {
-  it('is ready: the database and the job queue are connected', async () => {
+  it('is ready: the database, which holds the job queue and search, is connected', async () => {
     const res = await running.request('/api/health/ready');
     expect(res.status).toBe(200);
     expect(await res.json()).toMatchObject({ status: 'healthy' });
@@ -422,17 +462,115 @@ describe('the app, started as main.ts starts it', () => {
 });
 `;
 
-const CONTROLLERS_INDEX = `import type { BaseController } from '@mariachi/api-facade';
+/** `src/app.e2e.test.ts` with `--orgs`: organizations come from the app's own memberships, not from a token hook. */
+const ORGANIZATIONS_APP_E2E_TEST = `import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { startApp, type RunningApp } from './testing/e2e';
+
+let running: RunningApp;
+beforeAll(async () => {
+  running = await startApp();
+});
+afterAll(() => running?.stop());
+
+// Users as the harness signs them in: GoTrue's token gives the subject, the email and its own role
+// ("authenticated"). \`tenantId\` is the name of an organization they are in (the harness makes it, and
+// the membership, the first time it is named: the first user named is its owner); '' is none.
+const ADA = '0b9d4c53-8f0a-4d0e-9a63-5c2f1e7b3a41';
+const LIN = 'c2a1f0de-7b6c-4e59-8d3a-1f0e9b8c7d62';
+const owner = { userId: ADA, tenantId: 'acme', claims: { email: 'ada@example.test' } };
+const member = { userId: LIN, tenantId: 'acme' };
+const solo = { sub: 'e4b7a9c1-2d3f-4a5b-8c6d-7e8f9a0b1c23', email: 'solo@example.test', role: 'authenticated' };
+
+describe('the app, started as main.ts starts it', () => {
+  it('is ready: the database, which holds the job queue and search, is connected', async () => {
+    const res = await running.request('/api/health/ready');
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ status: 'healthy' });
+  });
+
+  it('serves the sign-in page to anyone, and asks everyone else for a token', async () => {
+    expect((await running.request('/api/sign-in')).status).toBe(200);
+    expect((await running.request('/api/me')).status).toBe(401);
+    expect((await running.request('/api/me', { headers: { authorization: 'Bearer made-up' } })).status).toBe(401);
+  });
+
+  it('puts a member in the organization the request names, with the role their membership gives them', async () => {
+    const me = (await (await running.request('/api/me', { as: owner })).json()) as { tenantId: string };
+    expect(me).toEqual({ userId: ADA, tenantId: expect.stringMatching(/^[0-9a-f-]{36}$/), personal: false, roles: ['authenticated', 'owner'], email: 'ada@example.test' });
+    expect((await running.request('/api/me/admin', { as: owner })).status).toBe(200);
+    expect((await running.request('/api/me/admin', { as: member })).status).toBe(403);
+    // A role that comes with the token says nothing about this organization
+    expect((await running.request('/api/me/admin', { as: { ...member, claims: { org_role: 'owner' } } })).status).toBe(403);
+    // And an organization the user isn't in is the same as one that doesn't exist
+    const outsider = await running.request('/api/me', { claims: solo, headers: { 'x-organization-id': me.tenantId } });
+    expect(outsider.status).toBe(404);
+    expect(await outsider.json()).toMatchObject({ error: { code: 'organizations/not-found' } });
+  });
+
+  it('gives a user who names no organization a personal tenant, where they are the owner', async () => {
+    const me = (await (await running.request('/api/me', { claims: solo })).json()) as { tenantId: string; personal: boolean; roles: string[] };
+    expect(me).toMatchObject({ tenantId: 'user.app.' + solo.sub, personal: true, roles: ['authenticated', 'owner'] });
+    expect((await running.request('/api/me/admin', { claims: solo })).status).toBe(200);
+  });
+
+  it('treats a token someone acts through as the user it is for', async () => {
+    // An impersonation ("view as") token: sub is the user being viewed, act says who is acting
+    const viewed = { ...member, claims: { act: { sub: 'support:42' } } };
+    expect(await (await running.request('/api/me', { as: viewed })).json()).toMatchObject({ userId: LIN, roles: ['authenticated', 'member'] });
+    expect((await running.request('/api/me/admin', { as: viewed })).status).toBe(403);
+  });
+
+  it('refuses a token that names a personal tenant itself, one with no subject, and a tenant header that disagrees', async () => {
+    const forged = await running.request('/api/me', { claims: { ...solo, org_id: 'user.app.' + ADA } });
+    expect(forged.status).toBe(401);
+    expect(await forged.json()).toMatchObject({ error: { code: 'auth/invalid-token' } });
+    expect((await running.request('/api/me', { claims: { role: 'authenticated' } })).status).toBe(401);
+    expect((await running.request('/api/me', { as: owner, headers: { 'x-tenant-id': 'another-org' } })).status).toBe(403);
+  });
+
+  it('requires an organization when personal tenants are off', async () => {
+    const strict = await startApp({ env: { AUTH_PERSONAL_TENANTS: 'false' } });
+    try {
+      const res = await strict.request('/api/me', { claims: solo });
+      expect(res.status).toBeGreaterThanOrEqual(400);
+      expect(await res.json()).toMatchObject({ error: { code: 'tenancy/missing-tenant' } });
+      expect((await strict.request('/api/me', { as: owner })).status).toBe(200);
+      // The organization routes still answer: that is how such a user creates or joins one
+      expect((await strict.request('/api/organizations', { claims: solo })).status).toBe(200);
+    } finally {
+      await strict.stop();
+    }
+  });
+
+  it('takes additions to the API through the configureApi option, with no edit to app.ts', async () => {
+    const custom = await startApp({
+      configureApi: (api) =>
+        api.withMiddleware(async (ctx, next) => {
+          ctx.responseHeaders['x-served-by'] = 'e2e';
+          await next();
+        }),
+    });
+    try {
+      expect((await custom.request('/api/health/live')).headers.get('x-served-by')).toBe('e2e');
+      expect((await running.request('/api/health/live')).headers.get('x-served-by')).toBeNull();
+    } finally {
+      await custom.stop();
+    }
+  });
+});
+`;
+
+const CONTROLLERS_INDEX = (orgs: boolean, ui: boolean) => `import type { BaseController } from '@mariachi/api-facade';
 import type { CommunicationLayer } from '@mariachi/communication';
-import { MeController } from './me.controller';
+${ui ? "import { PagesController } from './pages.controller';\n" : ''}${orgs ? "import { OrganizationsController } from '@mariachi/organizations/http';\n" : ''}import { MeController } from './me.controller';
 import { SignInController } from './sign-in.controller';
 // ${MARKERS.imports}
 
 export function createControllers(communication: CommunicationLayer): BaseController[] {
   return [
-    new MeController(communication),
+${ui ? '    new PagesController(communication),\n' : ''}    new MeController(communication),
     new SignInController(communication),
-    // ${MARKERS.controllers}
+${orgs ? '    new OrganizationsController(communication),\n' : ''}    // ${MARKERS.controllers}
   ];
 }
 `;
@@ -1193,7 +1331,7 @@ const AGENTS_AUTH_TESTS = `## Tests
 
 \`\`\`bash
 pnpm test          # unit tests (src/**/*.test.ts): no services needed
-pnpm test:e2e      # the whole app over HTTP (src/**/*.e2e.test.ts): starts a throwaway Postgres and Redis in Docker
+pnpm test:e2e      # the whole app over HTTP (src/**/*.e2e.test.ts): starts a throwaway Postgres in Docker
 \`\`\`
 
 - An end-to-end test calls \`startApp()\` from \`src/testing/e2e.ts\`: the same \`createApp()\` that
@@ -1215,6 +1353,10 @@ This is a Mariachi backend. Before writing code, read the framework docs shipped
 - \`node_modules/@mariachi/core/docs/recipes/\` (step-by-step: entity, job, webhook, integration)
 - \`node_modules/@mariachi/core/docs/auth-and-providers.md\` (how identity reaches \`ctx\`, personal tenants)
 
+\`pnpm mariachi docs\` lists them all. \`pnpm mariachi docs <name>#<section>\` prints one section
+(\`pnpm mariachi docs jobs#schedules\`), which is the cheapest way to read, and
+\`pnpm mariachi docs --search <words>\` finds the lines you need and says which section each is in.
+
 ## Layout
 
 | Path | Layer |
@@ -1228,6 +1370,11 @@ ${e2e ? '| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and t
 | \`src/services/<name>/\` | Service, repository and communication handlers for one domain |
 | \`src/schema/\` | \`defineTable\` tables; \`mariachi db generate\` turns them into migrations |
 | \`src/jobs/\` | \`defineJob\` background jobs |
+| \`src/search/\` | The search indexes; services reach search as \`deps.search\` |
+
+Postgres is the only service the app itself needs: jobs and search run in it
+(\`@mariachi/jobs/postgres\`, \`@mariachi/search/postgres\`). Don't add Redis or a search server to
+make either work. \`pnpm dev\` starts Postgres, applies migrations and runs the app with reload.
 
 ${e2e ? AGENTS_AUTH_TESTS : ''}## Sign-in, tenants and roles
 
@@ -1265,12 +1412,14 @@ token names, or the user's own personal tenant when it names none.
 ## Run
 
 \`\`\`bash
-cp .env.example .env    # then set AUTH_URL, e.g. https://<project>.supabase.co${AUTH_PATH}
-docker compose up -d    # Postgres and Redis
 pnpm install
-pnpm db:generate && pnpm db:migrate
+cp .env.example .env    # then set AUTH_URL, e.g. https://<project>.supabase.co${AUTH_PATH}
 pnpm dev
 \`\`\`
+
+\`pnpm dev\` (\`mariachi dev\`) starts Postgres with Docker Compose, writes and applies the first
+migration, and runs the app, reloading on changes. Postgres is the only service the app itself
+needs: jobs and search run in it (set \`REDIS_URL\` to run jobs on Redis instead).
 
 The API listens on \`PORT\` (default 3000) under \`/api\`. Health checks: \`/api/health/live\`,
 \`/api/health/ready\`, \`/api/health/startup\`. OpenAPI: \`/api/openapi.json\`.

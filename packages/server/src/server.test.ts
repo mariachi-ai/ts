@@ -83,6 +83,19 @@ describe('FastifyServerAdapter', () => {
     expect((await s.inject({ method: 'DELETE', url: '/api/v1/things/1' })).statusCode).toBe(204);
   });
 
+  it('mounts a root route outside the prefix, beside the prefixed ones', async () => {
+    const s = server({ prefix: '/api' }).register([
+      { method: 'GET', path: '/', root: true, handler: async () => httpResponse(200, 'home', { 'content-type': 'text/plain' }) },
+      { method: 'GET', path: '/assets/*', root: true, handler: async (_ctx, req) => ({ file: req.params['*'] }) },
+      { method: 'GET', path: '/things', handler: async () => ({ ok: true }) },
+    ]);
+    expect((await s.inject({ method: 'GET', url: '/' })).body).toBe('home');
+    expect((await s.inject({ method: 'GET', url: '/assets/css/app.css' })).json()).toEqual({ file: 'css/app.css' });
+    expect((await s.inject({ method: 'GET', url: '/api/things' })).json()).toEqual({ ok: true });
+    expect((await s.inject({ method: 'GET', url: '/things' })).statusCode).toBe(404);
+    expect((await s.inject({ method: 'GET', url: '/api/assets/app.css' })).statusCode).toBe(404);
+  });
+
   it('enforces CORS allowlist on preflight', async () => {
     const s = server({ cors: { origins: ['https://app.example.com'], credentials: true } }).register([
       { method: 'GET', path: '/x', handler: async () => ({}) },

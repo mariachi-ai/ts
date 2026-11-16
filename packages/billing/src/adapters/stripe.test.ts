@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type Stripe from 'stripe';
-import { StripeAdapter } from './stripe';
+import { StripeAdapter, meterEventAlreadyReceived } from './stripe';
 import { mapPrice, mapSubscription } from './stripe-mappers';
 
 type Call = { params: Record<string, any>; opts?: Record<string, any> };
@@ -211,7 +211,7 @@ describe('Stripe mappers', () => {
 });
 
 describe('StripeAdapter usage', () => {
-  function meterStub(fail?: { code: string }) {
+  function meterStub(fail?: { code?: string; statusCode?: number; rawType?: string; type?: string; message?: string }) {
     const calls: Array<{ params: Record<string, unknown>; opts: Record<string, unknown> | undefined }> = [];
     const client = {
       billing: {
@@ -240,7 +240,25 @@ describe('StripeAdapter usage', () => {
   });
 
   it('takes "an event with this identifier exists" as success, and any other refusal as a failure', async () => {
+    // What Stripe's v1 endpoint really answers a repeat with: a 400 with no code, only this message
+    const repeat = { statusCode: 400, rawType: 'invalid_request_error', code: undefined, message: 'An event already exists with identifier req-1.' };
+    await expect(meterStub(repeat).adapter.reportUsage(report)).resolves.toBeUndefined();
+    // The code the v2 API documents, should v1 ever send it
     await expect(meterStub({ code: 'duplicate_meter_event' }).adapter.reportUsage(report)).resolves.toBeUndefined();
-    await expect(meterStub({ code: 'resource_missing' }).adapter.reportUsage(report)).rejects.toMatchObject({ code: expect.stringMatching(/^billing\//) });
+
+    const refused = { code: expect.stringMatching(/^billing\//) };
+    await expect(meterStub({ code: 'resource_missing' }).adapter.reportUsage(report)).rejects.toMatchObject(refused);
+    // Another 400, the same words from another status, and a 400 that isn't an invalid request: all failures
+    await expect(meterStub({ statusCode: 400, rawType: 'invalid_request_error', message: 'No such customer: cus_1' }).adapter.reportUsage(report)).rejects.toMatchObject(refused);
+    await expect(meterStub({ statusCode: 500, rawType: 'api_error', type: 'StripeAPIError', message: 'An event already exists with identifier req-1.' }).adapter.reportUsage(report)).rejects.toMatchObject(refused);
+    await expect(meterStub({ statusCode: 400, rawType: 'card_error', type: 'StripeCardError', message: 'An event already exists with identifier req-1.' }).adapter.reportUsage(report)).rejects.toMatchObject(refused);
+  });
+
+  it('recognises the repeat from the error alone', () => {
+    expect(meterEventAlreadyReceived({ statusCode: 400, rawType: 'invalid_request_error', message: 'An event already exists with identifier x.' })).toBe(true);
+    expect(meterEventAlreadyReceived({ statusCode: 400, type: 'StripeInvalidRequestError', message: 'an event ALREADY EXISTS with identifier x' })).toBe(true);
+    for (const other of [null, undefined, 'An event already exists with identifier x.', {}, { statusCode: 400 }, { message: 'An event already exists with identifier x.' }]) {
+      expect(meterEventAlreadyReceived(other)).toBe(false);
+    }
   });
 });

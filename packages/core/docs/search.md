@@ -34,6 +34,13 @@ Add `searchIndexesTable` and `searchDocumentsTable` from `@mariachi/search/schem
 file and migrate; the migration creates the tables and their indexes. See [Postgres](#postgres)
 below.
 
+**At start**, `await search.ensureIndexes([products, …])` makes sure the app's indexes exist. One
+that isn't there is created. One that is there is left as it is, and if its fields in the code have
+changed it says so (`{ changed: ['products'] }`, and a warning in the log) without applying them:
+the definition is every tenant's, and their documents were indexed under it. The new fields take
+effect when you [reindex](#reindex-without-downtime). A project from `mariachi init` does this with the indexes in
+`src/search/index.ts`.
+
 ## Define an index
 
 ```ts

@@ -47,7 +47,7 @@ pnpm changeset          # for every user-facing change
 
 ## Layout
 
-- `packages/`: the 33 framework packages. Package metadata (`description`, `mariachi`) feeds the catalog.
+- `packages/`: the framework packages, listed in the [catalog](packages/core/docs/packages.md). Package metadata (`description`, `mariachi`) feeds it.
 - `integrations/`: third-party integrations.
 - `apps/`, `examples/`: stale reference code predating the current APIs, excluded from build,
   typecheck and lint. Don't copy from them; generate a project with `mariachi init` instead.

@@ -6,15 +6,23 @@ in the environment win.
 ## init
 
 ```bash
-npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue
+npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue, --orgs, --ui
 ```
 
 Creates the [project layout](./architecture.md#project-layout): `src/app.ts` (`createApp()`: config, lifecycle,
-Postgres, BullMQ jobs, communication, API server with JWT auth, health and OpenAPI), a `src/main.ts`
-that starts it, registry files, `docker-compose.yml` (Postgres + Redis), `.env.example`,
+Postgres, jobs, search, communication, API server with JWT auth, health and OpenAPI), a `src/main.ts`
+that starts it, registry files, `docker-compose.yml` (Postgres), `.env.example`,
 `vitest.config.ts`, end-to-end test support (`pnpm test:e2e`, see [testing.md](./testing.md#end-to-end-tests)),
 `AGENTS.md`, and an example `note` entity wired end to end. Dependencies are pinned to the framework version that generated the
 project. The directory must be empty or not exist.
+
+**Postgres is the only service a new project needs.** Jobs run in it (`@mariachi/jobs/postgres`,
+so a job enqueued in a transaction commits with the write) and so does search
+(`@mariachi/search/postgres`, tenant-scoped: `deps.search` in a service sees only the documents of
+`ctx.tenantId`; the indexes are listed in `src/search/index.ts`). Set `REDIS_URL` and jobs run on
+Redis (BullMQ) instead. The project's `pnpm dev` is [`mariachi dev`](#dev), so after `pnpm install`
+that one command is the whole setup, and [`mariachi token`](#token) signs a token to call the API
+with.
 
 `--no-e2e` leaves out the end-to-end test support (`pnpm test:e2e`, `src/testing/`, the
 `@mariachi/testing` and `testcontainers` devDependencies), for environments with no Docker.
@@ -28,6 +36,29 @@ with a plain Supabase project; `AUTH_PERSONAL_TENANTS=false` requires an organiz
 adds `GET /api/me`, `MIGRATE_ON_START`, and an example sign-in page at `/api/sign-in` (password,
 sign-up, magic link; emailed links use PKCE, so a link works once and only in the browser that
 asked for it).
+
+`--orgs` adds organizations, memberships and invitations kept in the app's own database
+(`@mariachi/organizations`, see [organizations.md](./organizations.md)), for apps whose identity
+provider keeps none. It works with either `--auth`. The project gets the tables
+(`src/schema/organizations.ts`), the wiring in one file (`src/organizations.ts`), the routes under
+`/api/organizations`, the check that puts a request in the organization its `x-organization-id`
+header names once the user's membership is confirmed, rate limits on creating, inviting and
+accepting, and end-to-end tests for all of it. Invitations are emailed once `INVITATION_URL` (your
+accept page) and an email adapter (`EMAIL_ADAPTER`) are set; until then the invite's response
+carries the token. The link carries the token in its fragment (`#token=`), which reaches no server
+log. With `--auth gotrue`, whether an invitee's address is verified is read from the user's record
+(`AUTH_SERVICE_KEY`) or from a claim your own token hook adds (`AUTH_EMAIL_VERIFIED_CLAIM=required`
+then needs no key), never from what the user can edit. The page that accepts an invitation is yours
+to build.
+
+`--ui` adds pages, sent by the same server as the API and styled with `@mariachi/design`
+([design.md](./design.md)). The project gets a layout and a home page (`src/api/pages/`), a
+controller that gives each page a route at the server's root (`src/api/controllers/pages.controller.ts`),
+`public/` for the files pages load (served under `/assets`), the design library's stylesheets under
+`/assets/design`, and tests. A page is a function that returns `html`, which escapes what is put
+into it ([http.md](./http.md#pages-and-files)); its script, if it has one, is a file in `public/`.
+There is no client framework and no build step. `mariachi generate page <name>` adds a page. It
+works with either `--auth` and with `--orgs`.
 
 ## generate
 
@@ -46,6 +77,8 @@ mariachi generate integration acme
 | `controller` | `api/controllers/<name>.controller.ts`; reuses `contracts/<name>.ts` if it exists | `api/controllers/index.ts` |
 | `job` | `jobs/<name>.job.ts` (`defineJob` with schema, retry, timeout) | `jobs/index.ts` |
 | `integration` | `integrations/<name>/client.ts` (timeouts, retries on transient status codes, `IntegrationError`) and a test | none; construct it in `app.ts` |
+| `seed` | `seeds/<name>.seed.ts` (`defineSeed`, run once per database by `mariachi db seed`) | `seeds/index.ts` |
+| `page` | `api/pages/<name>.ts` (the page, as `html` in the project's layout) and a test. Needs a project made with `--ui` | `api/controllers/pages.controller.ts` (its route at `/<name>`) and `api/pages/layout.ts` (its link in the bar) |
 
 Names can be kebab, camel or Pascal case (`invoice-item`, `invoiceItem`, `InvoiceItem`). Generators
 never overwrite files without `--force`: if any target exists, nothing is written. Registry files are
@@ -88,6 +121,31 @@ Every `mariachi` command then loads those (variables already set in the environm
 `dev` starts the app with them and never copies `.env.example`, and `doctor` checks what they
 produce. `--env-file <file>` (repeatable) replaces the list for one run of `dev` or `doctor`.
 
+## token
+
+```bash
+mariachi token                                         # user dev-user in tenant dev-tenant, good for an hour
+mariachi token --user ada --tenant acme --role admin --scope notes:read --expires 7d
+mariachi token --user ada --no-tenant --email ada@example.com
+curl -H "authorization: Bearer $(pnpm -s mariachi token)" localhost:3000/api/notes
+```
+
+Signs a token the project's API accepts, for calling it in development as any user. It signs with
+the project's own `JWT_SECRET` (and `JWT_ISSUER` and `JWT_AUDIENCE` when set), read from its env
+files like every other command, so it is for projects that verify HS256 tokens: the default
+`--auth jwt`. The token alone goes to stdout; who it is for goes to stderr.
+
+- `--no-tenant` names no tenant: a user in no organization, which is what a project made with
+  `--orgs` expects (there the request names the organization, in `x-organization-id`).
+- `--email` adds the address and marks it verified. You are vouching for it: that is what lets the
+  user accept an invitation sent to that address.
+- It does nothing when `NODE_ENV` is `production`. It gives no access the secret doesn't already
+  give; in production, tokens come from wherever your users sign in.
+- **Never point it at a deployed app's secret.** A token signed with it is a real sign-in as anyone,
+  with no record of who made it. Keep a development secret in `.env` and the real one out of reach.
+- **In your own code, never sign `email_verified: true` because a request said so.** Sign it only
+  after you have confirmed the address yourself: it is what lets someone accept an invitation.
+
 ## doctor
 
 ```bash
@@ -126,6 +184,45 @@ warnings too; `--timeout <ms>` sets how long to wait for a service.
   secret-looking query parameters, and the values of variables named like secrets (`*_SECRET`,
   `*_TOKEN`, `*_KEY`, `*_PASSWORD`) are replaced by `***`. A variable is named, never quoted.
 
+## docs
+
+```bash
+mariachi docs                              # the list: every doc, by group, with a line about it
+mariachi docs jobs                         # one doc
+mariachi docs http#pages-and-files         # one section (or: mariachi docs http --section "pages and files")
+mariachi docs --search idempotency key     # the lines that have every word, in every doc that has one
+mariachi docs jobs --search retry          # the same, in one doc
+mariachi docs recipes                      # a group's list
+mariachi docs jobs --path                  # where the file is
+```
+
+Reads the framework's docs from the terminal, so a person or a coding agent can find the rule or
+the recipe without opening `node_modules`. In a project it reads the docs of the `@mariachi/core`
+that project has installed, so they match the version in use; anywhere else, the ones the CLI came
+with.
+
+- A doc is named by its path without `.md` (`recipes/add-domain-entity`), by its last part
+  (`add-domain-entity`), or by the start of either when only one doc fits.
+- A section is named by its heading, in any case, its slug (`pages-and-files`), or the start of it.
+  It runs to the next heading of the same level.
+- **A search shows every doc that has a matching line**, with its first five and how many more it
+  has, so a common word can't push the doc you want out of the answer. Docs come likeliest first:
+  one named for a word, then one with a word in a heading, then the rest, with the generated
+  catalogs last. Each line starts with what to read next (`storage#browser-uploads-and-downloads:55`
+  is `mariachi docs storage#browser-uploads-and-downloads`). A quoted phrase is its words:
+  `--search "tables missing"` and `--search tables missing` are the same search. A word matches
+  inside longer words (`auth` finds `authenticate`). A doc named before `--search` limits the
+  search to it.
+- **A name that isn't a doc** gets the lines that mention it, in the same form, and exit code 1. A
+  group's name (`recipes`, `guides`) gets that group's list.
+- `--json` gives the list (`{ dir, docs }`), a doc (`{ name, file, section, summary, text }`) or the
+  search (`{ words, total, docs: [{ name, file, total, matches: [{ ref, line, heading, text }] }] }`)
+  to a tool.
+- The list is `llms.txt`, in the docs folder: an index of the docs in the
+  [llms.txt](https://llmstxt.org) format, generated from this folder's README by `pnpm docs:catalog`
+  and checked by `pnpm docs:check`. A tool that reads that format can be pointed at
+  `node_modules/@mariachi/core/docs/llms.txt`.
+
 ## validate
 
 ```bash
@@ -149,7 +246,7 @@ All `db` commands take `--schema <path>` (default `src/schema/index.ts`) and `--
 | `db check` | Exits 1 if the schema has changes that aren't in a migration. Use it in CI. |
 | `db sql` | Prints the full DDL for the schema, without a database. |
 | `db migrate` | Applies pending migrations inside a Postgres advisory lock, so concurrent deploys don't race. |
-| `db seed --env <env>` | Runs `defineSeed` seeds from `src/seeds/index.ts` (`--file`). Each seed runs once per environment and is recorded; `--force` re-runs. |
+| `db seed` | Runs `defineSeed` seeds from `src/seeds/index.ts` (`--file`), each in a transaction. A seed runs once per database and is recorded there; `--force` re-runs. The environment it runs as is `--env`, else `NODE_ENV`, else `development`: a seed with no `environments` runs as anything but `production`. It prints the database and the environment before it runs, and refuses a database on another host (a name with a dot, or an address) when it would run as `development` without `--env` saying so (`cli/seed-target-unclear`). A host without a dot is taken as a local service, as a Unix socket is. |
 
 The schema module exports every table: your own `defineTable`s, plus framework tables you use
 (`export { usersTable, tenantsTable } from '@mariachi/database'`, `eventOutboxTable` from
@@ -165,7 +262,8 @@ Builds and checks [design library](./design.md) themes from `mariachi.design.ts`
 | `design build [-o design.css] [--minify] [--strict]` | One CSS file: foundation, the chosen components (with replacements), the base theme, and only the tokens you changed. Prints contrast failures; `--strict` exits 1 on them. |
 | `design check [--json]` | Validates the config against the token contract and checks contrast in both modes. Exits 1 on failures. |
 | `design new-theme <name> [--from minimal] [-o file]` | Scaffolds `src/styles/<name>.theme.ts` extending a preset. |
-| `design list` | Presets and components. |
+| `design add <kit> [--dir src/design] [--force] [--dry-run] [--json]` | Copies a design language or plain preset into the project as its own: the kit's files in `<dir>`, exactly as built, and `design.css` beside it, once. Reports an edited copy and exits 1 unless `--force`. Needs `@mariachi/design-kits`. See [design.md](design.md#copying-a-language-into-a-project-kits). |
+| `design list [--kits] [--json]` | Presets and components, and the kits `design add` can copy in. |
 
 ## explore
 

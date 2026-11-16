@@ -7,6 +7,7 @@ import { DIM, GREEN, RED, RESET, YELLOW } from '../colors';
 import { fail } from '../output';
 
 type DesignBuild = typeof import('@mariachi/design/build');
+type DesignKits = typeof import('@mariachi/design-kits');
 
 const CONFIG_NAMES = ['mariachi.design.ts', 'mariachi.design.mts', 'mariachi.design.js', 'mariachi.design.mjs'];
 
@@ -22,15 +23,44 @@ export async function loadDesignConfig(cwd: string, file?: string): Promise<{ fi
   return { file: found, config };
 }
 
+const isMissing = (err: unknown): boolean => {
+  const code = (err as { code?: string }).code;
+  return code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND';
+};
+
 /** `@mariachi/design` is an optional peer: only `mariachi design` loads it, so a project that never runs it doesn't install it. */
 const design = async (): Promise<DesignBuild> => {
   try {
     return await import('@mariachi/design/build');
   } catch (err) {
-    const code = (err as { code?: string }).code;
-    if (code === 'ERR_MODULE_NOT_FOUND' || code === 'MODULE_NOT_FOUND') {
+    if (isMissing(err)) {
       throw new ConfigError('cli/design-missing', 'mariachi design needs @mariachi/design: pnpm add -D @mariachi/design (it matches your @mariachi version)');
     }
+    throw err;
+  }
+};
+
+/** `@mariachi/design-kits` is an optional peer too: only `design add` and `design list` load it. */
+const designKits = async (): Promise<DesignKits> => {
+  try {
+    return await import('@mariachi/design-kits');
+  } catch (err) {
+    if (isMissing(err)) {
+      throw new ConfigError(
+        'cli/design-kits-missing',
+        'mariachi design add needs @mariachi/design-kits: pnpm add -D @mariachi/design-kits (or, with nothing installed: npx @mariachi/design-kits add <kit>)',
+      );
+    }
+    throw err;
+  }
+};
+
+/** Resolves to undefined when the optional package isn't installed. */
+const optional = async <T>(load: () => Promise<T>): Promise<T | undefined> => {
+  try {
+    return await load();
+  } catch (err) {
+    if (err instanceof ConfigError && (err.code === 'cli/design-missing' || err.code === 'cli/design-kits-missing')) return undefined;
     throw err;
   }
 };
@@ -136,15 +166,56 @@ export function registerDesignCommand(program: Command): void {
     });
 
   cmd
-    .command('list')
-    .description('List presets and components')
-    .action(async () => {
+    .command('add <kit>')
+    .description("Copy a design language (or a plain preset) into the project as its own: tokens, base styles, fonts, motion and DESIGN.md")
+    .option('-d, --dir <dir>', "the kit's folder; design.css, the project's own, is made beside it", 'src/design')
+    .option('--force', 'replace a copy the project has edited (the edits are listed, then lost)')
+    .option('--dry-run', 'say what would happen; write nothing')
+    .option('--json', 'machine-readable output')
+    .action(async (kit: string, opts: { dir: string; force?: boolean; dryRun?: boolean; json?: boolean }) => {
       try {
-        const { presets, componentList } = await design();
-        console.log('Presets');
-        for (const p of Object.values(presets)) console.log(`  ${p.name.padEnd(12)} ${DIM}${p.description}${RESET}`);
-        console.log('\nComponents');
-        for (const c of componentList) console.log(`  ${c.name.padEnd(12)} ${DIM}${c.category}: ${c.description}${RESET}`);
+        const { runAdd } = await designKits();
+        process.exitCode = runAdd(kit, opts, { cwd: process.cwd(), out: (line) => console.log(line), err: (line) => console.error(line) });
+      } catch (error) {
+        fail(error);
+      }
+    });
+
+  cmd
+    .command('list')
+    .description('List presets and components, and the kits `design add` can copy in')
+    .option('--kits', 'only the kits')
+    .option('--json', 'machine-readable output')
+    .action(async (opts: { kits?: boolean; json?: boolean }) => {
+      try {
+        const [lib, kits] = await Promise.all([opts.kits ? undefined : optional(design), optional(designKits)]);
+        if (opts.kits && !kits) await designKits();
+        if (!lib && !kits) await design();
+        if (opts.json) {
+          console.log(
+            JSON.stringify(
+              {
+                presets: lib ? Object.values(lib.presets).map((p) => ({ name: p.name, description: p.description })) : undefined,
+                components: lib?.componentList.map((c) => ({ name: c.name, category: c.category, description: c.description })),
+                kits: kits?.listKits(),
+              },
+              null,
+              2,
+            ),
+          );
+          return;
+        }
+        if (lib) {
+          console.log('Presets');
+          for (const p of Object.values(lib.presets)) console.log(`  ${p.name.padEnd(12)} ${DIM}${p.description}${RESET}`);
+          console.log('\nComponents');
+          for (const c of lib.componentList) console.log(`  ${c.name.padEnd(12)} ${DIM}${c.category}: ${c.description}${RESET}`);
+        }
+        if (kits) {
+          if (lib) console.log('');
+          console.log(`Kits ${DIM}(mariachi design add <kit>)${RESET}`);
+          for (const line of kits.formatKitList(kits.listKits())) console.log(line);
+        } else console.log(`\n${DIM}Kits: install @mariachi/design-kits to copy a language into the project (mariachi design add <kit>)${RESET}`);
       } catch (error) {
         fail(error);
       }

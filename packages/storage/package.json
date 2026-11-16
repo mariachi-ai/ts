@@ -2,6 +2,11 @@
   "name": "@mariachi/storage",
   "version": "0.1.0",
   "description": "Object storage (S3 and compatibles, local disk, memory) with path-safe keys, streaming, presigned uploads and signed URLs.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/storage"
+  },
   "mariachi": {
     "category": "data",
     "status": "beta",
@@ -41,9 +46,9 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3",
-    "@aws-sdk/lib-storage": "^3",
-    "@aws-sdk/s3-request-presigner": "^3",
+    "@aws-sdk/client-s3": "^3.1138.0",
+    "@aws-sdk/lib-storage": "^3.1138.0",
+    "@aws-sdk/s3-request-presigner": "^3.1138.0",
     "@mariachi/core": "workspace:*"
   },
   "devDependencies": {

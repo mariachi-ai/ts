@@ -17,6 +17,21 @@ describe('token bucket', () => {
     expect((await limiter.check('k', rule)).allowed).toBe(true);
   });
 
+  it('counts a signed-in caller who is in no tenant on their own, not with everyone anonymous', async () => {
+    const limiting = new DefaultRateLimiting({ limiter: new MemoryRateLimiter() }, { logger: silent });
+    const tiers = { default: { name: 'default', rule: { maxRequests: 1, windowMs: 60_000, algorithm: 'fixed-window' as const } } };
+    const ada = createContext({ logger: silent, userId: 'ada', identityType: 'session' });
+    const ben = createContext({ logger: silent, userId: 'ben', identityType: 'session' });
+    const key = createContext({ logger: silent, apiKeyId: 'key_1', identityType: 'api-key' });
+    const nobody = createContext({ logger: silent });
+    // ada uses hers up; ben, a key and an anonymous caller each still have theirs
+    expect((await limiting.checkTier(ada, 'create', tiers)).allowed).toBe(true);
+    expect((await limiting.checkTier(ada, 'create', tiers)).allowed).toBe(false);
+    for (const other of [ben, key, nobody]) expect((await limiting.checkTier(other, 'create', tiers)).allowed).toBe(true);
+    // Callers with no identity at all share one
+    expect((await limiting.checkTier(createContext({ logger: silent }), 'create', tiers)).allowed).toBe(false);
+  });
+
   it('uses the tenant tier', async () => {
     const limiting = new DefaultRateLimiting({ limiter: new MemoryRateLimiter() }, { logger: silent });
     const ctx = createContext({ logger: silent, tenantId: 't1' });

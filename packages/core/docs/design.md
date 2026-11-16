@@ -24,6 +24,10 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
   `data-theme`.
 - The element with `data-theme` paints its own canvas, text colour and font.
 
+A project made with `mariachi init --ui` has this set up: the stylesheets are served under
+`/assets/design`, `src/api/pages/layout.ts` links them and sets `data-theme` from one constant
+(`THEME`), and its pages are written with the markup below. See [cli.md](./cli.md#init).
+
 ## Presets
 
 | Preset | Character |
@@ -186,14 +190,42 @@ A project can own its language instead of depending on the package, so the langu
 | --- | --- |
 | `index.css` | Imports the three below, in order |
 | `fonts.css`, `fonts/*.woff2` | The body and heading families, self-hosted (Latin and Latin Extended, from `@fontsource`). Mono falls back to the system's |
+| `fonts/<family>.LICENSE.txt` | Each family's licence (SIL Open Font License), which goes wherever its files go |
 | `base.css` | The reset and base layers, no components |
 | `tokens.css` | The language's tokens, light and dark, on `[data-theme="<id>"]` |
+| `motion/` | `@mariachi/motion`'s `motion.css`, `motion.js` and `charts.js` with their types: loading, motion and charts. Import `motion/motion.css` after `index.css` and call `enhance()` once |
 | `DESIGN.md` | The language in words, with the generated reference. The plain presets get a short generated one |
 | `kit.json` | The id, label, kind, mode, the Mariachi version and commit, the fonts, and a sha256 for every file as written |
 
 Copy the folder as it is (into `src/design/`, say), import `index.css` first, and set `data-theme` on `<html>`. Every CSS file opens with a header naming the language, the commit and the library source. **Components aren't copied.** A project makes each one when it needs it: the component's CSS in `dist/css/components/<name>.css` reads only `--m-*` tokens, so it takes the language's look from the kit, and the language's `DESIGN.md` says how it draws it. The project's own changes go in its own CSS after the kit. `kit.json`'s shas tell a tool which files the project has edited. Moving a project to a newer kit is a deliberate step, never automatic.
 
-Kits are build output and aren't in the npm package.
+`@mariachi/design`'s npm package leaves the kits out. They ship in `@mariachi/design-kits`, and one command copies one in:
+
+```bash
+pnpm add -D @mariachi/design-kits
+mariachi design list --kits                     # every language and plain preset, with its fonts and size
+mariachi design add linen                       # the kit in src/design/, and src/design.css
+mariachi design add linen --dir web/styles/kit  # another folder; design.css goes beside it
+
+npx @mariachi/design-kits add linen             # the same, with nothing installed
+```
+
+```
+src/
+  design/        the kit, exactly as built: index.css, tokens.css, fonts/, motion/, DESIGN.md, kit.json …
+  design.css     the project's own changes; made once, never written again
+```
+
+A project has one kit, and `<html data-theme>` names the language, so the folder doesn't: the imports (`./design/index.css`, `./design/motion/motion.css`, `./design.css`, in that order) stay the same when the language changes. `design add` writes every file exactly as built (each matches its sha256 in `kit.json`) and prints those imports, `data-theme="<kit>"` and the `enhance()` call. Its rules:
+
+- **`design.css` is the project's.** It's made once, beside the kit's folder, and never written again: not on a re-run, not on a change of language, not with `--force`.
+- **An edited copy is reported, not replaced.** If the project changed or removed a kit file, the command lists the files, writes nothing and exits 1. Move the changes to `design.css`, or pass `--force` to discard them (they're listed again as discarded).
+- **Taking another kit is a switch, in place.** The old kit's files are removed and the new one's written in the same folder, under the same rule for edits.
+- **Only kit files are ever removed.** A file of the project's own in the folder stays and is reported, unless the new kit has a file of that name (then it counts as an edit). A folder that has files and no kit is refused, with or without `--force`: a kit takes a folder of its own.
+- **A re-run with nothing to do says so** and writes nothing. After upgrading `@mariachi/design-kits`, a re-run moves a clean copy to the new version; that's the deliberate step.
+- `--dry-run` reports without writing; `--json` prints the result (or the error, with the files) for a tool.
+
+The same from code: `addKit(id, { dir, force, dryRun })`, `listKits()`, `readKit(id)` and `installedKit(dir)` from `@mariachi/design-kits`.
 
 ## Markup contract
 

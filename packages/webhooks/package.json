@@ -2,6 +2,11 @@
   "name": "@mariachi/webhooks",
   "version": "0.1.0",
   "description": "Inbound webhooks: signature verification over the raw body, dedup, direct or queued processing.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/webhooks"
+  },
   "mariachi": {
     "category": "http",
     "status": "beta",

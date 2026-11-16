@@ -5,6 +5,7 @@ export const LAYOUT = {
   /** The composition root: `createApp()` builds the object graph, for `main.ts` and for tests. */
   app: 'src/app.ts',
   schemaIndex: 'src/schema/index.ts',
+  seedsDir: 'src/seeds',
   seedsIndex: 'src/seeds/index.ts',
   contractsDir: 'src/contracts',
   servicesDir: 'src/services',
@@ -23,4 +24,9 @@ export const MARKERS = {
   services: 'mariachi:services',
   controllers: 'mariachi:controllers',
   jobs: 'mariachi:jobs',
+  seeds: 'mariachi:seeds',
+  /** In `pages.controller.ts`: where a page's route goes. */
+  pages: 'mariachi:pages',
+  /** In the pages' `layout.ts`: where a page's link in the bar goes. */
+  nav: 'mariachi:nav',
 } as const;

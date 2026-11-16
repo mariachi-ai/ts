@@ -2,6 +2,11 @@
   "name": "@mariachi/database-postgres",
   "version": "0.1.0",
   "description": "Postgres via Drizzle: tenant-safe DrizzleRepository, transactions, cursor pagination, migrations from the DSL.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/database-postgres"
+  },
   "mariachi": {
     "category": "data",
     "status": "beta",

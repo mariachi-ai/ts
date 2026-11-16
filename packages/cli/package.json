@@ -2,6 +2,11 @@
   "name": "@mariachi/cli",
   "version": "0.1.0",
   "description": "The mariachi binary: init, generate, validate, db (generate, check, migrate, seed), design and explore.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/cli"
+  },
   "mariachi": {
     "category": "tooling",
     "status": "beta",
@@ -39,6 +44,7 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@mariachi/auth": "workspace:*",
     "@mariachi/config": "workspace:*",
     "@mariachi/core": "workspace:*",
     "@mariachi/create": "workspace:*",
@@ -50,10 +56,14 @@
   },
   "peerDependencies": {
     "@mariachi/design": "workspace:>=0.0.5 <1",
+    "@mariachi/design-kits": "workspace:>=0.0.5 <1",
     "@mariachi/explorer": "workspace:>=0.0.5 <1"
   },
   "peerDependenciesMeta": {
     "@mariachi/design": {
+      "optional": true
+    },
+    "@mariachi/design-kits": {
       "optional": true
     },
     "@mariachi/explorer": {
@@ -62,6 +72,7 @@
   },
   "devDependencies": {
     "@mariachi/design": "workspace:*",
+    "@mariachi/design-kits": "workspace:*",
     "drizzle-orm": "^0.38",
     "postgres": "^3.4",
     "tsup": "^8",

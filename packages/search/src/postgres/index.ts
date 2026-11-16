@@ -1,7 +1,7 @@
 import { eq, sql, type SQL } from 'drizzle-orm';
 import { SearchError } from '@mariachi/core';
 import { compileTable, currentTransaction, type DrizzleDb } from '@mariachi/database-postgres';
-import { isText, mapFieldType } from '../field-types';
+import { isText, mapFieldType, sameFields } from '../field-types';
 import { searchDocumentsTable, searchIndexesTable } from '../schema';
 import type { SearchClient, SearchDocument, SearchField, SearchIndex, SearchQuery, SearchResult } from '../types';
 
@@ -68,18 +68,6 @@ function assertDefinition(index: SearchIndex): void {
   if (index.defaultSortingField && (!sortField || isList(sortField.type) || !['int32', 'int64', 'float'].includes(scalarOf(sortField.type)))) {
     throw new SearchError('search/invalid-input', `defaultSortingField ${index.defaultSortingField} must be a numeric field of ${index.name}`);
   }
-}
-
-/** Whether two definitions describe the same fields, whatever order they were written in. */
-function sameFields(a: SearchIndex, b: SearchIndex): boolean {
-  const shape = (index: SearchIndex): string =>
-    JSON.stringify({
-      sortBy: index.defaultSortingField ?? null,
-      fields: [...index.fields]
-        .sort((x, y) => x.name.localeCompare(y.name))
-        .map((f) => [f.name, mapFieldType(f.type), f.facet ?? false, f.sort ?? false, f.index ?? true]),
-    });
-  return shape(a) === shape(b);
 }
 
 const textFieldsOf = (index: SearchIndex): string[] => index.fields.filter((f) => isText(f.type) && f.index !== false).map((f) => f.name);
@@ -193,6 +181,15 @@ export class PostgresSearchAdapter implements SearchClient {
       throw toSearchError(error, 'search/request-failed', `Failed to create index ${index.name}`);
     }
     if (created.length === 0) throw new SearchError('search/index-exists', `Index ${index.name} already exists`);
+  }
+
+  /** The definition the index was created with, or last reindexed to. Undefined when there is no such index. */
+  async getIndex(name: string): Promise<SearchIndex | undefined> {
+    try {
+      return await this.find((currentTransaction() as DrizzleDb | undefined) ?? this.db, name);
+    } catch (error) {
+      throw toSearchError(error, 'search/request-failed', `Failed to read index ${name}`);
+    }
   }
 
   /** Removes the index and every tenant's documents in it. Does nothing when there is no such index. */

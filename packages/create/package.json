@@ -2,6 +2,11 @@
   "name": "@mariachi/create",
   "version": "0.1.0",
   "description": "Project scaffolding, generators and architecture validation used by the CLI.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/create"
+  },
   "mariachi": {
     "category": "tooling",
     "status": "beta",
@@ -50,8 +55,13 @@
     "@mariachi/config": "workspace:*",
     "@mariachi/database": "workspace:*",
     "@mariachi/database-postgres": "workspace:*",
+    "@mariachi/design": "workspace:*",
     "@mariachi/jobs": "workspace:*",
     "@mariachi/lifecycle": "workspace:*",
+    "@mariachi/notifications": "workspace:*",
+    "@mariachi/organizations": "workspace:*",
+    "@mariachi/rate-limit": "workspace:*",
+    "@mariachi/search": "workspace:*",
     "@mariachi/tenancy": "workspace:*",
     "@mariachi/testing": "workspace:*",
     "@types/node": "^22",

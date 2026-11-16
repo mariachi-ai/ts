@@ -1,5 +1,6 @@
 import type { Context, PaginatedResult, PaginationParams } from '@mariachi/core';
 import { auditCanonical, chainHash, GENESIS_HASH } from './chain';
+import { auditTenantScope } from './scope';
 import type { AuditChainVerification, AuditEntry, AuditLogOptions, AuditLogger, AuditMaintenance, AuditQuery, AuditQueryFilter } from './types';
 
 /** In-process append-only log with optional per-tenant hash chaining. For tests and single-node use. */
@@ -51,9 +52,11 @@ export class MemoryAuditLog implements AuditLogger, AuditQuery, AuditMaintenance
     return this.match(ctx, { resource, resourceId });
   }
 
-  async retain(_ctx: Context, olderThan: Date): Promise<number> {
+  /** Deletes entries older than `olderThan`: the context's tenant's, or everyone's for the system. */
+  async retain(ctx: Context, olderThan: Date): Promise<number> {
+    const tenantId = auditTenantScope(ctx);
     const before = this.entries.length;
-    const kept = this.entries.filter((e) => e.occurredAt >= olderThan);
+    const kept = this.entries.filter((e) => e.occurredAt >= olderThan || (tenantId ? e.tenantId !== tenantId : false));
     this.entries.length = 0;
     this.entries.push(...kept);
     return before - kept.length;
@@ -63,7 +66,9 @@ export class MemoryAuditLog implements AuditLogger, AuditQuery, AuditMaintenance
     return this.match(ctx, filter).map((e) => JSON.stringify(e)).join('\n');
   }
 
-  async verifyChain(ctx: Context, tenantId: string | null | undefined = ctx.tenantId): Promise<AuditChainVerification> {
+  async verifyChain(ctx: Context, requested?: string | null): Promise<AuditChainVerification> {
+    // `undefined` is the context's own tenant; `null` is the entries that have none, which only the system may ask for
+    const tenantId = requested === undefined ? (ctx.tenantId ?? auditTenantScope(ctx, null)) : auditTenantScope(ctx, requested);
     let checked = 0;
     let expectedPrev: string | undefined;
     const chain = this.entries
@@ -80,7 +85,7 @@ export class MemoryAuditLog implements AuditLogger, AuditQuery, AuditMaintenance
   }
 
   private match(ctx: Context, filter: AuditQueryFilter): AuditEntry[] {
-    const tenantId = ctx.tenantId ?? filter.tenantId;
+    const tenantId = auditTenantScope(ctx, filter.tenantId);
     return this.entries.filter((e) => {
       if (tenantId && e.tenantId !== tenantId) return false;
       if (filter.actor && e.actor !== filter.actor) return false;

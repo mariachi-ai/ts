@@ -26,7 +26,7 @@ It needs two tables. Export them from your schema so `mariachi db generate` writ
 
 ```ts
 // src/schema/index.ts
-export { jobsTable, jobSchedulesTable } from '@mariachi/jobs/schema';
+export { jobsTable, jobSchedulesTable } from '@mariachi/jobs/schema';   // a worker started without them says so: jobs/tables-missing
 ```
 
 Options: `queue` or `prefix` (workers with the same queue name share it), `concurrency` (5),
@@ -141,6 +141,9 @@ process should not call `start()`.
 On Postgres, each tick is enqueued once however many workers are running (the job's id is the
 schedule and the tick's time), a restart keeps the next tick, and ticks missed while no worker was
 running are not replayed.
+
+The in-memory queue runs schedules too, for development and tests: in the one process, while it is
+started, with nothing kept across a restart.
 
 ## Shutdown
 

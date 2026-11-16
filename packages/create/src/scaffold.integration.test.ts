@@ -7,7 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startPostgres, startRedis, stopAll } from '../../../test/setup';
-import { createProject, generateController, generateEntity, generateIntegration, generateJob, generateService, validate } from './index';
+import { JWTAdapter } from '@mariachi/auth';
+import { createProject, generateController, generateEntity, generateIntegration, generateJob, generatePage, generateSeed, generateService, validate } from './index';
 
 const run = promisify(execFile);
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -76,6 +77,49 @@ async function bootReady<T = undefined>(
   }
 }
 
+const APPLY_SCHEMA = `import { randomUUID } from 'node:crypto';
+import { sql } from 'drizzle-orm';
+import { applySchema, createPostgresDatabase } from '@mariachi/database-postgres';
+import * as schema from './src/schema/index';
+
+const name = 'boot_' + randomUUID().replaceAll('-', '');
+const server = createPostgresDatabase({ url: process.argv[2] as string });
+await server.connect();
+await server.db.execute(sql.raw('create database ' + name));
+await server.disconnect();
+const url = new URL(process.argv[2] as string);
+url.pathname = '/' + name;
+if (process.argv[3] !== 'empty') {
+  const database = createPostgresDatabase({ url: url.href });
+  await database.connect();
+  await applySchema(database.db, schema);
+  await database.disconnect();
+}
+console.log('DATABASE_URL=' + url.href);
+`;
+
+// One Postgres for every boot below; each gets a database of its own in it
+let postgres: Promise<string> | undefined;
+
+/**
+ * A new database on the test Postgres holding the project's own tables (its src/schema), as its
+ * migrations would leave it. Stands in for `mariachi dev`, which migrates before it starts the app.
+ * With `empty`, a new database with nothing in it.
+ */
+async function migratedDatabase(cwd: string, empty = false): Promise<string> {
+  const script = join(cwd, 'apply-schema.mts');
+  await writeFile(script, APPLY_SCHEMA);
+  try {
+    postgres ??= startPostgres();
+    const { stdout } = await run(process.execPath, [viteNode, script, await postgres, ...(empty ? ['empty'] : [])], { cwd, env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' } });
+    const url = /^DATABASE_URL=(.+)$/m.exec(stdout)?.[1];
+    if (!url) throw new Error(`no database url in: ${stdout}`); // mariachi-lint-ignore
+    return url;
+  } finally {
+    await rm(script, { force: true });
+  }
+}
+
 describe('generated project', () => {
   beforeAll(async () => {
     await rm(workDir, { recursive: true, force: true });
@@ -86,11 +130,14 @@ describe('generated project', () => {
     await generateEntity({ name: 'invoice-item', projectRoot: project });
     await generateJob({ name: 'send-digest', projectRoot: project });
     await generateIntegration({ name: 'acme', projectRoot: project });
+    await generateSeed({ name: 'demo-data', projectRoot: project });
   }, 30_000);
 
   afterAll(async () => {
     await rm(workDir, { recursive: true, force: true });
     await stopAll();
+    // The Postgres the boots shared went with it
+    postgres = undefined;
   });
 
   it('registers generated pieces in the registry files', async () => {
@@ -102,6 +149,9 @@ describe('generated project', () => {
     expect(controllers).toMatch(/new NotesController\(communication\),\n\s+new BillingReportController\(communication\),/);
     expect(await readFile(join(project, 'src/schema/index.ts'), 'utf-8')).toContain("export * from './invoice-items';");
     expect(await readFile(join(project, 'src/jobs/index.ts'), 'utf-8')).toContain('sendDigestJob,');
+    const seeds = await readFile(join(project, 'src/seeds/index.ts'), 'utf-8');
+    expect(seeds).toContain("import { demoDataSeed } from './demo-data.seed';");
+    expect(seeds).toMatch(/export const seeds: SeedDefinition<DrizzleDb>\[\] = \[\n\s+demoDataSeed,\n\s+\/\/ mariachi:seeds\n\];/);
     const pkg = JSON.parse(await readFile(join(project, 'package.json'), 'utf-8'));
     expect(pkg.dependencies['@mariachi/core']).toMatch(/^\^\d+\.\d+\.\d+/);
   });
@@ -121,24 +171,48 @@ describe('generated project', () => {
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
   }, 120_000);
 
-  it('passes its own end-to-end tests: the app over HTTP against a throwaway Postgres and Redis', async () => {
+  it('passes its own end-to-end tests: the app over HTTP against a throwaway Postgres, which holds its jobs and search too', async () => {
     const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', project, '--config', join(project, 'vitest.e2e.config.ts')]);
     expect(stdout).toMatch(/src\/app\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/src\/search\.e2e\.test\.ts/);
     expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
     expect(stdout).toMatch(/invoice-items\.e2e\.test\.ts/);
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
     expect(stdout).not.toMatch(/failed/);
   }, 300_000);
 
-  it('boots its main.ts against Postgres and Redis and answers ready', async () => {
+  it('boots its main.ts against Postgres alone and answers ready', async () => {
     const { status, output } = await bootReady(project, {
       SERVICE_NAME: 'scaffold-app',
       NODE_ENV: 'development',
-      DATABASE_URL: await startPostgres(),
-      REDIS_URL: await startRedis(),
+      DATABASE_URL: await migratedDatabase(project),
       JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
     });
     expect(output).not.toContain('database/not-connected');
+    expect({ status, output }).toMatchObject({ status: 200 });
+  }, 180_000);
+
+  it('says to migrate, and stops, when the database has none of its tables', async () => {
+    const { status, output } = await bootReady(project, {
+      SERVICE_NAME: 'scaffold-app',
+      NODE_ENV: 'development',
+      DATABASE_URL: await migratedDatabase(project, true),
+      JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
+    });
+    expect(status).toBeNull();
+    // The first thing to look for its tables says they are missing and what to do
+    expect(output).toContain('The search tables are not there');
+    expect(output).toContain('migrate');
+  }, 180_000);
+
+  it('runs its jobs on Redis when REDIS_URL is set, and is ready with both', async () => {
+    const { status, output } = await bootReady(project, {
+      SERVICE_NAME: 'scaffold-app',
+      NODE_ENV: 'development',
+      DATABASE_URL: await migratedDatabase(project),
+      REDIS_URL: await startRedis(),
+      JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
+    });
     expect({ status, output }).toMatchObject({ status: 200 });
   }, 180_000);
 
@@ -174,6 +248,8 @@ describe('generated project with --auth gotrue', () => {
   afterAll(async () => {
     await rm(workDir, { recursive: true, force: true });
     await stopAll();
+    // The Postgres the boots shared went with it
+    postgres = undefined;
   });
 
   it('boots, serves the sign-in page to anyone, and asks everyone else for a token', async () => {
@@ -182,8 +258,7 @@ describe('generated project with --auth gotrue', () => {
       {
         SERVICE_NAME: 'gotrue-app',
         NODE_ENV: 'development',
-        DATABASE_URL: await startPostgres(),
-        REDIS_URL: await startRedis(),
+        DATABASE_URL: await migratedDatabase(app),
         AUTH_URL: 'https://auth.example.test/auth/v1',
         AUTH_ANON_KEY: 'publishable-key',
       },
@@ -234,6 +309,158 @@ describe('generated project with --auth gotrue', () => {
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
     expect(stdout).not.toMatch(/failed/);
   }, 300_000);
+
+  it('passes mariachi validate with no findings', async () => {
+    const result = await validate(app);
+    expect(result.violations).toEqual([]);
+  });
+});
+
+const JWT_SECRET = 'scaffold-test-secret-at-least-32-characters';
+
+describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth %s)', (auth) => {
+  const app = join(workDir, `${auth}-orgs-app`);
+
+  beforeAll(async () => {
+    await rm(app, { recursive: true, force: true });
+    await createProject({ name: `${auth}-orgs-app`, outputDir: app, auth, organizations: true });
+    await generateEntity({ name: 'invoice-item', projectRoot: app });
+  }, 30_000);
+
+  afterAll(async () => {
+    await rm(workDir, { recursive: true, force: true });
+    await stopAll();
+    // The Postgres the boots shared went with it
+    postgres = undefined;
+  });
+
+  it('registers the organizations routes and tables beside the generated ones', async () => {
+    const controllers = await readFile(join(app, 'src/api/controllers/index.ts'), 'utf-8');
+    expect(controllers).toMatch(/new OrganizationsController\(communication\),\n\s+new NotesController\(communication\),\n\s+new InvoiceItemsController\(communication\),/);
+    const schema = await readFile(join(app, 'src/schema/index.ts'), 'utf-8');
+    expect(schema).toContain("export * from './organizations';");
+    expect(schema).toContain("export * from './invoice-items';");
+  });
+
+  it('typechecks against the current framework packages', async () => {
+    await sh('typescript/bin/tsc', ['-p', 'tsconfig.json'], app);
+  }, 120_000);
+
+  it('passes its own generated tests', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app], app);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 120_000);
+
+  it('passes its own end-to-end tests: organizations, invitations by email, and the generated entities inside an organization', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app, '--config', join(app, 'vitest.e2e.config.ts')], app);
+    expect(stdout).toMatch(/src\/organizations\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/src\/app\.e2e\.test\.ts/);
+    // Written by `generate entity`, unchanged: its users are put in organizations by the harness
+    expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/invoice-items\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    // Vitest's own count: the app logs "request failed" for a refusal a test provokes on purpose
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 300_000);
+
+  it('boots its main.ts, and answers the organization routes only to someone signed in', async () => {
+    const { status, output, probed } = await bootReady(
+      app,
+      {
+        SERVICE_NAME: `${auth}-orgs-app`,
+        NODE_ENV: 'development',
+        DATABASE_URL: await migratedDatabase(app),
+        ...(auth === 'gotrue' ? { AUTH_URL: 'https://auth.example.test/auth/v1' } : { JWT_SECRET }),
+      },
+      async (base) => {
+        const anonymous = (await fetch(`${base}/api/organizations`)).status;
+        if (auth !== 'jwt') return { anonymous };
+        // A real token for a user in no organization yet, through the app's own verifier. The route answers
+        // before it reads the database (which has no tables here): the token was accepted, the invitation wasn't.
+        const token = await new JWTAdapter({ secret: JWT_SECRET }).sign({ userId: 'user-ada', tenantId: '', scopes: [] });
+        const accept = await fetch(`${base}/api/organizations/invitations/accept`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ token: 'not-an-invitation' }),
+        });
+        return { anonymous, tenantless: accept.status, code: ((await accept.json()) as { error?: { code?: string } }).error?.code };
+      },
+    );
+    expect({ status, output }).toMatchObject({ status: 200 });
+    expect(probed).toEqual(auth === 'jwt' ? { anonymous: 401, tenantless: 400, code: 'organizations/invitation-invalid' } : { anonymous: 401 });
+  }, 180_000);
+
+  it('passes mariachi validate with no findings', async () => {
+    const result = await validate(app);
+    expect(result.violations).toEqual([]);
+  });
+});
+
+describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %s)', (auth) => {
+  const app = join(workDir, `${auth}-ui-app`);
+
+  beforeAll(async () => {
+    await rm(app, { recursive: true, force: true });
+    // With organizations too, so the three options are shown to work together
+    await createProject({ name: `${auth}-ui-app`, outputDir: app, auth, organizations: true, ui: true });
+    await generatePage({ name: 'team-settings', projectRoot: app });
+  }, 30_000);
+
+  afterAll(async () => {
+    await rm(workDir, { recursive: true, force: true });
+    await stopAll();
+    // The Postgres the boots shared went with it
+    postgres = undefined;
+  });
+
+  it('typechecks against the current framework packages, generated page included', async () => {
+    await sh('typescript/bin/tsc', ['-p', 'tsconfig.json'], app);
+  }, 120_000);
+
+  it('passes its own generated tests, the pages among them', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app], app);
+    expect(stdout).toMatch(/pages\/home\.test\.ts/);
+    expect(stdout).toMatch(/pages\/team-settings\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 120_000);
+
+  it("passes its own end-to-end tests: the pages, the design library's styles and the app's own files over HTTP", async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app, '--config', join(app, 'vitest.e2e.config.ts')], app);
+    expect(stdout).toMatch(/src\/pages\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 300_000);
+
+  it('boots its main.ts and sends the pages, the generated one too, beside the API', async () => {
+    const { status, output, probed } = await bootReady(
+      app,
+      {
+        SERVICE_NAME: `${auth}-ui-app`,
+        NODE_ENV: 'development',
+        DATABASE_URL: await migratedDatabase(app),
+        ...(auth === 'gotrue' ? { AUTH_URL: 'https://auth.example.test/auth/v1' } : { JWT_SECRET }),
+      },
+      async (base) => {
+        const home = await fetch(`${base}/`);
+        const page = await fetch(`${base}/team-settings`);
+        return {
+          home: home.status,
+          type: home.headers.get('content-type'),
+          bar: (await home.text()).includes('<a class="m-navbar-link" href="/team-settings" aria-current="false">Team settings</a>'),
+          page: page.status,
+          current: (await page.text()).includes('<a class="m-navbar-link" href="/team-settings" aria-current="page">Team settings</a>'),
+          design: (await fetch(`${base}/assets/design/mariachi.css`)).status,
+          script: (await fetch(`${base}/assets/home.js`)).status,
+          source: (await fetch(`${base}/assets/../src/app.ts`)).status,
+          api: (await fetch(`${base}/api/organizations`)).status,
+        };
+      },
+    );
+    expect({ status, output }).toMatchObject({ status: 200 });
+    expect(probed).toEqual({ home: 200, type: 'text/html; charset=utf-8', bar: true, page: 200, current: true, design: 200, script: 200, source: 404, api: 401 });
+  }, 180_000);
 
   it('passes mariachi validate with no findings', async () => {
     const result = await validate(app);

@@ -89,6 +89,8 @@ export const httpResponse = <T>(status: number, body: T, headers?: Record<string
 export interface ServerRoute {
   method: HttpMethod;
   path: string;
+  /** Mount the route at the server's root, not under its `prefix`. */
+  root?: boolean;
   handler: (ctx: RequestContext, req: IncomingRequest) => Promise<unknown>;
   /** Override the body limit for this route (e.g. uploads). */
   bodyLimitBytes?: number;

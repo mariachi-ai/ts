@@ -83,8 +83,20 @@ export type RouteHandler<S extends RouteSchemas = RouteSchemas> = (
 export interface RouteOpts<S extends RouteSchemas = RouteSchemas> {
   /** Strategies accepted by this route, or `false` for public. Default: server `withAuth` list. */
   auth?: AuthStrategy | AuthStrategy[] | false;
+  /**
+   * Mount the route at the server's root, outside its `prefix` (`/` and `/settings`, not `/api/…`):
+   * for pages and the files they load. Such a route is left out of the OpenAPI document.
+   */
+  root?: boolean;
   /** Every listed scope is required. */
   scopes?: string[];
+  /**
+   * Whether the caller must be in a tenant. `'required'` (the default) refuses an identity with none
+   * (`tenancy/missing-tenant`). `'optional'` lets one through with `ctx.tenantId` null, for the few
+   * routes a signed-in user needs before they are in any tenant: listing or creating their
+   * organizations, accepting an invitation. A handler on such a route must not touch tenant-scoped data.
+   */
+  tenant?: 'required' | 'optional';
   rateLimit?: RateLimitRule | false;
   schema?: S;
   /** Success status. Default 200 (204 when the handler returns undefined). */

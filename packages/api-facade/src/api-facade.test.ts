@@ -192,6 +192,32 @@ describe('tenants on a verified identity', () => {
     expect(res.json<{ error: { code: string } }>().error.code).toBe('tenancy/missing-tenant');
   });
 
+  it('lets an identity with no tenant onto a route that says the tenant is optional, and onto no other', async () => {
+    class Onboarding extends BaseController {
+      readonly prefix = 'me';
+      init() {
+        this.get('organizations', { tenant: 'optional' }, async (ctx) => ({ tenantId: ctx.tenantId, userId: ctx.userId }));
+        this.get('notes', async (ctx) => ({ tenantId: ctx.tenantId }));
+      }
+    }
+    const server = (identity: ResolvedIdentity) =>
+      createApiServer({ name: 'tenants', logger: silent, prefix: '/api' })
+        .withAuthStrategy('session', bearerStrategy({ verify: async () => identity }))
+        .withAuth('session')
+        .registerController(new Onboarding());
+    const headers = { authorization: 'Bearer t' };
+    const none = server(person({}));
+    // No tenant is null in the context, not an empty string a query could match on
+    expect((await none.inject({ method: 'GET', url: '/api/me/organizations', headers })).json()).toEqual({ tenantId: null, userId: 'u1' });
+    expect((await none.inject({ method: 'GET', url: '/api/me/notes', headers })).json<{ error: { code: string } }>().error.code).toBe('tenancy/missing-tenant');
+    // Optional is not anonymous, and not a way in for a forged personal tenant
+    expect((await none.inject({ method: 'GET', url: '/api/me/organizations' })).statusCode).toBe(401);
+    const forged = await server(person({ tenantId: 'user.main.someone-else' })).inject({ method: 'GET', url: '/api/me/organizations', headers });
+    expect(forged.json<{ error: { code: string } }>().error.code).toBe('tenancy/reserved-tenant');
+    // An identity that has a tenant keeps it there
+    expect((await server(person({ tenantId: 't1' })).inject({ method: 'GET', url: '/api/me/organizations', headers })).json()).toEqual({ tenantId: 't1', userId: 'u1' });
+  });
+
   it('accepts a personal tenant given by withPersonalTenants', async () => {
     const res = await get(markPersonalTenant(person({ tenantId: 'user.main.u1' })));
     expect(res.statusCode).toBe(200);
