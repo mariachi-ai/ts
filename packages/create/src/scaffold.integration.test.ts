@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startPostgres, startRedis, stopAll } from '../../../test/setup';
 import { JWTAdapter } from '@mariachi/auth';
-import { createProject, generateController, generateEntity, generateIntegration, generateJob, generateService, validate } from './index';
+import { createProject, generateController, generateEntity, generateIntegration, generateJob, generatePage, generateService, validate } from './index';
 
 const run = promisify(execFile);
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -385,6 +385,77 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth
     );
     expect({ status, output }).toMatchObject({ status: 200 });
     expect(probed).toEqual(auth === 'jwt' ? { anonymous: 401, tenantless: 400, code: 'organizations/invitation-invalid' } : { anonymous: 401 });
+  }, 180_000);
+
+  it('passes mariachi validate with no findings', async () => {
+    const result = await validate(app);
+    expect(result.violations).toEqual([]);
+  });
+});
+
+describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %s)', (auth) => {
+  const app = join(workDir, `${auth}-ui-app`);
+
+  beforeAll(async () => {
+    await rm(app, { recursive: true, force: true });
+    // With organizations too, so the three options are shown to work together
+    await createProject({ name: `${auth}-ui-app`, outputDir: app, auth, organizations: true, ui: true });
+    await generatePage({ name: 'team-settings', projectRoot: app });
+  }, 30_000);
+
+  afterAll(async () => {
+    await rm(workDir, { recursive: true, force: true });
+    await stopAll();
+    // The Postgres the boots shared went with it
+    postgres = undefined;
+  });
+
+  it('typechecks against the current framework packages, generated page included', async () => {
+    await sh('typescript/bin/tsc', ['-p', 'tsconfig.json'], app);
+  }, 120_000);
+
+  it('passes its own generated tests, the pages among them', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app], app);
+    expect(stdout).toMatch(/pages\/home\.test\.ts/);
+    expect(stdout).toMatch(/pages\/team-settings\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 120_000);
+
+  it("passes its own end-to-end tests: the pages, the design library's styles and the app's own files over HTTP", async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app, '--config', join(app, 'vitest.e2e.config.ts')], app);
+    expect(stdout).toMatch(/src\/pages\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 300_000);
+
+  it('boots its main.ts and sends the pages, the generated one too, beside the API', async () => {
+    const { status, output, probed } = await bootReady(
+      app,
+      {
+        SERVICE_NAME: `${auth}-ui-app`,
+        NODE_ENV: 'development',
+        DATABASE_URL: await migratedDatabase(app),
+        ...(auth === 'gotrue' ? { AUTH_URL: 'https://auth.example.test/auth/v1' } : { JWT_SECRET }),
+      },
+      async (base) => {
+        const home = await fetch(`${base}/`);
+        const page = await fetch(`${base}/team-settings`);
+        return {
+          home: home.status,
+          type: home.headers.get('content-type'),
+          bar: (await home.text()).includes('<a class="m-navbar-link" href="/team-settings" aria-current="false">Team settings</a>'),
+          page: page.status,
+          current: (await page.text()).includes('<a class="m-navbar-link" href="/team-settings" aria-current="page">Team settings</a>'),
+          design: (await fetch(`${base}/assets/design/mariachi.css`)).status,
+          script: (await fetch(`${base}/assets/home.js`)).status,
+          source: (await fetch(`${base}/assets/../src/app.ts`)).status,
+          api: (await fetch(`${base}/api/organizations`)).status,
+        };
+      },
+    );
+    expect({ status, output }).toMatchObject({ status: 200 });
+    expect(probed).toEqual({ home: 200, type: 'text/html; charset=utf-8', bar: true, page: 200, current: true, design: 200, script: 200, source: 404, api: 401 });
   }, 180_000);
 
   it('passes mariachi validate with no findings', async () => {

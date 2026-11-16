@@ -22,6 +22,7 @@ import {
   organizationsEnv,
   organizationsReadme,
 } from './organizations';
+import { UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_DEPS, UI_README, uiAgents, uiFiles } from './ui';
 
 const MARIACHI_DEPS = [
   'api-facade',
@@ -47,13 +48,16 @@ export interface ProjectFileOptions {
   e2e?: boolean;
   /** Organizations, memberships and invitations (`@mariachi/organizations`). Default false. */
   organizations?: boolean;
+  /** Pages and `@mariachi/design`. Default false. */
+  ui?: boolean;
 }
 
 export function projectFiles(name: string, mariachiRange: string, auth: ProjectAuth = 'jwt', options: ProjectFileOptions = {}): Record<string, string> {
   const e2e = options.e2e ?? true;
   const orgs = options.organizations ?? false;
+  const ui = options.ui ?? false;
   const dependencies: Record<string, string> = {};
-  for (const pkg of [...MARIACHI_DEPS, ...AUTH_DEPS[auth], ...(orgs ? ORGANIZATION_DEPS : [])].sort()) dependencies[`@mariachi/${pkg}`] = mariachiRange;
+  for (const pkg of [...MARIACHI_DEPS, ...AUTH_DEPS[auth], ...(orgs ? ORGANIZATION_DEPS : []), ...(ui ? UI_DEPS : [])].sort()) dependencies[`@mariachi/${pkg}`] = mariachiRange;
   dependencies.zod = V.zod;
   dependencies['drizzle-orm'] = V['drizzle-orm'];
   dependencies.postgres = V.postgres;
@@ -117,11 +121,11 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     '.env.example': ENV_EXAMPLE(name) + (orgs ? organizationsEnv('jwt') : ''),
     'docker-compose.yml': DOCKER_COMPOSE(databaseName(name)),
     'vitest.config.ts': VITEST_CONFIG,
-    'AGENTS.md': AGENTS_MD(e2e) + (orgs ? organizationsAgents('jwt') : ''),
+    'AGENTS.md': AGENTS_MD(e2e) + (orgs ? organizationsAgents('jwt') : '') + (ui ? uiAgents('jwt') : ''),
     'CLAUDE.md': 'See [AGENTS.md](./AGENTS.md).\n',
-    'README.md': README(name, e2e) + (orgs ? organizationsReadme('jwt') : ''),
+    'README.md': README(name, e2e) + (orgs ? organizationsReadme('jwt') : '') + (ui ? UI_README : ''),
     [LAYOUT.main]: MAIN_TS,
-    [LAYOUT.app]: APP_TS(orgs),
+    [LAYOUT.app]: APP_TS(orgs, ui),
     ...(e2e
       ? {
           'vitest.e2e.config.ts': VITEST_E2E_CONFIG,
@@ -137,7 +141,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     ...(e2e ? { [SEARCH_E2E_FILE]: SEARCH_E2E_TEST } : {}),
     [LAYOUT.seedsIndex]: SEEDS_INDEX,
     [LAYOUT.servicesIndex]: SERVICES_INDEX,
-    [LAYOUT.controllersIndex]: CONTROLLERS_INDEX(orgs),
+    [LAYOUT.controllersIndex]: CONTROLLERS_INDEX(orgs, ui),
     [LAYOUT.jobsIndex]: JOBS_INDEX,
   };
   if (orgs) {
@@ -146,7 +150,8 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     if (auth === 'jwt') files['src/config.ts'] = JWT_ORGANIZATIONS_CONFIG_TS;
     if (e2e) files[ORGANIZATIONS_E2E_FILE] = organizationsE2eTest(auth);
   }
-  return auth === 'gotrue' ? { ...files, ...gotrueFiles(name, e2e, orgs) } : files;
+  if (ui) Object.assign(files, uiFiles(name, auth, e2e));
+  return auth === 'gotrue' ? { ...files, ...gotrueFiles(name, e2e, orgs, ui) } : files;
 }
 
 /** The schema index. Shared by both sign-in choices. */
@@ -442,8 +447,8 @@ createApp()
   });
 `;
 
-const APP_TS = (orgs: boolean) => `import { existsSync } from 'node:fs';
-import { ConfigError, KEYS } from '@mariachi/core';
+const APP_TS = (orgs: boolean, ui: boolean) => `import { existsSync } from 'node:fs';
+${ui ? UI_APP_IMPORTS : ''}import { ConfigError, KEYS } from '@mariachi/core';
 import { bootstrap, type BootstrapOptions } from '@mariachi/lifecycle';
 import { createCommunication, type CommunicationLayer } from '@mariachi/communication';
 import { createPostgresDatabase, runMigrations, type PostgresDatabase } from '@mariachi/database-postgres';
@@ -457,7 +462,7 @@ import { createControllers } from './api/controllers/index';
 import { registerServices } from './services/index';
 import { jobs as jobDefinitions } from './jobs/index';
 import { searchIndexes } from './search/index';
-${orgs ? organizationsAppImports('jwt') : ''}
+${orgs ? organizationsAppImports('jwt') : ''}${ui ? UI_APP_CONSTANTS : ''}
 export interface AppOptions {
   /** Passed to bootstrap(). Tests give their own environment and leave the signal handlers off. */
   bootstrap?: BootstrapOptions;
@@ -573,7 +578,7 @@ ${orgs ? organizationsAppSetup('jwt') : ''}
   })
 ${orgs ? ORGANIZATIONS_STRATEGY_COMMENT : ''}    .withAuthStrategy('session', ${orgs ? 'organizationStrategy(bearerStrategy(verifier), access)' : 'bearerStrategy(verifier)'})
     .withAuth('session')
-    .withHealth(lifecycle.health)
+${ui ? UI_APP_STATIC : ''}    .withHealth(lifecycle.health)
     .withOpenApi({ info: { title: config.serviceName, version: '0.1.0' } });
   options.configureApi?.(api);
   for (const controller of createControllers(communication)) api.registerController(controller);
@@ -631,13 +636,13 @@ export function registerServices(communication: CommunicationLayer, deps: Servic
 }
 `;
 
-const CONTROLLERS_INDEX = (orgs: boolean) => `import type { BaseController } from '@mariachi/api-facade';
+const CONTROLLERS_INDEX = (orgs: boolean, ui: boolean) => `import type { BaseController } from '@mariachi/api-facade';
 import type { CommunicationLayer } from '@mariachi/communication';
-${orgs ? "import { OrganizationsController } from '@mariachi/organizations/http';\n" : ''}// ${MARKERS.imports}
+${ui ? "import { PagesController } from './pages.controller';\n" : ''}${orgs ? "import { OrganizationsController } from '@mariachi/organizations/http';\n" : ''}// ${MARKERS.imports}
 
 export function createControllers(communication: CommunicationLayer): BaseController[] {
   return [
-${orgs ? '    new OrganizationsController(communication),\n' : ''}    // ${MARKERS.controllers}
+${ui ? '    new PagesController(communication),\n' : ''}${orgs ? '    new OrganizationsController(communication),\n' : ''}    // ${MARKERS.controllers}
   ];
 }
 `;

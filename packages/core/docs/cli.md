@@ -6,7 +6,7 @@ in the environment win.
 ## init
 
 ```bash
-npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue, --orgs
+npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue, --orgs, --ui
 ```
 
 Creates the [project layout](./architecture.md#project-layout): `src/app.ts` (`createApp()`: config, lifecycle,
@@ -51,6 +51,15 @@ log. With `--auth gotrue`, whether an invitee's address is verified is read from
 then needs no key), never from what the user can edit. The page that accepts an invitation is yours
 to build.
 
+`--ui` adds pages, sent by the same server as the API and styled with `@mariachi/design`
+([design.md](./design.md)). The project gets a layout and a home page (`src/api/pages/`), a
+controller that gives each page a route at the server's root (`src/api/controllers/pages.controller.ts`),
+`public/` for the files pages load (served under `/assets`), the design library's stylesheets under
+`/assets/design`, and tests. A page is a function that returns `html`, which escapes what is put
+into it ([http.md](./http.md#pages-and-files)); its script, if it has one, is a file in `public/`.
+There is no client framework and no build step. `mariachi generate page <name>` adds a page. It
+works with either `--auth` and with `--orgs`.
+
 ## generate
 
 ```bash
@@ -68,6 +77,7 @@ mariachi generate integration acme
 | `controller` | `api/controllers/<name>.controller.ts`; reuses `contracts/<name>.ts` if it exists | `api/controllers/index.ts` |
 | `job` | `jobs/<name>.job.ts` (`defineJob` with schema, retry, timeout) | `jobs/index.ts` |
 | `integration` | `integrations/<name>/client.ts` (timeouts, retries on transient status codes, `IntegrationError`) and a test | none; construct it in `app.ts` |
+| `page` | `api/pages/<name>.ts` (the page, as `html` in the project's layout) and a test. Needs a project made with `--ui` | `api/controllers/pages.controller.ts` (its route at `/<name>`) and `api/pages/layout.ts` (its link in the bar) |
 
 Names can be kebab, camel or Pascal case (`invoice-item`, `invoiceItem`, `InvoiceItem`). Generators
 never overwrite files without `--force`: if any target exists, nothing is written. Registry files are

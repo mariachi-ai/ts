@@ -11,6 +11,7 @@ import {
   organizationsEnv,
   organizationsReadme,
 } from './organizations';
+import { UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_README, uiAgents } from './ui';
 
 /**
  * `mariachi init --auth gotrue`: sign-in by GoTrue (Supabase Auth, hosted or your own), verified
@@ -22,17 +23,17 @@ import {
 /** GoTrue's path when it's served under the app's own origin; hosted Supabase uses the same path. */
 export const AUTH_PATH = '/auth/v1';
 
-export function gotrueFiles(name: string, e2e = true, orgs = false): Record<string, string> {
+export function gotrueFiles(name: string, e2e = true, orgs = false, ui = false): Record<string, string> {
   return {
     '.env.example': ENV_EXAMPLE(name, databaseName(name)) + (orgs ? organizationsEnv('gotrue') : ''),
-    'README.md': README(name) + (orgs ? organizationsReadme('gotrue') : ''),
-    'AGENTS.md': AGENTS_AUTH(e2e) + (orgs ? organizationsAgents('gotrue') : ''),
+    'README.md': README(name) + (orgs ? organizationsReadme('gotrue') : '') + (ui ? UI_README : ''),
+    'AGENTS.md': AGENTS_AUTH(e2e) + (orgs ? organizationsAgents('gotrue') : '') + (ui ? uiAgents('gotrue') : ''),
     'src/config.ts': CONFIG_TS(orgs),
     'src/auth.ts': AUTH_TS,
     'src/auth.test.ts': AUTH_TEST(orgs),
-    [LAYOUT.app]: APP_TS(orgs),
+    [LAYOUT.app]: APP_TS(orgs, ui),
     ...(e2e ? { 'src/app.e2e.test.ts': orgs ? ORGANIZATIONS_APP_E2E_TEST : APP_E2E_TEST, [E2E_HARNESS_FILE]: e2eHarness('gotrue', orgs) } : {}),
-    [LAYOUT.controllersIndex]: CONTROLLERS_INDEX(orgs),
+    [LAYOUT.controllersIndex]: CONTROLLERS_INDEX(orgs, ui),
     [`${LAYOUT.controllersDir}/me.controller.ts`]: ME_CONTROLLER,
     [`${LAYOUT.controllersDir}/me.controller.test.ts`]: ME_CONTROLLER_TEST,
     [`${LAYOUT.controllersDir}/sign-in.controller.ts`]: SIGN_IN_CONTROLLER,
@@ -204,8 +205,8 @@ describe('browserAuthUrl', () => {
 });
 `;
 
-const APP_TS = (orgs: boolean) => `import { existsSync } from 'node:fs';
-import { ConfigError, KEYS } from '@mariachi/core';
+const APP_TS = (orgs: boolean, ui: boolean) => `import { existsSync } from 'node:fs';
+${ui ? UI_APP_IMPORTS : ''}import { ConfigError, KEYS } from '@mariachi/core';
 import { useConfigSection } from '@mariachi/config';
 import { bootstrap, type BootstrapOptions } from '@mariachi/lifecycle';
 import { createCommunication, type CommunicationLayer } from '@mariachi/communication';
@@ -224,7 +225,7 @@ import { createControllers } from './api/controllers/index';
 import { registerServices } from './services/index';
 import { jobs as jobDefinitions } from './jobs/index';
 import { searchIndexes } from './search/index';
-${orgs ? organizationsAppImports('gotrue') : ''}
+${orgs ? organizationsAppImports('gotrue') : ''}${ui ? UI_APP_CONSTANTS : ''}
 const MIGRATIONS = 'drizzle';
 
 export interface AppOptions {
@@ -338,7 +339,7 @@ ${orgs
 ${orgs ? ORGANIZATIONS_STRATEGY_COMMENT : ''}    .withAuthStrategy('session', ${orgs ? 'organizationStrategy(bearerStrategy(auth), access)' : 'bearerStrategy(auth)'})
     .withAuth('session')
     .withMiddleware(createTenancyMiddleware(tenancy))
-    .withHealth(lifecycle.health)
+${ui ? UI_APP_STATIC : ''}    .withHealth(lifecycle.health)
     .withOpenApi({ info: { title: config.serviceName, version: '0.1.0' } });
   options.configureApi?.(api);
   for (const controller of createControllers(communication)) api.registerController(controller);
@@ -559,15 +560,15 @@ describe('the app, started as main.ts starts it', () => {
 });
 `;
 
-const CONTROLLERS_INDEX = (orgs: boolean) => `import type { BaseController } from '@mariachi/api-facade';
+const CONTROLLERS_INDEX = (orgs: boolean, ui: boolean) => `import type { BaseController } from '@mariachi/api-facade';
 import type { CommunicationLayer } from '@mariachi/communication';
-${orgs ? "import { OrganizationsController } from '@mariachi/organizations/http';\n" : ''}import { MeController } from './me.controller';
+${ui ? "import { PagesController } from './pages.controller';\n" : ''}${orgs ? "import { OrganizationsController } from '@mariachi/organizations/http';\n" : ''}import { MeController } from './me.controller';
 import { SignInController } from './sign-in.controller';
 // ${MARKERS.imports}
 
 export function createControllers(communication: CommunicationLayer): BaseController[] {
   return [
-    new MeController(communication),
+${ui ? '    new PagesController(communication),\n' : ''}    new MeController(communication),
     new SignInController(communication),
 ${orgs ? '    new OrganizationsController(communication),\n' : ''}    // ${MARKERS.controllers}
   ];

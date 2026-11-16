@@ -767,6 +767,9 @@ importers:
       '@mariachi/database-postgres':
         specifier: workspace:*
         version: link:../database-postgres
+      '@mariachi/design':
+        specifier: workspace:*
+        version: link:../design
       '@mariachi/jobs':
         specifier: workspace:*
         version: link:../jobs

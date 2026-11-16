@@ -24,6 +24,10 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
   `data-theme`.
 - The element with `data-theme` paints its own canvas, text colour and font.
 
+A project made with `mariachi init --ui` has this set up: the stylesheets are served under
+`/assets/design`, `src/api/pages/layout.ts` links them and sets `data-theme` from one constant
+(`THEME`), and its pages are written with the markup below. See [cli.md](./cli.md#init).
+
 ## Presets
 
 | Preset | Character |

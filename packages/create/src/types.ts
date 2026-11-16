@@ -27,6 +27,12 @@ export interface ProjectConfig {
    * itself. Works with either `auth`. Default false.
    */
   organizations?: boolean;
+  /**
+   * Pages, sent by the same server as the API and styled with `@mariachi/design`: a layout, a home
+   * page, `public/` for the files pages load, and `mariachi generate page`. Works with either `auth`.
+   * Default false.
+   */
+  ui?: boolean;
 }
 
 export const PROJECT_AUTH = ['jwt', 'gotrue'] as const;
@@ -45,6 +51,7 @@ export type GenerateServiceConfig = GenerateOptions;
 export type GenerateControllerConfig = GenerateOptions;
 export type GenerateJobConfig = GenerateOptions;
 export type GenerateIntegrationConfig = GenerateOptions;
+export type GeneratePageConfig = GenerateOptions;
 
 export interface GenerateResult {
   /** Paths relative to the project root. */

@@ -23,4 +23,8 @@ export const MARKERS = {
   services: 'mariachi:services',
   controllers: 'mariachi:controllers',
   jobs: 'mariachi:jobs',
+  /** In `pages.controller.ts`: where a page's route goes. */
+  pages: 'mariachi:pages',
+  /** In the pages' `layout.ts`: where a page's link in the bar goes. */
+  nav: 'mariachi:nav',
 } as const;
