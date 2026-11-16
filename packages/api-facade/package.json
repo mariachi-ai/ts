@@ -2,6 +2,11 @@
   "name": "@mariachi/api-facade",
   "version": "0.1.0",
   "description": "Public HTTP API: controllers, Zod-validated routes, auth strategies, rate limits, OpenAPI and health endpoints.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/api-facade"
+  },
   "mariachi": {
     "category": "http",
     "status": "beta",

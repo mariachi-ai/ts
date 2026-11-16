@@ -2,6 +2,11 @@
   "name": "@mariachi/ai",
   "version": "0.1.0",
   "description": "LLM sessions persisted in Postgres, with token budgets, streaming, tools, agents, RAG, provider fallback and cost tracking.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/ai"
+  },
   "mariachi": {
     "category": "domain",
     "status": "beta",

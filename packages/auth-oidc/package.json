@@ -2,6 +2,11 @@
   "name": "@mariachi/auth-oidc",
   "version": "0.1.0",
   "description": "OpenID Connect token verification for any standard provider (Auth0, Cognito, Keycloak, Entra ID, Okta, Firebase, ...): discovery, JWKS, and configurable tenant, role and scope claims.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/auth-oidc"
+  },
   "mariachi": {
     "category": "security",
     "status": "alpha",

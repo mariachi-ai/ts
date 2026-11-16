@@ -90,6 +90,16 @@ class AcmeWebhookAuth extends SignatureAuthController {
 }
 ```
 
+**A controller written before 0.1.0 needs changing, and the compiler won't always say so.** Then,
+`verifySignature(signature, rawBody)` read its secret itself. That still compiles, because
+TypeScript accepts a method that takes fewer parameters, but the base class now asks
+`signingSecrets()` for the secrets first, finds none, and throws `webhooks/invalid-secret` (a
+configuration error, not a 401) on every delivery. Return the secret from `signingSecrets()` and
+verify with the `secret` you are passed, as above. The four-argument form,
+`verifySignature(signature, rawBody, ctx, req)`, does not compile: the third parameter is now the
+`secret` string, not the request context. `eventIdHeader` and `resolveTenant` are gone: use
+`dedupKey`, and `tenantFromPayload` or `tenantFromRequest` with `tenantSigningSecrets`.
+
 The base class keeps both rules for you: it deduplicates on a digest of the raw body (override
 `dedupKey` only to return an id the signature covers), and it takes a tenant from the verified body,
 or from the request only when you also implement `tenantSigningSecrets(tenantId)` so the delivery verifies

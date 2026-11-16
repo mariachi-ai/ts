@@ -2,6 +2,11 @@
   "name": "@mariachi/auth-gotrue",
   "version": "0.1.0",
   "description": "GoTrue (Supabase Auth) JWT verification through its JWKS (ES256), and its signed hooks (Standard Webhooks).",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/auth-gotrue"
+  },
   "mariachi": {
     "category": "security",
     "status": "alpha",

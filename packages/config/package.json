@@ -2,6 +2,11 @@
   "name": "@mariachi/config",
   "version": "0.1.0",
   "description": "Typed, validated configuration from the environment, plus secrets and feature flags.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/config"
+  },
   "mariachi": {
     "category": "foundation",
     "status": "beta",

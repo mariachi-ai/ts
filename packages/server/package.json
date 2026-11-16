@@ -2,6 +2,11 @@
   "name": "@mariachi/server",
   "version": "0.1.0",
   "description": "HTTP transport on Fastify: request context, traceparent propagation, CORS, security headers, graceful close.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/server"
+  },
   "mariachi": {
     "category": "http",
     "status": "beta",

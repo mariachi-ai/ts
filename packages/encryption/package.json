@@ -2,6 +2,11 @@
   "name": "@mariachi/encryption",
   "version": "0.1.0",
   "description": "Envelope encryption with key rotation (local keys, AWS KMS, GCP KMS).",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/encryption"
+  },
   "mariachi": {
     "category": "data",
     "status": "beta",
