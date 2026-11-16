@@ -25,6 +25,10 @@ jobs:
       - run: pnpm lint
       - run: pnpm docs:check
       - run: pnpm test:unit
+        env:
+          # The design probe tests need a real browser: the runner's own Chrome (locally they default to
+          # Playwright's bundled Chromium)
+          MARIACHI_CHROME: /usr/bin/google-chrome
 
   integration:
     runs-on: ubuntu-latest
