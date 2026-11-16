@@ -227,6 +227,7 @@ export const arrangements: Record<string, Arrangement> = {
   solace: { separation: 'tint', media: 'thumb', title: 'medium', density: 'airy', primary: 'footer', width: 'narrow' },
   sprint: { separation: 'tint', media: 'thumb', title: 'display', density: 'airy', primary: 'inline', width: 'wide' },
   summit: { separation: 'shadow', media: 'thumb', title: 'loud', density: 'airy', primary: 'header', width: 'wide' },
+  tally: { separation: 'border', media: 'leads', title: 'quiet', density: 'dense', primary: 'header', width: 'regular' },
   terracotta: {
     separation: 'divider',
     media: 'beside',

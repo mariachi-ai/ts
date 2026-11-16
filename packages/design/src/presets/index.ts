@@ -13,6 +13,7 @@ import { halcyon } from './halcyon';
 import { meridian } from './meridian';
 import { flint } from './flint';
 import { garnet } from './garnet';
+import { tally } from './tally';
 import { comet } from './comet';
 import { reel } from './reel';
 import { refrain } from './refrain';
@@ -115,7 +116,8 @@ export const presets = {
   doodle,
   tinker,
   garnet,
+  tally,
 } satisfies Record<string, Theme>;
 export type PresetName = keyof typeof presets;
 
-export { anthracite, basalt, bazaar, broadsheet, brutalist, cadence, candid, chalk, cirrus, comet, confetti, doodle, editorial, ember, enterprise, fennel, flint, folio, garnet, halcyon, harbor, hearth, heather, keel, kite, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nacre, nocturne, obsidian, ochre, onyx, quill, quire, reel, refrain, relay, saffron, soft, solace, sprint, summit, terminal, terracotta, tinker, transit, trellis, vellum, volt, zephyr };
+export { anthracite, basalt, bazaar, broadsheet, brutalist, cadence, candid, chalk, cirrus, comet, confetti, doodle, editorial, ember, enterprise, fennel, flint, folio, garnet, halcyon, harbor, hearth, heather, keel, kite, lagoon, linen, margin, marigold, marquee, meridian, minimal, mosaic, nacre, nocturne, obsidian, ochre, onyx, quill, quire, reel, refrain, relay, saffron, soft, solace, sprint, summit, tally, terminal, terracotta, tinker, transit, trellis, vellum, volt, zephyr };
