@@ -51,3 +51,24 @@ describe('mariachi init --auth', () => {
     expect(console.error).toHaveBeenCalledWith(expect.stringContaining('Unknown auth "clerk"'));
   });
 });
+
+describe('mariachi init --orgs', () => {
+  it('leaves organizations out unless asked', async () => {
+    await init(join(dir, 'app'), '--no-example');
+    const pkg = JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf-8'));
+    expect(pkg.dependencies['@mariachi/organizations']).toBeUndefined();
+    expect(existsSync(join(dir, 'app/src/organizations.ts'))).toBe(false);
+  });
+
+  it('adds organizations to either sign-in choice', async () => {
+    await init(join(dir, 'jwt'), '--no-example', '--orgs');
+    await init(join(dir, 'gotrue'), '--no-example', '--orgs', '--auth', 'gotrue');
+    for (const app of ['jwt', 'gotrue']) {
+      const pkg = JSON.parse(await readFile(join(dir, app, 'package.json'), 'utf-8'));
+      expect(pkg.dependencies).toHaveProperty('@mariachi/organizations');
+      expect(existsSync(join(dir, app, 'src/organizations.ts'))).toBe(true);
+      expect(existsSync(join(dir, app, 'src/schema/organizations.ts'))).toBe(true);
+      expect(await readFile(join(dir, app, 'src/app.ts'), 'utf-8')).toContain('organizationStrategy(bearerStrategy(');
+    }
+  });
+});

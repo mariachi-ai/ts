@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url';
 import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startPostgres, startRedis, stopAll } from '../../../test/setup';
+import { JWTAdapter } from '@mariachi/auth';
 import { createProject, generateController, generateEntity, generateIntegration, generateJob, generateService, validate } from './index';
 
 const run = promisify(execFile);
@@ -234,6 +235,86 @@ describe('generated project with --auth gotrue', () => {
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
     expect(stdout).not.toMatch(/failed/);
   }, 300_000);
+
+  it('passes mariachi validate with no findings', async () => {
+    const result = await validate(app);
+    expect(result.violations).toEqual([]);
+  });
+});
+
+const JWT_SECRET = 'scaffold-test-secret-at-least-32-characters';
+
+describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth %s)', (auth) => {
+  const app = join(workDir, `${auth}-orgs-app`);
+
+  beforeAll(async () => {
+    await rm(app, { recursive: true, force: true });
+    await createProject({ name: `${auth}-orgs-app`, outputDir: app, auth, organizations: true });
+    await generateEntity({ name: 'invoice-item', projectRoot: app });
+  }, 30_000);
+
+  afterAll(async () => {
+    await rm(workDir, { recursive: true, force: true });
+    await stopAll();
+  });
+
+  it('registers the organizations routes and tables beside the generated ones', async () => {
+    const controllers = await readFile(join(app, 'src/api/controllers/index.ts'), 'utf-8');
+    expect(controllers).toMatch(/new OrganizationsController\(communication\),\n\s+new NotesController\(communication\),\n\s+new InvoiceItemsController\(communication\),/);
+    const schema = await readFile(join(app, 'src/schema/index.ts'), 'utf-8');
+    expect(schema).toContain("export * from './organizations';");
+    expect(schema).toContain("export * from './invoice-items';");
+  });
+
+  it('typechecks against the current framework packages', async () => {
+    await sh('typescript/bin/tsc', ['-p', 'tsconfig.json'], app);
+  }, 120_000);
+
+  it('passes its own generated tests', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app], app);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 120_000);
+
+  it('passes its own end-to-end tests: organizations, invitations by email, and the generated entities inside an organization', async () => {
+    const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app, '--config', join(app, 'vitest.e2e.config.ts')], app);
+    expect(stdout).toMatch(/src\/organizations\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/src\/app\.e2e\.test\.ts/);
+    // Written by `generate entity`, unchanged: its users are put in organizations by the harness
+    expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/invoice-items\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/Tests\s+\d+ passed/);
+    // Vitest's own count: the app logs "request failed" for a refusal a test provokes on purpose
+    expect(stdout).not.toMatch(/\d+ failed/);
+  }, 300_000);
+
+  it('boots its main.ts, and answers the organization routes only to someone signed in', async () => {
+    const { status, output, probed } = await bootReady(
+      app,
+      {
+        SERVICE_NAME: `${auth}-orgs-app`,
+        NODE_ENV: 'development',
+        DATABASE_URL: await startPostgres(),
+        REDIS_URL: await startRedis(),
+        ...(auth === 'gotrue' ? { AUTH_URL: 'https://auth.example.test/auth/v1' } : { JWT_SECRET }),
+      },
+      async (base) => {
+        const anonymous = (await fetch(`${base}/api/organizations`)).status;
+        if (auth !== 'jwt') return { anonymous };
+        // A real token for a user in no organization yet, through the app's own verifier. The route answers
+        // before it reads the database (which has no tables here): the token was accepted, the invitation wasn't.
+        const token = await new JWTAdapter({ secret: JWT_SECRET }).sign({ userId: 'user-ada', tenantId: '', scopes: [] });
+        const accept = await fetch(`${base}/api/organizations/invitations/accept`, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+          body: JSON.stringify({ token: 'not-an-invitation' }),
+        });
+        return { anonymous, tenantless: accept.status, code: ((await accept.json()) as { error?: { code?: string } }).error?.code };
+      },
+    );
+    expect({ status, output }).toMatchObject({ status: 200 });
+    expect(probed).toEqual(auth === 'jwt' ? { anonymous: 401, tenantless: 400, code: 'organizations/invitation-invalid' } : { anonymous: 401 });
+  }, 180_000);
 
   it('passes mariachi validate with no findings', async () => {
     const result = await validate(app);

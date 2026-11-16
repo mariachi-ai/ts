@@ -4,6 +4,24 @@ import { THIRD_PARTY_VERSIONS as V } from '../version';
 import { databaseName } from '../names';
 import { E2E_GLOBAL_SETUP, E2E_HARNESS_FILE, VITEST_E2E_CONFIG, e2eHarness } from './e2e';
 import { gotrueFiles } from './gotrue';
+import {
+  JWT_ORGANIZATIONS_CONFIG_TS,
+  ORGANIZATION_DEPS,
+  ORGANIZATIONS_APP_FIELD,
+  ORGANIZATIONS_APP_OPTION,
+  ORGANIZATIONS_E2E_FILE,
+  ORGANIZATIONS_FILE,
+  ORGANIZATIONS_SCHEMA,
+  ORGANIZATIONS_SCHEMA_FILE,
+  ORGANIZATIONS_STRATEGY_COMMENT,
+  ORGANIZATIONS_TS,
+  organizationsAgents,
+  organizationsAppImports,
+  organizationsAppSetup,
+  organizationsE2eTest,
+  organizationsEnv,
+  organizationsReadme,
+} from './organizations';
 
 const MARIACHI_DEPS = [
   'api-facade',
@@ -26,12 +44,15 @@ const AUTH_DEPS: Record<ProjectAuth, readonly string[]> = {
 export interface ProjectFileOptions {
   /** End-to-end test support (`pnpm test:e2e`, needs Docker). Default true. */
   e2e?: boolean;
+  /** Organizations, memberships and invitations (`@mariachi/organizations`). Default false. */
+  organizations?: boolean;
 }
 
 export function projectFiles(name: string, mariachiRange: string, auth: ProjectAuth = 'jwt', options: ProjectFileOptions = {}): Record<string, string> {
   const e2e = options.e2e ?? true;
+  const orgs = options.organizations ?? false;
   const dependencies: Record<string, string> = {};
-  for (const pkg of [...MARIACHI_DEPS, ...AUTH_DEPS[auth]].sort()) dependencies[`@mariachi/${pkg}`] = mariachiRange;
+  for (const pkg of [...MARIACHI_DEPS, ...AUTH_DEPS[auth], ...(orgs ? ORGANIZATION_DEPS : [])].sort()) dependencies[`@mariachi/${pkg}`] = mariachiRange;
   dependencies.zod = V.zod;
   dependencies['drizzle-orm'] = V['drizzle-orm'];
   dependencies.postgres = V.postgres;
@@ -92,30 +113,40 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     'package.json': `${JSON.stringify(packageJson, null, 2)}\n`,
     'tsconfig.json': `${JSON.stringify(tsconfig, null, 2)}\n`,
     '.gitignore': 'node_modules/\ndist/\n.env\ncoverage/\n',
-    '.env.example': ENV_EXAMPLE(name),
+    '.env.example': ENV_EXAMPLE(name) + (orgs ? organizationsEnv('jwt') : ''),
     'docker-compose.yml': DOCKER_COMPOSE(databaseName(name)),
     'vitest.config.ts': VITEST_CONFIG,
-    'AGENTS.md': AGENTS_MD(e2e),
+    'AGENTS.md': AGENTS_MD(e2e) + (orgs ? organizationsAgents('jwt') : ''),
     'CLAUDE.md': 'See [AGENTS.md](./AGENTS.md).\n',
-    'README.md': README(name, e2e),
+    'README.md': README(name, e2e) + (orgs ? organizationsReadme('jwt') : ''),
     [LAYOUT.main]: MAIN_TS,
-    [LAYOUT.app]: APP_TS,
+    [LAYOUT.app]: APP_TS(orgs),
     ...(e2e
       ? {
           'vitest.e2e.config.ts': VITEST_E2E_CONFIG,
           'src/app.e2e.test.ts': APP_E2E_TEST,
-          [E2E_HARNESS_FILE]: e2eHarness('jwt'),
+          [E2E_HARNESS_FILE]: e2eHarness('jwt', orgs),
           'src/testing/global-setup.ts': E2E_GLOBAL_SETUP,
         }
       : {}),
-    [LAYOUT.schemaIndex]: `/** Every table exported here is picked up by \`mariachi db generate\`. */\n// ${MARKERS.schema}\nexport {};\n`,
+    [LAYOUT.schemaIndex]: SCHEMA_INDEX(orgs),
     [LAYOUT.seedsIndex]: SEEDS_INDEX,
     [LAYOUT.servicesIndex]: SERVICES_INDEX,
-    [LAYOUT.controllersIndex]: CONTROLLERS_INDEX,
+    [LAYOUT.controllersIndex]: CONTROLLERS_INDEX(orgs),
     [LAYOUT.jobsIndex]: JOBS_INDEX,
   };
-  return auth === 'gotrue' ? { ...files, ...gotrueFiles(name, e2e) } : files;
+  if (orgs) {
+    files[ORGANIZATIONS_FILE] = ORGANIZATIONS_TS;
+    files[ORGANIZATIONS_SCHEMA_FILE] = ORGANIZATIONS_SCHEMA;
+    if (auth === 'jwt') files['src/config.ts'] = JWT_ORGANIZATIONS_CONFIG_TS;
+    if (e2e) files[ORGANIZATIONS_E2E_FILE] = organizationsE2eTest(auth);
+  }
+  return auth === 'gotrue' ? { ...files, ...gotrueFiles(name, e2e, orgs) } : files;
 }
+
+/** The schema index. Shared by both sign-in choices. */
+export const SCHEMA_INDEX = (orgs: boolean): string =>
+  `/** Every table exported here is picked up by \`mariachi db generate\`. */\n${orgs ? "export * from './organizations';\n" : ''}// ${MARKERS.schema}\nexport {};\n`;
 
 const ENV_EXAMPLE = (name: string) => `SERVICE_NAME=${name}
 NODE_ENV=development
@@ -284,7 +315,7 @@ createApp()
   });
 `;
 
-const APP_TS = `import { existsSync } from 'node:fs';
+const APP_TS = (orgs: boolean) => `import { existsSync } from 'node:fs';
 import { ConfigError, KEYS } from '@mariachi/core';
 import { bootstrap, type BootstrapOptions } from '@mariachi/lifecycle';
 import { createCommunication, type CommunicationLayer } from '@mariachi/communication';
@@ -295,7 +326,7 @@ import { bearerStrategy, createApiServer, type FastifyAdapter, type TokenVerifie
 import { createControllers } from './api/controllers/index';
 import { registerServices } from './services/index';
 import { jobs as jobDefinitions } from './jobs/index';
-
+${orgs ? organizationsAppImports('jwt') : ''}
 export interface AppOptions {
   /** Passed to bootstrap(). Tests give their own environment and leave the signal handlers off. */
   bootstrap?: BootstrapOptions;
@@ -315,14 +346,14 @@ export interface AppOptions {
    * middleware or rate limits without editing this file.
    */
   configureApi?: (api: FastifyAdapter) => void;
-}
+${orgs ? ORGANIZATIONS_APP_OPTION : ''}}
 
 export interface App {
   api: FastifyAdapter;
   communication: CommunicationLayer;
   database: PostgresDatabase;
   jobs: DefaultJobs;
-  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
+${orgs ? ORGANIZATIONS_APP_FIELD : ''}  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
   start(): Promise<string>;
   /** Stops listening, then closes the worker and the connections. */
   stop(): Promise<void>;
@@ -332,13 +363,15 @@ export interface App {
 export async function createApp(options: AppOptions = {}): Promise<App> {
   const { config, logger, tracer, metrics, container, lifecycle } = bootstrap(options.bootstrap);
   const instrumentation = { logger, tracer, metrics };
-
+${orgs ? '  const app = useConfigSection<AppSettings>(APP_CONFIG);\n' : ''}
   if (!config.database) throw new ConfigError('app/database-required', 'DATABASE_URL is required');
   if (!config.redis) throw new ConfigError('app/redis-required', 'REDIS_URL is required');
   let verifier = options.verifier;
   if (!verifier) {
     if (!config.auth?.jwtSecret) throw new ConfigError('app/jwt-secret-required', 'JWT_SECRET is required');
-    verifier = new JWTAdapter({ secret: config.auth.jwtSecret, issuer: config.auth.jwtIssuer, audience: config.auth.jwtAudience });
+${orgs
+  ? "    // A token may name no tenant: a user who is in no organization yet still has to create or join one\n    verifier = new JWTAdapter({ secret: config.auth.jwtSecret, issuer: config.auth.jwtIssuer, audience: config.auth.jwtAudience, requireTenant: false });"
+  : '    verifier = new JWTAdapter({ secret: config.auth.jwtSecret, issuer: config.auth.jwtIssuer, audience: config.auth.jwtAudience });'}
   }
 
   // Startup runs in ascending priority; shutdown runs in reverse.
@@ -378,7 +411,7 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
   // Repositories take the Drizzle client when they're built, so connect first (the startup connect is then a no-op).
   await database.connect();
   registerServices(communication, { db: database.db, jobs });
-
+${orgs ? organizationsAppSetup('jwt') : ''}
   const api = createApiServer({
     name: 'api',
     prefix: '/api',
@@ -388,7 +421,7 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
     bodyLimitBytes: config.server.bodyLimitBytes,
     cors: config.server.corsOrigins.length > 0 ? { origins: config.server.corsOrigins } : false,
   })
-    .withAuthStrategy('session', bearerStrategy(verifier))
+${orgs ? ORGANIZATIONS_STRATEGY_COMMENT : ''}    .withAuthStrategy('session', ${orgs ? 'organizationStrategy(bearerStrategy(verifier), access)' : 'bearerStrategy(verifier)'})
     .withAuth('session')
     .withHealth(lifecycle.health)
     .withOpenApi({ info: { title: config.serviceName, version: '0.1.0' } });
@@ -411,7 +444,7 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
     communication,
     database,
     jobs,
-    start: async () => {
+${orgs ? '    organizations,\n' : ''}    start: async () => {
       await lifecycle.start();
       return address;
     },
@@ -444,13 +477,13 @@ export function registerServices(communication: CommunicationLayer, deps: Servic
 }
 `;
 
-const CONTROLLERS_INDEX = `import type { BaseController } from '@mariachi/api-facade';
+const CONTROLLERS_INDEX = (orgs: boolean) => `import type { BaseController } from '@mariachi/api-facade';
 import type { CommunicationLayer } from '@mariachi/communication';
-// ${MARKERS.imports}
+${orgs ? "import { OrganizationsController } from '@mariachi/organizations/http';\n" : ''}// ${MARKERS.imports}
 
 export function createControllers(communication: CommunicationLayer): BaseController[] {
   return [
-    // ${MARKERS.controllers}
+${orgs ? '    new OrganizationsController(communication),\n' : ''}    // ${MARKERS.controllers}
   ];
 }
 `;

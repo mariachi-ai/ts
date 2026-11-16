@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { MariachiError, type Context } from '@mariachi/core';
 import type { CommunicationLayer } from '@mariachi/communication';
+import type { InvitationDelivery } from './email';
 import type { Organizations } from './organizations';
 import { ORGANIZATION_ROLES, type Invitation, type Organization } from './types';
 
@@ -62,7 +63,7 @@ export interface OrganizationProcedureOptions {
    * to whoever invited, so it reaches only the invited address. Without it, the caller gets the token
    * and must deliver it.
    */
-  deliverInvitation?: (ctx: Context, delivery: { organization: Organization; invitation: Invitation; token: string }) => Promise<void>;
+  deliverInvitation?: (ctx: Context, delivery: InvitationDelivery) => Promise<void>;
   /**
    * Limits creating organizations, inviting and accepting. Without one there are no limits here: give
    * the limiter your API uses.

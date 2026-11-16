@@ -13,12 +13,13 @@ export function registerInitCommand(program: Command): void {
     .option('--no-e2e', 'skip end-to-end test support (pnpm test:e2e, which needs Docker)')
     .option('--mariachi-version <range>', 'version range for @mariachi/* dependencies')
     .option('--auth <provider>', 'how users sign in: jwt (HS256 tokens from JWT_SECRET) or gotrue (GoTrue / Supabase Auth, with a sign-in page)', 'jwt')
-    .action(async (directory: string, opts: { name?: string; example: boolean; e2e: boolean; mariachiVersion?: string; auth: string }) => {
+    .option('--orgs', 'organizations, memberships and invitations in your own database (@mariachi/organizations): for apps whose identity provider keeps none')
+    .action(async (directory: string, opts: { name?: string; example: boolean; e2e: boolean; mariachiVersion?: string; auth: string; orgs?: boolean }) => {
       try {
         const outputDir = resolve(directory);
         const name = opts.name ?? basename(outputDir);
         const auth = opts.auth as ProjectAuth;
-        const result = await createProject({ name, outputDir, example: opts.example, e2e: opts.e2e, mariachiVersion: opts.mariachiVersion, auth });
+        const result = await createProject({ name, outputDir, example: opts.example, e2e: opts.e2e, mariachiVersion: opts.mariachiVersion, auth, organizations: opts.orgs === true });
         printResult(result);
         const cd = relative(process.cwd(), outputDir) || '.';
         console.log(`\n${GREEN}Created ${name}.${RESET} Next steps:\n`);
@@ -34,6 +35,9 @@ export function registerInitCommand(program: Command): void {
         }
         if (auth === 'gotrue') {
           console.log(`\n  Sign-in is GoTrue's: set ${DIM}AUTH_URL${RESET} in .env (see README.md), then open ${DIM}/api/sign-in${RESET}.`);
+        }
+        if (opts.orgs) {
+          console.log(`\n  Organizations: the routes are under ${DIM}/api/organizations${RESET}. To email invitations, set ${DIM}INVITATION_URL${RESET} and ${DIM}EMAIL_ADAPTER${RESET} in .env (see README.md).`);
         }
       } catch (error) {
         fail(error);

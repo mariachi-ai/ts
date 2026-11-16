@@ -25,7 +25,8 @@ const NPM_NAME = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
 
 /**
  * Scaffolds a runnable project and, unless `example: false`, a `note` entity wired end to end.
- * `auth: 'gotrue'` signs users in with GoTrue (see `ProjectConfig.auth`).
+ * `auth: 'gotrue'` signs users in with GoTrue (see `ProjectConfig.auth`); `organizations: true` adds
+ * organizations, memberships and invitations (see `ProjectConfig.organizations`).
  */
 export async function createProject(config: ProjectConfig): Promise<GenerateResult> {
   if (!NPM_NAME.test(config.name)) {
@@ -40,7 +41,7 @@ export async function createProject(config: ProjectConfig): Promise<GenerateResu
   }
   await mkdir(config.outputDir, { recursive: true });
   const range = config.mariachiVersion ?? `^${MARIACHI_VERSION}`;
-  const project = await writeFiles(config.outputDir, projectFiles(config.name, range, auth, { e2e: config.e2e }));
+  const project = await writeFiles(config.outputDir, projectFiles(config.name, range, auth, { e2e: config.e2e, organizations: config.organizations }));
   if (config.example === false) return project;
   const example = await generateEntity({ name: 'note', projectRoot: config.outputDir });
   return { ...mergeResults(project, example), updated: [] };

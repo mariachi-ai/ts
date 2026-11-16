@@ -7,8 +7,8 @@ Supabase Auth, a generic OIDC provider, the built-in JWT adapter.
 You don't need it when the provider puts an organization in every token (WorkOS, Clerk, a custom
 claim): that organization is already the tenant.
 
-Sending the invitation email, and `mariachi init --orgs`, arrive in the next release; until then you
-send the link yourself (see [Invitations](#invitations)).
+To start a project with all of this wired, tested and documented: `mariachi init my-app --orgs`
+(with either `--auth`; see [cli.md](./cli.md#init)).
 
 ## The model
 
@@ -110,7 +110,10 @@ names a different organization is. An app has one source of memberships, not bot
 Mind how long the token lives: with the token as the source, a removed member keeps their access
 until the token expires, not for five seconds. If something of your own issues the token's
 organization claim (a token hook), have it read this module's tables and keep `source: 'module'`:
-the claim is then only a default, which the check confirms on every request.
+the claim is then only a default, which the check confirms on every request. But a request that
+names a different organization from the token's is refused, so a user in two organizations can't
+switch by header while the token names one. Where users can be in several, leave the organization
+out of the token and let the request name it.
 
 ### Reading the tables yourself
 
@@ -200,26 +203,56 @@ it is, to be refused.
 ## Invitations
 
 ```ts
-// 1. An owner or admin invites an address. The token is returned this once: put it in the link you send.
-const { invitation, token } = await organizations.invite(ctx, organization.id, { email: 'ivy@example.com', role: 'member' });
-await sendEmail(invitation.email, `${appUrl}/invitations/accept?token=${token}`);
+import { createEmailAdapter } from '@mariachi/notifications';
+import { invitationEmail, registerOrganizationProcedures } from '@mariachi/organizations';
 
-// Or, with the procedures: say how an invitation is delivered, and the token goes only to the invited address
+// 1. Say how an invitation is delivered. An owner or admin then invites an address
+//    (POST /organizations/:id/invitations), and the link goes to that address and nowhere else.
 registerOrganizationProcedures(communication, organizations, {
-  deliverInvitation: (ctx, { organization, invitation, token }) =>
-    sendEmail(invitation.email, `${appUrl}/invitations/accept?token=${token}`, { organization: organization.name }),
+  limiter,
+  deliverInvitation: invitationEmail({
+    email: createEmailAdapter(config),                             // any email adapter
+    acceptUrl: 'https://app.example.com/invitations/accept',       // the token is added as #token=
+    appName: 'Launchpad',
+  }),
 });
 
-// 2. The invitee opens the link, signs in or signs up, and your page calls this as them.
+// 2. The invitee opens the link, signs in or signs up, and your page calls this as them
+//    (POST /organizations/invitations/accept with { token }).
 await organizations.acceptInvitation(ctx, { token });
 ```
+
+- **`invitationEmail`** writes a plain message (the organization, the role, the link, when it
+  expires) as text and HTML. `compose: (ctx, { organization, invitation, url }) => ({ subject, text,
+  html })` writes your own; `acceptUrl` can be a function that builds the whole link; `from` sets
+  the sender. The organization's name is written by a user: it is escaped in the HTML and kept to
+  one line in the subject, and in a message of your own that is yours to do.
+- **It sends in the request that invites, straight through the adapter**: not through a job queue
+  or a notification record, because either would keep the token, and the token is the invitation.
+  If the send fails, the call fails; the invitation exists, and `resend` sends a new link.
+- **Without `deliverInvitation`** the token comes back to whoever invited, once, and delivering it
+  is theirs: `const { invitation, token } = await organizations.invite(ctx, organization.id, {
+  email, role })`. `deliverInvitation` can be any function of your own, too.
+- **The token is in the link's fragment** (`#token=…`), not its query. A browser sends a fragment to
+  no server, so the token is in no access log on the way to your page (an edge, a proxy, the app's
+  own request log) and in no `Referer`. A fixed `acceptUrl` must have no fragment of its own; a page
+  that routes by fragment gives a function and builds its own link.
+- **The accept page is yours.** It reads the token from `location.hash`, needs the user signed in as
+  the invited address, and then makes one call. Keep the token out of logs and analytics on that
+  page, and take it out of the address bar once read (`history.replaceState`).
 
 **The invitee's email address is not an argument.** Accepting reads it from the user's verified
 identity, so nothing a client sends can stand in for it. By default that is the standard claims of
 the request's token, `email` and `email_verified`, which the API layer puts on `ctx.identity.claims`.
 
-For a provider whose tokens don't carry `email_verified`, say where the answer is. Ask the provider
-for the user's record, server-side:
+For a provider whose tokens don't carry `email_verified`, say where the answer is. For GoTrue
+(Supabase Auth) that is one line, `verifiedEmail: goTrueVerifiedEmail({ url, serviceKey })` from
+`@mariachi/auth-gotrue`: it uses a top-level `email_verified` claim when a hook of yours adds one,
+otherwise the user's record (`email_confirmed_at`), and never `user_metadata`. It reads GoTrue's
+settings too, and when GoTrue confirms sign-ups without sending mail it answers unverified
+(`trustAutoconfirm: true` for development). `requireClaim: true` takes the answer only from the
+claim, so the app holds no service key. For any other provider, ask it for the user's record,
+server-side:
 
 ```ts
 new DefaultOrganizations({

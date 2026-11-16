@@ -84,6 +84,12 @@ The `--auth gotrue` project's harness does this: `request('/api/me', { claims: {
 `{ as: { userId, tenantId } }` writes the claims for you. A wrong claim name or a role that isn't
 where the app looks then fails a test instead of a sign-in.
 
+In a project made with `--orgs`, `{ as: { userId, tenantId: 'acme' } }` is a member of an
+organization the test calls `acme`. The harness creates it, and the membership, the first time
+they are named (the first user named is its owner), and sends its id in `x-organization-id` as a
+client would, so the app's own membership check runs on every test request. `tenantId: ''` is a
+user in no organization. Tests written by `mariachi generate entity` work unchanged.
+
 A project made with `mariachi init --no-e2e` has none of this (no Docker needed); add it later by
 copying these files from a project generated with it.
 

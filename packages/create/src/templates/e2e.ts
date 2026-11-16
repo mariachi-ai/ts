@@ -35,13 +35,21 @@ export const E2E_HARNESS_FILE = 'src/testing/e2e.ts';
  * The end-to-end harness. With `gotrue`, a request's identity is written as the claims GoTrue's token
  * carries and read back through the provider's own mapping, so the tests cover that mapping too.
  */
-export function e2eHarness(kind: ProjectAuth): string {
+export function e2eHarness(kind: ProjectAuth, orgs = false): string {
   const gotrue = kind === 'gotrue';
+  // With organizations, a signed-in request names its organization in a header, as a client does
+  const signedIn = gotrue
+    ? orgs
+      ? '          ...(request.claims\n            ? auth.headersForClaims(request.claims)\n            : request.as\n              ? { ...auth.headersForClaims(claimsFor(request.as)), ...(await organizationFor(request.as)) }\n              : {}),\n'
+      : '          ...(request.claims ? auth.headersForClaims(request.claims) : request.as ? auth.headersForClaims(claimsFor(request.as)) : {}),\n'
+    : orgs
+      ? "          ...(request.as ? { ...auth.headersFor({ ...request.as, tenantId: '' }), ...(await organizationFor(request.as)) } : {}),\n"
+      : '          ...(request.as ? auth.headersFor(request.as) : {}),\n';
   return `import { randomUUID } from 'node:crypto';
 import { sql } from 'drizzle-orm';
 import { inject } from 'vitest';
 ${gotrue ? "import { useConfigSection } from '@mariachi/config';\n" : ''}import { applySchema, createPostgresDatabase } from '@mariachi/database-postgres';
-${gotrue ? "import { createGoTrueAuth, type GoTrueAuthProvider, type GoTrueJwtPayload } from '@mariachi/auth-gotrue';\n" : ''}import { createTestAuth, type TestAuth, type TestIdentity } from '@mariachi/testing';
+${gotrue ? "import { createGoTrueAuth, type GoTrueAuthProvider, type GoTrueJwtPayload } from '@mariachi/auth-gotrue';\n" : ''}${orgs ? "import { DrizzleOrganizationStore } from '@mariachi/organizations/postgres';\n" : ''}import { createTestAuth, ${orgs ? 'createTestContext, ' : ''}type TestAuth, type TestIdentity } from '@mariachi/testing';
 import { createApp, type App, type AppOptions } from '../app';
 ${gotrue ? "import { goTrueConfig } from '../auth';\nimport { APP_CONFIG, type AppSettings } from '../config';\n" : ''}import * as schema from '../schema/index';
 
@@ -54,7 +62,7 @@ declare module 'vitest' {
 
 export interface RequestOptions {
   method?: string;
-  /** Who is asking. Left out, the request carries no token. */
+  /** Who is asking. Left out, the request carries no token.${orgs ? " \`tenantId\` is the name of an organization they are in ('' for none): see startApp(). " : ' '}*/
   as?: TestIdentity;
 ${gotrue ? "  /** Who is asking, as the claims of their GoTrue token (sub, role, the organization claims a hook adds). */\n  claims?: GoTrueJwtPayload;\n" : ''}  /** Sent as the JSON body (and makes the request a POST unless \`method\` says otherwise). */
   json?: unknown;
@@ -81,7 +89,9 @@ export interface RunningApp {
  * with its own empty database (the tables in src/schema, created directly) and its own job queue.
 ${gotrue
   ? " * No GoTrue is needed: a request's claims are read by the provider's own mapping, then by personal\n * tenants, tenancy and roles, as a real token's are. \`request(path, { claims: { sub, role, org_id } })\`\n * is a signed-in request; \`{ as: { userId, tenantId } }\` writes the claims for you.\n"
-  : " * Sign-in is createTestAuth(): \`request(path, { as: { userId, tenantId } })\` is a signed-in request.\n"} * \`options\` are createApp()'s own (migrateOnStart, configureApi), plus \`env\`.
+  : " * Sign-in is createTestAuth(): \`request(path, { as: { userId, tenantId } })\` is a signed-in request.\n"}${orgs
+  ? " *\n * Organizations are made as tests name them: \`{ as: { userId, tenantId: 'acme' } }\` is a member of an\n * organization called acme. It is created the first time it is named, with that user as its owner; a\n * user named in it later joins as a member. The request then names it in x-organization-id, as a\n * client does, so the app's own membership check runs. \`tenantId: ''\` is a user in no organization.\n"
+  : ''} * \`options\` are createApp()'s own (migrateOnStart, configureApi${orgs ? ', mailer' : ''}), plus \`env\`.
  */
 export async function startApp(options: StartOptions = {}): Promise<RunningApp> {
   const { env, ...appOptions } = options;
@@ -94,7 +104,7 @@ export async function startApp(options: StartOptions = {}): Promise<RunningApp> 
   databaseUrl.pathname = \`/\${name}\`;
 
 ${gotrue
-  ? "  // Built on first use: the app's settings are loaded by createApp() below\n  let provider: GoTrueAuthProvider | undefined;\n  const settings = () => useConfigSection<AppSettings>(APP_CONFIG).auth;\n  const auth = createTestAuth<GoTrueJwtPayload>({\n    fromClaims: (claims) => {\n      provider ??= createGoTrueAuth(goTrueConfig(settings()));\n      return provider.toIdentity(claims);\n    },\n  });\n  // A user as GoTrue's token describes them: the subject, GoTrue's own role, and the organization claim when they're in one\n  const claimsFor = (identity: TestIdentity): GoTrueJwtPayload => ({\n    sub: identity.userId,\n    role: 'authenticated',\n    ...(identity.tenantId ? { [settings().orgClaim]: identity.tenantId } : {}),\n    ...identity.claims,\n  });\n"
+  ? `  // Built on first use: the app's settings are loaded by createApp() below\n  let provider: GoTrueAuthProvider | undefined;\n  const settings = () => useConfigSection<AppSettings>(APP_CONFIG).auth;\n  const auth = createTestAuth<GoTrueJwtPayload>({\n    fromClaims: (claims) => {\n      provider ??= createGoTrueAuth(goTrueConfig(settings()));\n      return provider.toIdentity(claims);\n    },\n  });\n  // A user as GoTrue's token describes them: the subject, GoTrue's own role, and the organization claim when they're in one\n  const claimsFor = (identity: TestIdentity): GoTrueJwtPayload => ({\n    sub: identity.userId,\n    role: 'authenticated',\n${orgs ? '' : '    ...(identity.tenantId ? { [settings().orgClaim]: identity.tenantId } : {}),\n'}    ...identity.claims,\n  });\n`
   : '  const auth = createTestAuth();\n'}  const app = await createApp({
     ...appOptions,
     verifier: auth.verifier,
@@ -119,19 +129,43 @@ ${gotrue
   });
   await applySchema(app.database.db, schema);
   const url = await app.start();
-
+${orgs
+  ? `
+  // The organizations tests have named so far, and who has been put in them
+  const store = new DrizzleOrganizationStore(app.database.db);
+  const setup = createTestContext();
+  const organizations = new Map<string, Promise<string>>();
+  const memberships = new Map<string, Promise<unknown>>();
+  const organizationFor = async (identity: TestIdentity): Promise<Record<string, string>> => {
+    const name = identity.tenantId;
+    if (!name) return {};
+    let created = organizations.get(name);
+    const role = created ? 'member' : 'owner';
+    if (!created) {
+      const slug = \`\${name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-\${randomUUID().slice(0, 8)}\`;
+      created = store.createOrganization(setup, { name, slug }).then((organization) => organization.id);
+      organizations.set(name, created);
+    }
+    const organizationId = await created;
+    const key = \`\${organizationId}:\${identity.userId}\`;
+    if (!memberships.has(key)) {
+      memberships.set(key, store.putMembership(setup, { organizationId, userId: identity.userId, role, email: null, name: null, invitedBy: null }));
+    }
+    await memberships.get(key);
+    return { 'x-organization-id': organizationId };
+  };
+`
+  : ''}
   return {
     app,
     url,
     auth,
-    request: (path, request = {}) =>
+    request: ${orgs ? 'async ' : ''}(path, request = {}) =>
       fetch(url + path, {
         method: request.method ?? (request.json === undefined ? 'GET' : 'POST'),
         headers: {
           ...(request.json === undefined ? {} : { 'content-type': 'application/json' }),
-${gotrue
-  ? '          ...(request.claims ? auth.headersForClaims(request.claims) : request.as ? auth.headersForClaims(claimsFor(request.as)) : {}),\n'
-  : '          ...(request.as ? auth.headersFor(request.as) : {}),\n'}          ...request.headers,
+${signedIn}          ...request.headers,
         },
         body: request.json === undefined ? undefined : JSON.stringify(request.json),
       }),

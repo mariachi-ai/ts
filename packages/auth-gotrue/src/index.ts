@@ -1,5 +1,6 @@
 export type { AsymmetricAlgorithm, GoTrueAmrEntry, GoTrueConfig, GoTrueJwtPayload } from './types';
 export { GoTrueAuthProvider } from './provider';
+export { goTrueVerifiedEmail, type GoTrueVerifiedEmailConfig, type VerifiedEmailContext } from './verified-email';
 export { GoTrueWebhookHandler, normalizeGoTrueHook } from './webhooks/handler';
 export type { GoTrueHookName, GoTrueWebhookHandlerConfig } from './webhooks/handler';
 export {
