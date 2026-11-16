@@ -165,7 +165,8 @@ Builds and checks [design library](./design.md) themes from `mariachi.design.ts`
 | `design build [-o design.css] [--minify] [--strict]` | One CSS file: foundation, the chosen components (with replacements), the base theme, and only the tokens you changed. Prints contrast failures; `--strict` exits 1 on them. |
 | `design check [--json]` | Validates the config against the token contract and checks contrast in both modes. Exits 1 on failures. |
 | `design new-theme <name> [--from minimal] [-o file]` | Scaffolds `src/styles/<name>.theme.ts` extending a preset. |
-| `design list` | Presets and components. |
+| `design add <kit> [--dir src/design] [--force] [--dry-run] [--json]` | Copies a design language or plain preset into the project as its own: the kit's files in `<dir>`, exactly as built, and `design.css` beside it, once. Reports an edited copy and exits 1 unless `--force`. Needs `@mariachi/design-kits`. See [design.md](design.md#copying-a-language-into-a-project-kits). |
+| `design list [--kits] [--json]` | Presets and components, and the kits `design add` can copy in. |
 
 ## explore
 
