@@ -1,13 +1,13 @@
 /**
  * Showcases: the key component of someone's app (their player, their job card) drawn in any design language, for
- * New project's look step and for "how does this language draw a …?". One template per kind of component; each
+ * a project's look picker and for "how does this language draw a …?". One template per kind of component; each
  * language's measured habits (its `Arrangement`) decide the structure, and its kit's tokens decide the paint, so
  * three languages give three different components from the same content.
  */
 
 /**
- * The kinds a showcase can be: New project's `SHOWCASE_KINDS`, less `other`, which is drawn live. The interview picks
- * one from the idea and the first flow.
+ * The kinds a showcase can be (`SHOWCASE_KINDS` less `other`, which is drawn live). A look picker picks one from
+ * the app's idea and its first flow.
  */
 export const showcaseKinds = [
   'player',
@@ -214,7 +214,7 @@ export interface ShowcaseContent {
   dashboard_tile: DashboardTileContent;
 }
 
-/** A language's named pattern: what `design_reference` answers for "how does this language draw a player?". */
+/** A language's named pattern: what `mariachi design reference` answers for "how does this language draw a player?". */
 export interface ShowcasePattern {
   name: DrawnKind;
   aliases: string[];

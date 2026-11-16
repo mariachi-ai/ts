@@ -124,7 +124,7 @@ describe('catalog archetypes', () => {
     }
   });
 
-  it('gives each language a known category and the tags New Project searches', () => {
+  it('gives each language a known category and the tags a design picker searches', () => {
     const catalog = buildCatalog('0.0.0');
     expect(Object.keys(catalog.categories).length).toBeGreaterThan(0);
     for (const a of catalog.archetypes) {

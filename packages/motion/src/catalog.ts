@@ -1,7 +1,7 @@
 /**
  * The motion catalog (dist/catalog.json): every pattern with its markup, in the shape of
  * @mariachi/design's catalog components (name, title, description, useWhen, examples of
- * { name, html }), plus `code` where a pattern is started from JavaScript. design_reference reads it.
+ * { name, html }), plus `code` where a pattern is started from JavaScript. `mariachi design reference` reads it.
  * Build-time only: not part of the package's runtime files.
  */
 import { chart } from './charts';
