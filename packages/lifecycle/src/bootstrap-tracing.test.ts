@@ -11,7 +11,8 @@ vi.mock('@mariachi/observability', async (importOriginal) => {
 
 const { bootstrap } = await import('./bootstrap');
 
-const ENDPOINT = 'http://collector.test:4318/v1/traces';
+// With credentials in the URL, which the log lines must not repeat
+const ENDPOINT = 'https://tenant:s3cret-key@collector.test:4318/v1/traces';
 
 function start() {
   return bootstrap({
@@ -74,6 +75,8 @@ describe('bootstrap: tracing', () => {
     const app = start();
     expect(setup.fn).not.toHaveBeenCalled();
     expect(printed(info)).toContain('An OpenTelemetry SDK is already registered; using it');
+    expect(JSON.stringify(info.mock.calls)).toContain('"collector":"https://collector.test:4318"');
+    expect(JSON.stringify(info.mock.calls)).not.toContain('s3cret-key');
     // Mariachi's tracer goes through the global provider, so its spans reach that SDK
     await expect(app.tracer.withSpan('mariachi.procedure', async () => 'ran')).resolves.toBe('ran');
     app.tracer.startSpan('http.route').end();
@@ -89,6 +92,7 @@ describe('bootstrap: tracing', () => {
     });
     expect(() => start()).not.toThrow();
     expect(printed(warn).some((m) => m.startsWith('Tracing is on, but spans are not exported'))).toBe(true);
+    expect(JSON.stringify(warn.mock.calls)).not.toContain('s3cret-key');
   });
 
   it('still fails on any other error from starting the SDK', () => {

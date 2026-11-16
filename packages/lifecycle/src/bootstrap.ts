@@ -107,7 +107,7 @@ export function bootstrap(options: BootstrapOptions = {}): BootstrapResult {
  */
 function startTracing(serviceName: string, endpoint: string, logger: Logger, lifecycle: Lifecycle): void {
   if (openTelemetryRegistered()) {
-    logger.info({ endpoint }, 'An OpenTelemetry SDK is already registered; using it');
+    logger.info({ collector: origin(endpoint) }, 'An OpenTelemetry SDK is already registered; using it');
     return;
   }
   let stop: () => Promise<void>;
@@ -116,12 +116,21 @@ function startTracing(serviceName: string, endpoint: string, logger: Logger, lif
   } catch (err) {
     if (!(err instanceof MariachiError && err.code === 'dependency/missing-peer')) throw err;
     logger.warn(
-      { err, endpoint },
+      { err, collector: origin(endpoint) },
       'Tracing is on, but spans are not exported: install @opentelemetry/sdk-node and @opentelemetry/exporter-trace-otlp-http, or register an SDK before the app starts',
     );
     return;
   }
   lifecycle.shutdown.register({ name: 'opentelemetry', priority: -1000, fn: stop });
+}
+
+/** Where an OTLP endpoint points, for a log line: its origin only, since its URL can carry credentials. */
+function origin(endpoint: string): string {
+  try {
+    return new URL(endpoint).origin;
+  } catch {
+    return '(not a URL)';
+  }
 }
 
 /**
