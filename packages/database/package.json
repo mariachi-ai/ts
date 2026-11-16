@@ -2,6 +2,11 @@
   "name": "@mariachi/database",
   "version": "0.1.0",
   "description": "Driver-agnostic schema DSL (defineTable), repository contract and seeds.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/database"
+  },
   "mariachi": {
     "category": "data",
     "status": "beta",

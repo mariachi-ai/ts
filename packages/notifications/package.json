@@ -2,6 +2,11 @@
   "name": "@mariachi/notifications",
   "version": "0.1.0",
   "description": "Email (Resend, SMTP, Postmark, SendGrid), SMS (Twilio), push (FCM) and in-app notifications with preferences, per-channel queued delivery and delivery tracking.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/notifications"
+  },
   "mariachi": {
     "category": "domain",
     "status": "beta",

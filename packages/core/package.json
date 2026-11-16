@@ -2,6 +2,11 @@
   "name": "@mariachi/core",
   "version": "0.1.0",
   "description": "Context, typed errors, DI container, retry, idempotency and instrumentation primitives shared by every package.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/core"
+  },
   "mariachi": {
     "category": "foundation",
     "status": "beta",

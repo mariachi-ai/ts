@@ -3,6 +3,11 @@
   "version": "0.1.0",
   "private": false,
   "description": "Explorer for the whole framework: packages, docs, API, error codes, dependency graph, CLI, tables and the design library, generated from the repo.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/explorer"
+  },
   "mariachi": {
     "category": "tooling",
     "status": "alpha",

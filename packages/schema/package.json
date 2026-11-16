@@ -2,6 +2,11 @@
   "name": "@mariachi/schema",
   "version": "0.1.0",
   "description": "Every framework table (users, tenants, auth, billing, audit, ...) in the DSL, for apps to include in their schema.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/schema"
+  },
   "mariachi": {
     "category": "data",
     "status": "beta",
