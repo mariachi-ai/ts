@@ -1,5 +1,27 @@
 # @mariachi/testing
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [a31310b]
+- Updated dependencies [df09ec1]
+- Updated dependencies [f04e223]
+- Updated dependencies [a76affd]
+- Updated dependencies [0964659]
+- Updated dependencies [8486aa5]
+- Updated dependencies [867c6ca]
+- Updated dependencies [df6d8df]
+  - @mariachi/ai@0.1.1
+  - @mariachi/jobs@0.1.1
+  - @mariachi/search@0.1.1
+  - @mariachi/core@0.1.1
+  - @mariachi/storage@0.1.1
+  - @mariachi/cache@0.1.1
+  - @mariachi/database@0.1.1
+  - @mariachi/events@0.1.1
+  - @mariachi/notifications@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

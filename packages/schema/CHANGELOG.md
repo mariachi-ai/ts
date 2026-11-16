@@ -1,5 +1,25 @@
 # @mariachi/schema
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [a31310b]
+- Updated dependencies [df09ec1]
+- Updated dependencies [a4e77e9]
+- Updated dependencies [a76affd]
+- Updated dependencies [8486aa5]
+  - @mariachi/ai@0.1.1
+  - @mariachi/auth@0.1.1
+  - @mariachi/jobs@0.1.1
+  - @mariachi/billing@0.1.1
+  - @mariachi/audit@0.1.1
+  - @mariachi/webhooks@0.1.1
+  - @mariachi/config@0.1.1
+  - @mariachi/database@0.1.1
+  - @mariachi/events@0.1.1
+  - @mariachi/notifications@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

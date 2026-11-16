@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/auth-fusionauth",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "FusionAuth JWT verification (JWKS), webhook verification, and an IdentityClient for headless sign-in.",
   "repository": {
     "type": "git",

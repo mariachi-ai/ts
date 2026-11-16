@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/motion",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Loading, motion and animated charts for every Mariachi design language: skeletons, busy and optimistic states, entrances and exits, open and close, page transitions, and SVG charts that draw themselves. Tokens only, no dependencies.",
   "repository": {
     "type": "git",

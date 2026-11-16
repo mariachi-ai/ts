@@ -1,5 +1,17 @@
 # @mariachi/lifecycle
 
+## 0.1.1
+
+### Patch Changes
+
+- Updated dependencies [f04e223]
+- Updated dependencies [0964659]
+- Updated dependencies [8486aa5]
+- Updated dependencies [867c6ca]
+  - @mariachi/core@0.1.1
+  - @mariachi/config@0.1.1
+  - @mariachi/observability@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes

@@ -1,5 +1,113 @@
 # @mariachi/cli
 
+## 0.1.1
+
+### Patch Changes
+
+- df09ec1: A new project needs only Postgres, starts with one command, and can be called right away.
+  - **Generated projects run jobs and search in Postgres.** `createApp()` builds the Postgres job
+    queue (`@mariachi/jobs/postgres`) unless `REDIS_URL` is set, and tenant-scoped search
+    (`@mariachi/search/postgres`, `deps.search` in services, indexes listed in `src/search/index.ts`).
+    The Compose file and `.env.example` no longer ask for Redis, and the end-to-end tests start one
+    container, not two. With `--orgs`, rate limits are counted in memory until `REDIS_URL` is set.
+  - **`pnpm dev` is `mariachi dev`** in a generated project: it makes `.env`, starts Postgres, writes
+    and applies the first migration, and runs the app with reload. `init` now says so in two steps.
+  - **`mariachi token`** signs a development token with the project's `JWT_SECRET`, so a fresh
+    `--auth jwt` project can be called at once: `curl -H "authorization: Bearer $(pnpm -s mariachi
+token)" …`. `--user`, `--tenant` or `--no-tenant`, `--email`, `--role`, `--scope`, `--expires`.
+    It does nothing when `NODE_ENV` is `production`.
+  - `JWTAdapter.sign(payload, expiresIn, claims)` takes claims of your own (an `email`, say), which
+    come back in `identity.claims`. Claims the adapter writes itself can't be given there.
+  - The Postgres job queue, started on a database without its tables, says which tables are missing
+    and how to add them (`jobs/tables-missing`) instead of a bare SQL error.
+  - `search.ensureIndexes(indexes)` (`@mariachi/search`) makes sure an app's indexes exist when it
+    starts: it creates the missing ones, leaves existing ones as they are, and reports and warns when
+    an existing index's fields differ from the code's, without applying them. Search clients gain an
+    optional `getIndex(name)`; the Postgres and memory adapters have it.
+
+  An existing project is not changed by upgrading: this is about what `mariachi init` generates.
+
+- 3989057: Kits are published, and `mariachi design add <kit>` copies one into a project. The new
+  `@mariachi/design-kits` ships every design language and plain preset as a kit (tokens, base styles,
+  self-hosted fonts, motion and `DESIGN.md`, with a sha256 per file), storing shared fonts and the motion
+  files once and putting each kit back together byte for byte. `mariachi design add linen` (or
+  `npx @mariachi/design-kits add linen`, with nothing installed) writes the kit into `src/design/` and, once,
+  `src/design.css` beside it for the project's own changes. It never writes `design.css` again, reports a
+  copy the project has edited instead of replacing it (exit 1, unless `--force`), switches languages in
+  place so the project's imports don't change, and never removes a file that isn't a kit's. `mariachi design list` shows the kits beside the
+  presets and components. Each kit now carries the licence of every font it copies, as
+  `fonts/<family>.LICENSE.txt`, recorded in `kit.json`.
+
+  Tools that serve or assemble a kit without writing it use `hasKit(id)`, `kitJson(id)`,
+  `kitJsonBytes(id)` and `readKitFile(id, path)`, which gives only the files `kit.json` lists, each
+  checked against its sha256. The design catalog (components, languages, presets, tokens) ships as
+  `@mariachi/design-kits/catalog.json`: it is too large for `@mariachi/design`, which leaves it out.
+
+- df60585: `mariachi generate seed <name>` writes `src/seeds/<name>.seed.ts` (a `defineSeed`, with a note on
+  writing it so it is safe to repeat) and lists it in `src/seeds/index.ts`, which `mariachi db seed`
+  runs. A new project's seeds index has the markers the generator inserts at; in an older project it
+  says which two lines to add by hand.
+
+  `mariachi db seed` runs as `NODE_ENV` when `--env` isn't given. It used to run as `development`
+  whatever the environment said, so against a production database it ran every seed that didn't name
+  its environments. With `NODE_ENV=production`, such seeds are now skipped unless you pass `--env`. It
+  prints the database and the environment before it runs, and refuses a database on another machine
+  when it would run as `development` without `--env` saying so.
+
+- d12d074: `mariachi init --ui` and `mariachi generate page`: a project with pages a person can open.
+  - **`--ui`** (`createProject({ ui: true })`) adds pages sent by the same server as the API and
+    styled with `@mariachi/design`: a layout with the design library's stylesheets and one `THEME`
+    constant, a home page, a pages controller with routes at the server's root, `public/` served under
+    `/assets`, and unit and end-to-end tests. Pages are built with `html`, which escapes what is put
+    into it; scripts are files, and the page's policy runs no inline script. It works with `--auth
+jwt`, `--auth gotrue` and `--orgs`. Projects made without the flag are unchanged.
+  - **`mariachi generate page <name>`** writes `src/api/pages/<name>.ts` and its test, adds its route
+    at `/<name>` and its link in the bar.
+
+- f04e223: The docs can be read and searched from the terminal, and have an index for tools.
+  - **`mariachi docs`** lists the framework's docs by group, prints one (`mariachi docs jobs`) or one
+    section (`mariachi docs http#pages-and-files`), and searches them (`mariachi docs --search
+idempotency key`): every doc with a matching line is shown, likeliest first, and each line says
+    which section to read. In a project it reads the docs of the `@mariachi/core` installed there.
+    `--json` and `--path` are for tools.
+  - **`llms.txt`** ships in `@mariachi/core`'s docs folder: every doc with a line about it, in the
+    llms.txt format, generated from the docs index and checked in CI. The check fails for a doc that
+    is not in the index, or whose index line doesn't say what it is.
+  - A generated project's AGENTS.md names the command.
+
+- 0964659: Organizations, part three: invitation emails, and a project that starts with all of it.
+  - **`invitationEmail({ email, acceptUrl, appName })`** in `@mariachi/organizations` sends each
+    invitation to the address it is for. Give it to `registerOrganizationProcedures` as
+    `deliverInvitation` with any email adapter from `@mariachi/notifications`. The token is added to
+    your accept page's address as its fragment, `#token=`, which a browser sends to no server, so it
+    is in no access log; `compose` writes your own message. It sends in the request that invites,
+    never through a queue, so the token is stored nowhere.
+  - **`goTrueVerifiedEmail({ url, serviceKey })`** in `@mariachi/auth-gotrue` says whether a GoTrue
+    (Supabase Auth) user's email address is verified, for `verifiedEmail`: from a top-level
+    `email_verified` claim when your token hook adds one, otherwise from the user's record, and never
+    from `user_metadata`, which the user can rewrite. A GoTrue that confirms sign-ups without sending
+    mail is answered unverified. `requireClaim` takes only the claim, so an app whose hook sets it
+    holds no service key. With no way to know it says so (`auth/verified-email-unavailable`) instead
+    of guessing.
+  - **`mariachi init --orgs`** (`createProject({ organizations: true })`) generates a project with the
+    tables, the wiring in `src/organizations.ts`, the `/api/organizations` routes, the membership check
+    on every request, rate limits, and end-to-end tests. It works with `--auth jwt` and `--auth
+gotrue`. Projects made without the flag are unchanged.
+
+- Updated dependencies [df09ec1]
+- Updated dependencies [df60585]
+- Updated dependencies [d12d074]
+- Updated dependencies [f04e223]
+- Updated dependencies [0964659]
+- Updated dependencies [8486aa5]
+- Updated dependencies [867c6ca]
+  - @mariachi/create@0.1.1
+  - @mariachi/auth@0.1.1
+  - @mariachi/core@0.1.1
+  - @mariachi/config@0.1.1
+  - @mariachi/database@0.1.1
+  - @mariachi/database-postgres@0.1.1
+
 ## 0.1.0
 
 ### Minor Changes
