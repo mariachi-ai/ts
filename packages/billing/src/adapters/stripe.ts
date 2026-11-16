@@ -104,6 +104,23 @@ function itemChanges(current: Stripe.Subscription, patch: UpdateSubscriptionInpu
   return undefined;
 }
 
+/**
+ * Whether Stripe refused a meter event because it already has one with that identifier.
+ *
+ * The v1 endpoint answers a repeat with a 400 `invalid_request_error` that has no `code`, only the
+ * message "An event already exists with identifier …" (checked against Stripe's test mode,
+ * 2026-11). The message is the one signal it gives, so it is matched; `duplicate_meter_event` is the
+ * code the v2 API documents, kept in case v1 gains it. Stripe doesn't compare the value: a repeat of
+ * an identifier is refused whatever it carries, and the first one is what counts.
+ */
+export function meterEventAlreadyReceived(error: unknown): boolean {
+  const e = error as { code?: string; statusCode?: number; rawType?: string; type?: string; message?: string } | null;
+  if (!e || typeof e !== 'object') return false;
+  if (e.code === 'duplicate_meter_event') return true;
+  const invalidRequest = e.rawType === 'invalid_request_error' || e.type === 'StripeInvalidRequestError';
+  return e.statusCode === 400 && invalidRequest && /already exists with identifier/i.test(e.message ?? '');
+}
+
 export class StripeAdapter implements BillingAdapter {
   readonly name = 'stripe';
   private readonly stripe: Stripe;
@@ -379,7 +396,7 @@ export class StripeAdapter implements BillingAdapter {
         });
       } catch (error) {
         // Stripe already has an event with this identifier: the earlier attempt did arrive
-        if ((error as { code?: string }).code === 'duplicate_meter_event') return;
+        if (meterEventAlreadyReceived(error)) return;
         throw error;
       }
     });
