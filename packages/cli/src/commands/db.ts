@@ -16,6 +16,7 @@ import { planMigration } from '../db/migrations';
 import { importModule, writePlannedMigration } from '../db/project';
 
 import { DIM, GREEN, RED, RESET, YELLOW } from '../colors';
+import { isLocal, safeUrl } from '../doctor/checks';
 import { fail } from '../output';
 
 interface DbOptions {
@@ -52,6 +53,45 @@ function withSchemaOptions(cmd: Command): Command {
   return cmd
     .option('-s, --schema <path>', 'module exporting defineTable() tables', 'src/schema/index.ts')
     .option('-o, --out <dir>', 'migrations folder', 'drizzle');
+}
+
+/**
+ * The environment seeds run as: `--env`, else NODE_ENV, else development. It used to be
+ * development unless `--env` said otherwise, so `db seed` against a production database ran every
+ * seed that didn't name its environments, demo data included.
+ */
+export function seedEnvironment(flag: string | undefined, nodeEnv: string | undefined): string {
+  return flag?.trim() || nodeEnv?.trim() || 'development';
+}
+
+/**
+ * A database that is taken to be near: reached through a Unix socket (no host, or a path for one),
+ * or at a host with no dot in its name, which is a Compose or container-network service
+ * (`postgres`, `db`). A short name can also be a real database (an /etc/hosts alias, a private DNS
+ * name); that is the price of not asking every containerised dev setup for `--env`.
+ */
+function isNearby(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = decodeURIComponent(parsed.hostname);
+    if (host === '' || host.startsWith('/') || parsed.searchParams.get('host')?.startsWith('/')) return true;
+    return !host.includes('.') && !host.includes(':');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Refuses the one mix-up that seeds demo data into a real database: a database on another machine,
+ * seeded as development because nothing said otherwise (a laptop's .env sets NODE_ENV=development,
+ * and `--url` pointed somewhere else). Saying `--env` is how a person confirms what the database is.
+ */
+export function assertSeedTarget(url: string, environment: string, explicit: boolean): void {
+  if (explicit || environment !== 'development' || isLocal(url) || isNearby(url)) return;
+  throw new ConfigError(
+    'cli/seed-target-unclear',
+    `This database (${safeUrl(url)}) is not on this machine, and the seeds would run as development. Pass --env to say what it is: --env development if it really is a development database`,
+  );
 }
 
 export function registerDbCommand(program: Command): void {
@@ -126,27 +166,32 @@ export function registerDbCommand(program: Command): void {
     });
 
   db.command('seed')
-    .description('Run seeds exported from a module (defineSeed). Each seed runs once per environment unless --force')
+    .description('Run seeds exported from a module (defineSeed). Each seed runs once per database unless --force')
     .option('-f, --file <path>', 'module exporting seeds', 'src/seeds/index.ts')
-    .option('-e, --env <environment>', 'environment name', 'development')
+    .option('-e, --env <environment>', 'the environment the seeds run as, which decides which may run (default: NODE_ENV, else development)')
     .option('--force', 're-run seeds that already ran')
     .option('--url <url>', 'database URL (default: DATABASE_URL)')
-    .action(async (options: DbOptions & { file: string; env: string; force?: boolean }) => {
+    .action(async (options: DbOptions & { file: string; env?: string; force?: boolean }) => {
       try {
+        const environment = seedEnvironment(options.env, readEnv('NODE_ENV'));
+        const target = databaseUrl(options);
+        assertSeedTarget(target, environment, Boolean(options.env?.trim()));
         const mod = await importModule(options.file);
         const seeds = (Array.isArray(mod.seeds) ? mod.seeds : Array.isArray(mod.default) ? mod.default : Object.values(mod)).filter(
           (s): s is SeedDefinition<DrizzleDb> => !!s && typeof s === 'object' && 'name' in s && 'run' in s,
         );
         if (seeds.length === 0) throw new ConfigError('cli/no-seeds', `${options.file} exports no seeds (use defineSeed)`);
+        // Said before anything runs, so a wrong target can still be stopped
+        console.log(`Seeding ${safeUrl(target)} as ${environment}`);
         await withAdapter(options, (adapter) =>
           runSeeds(adapter.getClient<DrizzleDb>(), seeds, {
-            environment: options.env,
+            environment,
             force: options.force,
             logger: consoleLogger,
             ctx: createContext({ logger: consoleLogger, identityType: 'system' }),
           }),
         );
-        console.log(`${GREEN}Seeds complete.${RESET}`);
+        console.log(`${GREEN}Seeds complete${RESET} ${DIM}(as ${environment})${RESET}`);
       } catch (err) {
         fail(err);
       }

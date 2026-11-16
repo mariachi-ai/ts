@@ -52,6 +52,7 @@ export type GenerateControllerConfig = GenerateOptions;
 export type GenerateJobConfig = GenerateOptions;
 export type GenerateIntegrationConfig = GenerateOptions;
 export type GeneratePageConfig = GenerateOptions;
+export type GenerateSeedConfig = GenerateOptions;
 
 export interface GenerateResult {
   /** Paths relative to the project root. */

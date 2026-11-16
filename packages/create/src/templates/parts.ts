@@ -220,3 +220,36 @@ describe('${n.pascal}Client', () => {
   });
 });
 `;
+
+/** `src/seeds/<name>.seed.ts`, written by `mariachi generate seed`. */
+export const seedFile = (n: Names): string => `import { defineSeed } from '@mariachi/database';
+import type { DrizzleDb } from '@mariachi/database-postgres';
+
+/**
+ * Data the app starts with. Run it: \`pnpm mariachi db seed\` (\`pnpm dev\` doesn't).
+ *
+ * - It runs once per database: its name is recorded there, and it is skipped after that.
+ *   \`--force\` runs it again, so write it to be safe to repeat (below).
+ * - It runs in one transaction. If it throws, nothing it wrote is kept and it isn't recorded.
+ * - Which seeds may run depends on the environment the command runs as: \`--env\`, else NODE_ENV,
+ *   else development. A seed with no \`environments\` runs as anything but production.
+ * - People who sign in come from wherever users sign in (the identity provider, or the tokens you
+ *   issue), not from a seed. A seed can make what belongs to them.
+ */
+export const ${n.camel}Seed = defineSeed<DrizzleDb>({
+  name: '${n.kebab}',
+  // environments: ['development', 'test'],
+  run: async (ctx, db) => {
+    // Rows go in through the tables in src/schema, compiled for Drizzle. Give each row an id of your
+    // own: with a generated id every run inserts a new row, and onConflictDoNothing has nothing to catch.
+    //   import { compileTable } from '@mariachi/database-postgres';
+    //   import { notesTable } from '../schema/notes';
+    //   await db
+    //     .insert(compileTable(notesTable))
+    //     .values({ id: '00000000-0000-4000-8000-000000000001', tenantId: 'dev-tenant', name: 'First note' })
+    //     .onConflictDoNothing();
+    void db;
+    ctx.logger.info({ seed: '${n.kebab}' }, 'seed ran');
+  },
+});
+`;

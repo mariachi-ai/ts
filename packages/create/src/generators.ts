@@ -6,7 +6,7 @@ import { LAYOUT, MARKERS } from './layout';
 import { names } from './names';
 import { E2E_HARNESS_FILE } from './templates/e2e';
 import { entityFiles } from './templates/entity';
-import { controllerFile, integrationFiles, jobFile, serviceFiles } from './templates/parts';
+import { controllerFile, integrationFiles, jobFile, seedFile, serviceFiles } from './templates/parts';
 import { projectFiles } from './templates/project';
 import { PAGES_CONTROLLER_FILE, PAGES_DIR, PAGES_LAYOUT_FILE, pageFile, pageTestFile, pageTitle } from './templates/ui';
 import { PROJECT_AUTH } from './types';
@@ -17,6 +17,7 @@ import type {
   GenerateJobConfig,
   GeneratePageConfig,
   GenerateResult,
+  GenerateSeedConfig,
   GenerateServiceConfig,
   ProjectConfig,
 } from './types';
@@ -129,6 +130,23 @@ export async function generateJob(config: GenerateJobConfig): Promise<GenerateRe
     ],
     config,
   );
+}
+
+/** A seed: `src/seeds/<name>.seed.ts`, listed in the seeds index so `mariachi db seed` runs it. */
+export async function generateSeed(config: GenerateSeedConfig): Promise<GenerateResult> {
+  assertProject(config.projectRoot);
+  const n = names(config.name);
+  const result = await writeFiles(
+    config.projectRoot,
+    { [`${LAYOUT.seedsDir}/${n.kebab}.seed.ts`]: seedFile(n) },
+    [
+      { file: LAYOUT.seedsIndex, marker: MARKERS.imports, line: `import { ${n.camel}Seed } from './${n.kebab}.seed';` },
+      { file: LAYOUT.seedsIndex, marker: MARKERS.seeds, line: `${n.camel}Seed,` },
+    ],
+    config,
+  );
+  result.notes.push('Run it with: pnpm mariachi db seed (--force runs it again; pnpm dev does not run seeds).');
+  return result;
 }
 
 /** Paths a page can't have: they are the API's and the static files'. */

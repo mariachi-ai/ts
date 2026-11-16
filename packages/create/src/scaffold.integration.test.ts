@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startPostgres, startRedis, stopAll } from '../../../test/setup';
 import { JWTAdapter } from '@mariachi/auth';
-import { createProject, generateController, generateEntity, generateIntegration, generateJob, generatePage, generateService, validate } from './index';
+import { createProject, generateController, generateEntity, generateIntegration, generateJob, generatePage, generateSeed, generateService, validate } from './index';
 
 const run = promisify(execFile);
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -130,6 +130,7 @@ describe('generated project', () => {
     await generateEntity({ name: 'invoice-item', projectRoot: project });
     await generateJob({ name: 'send-digest', projectRoot: project });
     await generateIntegration({ name: 'acme', projectRoot: project });
+    await generateSeed({ name: 'demo-data', projectRoot: project });
   }, 30_000);
 
   afterAll(async () => {
@@ -148,6 +149,9 @@ describe('generated project', () => {
     expect(controllers).toMatch(/new NotesController\(communication\),\n\s+new BillingReportController\(communication\),/);
     expect(await readFile(join(project, 'src/schema/index.ts'), 'utf-8')).toContain("export * from './invoice-items';");
     expect(await readFile(join(project, 'src/jobs/index.ts'), 'utf-8')).toContain('sendDigestJob,');
+    const seeds = await readFile(join(project, 'src/seeds/index.ts'), 'utf-8');
+    expect(seeds).toContain("import { demoDataSeed } from './demo-data.seed';");
+    expect(seeds).toMatch(/export const seeds: SeedDefinition<DrizzleDb>\[\] = \[\n\s+demoDataSeed,\n\s+\/\/ mariachi:seeds\n\];/);
     const pkg = JSON.parse(await readFile(join(project, 'package.json'), 'utf-8'));
     expect(pkg.dependencies['@mariachi/core']).toMatch(/^\^\d+\.\d+\.\d+/);
   });
