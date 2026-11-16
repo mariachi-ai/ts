@@ -1,6 +1,6 @@
 ---
-'@mariachi/design-kits': minor
-'@mariachi/cli': minor
+'@mariachi/design-kits': patch
+'@mariachi/cli': patch
 '@mariachi/design': patch
 ---
 

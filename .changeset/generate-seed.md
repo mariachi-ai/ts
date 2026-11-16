@@ -1,6 +1,6 @@
 ---
-'@mariachi/create': minor
-'@mariachi/cli': minor
+'@mariachi/create': patch
+'@mariachi/cli': patch
 ---
 
 `mariachi generate seed <name>` writes `src/seeds/<name>.seed.ts` (a `defineSeed`, with a note on

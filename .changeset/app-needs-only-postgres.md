@@ -1,9 +1,9 @@
 ---
-'@mariachi/create': minor
-'@mariachi/cli': minor
-'@mariachi/auth': minor
+'@mariachi/create': patch
+'@mariachi/cli': patch
+'@mariachi/auth': patch
 '@mariachi/jobs': patch
-'@mariachi/search': minor
+'@mariachi/search': patch
 ---
 
 A new project needs only Postgres, starts with one command, and can be called right away.

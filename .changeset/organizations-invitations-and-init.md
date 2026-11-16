@@ -1,8 +1,8 @@
 ---
-'@mariachi/organizations': minor
-'@mariachi/auth-gotrue': minor
-'@mariachi/create': minor
-'@mariachi/cli': minor
+'@mariachi/organizations': patch
+'@mariachi/auth-gotrue': patch
+'@mariachi/create': patch
+'@mariachi/cli': patch
 '@mariachi/core': patch
 ---
 

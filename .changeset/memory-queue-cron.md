@@ -1,5 +1,5 @@
 ---
-'@mariachi/jobs': minor
+'@mariachi/jobs': patch
 ---
 
 The in-memory job queue runs cron schedules.

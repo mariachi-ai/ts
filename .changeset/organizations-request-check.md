@@ -1,9 +1,9 @@
 ---
-'@mariachi/organizations': minor
-'@mariachi/api-facade': minor
-'@mariachi/auth': minor
-'@mariachi/audit': minor
-'@mariachi/core': minor
+'@mariachi/organizations': patch
+'@mariachi/api-facade': patch
+'@mariachi/auth': patch
+'@mariachi/audit': patch
+'@mariachi/core': patch
 '@mariachi/rate-limit': patch
 ---
 

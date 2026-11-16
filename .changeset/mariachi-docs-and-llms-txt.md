@@ -1,6 +1,6 @@
 ---
-'@mariachi/cli': minor
-'@mariachi/core': minor
+'@mariachi/cli': patch
+'@mariachi/core': patch
 '@mariachi/create': patch
 ---
 

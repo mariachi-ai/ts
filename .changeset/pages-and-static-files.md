@@ -1,6 +1,6 @@
 ---
-'@mariachi/api-facade': minor
-'@mariachi/server': minor
+'@mariachi/api-facade': patch
+'@mariachi/server': patch
 ---
 
 The API server can send pages and the files they load.

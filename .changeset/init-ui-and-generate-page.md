@@ -1,6 +1,6 @@
 ---
-'@mariachi/create': minor
-'@mariachi/cli': minor
+'@mariachi/create': patch
+'@mariachi/cli': patch
 ---
 
 `mariachi init --ui` and `mariachi generate page`: a project with pages a person can open.
