@@ -68,7 +68,7 @@
     }
   },
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3",
+    "@aws-sdk/client-s3": "^3.1138.0",
     "@mariachi/database-postgres": "workspace:^",
     "drizzle-orm": "^0.38",
     "tsup": "^8",
