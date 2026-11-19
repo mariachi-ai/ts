@@ -13,11 +13,15 @@ const started: StartedTestContainer[] = [];
 let network: StartedNetwork;
 let base: string;
 let client: FusionAuthIdentityClient;
+/** The same application, with the app sending the reset and verification emails. */
+let appEmails: FusionAuthIdentityClient;
+/** A second tenant that verifies emails with a code (FormField), and clients for its application. */
+let verifying: { tenantId: string; applicationId: string; appSends: FusionAuthIdentityClient; faSends: FusionAuthIdentityClient };
 
-async function fa<T = any>(method: string, path: string, body?: unknown): Promise<T> {
+async function fa<T = any>(method: string, path: string, body?: unknown, tenantId?: string): Promise<T> {
   const res = await fetch(`${base}${path}`, {
     method,
-    headers: { Authorization: API_KEY, 'Content-Type': 'application/json' },
+    headers: { Authorization: API_KEY, 'Content-Type': 'application/json', ...(tenantId ? { 'X-FusionAuth-TenantId': tenantId } : {}) },
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
   const text = await res.text();
@@ -73,13 +77,50 @@ beforeAll(async () => {
       oauthConfiguration: { clientSecret, authorizedRedirectURLs: ['http://127.0.0.1/cb'], enabledGrants: ['authorization_code', 'refresh_token'] },
     },
   });
-  client = createFusionAuthIdentityClient({
+  const config = {
     serverUrl: base,
     apiKey: API_KEY,
+    tenantId, // two tenants below: user lookups by email need the header
     applicationId: created.application.id,
     clientId: created.application.oauthConfiguration.clientId,
     clientSecret,
+  };
+  client = createFusionAuthIdentityClient(config);
+  appEmails = createFusionAuthIdentityClient({ ...config, emailsSentBy: 'app' });
+
+  // Email verification with a code: FusionAuth's FormField strategy (Allow, the unlicensed behavior).
+  const template = await fa<{ emailTemplate: { id: string } }>('POST', '/api/email/template', {
+    emailTemplate: { name: 'verify', defaultSubject: 'Verify', defaultTextTemplate: '${verificationOneTimeCode!}', defaultHtmlTemplate: '<p>${verificationOneTimeCode!}</p>', fromEmail: 'no-reply@example.org' },
   });
+  // A copy of the default tenant (a copy takes only the name from the request), then its email settings.
+  const verifyTenantId = (await fa<{ tenant: { id: string } }>('POST', '/api/tenant', { sourceTenantId: tenantId, tenant: { name: 'verifies email' } })).tenant.id;
+  await fa('PATCH', `/api/tenant/${verifyTenantId}`, {
+    tenant: { emailConfiguration: { verifyEmail: true, verificationStrategy: 'FormField', verificationEmailTemplateId: template.emailTemplate.id } },
+  });
+  const verifySecret = randomBytes(16).toString('hex');
+  const verifyApp = await fa<{ application: { id: string; oauthConfiguration: { clientId: string } } }>('POST', '/api/application', {
+    application: {
+      name: 'mariachi verification',
+      tenantId: verifyTenantId,
+      loginConfiguration: { generateRefreshTokens: true },
+      passwordlessConfiguration: { enabled: true },
+      oauthConfiguration: { clientSecret: verifySecret, authorizedRedirectURLs: ['http://127.0.0.1/cb'], enabledGrants: ['authorization_code', 'refresh_token'] },
+    },
+  }, verifyTenantId);
+  const verifyConfig = {
+    serverUrl: base,
+    apiKey: API_KEY,
+    tenantId: verifyTenantId,
+    applicationId: verifyApp.application.id,
+    clientId: verifyApp.application.oauthConfiguration.clientId,
+    clientSecret: verifySecret,
+  };
+  verifying = {
+    tenantId: verifyTenantId,
+    applicationId: verifyApp.application.id,
+    appSends: createFusionAuthIdentityClient({ ...verifyConfig, emailsSentBy: 'app' }),
+    faSends: createFusionAuthIdentityClient(verifyConfig),
+  };
 }, 300_000);
 
 afterAll(async () => {
@@ -156,5 +197,73 @@ describe('FusionAuthIdentityClient against FusionAuth', () => {
     const addr = email('reset');
     await client.createUser({ email: addr, emailVerified: true, password: PASSWORD });
     await expect(client.sendPasswordReset(addr)).rejects.toMatchObject({ code: 'auth/not-supported' });
+  });
+
+  it("resets a password with the token the app emails: the user comes back, the new password works, the token doesn't again", async () => {
+    const addr = email('reset-app');
+    const user = await client.createUser({ email: addr, emailVerified: true, password: PASSWORD });
+    expect(await appEmails.sendPasswordReset(email('nobody'))).toEqual({ deliveredBy: 'nobody' });
+    const sent = await appEmails.sendPasswordReset(addr);
+    if (sent.deliveredBy !== 'app') throw new Error(`expected the app to send the reset, got ${sent.deliveredBy}`);
+
+    await expect(appEmails.resetPassword({ token: sent.token, password: 'short' })).rejects.toMatchObject({ code: 'auth/invalid-grant', metadata: { errors: ['[tooShort]password'] } });
+    const reset = await appEmails.resetPassword({ token: sent.token, password: 'a-new-long-password-3' });
+    expect(reset).toMatchObject({ id: user.id, email: addr, emailVerified: true });
+
+    expect((await client.signInWithPassword({ email: addr, password: 'a-new-long-password-3' })).status).toBe('signed-in');
+    await expect(client.signInWithPassword({ email: addr, password: PASSWORD })).rejects.toMatchObject({ code: 'auth/invalid-credentials' });
+    await expect(appEmails.resetPassword({ token: sent.token, password: 'a-new-long-password-4' })).rejects.toMatchObject({ code: 'auth/invalid-grant' });
+    await expect(appEmails.resetPassword({ token: 'not-a-token', password: 'a-new-long-password-4' })).rejects.toMatchObject({ code: 'auth/invalid-grant' });
+  });
+
+  it('verifies an email with the code the app emails, then signs in; the code works once', async () => {
+    const identity = verifying.appSends;
+    const addr = email('verify-app');
+    const user = await identity.createUser({ email: addr, emailVerified: false, password: PASSWORD });
+    const held = await identity.signInWithPassword({ email: addr, password: PASSWORD });
+    if (held.status !== 'pending') throw new Error(`expected a held sign-in, got ${held.status}`);
+    expect(held).toMatchObject({ reason: 'email-verification', email: addr, user: { id: user.id, emailVerified: false } });
+    const code = await identity.pendingVerificationCode(held);
+    expect(code).toMatch(/^\w{4,}$/);
+
+    await expect(identity.verifyEmailAndSignIn({ pendingToken: held.pendingToken!, code: 'WRONG1' })).rejects.toMatchObject({ code: 'auth/invalid-grant' });
+    const done = await identity.verifyEmailAndSignIn({ pendingToken: held.pendingToken!, code });
+    if (done.status !== 'signed-in') throw new Error(`expected signed-in, got ${done.status}`);
+    expect(done.user).toMatchObject({ id: user.id, emailVerified: true });
+    expect(done.tokens.refreshToken).toBeTruthy();
+    expect((await identity.refresh(done.tokens.refreshToken)).accessToken).toBeTruthy();
+
+    await expect(identity.verifyEmailAndSignIn({ pendingToken: held.pendingToken!, code })).rejects.toMatchObject({ code: 'auth/invalid-grant' });
+    expect((await identity.signInWithPassword({ email: addr, password: PASSWORD })).status).toBe('signed-in');
+  });
+
+  it("a later held sign-in replaces the earlier code (FusionAuth keeps one verification per address)", async () => {
+    const identity = verifying.appSends;
+    const addr = email('verify-again');
+    await identity.createUser({ email: addr, emailVerified: false, password: PASSWORD });
+    const first = await identity.signInWithPassword({ email: addr, password: PASSWORD });
+    const second = await identity.signInWithPassword({ email: addr, password: PASSWORD });
+    if (first.status !== 'pending' || second.status !== 'pending') throw new Error('expected held sign-ins');
+    const stale = await identity.pendingVerificationCode(first);
+    await expect(identity.verifyEmailAndSignIn({ pendingToken: first.pendingToken!, code: stale })).rejects.toMatchObject({ code: 'auth/invalid-grant' });
+    expect((await identity.verifyEmailAndSignIn({ pendingToken: second.pendingToken!, code: await identity.pendingVerificationCode(second) })).status).toBe('signed-in');
+  });
+
+  it("verifies an email with the code FusionAuth emailed (emailsSentBy 'provider')", async () => {
+    const identity = verifying.faSends;
+    const addr = email('verify-fa');
+    // The code FusionAuth put in its verification email when it created the user.
+    const created = await fa<{ user: { id: string }; verificationIds: Array<{ oneTimeCode: string; value: string }> }>(
+      'POST',
+      '/api/user/registration',
+      { user: { email: addr, password: PASSWORD }, registration: { applicationId: verifying.applicationId }, skipVerification: false },
+      verifying.tenantId,
+    );
+    const emailed = created.verificationIds.find((v) => v.value === addr)!.oneTimeCode;
+    const held = await identity.signInWithPassword({ email: addr, password: PASSWORD });
+    if (held.status !== 'pending') throw new Error(`expected a held sign-in, got ${held.status}`);
+    await expect(identity.pendingVerificationCode(held)).rejects.toMatchObject({ code: 'auth/not-supported' });
+    const done = await identity.verifyEmailAndSignIn({ pendingToken: held.pendingToken!, code: emailed });
+    expect(done.status === 'signed-in' && done.user).toMatchObject({ id: created.user.id, emailVerified: true });
   });
 });

@@ -1,8 +1,10 @@
 # Guide for coding agents
 
 Read [architecture.md](./architecture.md) and [conventions.md](./conventions.md) first. This page
-answers "which piece do I use?" and lists the mistakes agents most often make. Run `mariachi validate`
-and `tsc --noEmit` before you finish.
+answers "which piece do I use?" and lists the mistakes agents most often make. To see what an app
+already has, run `mariachi list` (its routes, the procedures they call, and its jobs, each with
+where it is written) before opening its files. Run `mariachi validate` and `tsc --noEmit` before you
+finish.
 
 ## Which piece?
 

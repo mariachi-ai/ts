@@ -18,7 +18,7 @@ only point here.
 
 ## Guides
 
-- [cli.md](./cli.md): `mariachi init`, `generate`, `dev`, `token`, `docs`, `validate`, `db`, `design`, `explore`
+- [cli.md](./cli.md): `mariachi init`, `generate`, `dev`, `token`, `docs`, `validate`, `list`, `db`, `design`, `explore`
 - [http.md](./http.md): `server` vs `api-facade` vs `webhooks`, routes, auth strategies, rate limits, OpenAPI
 - [events.md](./events.md): envelopes, consumer groups, delivery guarantees, dead letters, outbox
 - [jobs.md](./jobs.md): `defineJob`, retries, dedup, scheduling, hooks, dead-letter queue
