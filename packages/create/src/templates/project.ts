@@ -22,7 +22,7 @@ import {
   organizationsEnv,
   organizationsReadme,
 } from './organizations';
-import { UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_DEPS, UI_README, uiAgents, uiFiles } from './ui';
+import { UI_APP_CHECK, UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_DEPS, UI_README, uiAgents, uiFiles } from './ui';
 
 const MARIACHI_DEPS = [
   'api-facade',
@@ -510,7 +510,7 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
   const instrumentation = { logger, tracer, metrics };
 ${orgs ? '  const app = useConfigSection<AppSettings>(APP_CONFIG);\n' : ''}
   if (!config.database) throw new ConfigError('app/database-required', 'DATABASE_URL is required');
-  let verifier = options.verifier;
+${ui ? UI_APP_CHECK : ''}  let verifier = options.verifier;
   if (!verifier) {
     if (!config.auth?.jwtSecret) throw new ConfigError('app/jwt-secret-required', 'JWT_SECRET is required');
 ${orgs

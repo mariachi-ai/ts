@@ -11,7 +11,7 @@ import {
   organizationsEnv,
   organizationsReadme,
 } from './organizations';
-import { UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_README, uiAgents } from './ui';
+import { UI_APP_CHECK, UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_README, uiAgents } from './ui';
 
 /**
  * `mariachi init --auth gotrue`: sign-in by GoTrue (Supabase Auth, hosted or your own), verified
@@ -265,7 +265,7 @@ export async function createApp(options: AppOptions = {}): Promise<App> {
   const app = useConfigSection<AppSettings>(APP_CONFIG);
 
   if (!config.database) throw new ConfigError('app/database-required', 'DATABASE_URL is required');
-
+${ui ? UI_APP_CHECK : ''}
   // Startup runs in ascending priority; shutdown runs in reverse.
   const database = lifecycle.manage(
     'database',

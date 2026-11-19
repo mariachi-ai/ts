@@ -1,7 +1,7 @@
 export { FastifyAdapter, createApiServer } from './server';
 export { BaseController } from './controller';
 export { Html, html, raw, escapeHtml, safeHref, htmlResponse, DEFAULT_PAGE_CSP, type HtmlResponseOptions } from './html';
-export { staticFiles, type StaticOptions } from './static';
+export { staticFile, staticFiles, type StaticOptions } from './static';
 export { generateOpenApi } from './openapi';
 export {
   bearerStrategy,
