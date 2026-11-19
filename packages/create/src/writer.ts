@@ -4,11 +4,20 @@ import { dirname, join, relative } from 'node:path';
 import { ConfigError } from '@mariachi/core';
 import type { GenerateResult } from './types';
 
-/** A registry file edit: `line` is inserted above the first line containing `marker`. */
+/**
+ * A registry file edit: `line` is inserted above the first line containing `marker`, at the marker's
+ * indentation. `line` may hold several lines; each keeps its own indentation relative to the first.
+ */
 export interface Insertion {
   file: string;
   marker: string;
   line: string;
+  /**
+   * Where to insert when the file has no marker (one written before the marker existed): above the
+   * first line that is only `}` after the first line matching this, at two spaces. The end of a
+   * class or function written at the top level.
+   */
+  orBeforeEndOf?: RegExp;
 }
 
 /**
@@ -43,17 +52,32 @@ export async function writeFiles(
     const content = await readFile(path, 'utf-8');
     if (content.includes(ins.line.trim())) continue;
     const lines = content.split('\n');
-    const at = lines.findIndex((l) => l.includes(ins.marker));
+    let at = lines.findIndex((l) => l.includes(ins.marker));
+    const indent = at === -1 ? '  ' : (lines[at].match(/^\s*/)?.[0] ?? '');
+    if (at === -1 && ins.orBeforeEndOf) at = endOf(lines, ins.orBeforeEndOf);
     if (at === -1) {
       result.notes.push(`${ins.file} has no "${ins.marker}" marker; add manually: ${ins.line.trim()}`);
       continue;
     }
-    const indent = lines[at].match(/^\s*/)?.[0] ?? '';
-    lines.splice(at, 0, `${indent}${ins.line.trim()}`);
+    lines.splice(at, 0, ...indented(ins.line, indent));
     await writeFile(path, lines.join('\n'));
     if (!result.updated.includes(ins.file)) result.updated.push(ins.file);
   }
   return result;
+}
+
+/** The index of the first line that is only `}` after the first line matching `start`, or -1. */
+function endOf(lines: string[], start: RegExp): number {
+  const from = lines.findIndex((l) => start.test(l));
+  if (from === -1) return -1;
+  return lines.findIndex((l, i) => i > from && /^}\s*;?\s*$/.test(l));
+}
+
+/** `text`'s lines under `indent`, the first written line's own indentation removed from each; blank lines stay blank. */
+function indented(text: string, indent: string): string[] {
+  const rows = text.replace(/\s+$/, '').split('\n');
+  const own = rows.find((row) => row.trim() !== '')?.match(/^\s*/)?.[0].length ?? 0;
+  return rows.map((row) => (row.trim() === '' ? '' : indent + row.slice(Math.min(own, row.match(/^\s*/)?.[0].length ?? 0))));
 }
 
 export function relativeImport(fromFile: string, toFile: string): string {

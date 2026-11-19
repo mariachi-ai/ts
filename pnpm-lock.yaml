@@ -773,6 +773,9 @@ importers:
       '@mariachi/design-kits':
         specifier: workspace:*
         version: link:../design-kits
+      '@mariachi/events':
+        specifier: workspace:*
+        version: link:../events
       '@mariachi/jobs':
         specifier: workspace:*
         version: link:../jobs
@@ -797,6 +800,9 @@ importers:
       '@mariachi/testing':
         specifier: workspace:*
         version: link:../testing
+      '@mariachi/webhooks':
+        specifier: workspace:*
+        version: link:../webhooks
       '@types/node':
         specifier: ^22
         version: 22.19.11

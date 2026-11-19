@@ -22,7 +22,20 @@ import {
   organizationsEnv,
   organizationsReadme,
 } from './organizations';
+import { EVENTS_INDEX } from './events';
 import { UI_APP_CHECK, UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_DEPS, UI_README, uiAgents, uiFiles } from './ui';
+import { WEBHOOKS_INDEX } from './webhooks';
+import {
+  EVENTS_SCHEMA,
+  EVENTS_SCHEMA_FILE,
+  WIRING_APP_EVENTS,
+  WIRING_APP_FIELDS,
+  WIRING_APP_IMPORTS,
+  WIRING_APP_REGISTRY_IMPORTS,
+  WIRING_APP_RETURN,
+  WIRING_APP_SERVICES,
+  WIRING_APP_WEBHOOKS,
+} from './wiring';
 
 const MARIACHI_DEPS = [
   'api-facade',
@@ -32,9 +45,11 @@ const MARIACHI_DEPS = [
   'core',
   'database',
   'database-postgres',
+  'events',
   'jobs',
   'lifecycle',
   'search',
+  'webhooks',
 ] as const;
 
 /** Framework packages a sign-in choice adds. */
@@ -136,6 +151,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
       : {}),
     [LAYOUT.schemaIndex]: SCHEMA_INDEX(orgs),
     [JOB_QUEUE_SCHEMA_FILE]: JOB_QUEUE_SCHEMA,
+    [EVENTS_SCHEMA_FILE]: EVENTS_SCHEMA,
     [SEARCH_SCHEMA_FILE]: SEARCH_SCHEMA,
     [SEARCH_INDEXES_FILE]: SEARCH_INDEXES,
     ...(e2e ? { [SEARCH_E2E_FILE]: SEARCH_E2E_TEST } : {}),
@@ -143,6 +159,8 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     [LAYOUT.servicesIndex]: SERVICES_INDEX,
     [LAYOUT.controllersIndex]: CONTROLLERS_INDEX(orgs, ui),
     [LAYOUT.jobsIndex]: JOBS_INDEX,
+    [LAYOUT.eventsIndex]: EVENTS_INDEX,
+    [LAYOUT.webhooksIndex]: WEBHOOKS_INDEX,
   };
   if (orgs) {
     files[ORGANIZATIONS_FILE] = ORGANIZATIONS_TS;
@@ -156,7 +174,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
 
 /** The schema index. Shared by both sign-in choices. */
 export const SCHEMA_INDEX = (orgs: boolean): string =>
-  `/** Every table exported here is picked up by \`mariachi db generate\`. */\nexport * from './job-queue';\nexport * from './search';\n${orgs ? "export * from './organizations';\n" : ''}// ${MARKERS.schema}\nexport {};\n`;
+  `/** Every table exported here is picked up by \`mariachi db generate\`. */\nexport * from './events';\nexport * from './job-queue';\nexport * from './search';\n${orgs ? "export * from './organizations';\n" : ''}// ${MARKERS.schema}\nexport {};\n`;
 
 const JOB_QUEUE_SCHEMA_FILE = 'src/schema/job-queue.ts';
 const JOB_QUEUE_SCHEMA = `/**
@@ -363,6 +381,8 @@ ${e2e ? '| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and t
 | \`src/schema/\` | \`defineTable\` tables; \`mariachi db generate\` turns them into migrations |
 | \`src/jobs/\` | \`defineJob\` background jobs |
 | \`src/search/\` | The search indexes; services reach search as \`deps.search\` |
+| \`src/events/\` | \`defineEvent\` events and their subscribers; services publish through \`deps.outbox\` or \`deps.events\` |
+| \`src/webhooks/\` | Webhook controllers, served on \`WEBHOOK_PORT\`: signature checked, deduplicated, handed to a job |
 
 Postgres is the only service: jobs and search run in it (\`@mariachi/jobs/postgres\`,
 \`@mariachi/search/postgres\`). Don't add Redis or a search server to make either work.
@@ -382,11 +402,15 @@ your users sign in.
 ## Generators
 
 \`\`\`bash
-pnpm mariachi generate entity <name>      # schema + repository + service + handler + controller + unit and end-to-end tests
+pnpm mariachi generate entity <name> [--field title:string --field done:boolean]   # schema + repository + service + handler + controller + unit and end-to-end tests
 pnpm mariachi generate service <name>
 pnpm mariachi generate controller <name>
 pnpm mariachi generate job <name>
 pnpm mariachi generate integration <name>
+pnpm mariachi generate procedure <service> <name>   # one more procedure on an existing service
+pnpm mariachi generate event <domain.thing.happened> [--subscriber <name>]
+pnpm mariachi generate subscriber <domain.thing.happened> <name>
+pnpm mariachi generate webhook <name>     # signed endpoint on WEBHOOK_PORT + the job it hands deliveries to
 pnpm validate                            # architecture rules; run before committing
 \`\`\`
 ${e2e ? AGENTS_TESTS : ''}`;
@@ -461,13 +485,13 @@ import { createJobQueue, DefaultJobs } from '@mariachi/jobs';
 import { createPostgresJobQueue } from '@mariachi/jobs/postgres';
 import { DefaultSearch, type SearchIndex } from '@mariachi/search';
 import { createPostgresSearch } from '@mariachi/search/postgres';
-import { JWTAdapter } from '@mariachi/auth';
+${WIRING_APP_IMPORTS}import { JWTAdapter } from '@mariachi/auth';
 import { bearerStrategy, createApiServer, type FastifyAdapter, type TokenVerifier } from '@mariachi/api-facade';
 import { createControllers } from './api/controllers/index';
 import { registerServices } from './services/index';
 import { jobs as jobDefinitions } from './jobs/index';
 import { searchIndexes } from './search/index';
-${orgs ? organizationsAppImports('jwt') : ''}${ui ? UI_APP_CONSTANTS : ''}
+${WIRING_APP_REGISTRY_IMPORTS}${orgs ? organizationsAppImports('jwt') : ''}${ui ? UI_APP_CONSTANTS : ''}
 export interface AppOptions {
   /** Passed to bootstrap(). Tests give their own environment and leave the signal handlers off. */
   bootstrap?: BootstrapOptions;
@@ -498,7 +522,7 @@ export interface App {
   jobs: DefaultJobs;
   /** Search over the app's own Postgres. Every call reads and writes only the documents of ctx.tenantId. */
   search: DefaultSearch;
-${orgs ? ORGANIZATIONS_APP_FIELD : ''}  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
+${WIRING_APP_FIELDS}${orgs ? ORGANIZATIONS_APP_FIELD : ''}  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
   start(): Promise<string>;
   /** Stops listening, then closes the worker and the connections. */
   stop(): Promise<void>;
@@ -506,7 +530,7 @@ ${orgs ? ORGANIZATIONS_APP_FIELD : ''}  /** Connects, starts the job worker and 
 
 /** The composition root: builds everything the app is made of. main.ts starts it; so do the end-to-end tests. */
 export async function createApp(options: AppOptions = {}): Promise<App> {
-  const { config, logger, tracer, metrics, container, lifecycle } = bootstrap(options.bootstrap);
+  const { config, secrets, logger, tracer, metrics, container, lifecycle } = bootstrap(options.bootstrap);
   const instrumentation = { logger, tracer, metrics };
 ${orgs ? '  const app = useConfigSection<AppSettings>(APP_CONFIG);\n' : ''}
   if (!config.database) throw new ConfigError('app/database-required', 'DATABASE_URL is required');
@@ -567,11 +591,11 @@ ${orgs
   // when its fields here have changed: they take effect when you reindex.
   lifecycle.startup.register({ name: 'search-indexes', priority: 30, fn: async () => void (await search.ensureIndexes(options.searchIndexes ?? searchIndexes)) });
 
+${WIRING_APP_EVENTS}
   // One communication layer per process: handlers register on it, controllers call through it.
   const communication = createCommunication({}, instrumentation);
   container.register(KEYS.Communication, communication);
-  registerServices(communication, { db: database.db, jobs, search });
-${orgs ? organizationsAppSetup('jwt') : ''}
+${WIRING_APP_SERVICES}${orgs ? organizationsAppSetup('jwt') : ''}
   const api = createApiServer({
     name: 'api',
     prefix: '/api',
@@ -587,7 +611,7 @@ ${ui ? UI_APP_STATIC : ''}    .withHealth(lifecycle.health)
     .withOpenApi({ info: { title: config.serviceName, version: '0.1.0' } });
   options.configureApi?.(api);
   for (const controller of createControllers(communication)) api.registerController(controller);
-
+${WIRING_APP_WEBHOOKS}
   let address = '';
   lifecycle.startup.register({
     name: 'api',
@@ -605,7 +629,7 @@ ${ui ? UI_APP_STATIC : ''}    .withHealth(lifecycle.health)
     database,
     jobs,
     search,
-${orgs ? '    organizations,\n' : ''}    start: async () => {
+${orgs ? '    organizations,\n' : ''}${WIRING_APP_RETURN}    start: async () => {
       await lifecycle.start();
       return address;
     },
@@ -631,6 +655,8 @@ export const seeds: SeedDefinition<DrizzleDb>[] = [
 
 const SERVICES_INDEX = `import type { CommunicationLayer } from '@mariachi/communication';
 import type { DrizzleDb } from '@mariachi/database-postgres';
+import type { Events } from '@mariachi/events';
+import type { Outbox } from '@mariachi/events/outbox';
 import type { Jobs } from '@mariachi/jobs';
 import type { Search } from '@mariachi/search';
 // ${MARKERS.imports}
@@ -640,6 +666,10 @@ export interface ServiceDeps {
   jobs: Jobs;
   /** Tenant-scoped: every call sees only the documents of ctx.tenantId. The indexes are in src/search/index.ts. */
   search: Search;
+  /** Publishes an event to its subscribers now (src/events/). */
+  events: Events;
+  /** Publishes an event once the transaction it is added in commits: \`outbox.add(ctx, event, payload)\` inside withTransaction. */
+  outbox: Outbox;
 }
 
 /** Wires every domain service and registers its communication handlers. */

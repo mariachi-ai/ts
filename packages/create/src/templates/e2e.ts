@@ -116,6 +116,8 @@ ${gotrue
           // Also the job queue's name
           SERVICE_NAME: name,
           PORT: '0',
+          // A webhook whose secret is set listens too: on a free port, so test files don't collide
+          WEBHOOK_PORT: '0',
           HOST: '127.0.0.1',
           LOG_LEVEL: 'error',
           DATABASE_URL: databaseUrl.href,

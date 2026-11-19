@@ -32,7 +32,7 @@ describe.each(Object.entries(VARIANTS))('a generated project (%s) needs only Pos
 
   it('wires search on Postgres, tenant-scoped, and creates the indexes the app lists', () => {
     expect(app).toContain('new DefaultSearch({ client: createPostgresSearch(database.db), tenantScoped: true }, instrumentation),');
-    expect(app).toContain('registerServices(communication, { db: database.db, jobs, search });');
+    expect(app).toContain('registerServices(communication, { db: database.db, jobs, search, events, outbox });');
     // Managed, so a database without the search tables says so at start; then the app's indexes are made sure of
     expect(app).toMatch(/const search = lifecycle\.manage\(\s+'search',/);
     expect(app).toContain('await search.ensureIndexes(options.searchIndexes ?? searchIndexes)');

@@ -5,8 +5,13 @@ Goal: an `orders` domain with a table, repository, service, procedures, HTTP rou
 ## 0. Generate the slice
 
 ```bash
-mariachi generate entity order
+mariachi generate entity order --field status:string --field total_cents:integer --field customer_id:uuid --field paid_at:timestamp:optional
 ```
+
+`--field name:type` gives it its columns (`string`, `text`, `integer`, `number`, `boolean`,
+`timestamp`, `date`, `uuid`; `:optional` or `?` for a nullable one); without any it has a `name`. The
+plural names the table, the routes and the procedures (`person` → `people`); `--plural` overrides it.
+See [cli.md](../cli.md#generate).
 
 This writes the files below and registers them in `src/schema/index.ts`, `src/services/index.ts` and
 `src/api/controllers/index.ts`. The steps that follow explain each file and what to change. If you
@@ -122,6 +127,9 @@ export function registerOrdersHandlers(communication: CommunicationLayer, servic
   });
 }
 ```
+
+`mariachi generate procedure orders cancel` adds one more procedure to the service: its schemas in
+the contract, the method, this registration and a test.
 
 Wire it in `src/services/index.ts` (the generator does this):
 

@@ -46,13 +46,40 @@ export interface GenerateOptions {
   force?: boolean;
 }
 
-export type GenerateEntityConfig = GenerateOptions;
+export interface GenerateEntityConfig extends GenerateOptions {
+  /**
+   * The entity's columns, as `name:type`: `title:string`, `done:boolean`, and `dueAt:timestamp?` (or
+   * `dueAt:timestamp:optional`) for a nullable one. Types: string, text, integer, number, boolean,
+   * timestamp, date, uuid. Default: one `name:string`.
+   */
+  fields?: string[];
+  /** The plural (table, routes, procedure namespace) when the rules get it wrong: `cactus` → `cacti`. */
+  plural?: string;
+}
 export type GenerateServiceConfig = GenerateOptions;
 export type GenerateControllerConfig = GenerateOptions;
 export type GenerateJobConfig = GenerateOptions;
 export type GenerateIntegrationConfig = GenerateOptions;
 export type GeneratePageConfig = GenerateOptions;
 export type GenerateSeedConfig = GenerateOptions;
+export type GenerateWebhookConfig = GenerateOptions;
+
+export interface GenerateEventConfig extends GenerateOptions {
+  /** Also a subscriber to it: its name, or `true` for `on-<event>`. */
+  subscriber?: string | boolean;
+}
+
+export interface GenerateSubscriberConfig extends Omit<GenerateOptions, 'name'> {
+  /** The event, made by `generate event`: `billing.invoice.paid`. */
+  event: string;
+  /** The subscriber's name. Default `on-<event>`. */
+  name?: string;
+}
+
+export interface GenerateProcedureConfig extends GenerateOptions {
+  /** The service it goes on: its folder in `src/services` (`notes`, `billing-report`) or an entity's singular (`note`). */
+  service: string;
+}
 
 export interface GenerateResult {
   /** Paths relative to the project root. */

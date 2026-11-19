@@ -12,6 +12,15 @@ import {
   organizationsReadme,
 } from './organizations';
 import { UI_APP_CHECK, UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_README, uiAgents } from './ui';
+import {
+  WIRING_APP_EVENTS,
+  WIRING_APP_FIELDS,
+  WIRING_APP_IMPORTS,
+  WIRING_APP_REGISTRY_IMPORTS,
+  WIRING_APP_RETURN,
+  WIRING_APP_SERVICES,
+  WIRING_APP_WEBHOOKS,
+} from './wiring';
 
 /**
  * `mariachi init --auth gotrue`: sign-in by GoTrue (Supabase Auth, hosted or your own), verified
@@ -215,7 +224,7 @@ import { createJobQueue, DefaultJobs } from '@mariachi/jobs';
 import { createPostgresJobQueue } from '@mariachi/jobs/postgres';
 import { DefaultSearch, type SearchIndex } from '@mariachi/search';
 import { createPostgresSearch } from '@mariachi/search/postgres';
-import { withPersonalTenants, type ResolvedIdentity } from '@mariachi/auth';
+${WIRING_APP_IMPORTS}import { withPersonalTenants, type ResolvedIdentity } from '@mariachi/auth';
 import { createGoTrueAuth${orgs ? ', goTrueVerifiedEmail' : ''} } from '@mariachi/auth-gotrue';
 import { createTenancy, createTenancyMiddleware } from '@mariachi/tenancy';
 import { bearerStrategy, createApiServer, type FastifyAdapter } from '@mariachi/api-facade';
@@ -225,7 +234,7 @@ import { createControllers } from './api/controllers/index';
 import { registerServices } from './services/index';
 import { jobs as jobDefinitions } from './jobs/index';
 import { searchIndexes } from './search/index';
-${orgs ? organizationsAppImports('gotrue') : ''}${ui ? UI_APP_CONSTANTS : ''}
+${WIRING_APP_REGISTRY_IMPORTS}${orgs ? organizationsAppImports('gotrue') : ''}${ui ? UI_APP_CONSTANTS : ''}
 const MIGRATIONS = 'drizzle';
 
 export interface AppOptions {
@@ -252,7 +261,7 @@ export interface App {
   jobs: DefaultJobs;
   /** Search over the app's own Postgres. Every call reads and writes only the documents of ctx.tenantId. */
   search: DefaultSearch;
-${orgs ? ORGANIZATIONS_APP_FIELD : ''}  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
+${WIRING_APP_FIELDS}${orgs ? ORGANIZATIONS_APP_FIELD : ''}  /** Connects, starts the job worker and listens. Resolves to the address it listens on. */
   start(): Promise<string>;
   /** Stops listening, then closes the worker and the connections. */
   stop(): Promise<void>;
@@ -260,7 +269,7 @@ ${orgs ? ORGANIZATIONS_APP_FIELD : ''}  /** Connects, starts the job worker and 
 
 /** The composition root: builds everything the app is made of. main.ts starts it; so do the end-to-end tests. */
 export async function createApp(options: AppOptions = {}): Promise<App> {
-  const { config, logger, tracer, metrics, container, lifecycle } = bootstrap(options.bootstrap);
+  const { config, secrets, logger, tracer, metrics, container, lifecycle } = bootstrap(options.bootstrap);
   const instrumentation = { logger, tracer, metrics };
   const app = useConfigSection<AppSettings>(APP_CONFIG);
 
@@ -314,11 +323,11 @@ ${ui ? UI_APP_CHECK : ''}
   // when its fields here have changed: they take effect when you reindex.
   lifecycle.startup.register({ name: 'search-indexes', priority: 30, fn: async () => void (await search.ensureIndexes(options.searchIndexes ?? searchIndexes)) });
 
+${WIRING_APP_EVENTS}
   // One communication layer per process: handlers register on it, controllers call through it.
   const communication = createCommunication({}, instrumentation);
   container.register(KEYS.Communication, communication);
-  registerServices(communication, { db: database.db, jobs, search });
-${orgs ? organizationsAppSetup('gotrue') : ''}
+${WIRING_APP_SERVICES}${orgs ? organizationsAppSetup('gotrue') : ''}
   // Sign-in is GoTrue's: its ES256 tokens are checked against its JWKS, issuer and audience.
   const provider = options.verifier ?? createGoTrueAuth(goTrueConfig(app.auth));
 ${orgs
@@ -343,7 +352,7 @@ ${ui ? UI_APP_STATIC : ''}    .withHealth(lifecycle.health)
     .withOpenApi({ info: { title: config.serviceName, version: '0.1.0' } });
   options.configureApi?.(api);
   for (const controller of createControllers(communication)) api.registerController(controller);
-
+${WIRING_APP_WEBHOOKS}
   let address = '';
   lifecycle.startup.register({
     name: 'api',
@@ -361,7 +370,7 @@ ${ui ? UI_APP_STATIC : ''}    .withHealth(lifecycle.health)
     database,
     jobs,
     search,
-${orgs ? '    organizations,\n' : ''}    start: async () => {
+${orgs ? '    organizations,\n' : ''}${WIRING_APP_RETURN}    start: async () => {
       await lifecycle.start();
       return address;
     },
@@ -1371,6 +1380,8 @@ ${e2e ? '| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and t
 | \`src/schema/\` | \`defineTable\` tables; \`mariachi db generate\` turns them into migrations |
 | \`src/jobs/\` | \`defineJob\` background jobs |
 | \`src/search/\` | The search indexes; services reach search as \`deps.search\` |
+| \`src/events/\` | \`defineEvent\` events and their subscribers; services publish through \`deps.outbox\` or \`deps.events\` |
+| \`src/webhooks/\` | Webhook controllers, served on \`WEBHOOK_PORT\`: signature checked, deduplicated, handed to a job |
 
 Postgres is the only service the app itself needs: jobs and search run in it
 (\`@mariachi/jobs/postgres\`, \`@mariachi/search/postgres\`). Don't add Redis or a search server to
@@ -1393,11 +1404,15 @@ ${e2e ? AGENTS_AUTH_TESTS : ''}## Sign-in, tenants and roles
 ## Generators
 
 \`\`\`bash
-pnpm mariachi generate entity <name>      # schema + repository + service + handler + controller + test
+pnpm mariachi generate entity <name> [--field title:string --field done:boolean]   # schema + repository + service + handler + controller + test
 pnpm mariachi generate service <name>
 pnpm mariachi generate controller <name>
 pnpm mariachi generate job <name>
 pnpm mariachi generate integration <name>
+pnpm mariachi generate procedure <service> <name>   # one more procedure on an existing service
+pnpm mariachi generate event <domain.thing.happened> [--subscriber <name>]
+pnpm mariachi generate subscriber <domain.thing.happened> <name>
+pnpm mariachi generate webhook <name>     # signed endpoint on WEBHOOK_PORT + the job it hands deliveries to
 pnpm validate                            # architecture rules; run before committing
 pnpm test && pnpm typecheck
 \`\`\`

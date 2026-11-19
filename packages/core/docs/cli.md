@@ -91,9 +91,15 @@ look with no code change. The app won't start without a kit in `src/design/`
 
 ```bash
 mariachi generate entity invoice-item     # alias: mariachi g
+mariachi generate entity task --field title:string --field done:boolean --field due_at:timestamp:optional
+mariachi generate entity cactus --plural cacti
 mariachi generate service billing-report
+mariachi generate procedure billing-report summarize-month
 mariachi generate controller billing-report
 mariachi generate job send-digest
+mariachi generate event billing.invoice.paid --subscriber send-receipt
+mariachi generate subscriber billing.invoice.paid audit-payment
+mariachi generate webhook acme
 mariachi generate integration acme
 ```
 
@@ -101,8 +107,12 @@ mariachi generate integration acme
 | --- | --- | --- |
 | `entity` | `schema/<plural>.ts`, `contracts/<plural>.ts`, `services/<plural>/{repository,service,handler,service.test}.ts`, `api/controllers/<plural>.controller.ts` with CRUD + cursor pagination, and `api/controllers/<plural>.e2e.test.ts` | `schema/index.ts`, `services/index.ts`, `api/controllers/index.ts` |
 | `service` | `contracts/<name>.ts` with an `<name>.execute` procedure, service, handler, test | `services/index.ts` |
+| `procedure <service> <name>` | On a service that exists: the input and output schemas and the `Procedures` entry, appended to its contract; a method on the service; `services/<service>/<service>.<name>.test.ts`, which calls it through communication | the service's `register…Handlers()` |
 | `controller` | `api/controllers/<name>.controller.ts`; reuses `contracts/<name>.ts` if it exists | `api/controllers/index.ts` |
 | `job` | `jobs/<name>.job.ts` (`defineJob` with schema, retry, timeout) | `jobs/index.ts` |
+| `event <name>` | `events/<name>.event.ts` (`defineEvent` with a Zod payload, and how to publish it) and its test. `--subscriber [name]` adds a subscriber too | none (`subscriber` registers) |
+| `subscriber <event> [name]` | `events/subscribers/<name>.subscriber.ts` and its test. The name defaults to `on-<event>` | `events/index.ts` |
+| `webhook` | `webhooks/<name>.controller.ts` (signature, Zod, dedup, handed to a job), its test, `contracts/<name>-webhook.ts` and `jobs/<name>-webhook.job.ts`; `schema/webhooks.ts` with the first one | `webhooks/index.ts`, `jobs/index.ts`, `schema/index.ts`, `.env.example` |
 | `integration` | `integrations/<name>/client.ts` (timeouts, retries on transient status codes, `IntegrationError`) and a test | none; construct it in `app.ts` |
 | `seed` | `seeds/<name>.seed.ts` (`defineSeed`, run once per database by `mariachi db seed`) | `seeds/index.ts` |
 | `page` | `api/pages/<name>.ts` (the page, as `html` in the project's layout) and a test. Needs a project made with `--ui` | `api/controllers/pages.controller.ts` (its route at `/<name>`) and `api/pages/layout.ts` (its link in the bar) |
@@ -111,6 +121,47 @@ Names can be kebab, camel or Pascal case (`invoice-item`, `invoiceItem`, `Invoic
 never overwrite files without `--force`: if any target exists, nothing is written. Registry files are
 edited by inserting above the `// mariachi:<kind>` marker comments, so keep those comments.
 `--project-root <dir>` targets another directory.
+
+**Entity fields.** `--field <name>:<type>`, repeated, gives the entity its columns, in the table, the
+contract, the service and both tests. Types: `string` (text, 1 to 200 characters on create), `text`,
+`integer`, `number`, `boolean`, `timestamp`, `date` (`YYYY-MM-DD`), `uuid`. A `?` after the type, or
+`:optional` (which needs no quoting in a shell), makes the column nullable and optional on create:
+`--field 'due_at:timestamp?'`. Names may be snake or kebab case; they become camelCase keys and
+snake_case columns. `id`, `tenantId`, `createdAt`, `updatedAt` and `deletedAt` are every entity's
+already. With no `--field`, the entity has a `name`.
+
+**Plurals** name the table, the routes and the procedures: `person` → `people`, `category` →
+`categories`, `analysis` → `analyses`, `leaf` → `leaves`, `sheep` → `sheep`, and so on for the
+common irregular and uncountable words and the `-y`, `-is`, `-s`, `-x`, `-z`, `-ch` and `-sh`
+endings. `--plural <word>` overrides them.
+
+**Procedures.** `<service>` is the service's folder in `src/services` (`billing-report`, `notes`) or an
+entity's singular (`note`); the procedure is `<service in camel case>.<name in camel case>`
+(`billingReport.summarizeMonth`, `notes.archive`). It is refused, naming the services there are,
+when the service doesn't exist, and when the procedure or the method does. In a service written
+before the `mariachi:procedures` markers, the method and its registration go at the end of the class
+and of `register…Handlers()`. To call it over HTTP, add a route to a controller.
+
+**Events** are named lowercase and dot-separated, domain first (`billing.invoice.paid`), as
+`mariachi validate` checks. A new project has them set up in `src/app.ts`: an in-process bus, and an
+outbox in Postgres (`src/schema/events.ts`) relayed to it, so `outbox.add(ctx, event, payload)` inside
+`withTransaction` sends the event only if the change commits, at least once. Services get `events`
+and `outbox` in their `deps`; subscribers get `communication` and `jobs`, to hand work on with the
+event's `ctx`. See [events.md](./events.md).
+
+**Webhooks** are received the way the [webhook recipe](./recipes/add-webhook-endpoint.md) does it: a
+`WebhookController` on the app's `WebhookServer` (`src/webhooks/index.ts`), on its own port
+(`WEBHOOK_PORT`, default 3002) under `/webhooks`, so the API's sign-in and limits never apply to it.
+The generated one checks the Standard Webhooks signature over the raw body (swap the authenticator
+for GitHub, Stripe or a plain HMAC), parses the body with its Zod contract (400 on a bad one),
+answers a redelivery as a duplicate from the `auth_webhook_dedup` table, and enqueues the
+`<name>-webhook` job (202). Its secret is `<NAME>_WEBHOOK_SECRET` (`whsec_…`); without it the webhook
+is off with a warning, except in production, where the app refuses to start. No webhook server
+starts while there are none. Run `mariachi db generate` after the first.
+
+A project made before events and webhooks came with it gets the registries and tables from the
+first `generate event` or `generate webhook`, the package in `package.json`, and a note saying what
+to add to its `src/app.ts`.
 
 ## dev
 

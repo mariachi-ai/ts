@@ -15,6 +15,36 @@ POST /webhooks/github/events
 Prefer `queue` mode for anything slower than a few hundred milliseconds or anything that calls other
 APIs. Providers time out and retry quickly; the job gives you your own retries and a dead-letter queue.
 
+## 0. Generate it
+
+```bash
+mariachi generate webhook acme
+```
+
+In a project made by `mariachi init`, this writes all of the steps below for a sender that signs with
+Standard Webhooks, and registers them:
+
+| File | What it is |
+| --- | --- |
+| `src/webhooks/acme.controller.ts` | `POST /webhooks/acme/events`: `StandardWebhookAuth`, the body parsed with Zod, queue mode |
+| `src/contracts/acme-webhook.ts` | the body's schema and the job's |
+| `src/jobs/acme-webhook.job.ts` | the job the delivery is handed to, listed in `src/jobs/index.ts` |
+| `src/webhooks/acme.controller.test.ts` | signed, wrongly signed and unsigned deliveries, a redelivery, a bad body |
+| `src/webhooks/index.ts` | the `WebhookServer` (on `WEBHOOK_PORT`, deduplicating in Postgres) and its controllers |
+| `src/schema/webhooks.ts` | the dedup table (with the first webhook: run `mariachi db generate`) |
+
+Set `ACME_WEBHOOK_SECRET`. Without it the webhook is off, with a warning, except in production, which
+won't start. For GitHub, Stripe or a plain HMAC, change the authenticator in the controller (below).
+
+**Why this way.** The framework has more than one way to take a signed call: this one
+(`WebhookServer` with a `WebhookController`), a signature strategy on the API facade, the auth
+providers' webhook dispatcher, the billing package's Stripe handler and `defineWebhookHandler` in
+integrations. The last three each serve one source (identity providers, Stripe billing, one
+integration) and the facade strategy puts deliveries behind the API's sign-in, limits and body size.
+For an app's own endpoint, `WebhookServer` is the one that does everything a webhook needs in one
+place: raw-body verification, dedup that survives a restart, a log with secrets redacted, and the
+hand-off to a job or a procedure, on a port of its own.
+
 ## 1. Verify the signature
 
 `@mariachi/webhooks` ships the common schemes, so there's usually no class to write:
