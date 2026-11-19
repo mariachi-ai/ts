@@ -11,6 +11,8 @@ interface ErrorClass {
   /** Set when the constructor calls `super('<literal code>', …)`: the code is fixed, args shift. */
   fixedCode: string | undefined;
   hasConstructor: boolean;
+  /** Extends `Error` itself and takes `code` first: an error root of its own, shaped like MariachiError (the design packages' errors, which install nothing of the framework). */
+  codeRoot?: boolean;
 }
 
 export interface ScanResult {
@@ -58,7 +60,9 @@ function collectClasses(files: { file: string; sf: ts.SourceFile }[]): Map<strin
           if (ts.isCallExpression(n) && n.expression.kind === ts.SyntaxKind.SuperKeyword) fixedCode ??= literalOf(n.arguments[0]);
           n.forEachChild(find);
         });
-        classes.set(node.name.text, { base, fixedCode, hasConstructor: ctor !== undefined });
+        const first = ctor?.parameters[0]?.name;
+        const codeRoot = base === 'Error' && !!first && ts.isIdentifier(first) && first.text === 'code';
+        classes.set(node.name.text, { base, fixedCode, hasConstructor: ctor !== undefined, codeRoot });
       }
       ts.forEachChild(node, visit);
     });
@@ -66,9 +70,9 @@ function collectClasses(files: { file: string; sf: ts.SourceFile }[]): Map<strin
   return classes;
 }
 
-/** True when `name` is MariachiError or extends it, directly or through other classes. */
+/** True when `name` is MariachiError or a code-first root like it, or extends one, directly or through other classes. */
 function isErrorClass(name: string, classes: Map<string, ErrorClass>, seen = new Set<string>()): boolean {
-  if (name === 'MariachiError') return true;
+  if (name === 'MariachiError' || classes.get(name)?.codeRoot) return true;
   if (seen.has(name)) return false;
   seen.add(name);
   const base = classes.get(name)?.base;
@@ -78,7 +82,7 @@ function isErrorClass(name: string, classes: Map<string, ErrorClass>, seen = new
 /** The fixed code a class always uses, following classes without their own constructor. */
 function fixedCodeOf(name: string, classes: Map<string, ErrorClass>): string | undefined {
   const c = classes.get(name);
-  if (!c || name === 'MariachiError') return undefined;
+  if (!c || name === 'MariachiError' || c.codeRoot) return undefined;
   if (c.hasConstructor) return c.fixedCode;
   return c.base ? fixedCodeOf(c.base, classes) : undefined;
 }
@@ -93,8 +97,8 @@ function httpStatus(code: string): number | null {
 }
 
 /**
- * Finds every `new <X>Error(...)` where X extends MariachiError (directly or through other
- * classes) in the given files. `packageName` is reported as the error's package.
+ * Finds every `new <X>Error(...)` where X extends MariachiError, or a code-first error root shaped like it
+ * (directly or through other classes), in the given files. `packageName` is reported as the error's package.
  */
 export function scanErrors(sources: { file: string; packageName: string }[]): ScanResult {
   const files = sources.map(({ file, packageName }) => ({

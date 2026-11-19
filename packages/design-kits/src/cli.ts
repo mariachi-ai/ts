@@ -1,6 +1,5 @@
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { MariachiError } from '@mariachi/core/errors';
 import { addKit, type KitChanges } from './add';
 import { DesignKitsError } from './errors';
 import { formatAddResult, formatChanges, formatKitList } from './format';
@@ -46,7 +45,7 @@ export function runAdd(id: string, opts: AddCommandOptions, io: CliIO): number {
     else for (const line of formatAddResult(result, io.cwd)) io.out(line);
     return 0;
   } catch (error) {
-    if (!(error instanceof MariachiError)) throw error;
+    if (!(error instanceof DesignKitsError)) throw error;
     if (opts.json) io.out(JSON.stringify({ error: { code: error.code, message: error.message, ...error.metadata } }, null, 2));
     else {
       io.err(`error ${error.message}`);
@@ -106,7 +105,7 @@ export function run(argv: string[], io: CliIO): number {
     }
     throw new DesignKitsError('design-kits/usage', command === 'add' ? 'add takes one kit id' : `Unknown command "${command}"`);
   } catch (error) {
-    if (!(error instanceof MariachiError)) throw error;
+    if (!(error instanceof DesignKitsError)) throw error;
     io.err(`error ${error.message}`);
     if (error.code === 'design-kits/usage') for (const line of USAGE) io.err(line);
     return error.code === 'design-kits/usage' ? 2 : 1;

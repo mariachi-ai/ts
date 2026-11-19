@@ -7,6 +7,8 @@ one thing is one line. Status: **alpha**. Browse every component and preset in t
 
 ## Use it
 
+The design packages (`@mariachi/design`, `@mariachi/design-kits` and `@mariachi/motion`) install nothing of the backend framework: a site or app can use them on their own. Their errors (`DesignError`, `DesignKitsError`) have the same shape as `MariachiError` (a stable `code`, a message, optional `metadata`), but aren't subclasses of it.
+
 ```html
 <link rel="stylesheet" href="node_modules/@mariachi/design/dist/css/mariachi.css">
 <link rel="stylesheet" href="node_modules/@mariachi/design/dist/css/themes/minimal.css">
