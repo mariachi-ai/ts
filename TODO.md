@@ -13,12 +13,17 @@ None of this exists in code. Don't generate code that uses it.
 
 As of 2026-11-19. These need a decision or an action only the maintainer can take.
 
-- **The next release.** Six changes are merged and unreleased. Their changesets are minor, so the
-  release computes as 0.2.0; say the version and it is published from a maintainer's machine.
+- **The next release.** Nine changes are merged and unreleased. The largest changesets are minor, so
+  the release computes as 0.2.0; say the version and it is published from a maintainer's machine.
   - Vendor SDKs become optional peers: an app adds the SDKs it uses to its own dependencies.
   - Billing: settling stale usage (an app generates a migration for four new columns).
   - `bootstrap` uses an OpenTelemetry SDK that is already registered.
   - The design library's phase A, display faces in kits, and the Tally language.
+  - `mariachi design reference <name>`, with the component CSS and patterns packed in
+    `@mariachi/design-kits`.
+  - The design packages no longer depend on `@mariachi/core` (their errors extend `Error`, not
+    `MariachiError`).
+  - `mariachi doctor`'s Redis hint and `db seed`'s remote-host check are fixed.
 - **Pull requests to review or merge:**
   - #103, design kits refuse to publish without one clean commit. Waiting on a security review.
   - #109, the integrations plan.
@@ -153,9 +158,6 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
 
 ### Design and explorer
 
-- `mariachi design reference <name> [--kit <id>]`, with the component catalogs shipped in
-  `@mariachi/design-kits`. **Do this first:** every kit's headers and `DESIGN.md` already tell the
-  reader to run it, and the command doesn't exist.
 - The explorer's visual test of a package page should not depend on what the package exports.
 
 ### This repository
