@@ -56,6 +56,7 @@
     "@mariachi/database": "workspace:*",
     "@mariachi/database-postgres": "workspace:*",
     "@mariachi/design": "workspace:*",
+    "@mariachi/design-kits": "workspace:*",
     "@mariachi/jobs": "workspace:*",
     "@mariachi/lifecycle": "workspace:*",
     "@mariachi/notifications": "workspace:*",

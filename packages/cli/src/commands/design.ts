@@ -7,7 +7,7 @@ import { DIM, GREEN, RED, RESET, YELLOW } from '../colors';
 import { fail } from '../output';
 
 type DesignBuild = typeof import('@mariachi/design/build');
-type DesignKits = typeof import('@mariachi/design-kits');
+export type DesignKits = typeof import('@mariachi/design-kits');
 
 const CONFIG_NAMES = ['mariachi.design.ts', 'mariachi.design.mts', 'mariachi.design.js', 'mariachi.design.mjs'];
 
@@ -64,6 +64,9 @@ const optional = async <T>(load: () => Promise<T>): Promise<T | undefined> => {
     throw err;
   }
 };
+
+/** `@mariachi/design-kits`, or undefined when it isn't installed (`init --ui` then copies the kit with npx). */
+export const optionalDesignKits = (): Promise<DesignKits | undefined> => optional(designKits);
 
 function printCheck(check: Awaited<ReturnType<DesignBuild['buildDesign']>>['check'], format: DesignBuild['formatContrastFailure']): void {
   const passed = check.results.length - check.failures.length;

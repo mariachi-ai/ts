@@ -13,6 +13,7 @@ export { names, pluralize, type Names } from './names';
 export { LAYOUT, MARKERS } from './layout';
 export { MARIACHI_VERSION } from './version';
 export { PROJECT_AUTH } from './types';
+export { DEFAULT_KIT, DESIGN_KIT_DIR } from './templates/ui';
 
 export type {
   ProjectAuth,

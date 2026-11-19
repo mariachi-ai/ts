@@ -770,6 +770,9 @@ importers:
       '@mariachi/design':
         specifier: workspace:*
         version: link:../design
+      '@mariachi/design-kits':
+        specifier: workspace:*
+        version: link:../design-kits
       '@mariachi/jobs':
         specifier: workspace:*
         version: link:../jobs

@@ -9,14 +9,43 @@ Check the code again before starting one: some will have moved.
 
 None of this exists in code. Don't generate code that uses it.
 
-## Next release (0.2.0)
+## Waiting on the maintainer
+
+As of 2026-11-19. These need a decision or an action only the maintainer can take.
+
+- **The next release.** Nine changes are merged and unreleased. The largest changesets are minor, so
+  the release computes as 0.2.0; say the version and it is published from a maintainer's machine.
+  - Vendor SDKs become optional peers: an app adds the SDKs it uses to its own dependencies.
+  - Billing: settling stale usage (an app generates a migration for four new columns).
+  - `bootstrap` uses an OpenTelemetry SDK that is already registered.
+  - The design library's phase A, display faces in kits, and the Tally language.
+  - `mariachi design reference <name>`, with the component CSS and patterns packed in
+    `@mariachi/design-kits`.
+  - The design packages no longer depend on `@mariachi/core` (their errors extend `Error`, not
+    `MariachiError`).
+  - `mariachi doctor`'s Redis hint and `db seed`'s remote-host check are fixed.
+- **Pull requests to review or merge:**
+  - #103, design kits refuse to publish without one clean commit. Waiting on a security review.
+  - #109, the integrations plan.
+- **Go on the integrations plan** ([`plans/integrations.md`](plans/integrations.md) once #109 is in).
+  Nothing in it is built until then.
+- **`.pnpm-store/` is tracked in git:** 20,800 files of a package manager's cache, although
+  `.gitignore` lists the folder. Untracking them (`git rm -r --cached .pnpm-store`) is safe and makes
+  every clone smaller.
+- **Automated publishing**, when wanted: the repository and npm settings listed at the top of
+  `.github/workflows/publish.yml`. Until then releases are made by hand.
+- **Sandbox accounts** with each provider, for the integrations' one-off checks, when that work starts.
+
+## Next
+
+Not built yet; the release that carries it is decided when it is ready.
 
 The goal: `mariachi init` gives a working multi-user app with nothing else to install.
 
 Built for it already: organizations with a request check, invitation emails and `init --orgs`; a
 generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi token`; pages
-(`init --ui`, `generate page`) with static files and an escaping `html` template; `mariachi docs` and
-`llms.txt`; cron schedules in the in-memory job queue. What is left:
+(`init --ui`, `generate page`) with static files, an escaping `html` template and a design kit the
+project owns; `mariachi docs` and `llms.txt`; cron schedules in the in-memory job queue. What is left:
 
 1. **Sign-in a person can use in a new project.**
    - A local GoTrue in the `--auth gotrue` project's Compose file, so its sign-in page works with no
@@ -25,24 +54,17 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
      through sign-in and back, then posts the token. `INVITATION_URL` can then have a default.
    - A browser sign-in for the default (`--auth jwt`) project, or a decision that it has none. Its
      pages can show only public content today.
-2. **Design kits in a generated project.** After the kits package lands: `init --ui` copies a kit into
+2. **Design kits in a generated project.** `init --ui` copies a kit into
    `src/design`, serves it under `/assets/design` and links its imports, and token overrides move to
    `src/design.css`. Serve `@mariachi/design/behaviors` and a kit's `motion.js` from `/assets`.
 3. **What an agent reads and runs.**
    - Listing routes, procedures and jobs from the CLI.
-   - Generators for an event and its subscriber, a webhook endpoint, a procedure on an existing
-     service and a seed. The entity generator's fixed `name` column and naive plurals.
+   - Generators for an event and its subscriber, a webhook endpoint and a procedure on an existing
+     service. The entity generator's fixed `name` column and naive plurals.
    - `mariachi validate` checking `ctx` first, Zod at boundaries and procedure names, not only imports.
      A `lint` script in generated projects.
    - The example entity indexed for search, as a worked example of `deps.search`.
 4. **Small fixes.**
-   - Settling usage records that were never forwarded and are past the resend window. Agreed shape:
-     `listStaleUsage` (an operator call, across tenants) and `settleStaleUsage` with an outcome of
-     `provider-has-it` or `written-off` (a note required), kept in new columns (`settlement`,
-     `settled_at`, `settled_by`, `settlement_note`). The usage stays in the totals; `forwarded_at`
-     stays the provider's own confirmation; `summarizeUsage` gains `only: 'billed' | 'written-off'`.
-     Only records past the window can be settled, the same outcome twice does nothing, and a
-     different one is refused.
    - A rate limiter in Postgres, so a project with organizations and several processes shares its
      limits without Redis.
 
@@ -134,13 +156,10 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
 
 ### Design and explorer
 
-- `mariachi design reference <name> [--kit <id>]`, with the component catalogs shipped in
-  `@mariachi/design-kits`.
 - The explorer's visual test of a package page should not depend on what the package exports.
 
 ### This repository
 
-- The Release workflow can't open its pull request: "GitHub Actions is not permitted to create or
-  approve pull requests" is a repository setting. Until it is changed, a release is made by hand.
-- No `package.json` has a `repository` field.
+- The Release workflow needs repository and npm settings before it can publish (see "Waiting on the
+  maintainer"). Until then a release is made by hand.
 - `apps/` and `examples/` are stale; see "Reference app" in the roadmap.
