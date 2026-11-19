@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { addKit } from '../src/add';
 import { snapshot, tmp } from '../src/fixture';
 import { packKits } from '../src/pack';
+import { designReference, openReferenceSource, referenceList } from '../src/reference';
 import { openKitStore } from '../src/store';
 
 // The kits @mariachi/design's build wrote (turbo builds it before these tests), packed the way this package ships them
@@ -68,6 +69,39 @@ describe("@mariachi/design's kits, packed", () => {
     for (const file of linen.motion?.files ?? []) expect(shared.has(linen.files[file] as string), file).toBe(true);
     for (const id of store.list().map((k) => k.id)) {
       expect(fs.existsSync(path.join(root, 'kits', id, 'motion')), id).toBe(false);
+    }
+  });
+});
+
+describe('design reference, from the real build', () => {
+  // The catalog and the reference laid out beside the packed kits, as scripts/pack.mjs does
+  const design = path.dirname(built);
+  fs.copyFileSync(path.join(design, 'catalog.json'), path.join(root, 'catalog.json'));
+  fs.mkdirSync(path.join(root, 'reference', 'components'), { recursive: true });
+  fs.mkdirSync(path.join(root, 'reference', 'patterns'), { recursive: true });
+  for (const f of fs.readdirSync(path.join(design, 'css', 'components'))) fs.copyFileSync(path.join(design, 'css', 'components', f), path.join(root, 'reference', 'components', f));
+  for (const id of fs.readdirSync(path.join(design, 'archetypes'))) {
+    const showcase = path.join(design, 'archetypes', id, 'showcase.json');
+    if (fs.existsSync(showcase)) fs.copyFileSync(showcase, path.join(root, 'reference', 'patterns', `${id}.json`));
+  }
+  const source = openReferenceSource(root, store);
+
+  it('answers every component in every kit, with its CSS', () => {
+    const components = source.components();
+    expect(components.length).toBeGreaterThanOrEqual(30);
+    for (const { id } of store.list()) {
+      for (const c of components) {
+        const answer = designReference(c.name, id, source);
+        expect(answer.found, `${c.name} in ${id}`).toBe('component');
+        expect(answer.markdown, `${c.name} in ${id}`).not.toContain('(No CSS file for it in this build.)');
+      }
+    }
+  });
+
+  it("finds each language's own notes on its buttons, and lists its named patterns", () => {
+    for (const lang of source.languages()) {
+      expect(designReference('button', lang.id, source).markdown, lang.id).not.toContain("DESIGN.md has no entry for Button");
+      expect(referenceList(lang.id, source), lang.id).toContain('## Patterns in this language');
     }
   });
 });
