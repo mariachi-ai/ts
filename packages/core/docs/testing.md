@@ -147,5 +147,5 @@ Testcontainers there. CI shares one database across packages, so tests should us
 keys (`crypto.randomUUID()`) instead of assuming empty tables.
 
 The domain packages that talk to infrastructure all have one: billing, notifications, ai, audit
-and auth (Postgres), config feature flags (Postgres), rate-limit (Redis), search (Typesense) and
+and auth (Postgres), config feature flags (Postgres), rate-limit (Redis and Postgres, one contract), search (Typesense) and
 storage (MinIO).

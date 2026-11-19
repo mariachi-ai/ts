@@ -262,8 +262,56 @@ Each rule picks an `algorithm`:
 | `fixed-window` | One counter per window; up to 2× the limit across a boundary. Cheapest. | High-volume, coarse limits. |
 | `token-bucket` | `maxRequests` tokens refilled evenly over `windowMs`; bursts up to the bucket size. | Smooth per-client throughput. |
 
-`cost` weights a request (an export can cost 10). The Redis limiter runs each check as one Lua
-script using Redis server time, so every instance shares one budget whatever its clock says.
+`cost` weights a request (an export can cost 10).
+
+### Where the counts live
+
+`createRateLimiter({ adapter, ... })` picks the store. All three give the same answers to the same
+checks; the shared ones are tested against one contract.
+
+| `adapter` | Shared by | Needs |
+| --- | --- | --- |
+| `memory` | this process only | nothing. Development, tests, and an app that runs one process |
+| `redis` | every process | `url` (`REDIS_URL`) or `client`, and `ioredis` installed |
+| `postgres` | every process on the same database | `db` (the app's database) and the `rate_limit_buckets` table |
+
+`RATE_LIMIT_ADAPTER` (`config.rateLimit.adapter`) names one, so a deployment can switch without a
+code change:
+
+```ts
+const limiter = createRateLimiter({
+  adapter: config.rateLimit?.adapter ?? (config.redis ? 'redis' : 'postgres'),
+  url: config.redis?.url,
+  db: database.db,
+  prefix: `${config.serviceName}:rate-limit`,
+});
+```
+
+The Redis limiter runs each check as one Lua script using Redis server time, so every instance
+shares one budget whatever its clock says.
+
+The Postgres limiter keeps one row per key in `rate_limit_buckets`. Add the table to your schema and
+generate a migration (`mariachi db generate`):
+
+```ts
+// src/schema/rate-limits.ts
+export { rateLimitBucketsTable } from '@mariachi/rate-limit/schema';
+```
+
+- **One statement per check.** Each check is an `INSERT … ON CONFLICT (key) DO UPDATE … RETURNING`
+  with the whole algorithm in it. Postgres locks the key's row and evaluates the update against its
+  newest version, so concurrent checks from any number of processes are applied one at a time: no
+  lost counts, no transaction, one round trip, and it works behind a transaction-pooling proxy.
+  Pass the database, not a transaction: a check commits on its own.
+- **Database time.** The statement reads the database server's clock, as the Redis limiter reads
+  Redis's, and a key's clock never moves backwards.
+- **Cleanup without a cron.** A key in use rewrites its own row. Rows of keys that went quiet are
+  deleted by `sweep()`, which each process starts in the background from a check at most once a
+  minute (`sweepIntervalMs`; 0 turns it off), in batches, skipping rows a check holds.
+- **Cost.** A sliding window keeps the admitted requests of the window in the row (at most
+  `maxRequests` entries), so for limits in the thousands per window prefer `fixed-window` or
+  `token-bucket`, which keep two numbers. Every check is a write: for very hot keys (thousands of
+  checks a second on one key), Redis is the better store.
 
 For quotas outside HTTP (jobs, AI calls, exports), use `DefaultRateLimiting` from
 `@mariachi/rate-limit` with named tiers:

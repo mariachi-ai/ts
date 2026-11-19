@@ -45,8 +45,6 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
      stays the provider's own confirmation; `summarizeUsage` gains `only: 'billed' | 'written-off'`.
      Only records past the window can be settled, the same outcome twice does nothing, and a
      different one is refused.
-   - A rate limiter in Postgres, so a project with organizations and several processes shares its
-     limits without Redis.
 
 ## Later
 

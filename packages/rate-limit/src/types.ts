@@ -1,11 +1,26 @@
 import type { Context } from '@mariachi/core';
+import type { SQL } from 'drizzle-orm';
 import type Redis from 'ioredis';
 
+/** Runs one SQL statement: the app's Drizzle database (`createPostgresDatabase(...).db`) is one. */
+export interface SqlExecutor {
+  execute(query: SQL): PromiseLike<unknown>;
+}
+
 export interface RateLimitConfig {
-  adapter: 'redis' | 'memory' | (string & {});
+  adapter: 'redis' | 'postgres' | 'memory' | (string & {});
+  /** Redis URL, for `adapter: 'redis'`. */
   url?: string;
-  /** Reuse an existing ioredis client. */
+  /** Reuse an existing ioredis client, for `adapter: 'redis'`. */
   client?: Redis;
+  /** The app's database, for `adapter: 'postgres'`. Its schema needs `rateLimitBucketsTable` (`@mariachi/rate-limit/schema`). */
+  db?: SqlExecutor;
+  /**
+   * `adapter: 'postgres'`: how often each process deletes rows whose windows have passed, in ms.
+   * Default 60 000; 0 turns it off (call `sweep()` yourself).
+   */
+  sweepIntervalMs?: number;
+  /** Key prefix, default `ratelimit`. */
   prefix?: string;
 }
 

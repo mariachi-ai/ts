@@ -43,6 +43,7 @@ fail the boot with `ConfigError`.
 | `DATABASE_URL`, `DATABASE_POOL_MAX` | Postgres, and the most connections the pool opens | none, 10 |
 | `DATABASE_POOL_MIN` | Not used: the driver opens connections on demand and closes idle ones. Kept so existing environments still load | 2 |
 | `REDIS_URL` | Redis for cache, jobs, events, rate limits, realtime | none |
+| `RATE_LIMIT_ADAPTER` | where `createRateLimiter` counts: `memory`, `redis` or `postgres` (the `rate_limit_buckets` table) | the app chooses |
 | `JWT_SECRET`, `JWT_ISSUER`, `JWT_AUDIENCE`, `JWT_EXPIRES_IN`, `SESSION_SECRET` | auth (secrets are at least 32 chars) | none, `1h` for expiry |
 | `ENCRYPTION_ADAPTER`, `ENCRYPTION_KEY`, `ENCRYPTION_KEY_VERSION` | encryption: the local key and which generation it is (its key id) | `local`, none, 1 |
 | `ENCRYPTION_KMS_KEY_ID` | the KMS key that wraps data keys, for `aws-kms` or `gcp-kms` | none |
