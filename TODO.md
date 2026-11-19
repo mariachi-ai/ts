@@ -61,8 +61,6 @@ project owns; `mariachi docs` and `llms.txt`; cron schedules in the in-memory jo
    - Listing routes, procedures and jobs from the CLI.
    - Generators for an event and its subscriber, a webhook endpoint and a procedure on an existing
      service. The entity generator's fixed `name` column and naive plurals.
-   - `mariachi validate` checking `ctx` first, Zod at boundaries and procedure names, not only imports.
-     A `lint` script in generated projects.
    - The example entity indexed for search, as a worked example of `deps.search`.
 3. **Small fixes.**
    - FusionAuth's three `IdentityClient` methods that throw `auth/not-supported` (resetting a password

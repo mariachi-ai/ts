@@ -76,6 +76,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
       'test:watch': 'vitest',
       ...(e2e ? { 'test:e2e': 'vitest run --config vitest.e2e.config.ts' } : {}),
       validate: 'mariachi validate',
+      lint: 'mariachi validate && tsc --noEmit',
       'db:generate': 'mariachi db generate',
       'db:check': 'mariachi db check',
       'db:migrate': 'mariachi db migrate',
@@ -387,7 +388,7 @@ pnpm mariachi generate service <name>
 pnpm mariachi generate controller <name>
 pnpm mariachi generate job <name>
 pnpm mariachi generate integration <name>
-pnpm validate                            # architecture rules; run before committing
+pnpm lint                                # mariachi validate (layers, ctx first, Zod at boundaries, procedure names) + tsc; run before committing
 \`\`\`
 ${e2e ? AGENTS_TESTS : ''}`;
 
@@ -439,6 +440,12 @@ In production the tokens come from wherever your users sign in: an identity prov
 - **Search** is in Postgres too, and tenant-scoped: declare an index in \`src/search/index.ts\`, then
   \`deps.search.indexDocument(ctx, …)\` and \`deps.search.search(ctx, …)\` in a service. A call sees
   only the documents of \`ctx.tenantId\`.
+
+## Checks
+
+\`pnpm lint\` runs \`mariachi validate\` (layers, \`ctx\` first, Zod at boundaries, procedure names; each
+finding names the file, the line, the rule and the fix) and \`tsc --noEmit\`. Run it before committing
+and in CI.
 ${e2e ? README_TESTS : ''}`;
 
 const MAIN_TS = `import { createApp } from './app';

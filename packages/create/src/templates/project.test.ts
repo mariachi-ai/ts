@@ -12,6 +12,21 @@ const files = projectFiles('acme-app', '^0.1.0');
 const gotrue = projectFiles('acme-app', '^0.1.0', 'gotrue');
 const pkg = JSON.parse(files['package.json'] as string);
 
+describe('the generated project checks itself', () => {
+  it("has a lint script, mariachi validate then tsc, with no linter of its own to install", () => {
+    expect(pkg.scripts.lint).toBe('mariachi validate && tsc --noEmit');
+    expect(pkg.devDependencies).toMatchObject({ '@mariachi/cli': '^0.1.0', typescript: expect.any(String) });
+    expect(Object.keys(pkg.devDependencies)).not.toEqual(expect.arrayContaining([expect.stringMatching(/eslint|biome/)]));
+  });
+
+  it('tells people and agents to run it', () => {
+    for (const set of [files, gotrue]) {
+      expect(set['README.md']).toContain('`pnpm lint` runs `mariachi validate`');
+      expect(set['AGENTS.md']).toMatch(/pnpm lint +# mariachi validate \(layers, ctx first, Zod at boundaries, procedure names\) \+ tsc/);
+    }
+  });
+});
+
 describe('the generated project can be started from a test', () => {
   it('builds the app in app.ts and only starts it in main.ts', () => {
     const main = files['src/main.ts'] as string;

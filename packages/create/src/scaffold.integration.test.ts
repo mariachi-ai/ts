@@ -1,5 +1,5 @@
 import { execFile, spawn } from 'node:child_process';
-import { readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { type AddressInfo, createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
@@ -30,6 +30,35 @@ async function sh(bin: string, args: string[], cwd = project) {
   } catch (error) {
     const e = error as { stdout?: string; stderr?: string };
     throw new Error(`${bin} failed:\n${e.stdout ?? ''}\n${e.stderr ?? ''}`); // mariachi-lint-ignore
+  }
+}
+
+/**
+ * Runs the project's own `lint` script as `pnpm lint` would: `mariachi` is this repo's CLI and `tsc`
+ * the TypeScript this package resolves, put first on the PATH.
+ */
+async function lint(cwd: string): Promise<string> {
+  const script = JSON.parse(await readFile(join(cwd, 'package.json'), 'utf-8')).scripts.lint as string;
+  const bin = join(cwd, '.lint-bin');
+  await mkdir(bin, { recursive: true });
+  const shim = async (name: string, target: string) => {
+    await writeFile(join(bin, name), `#!/bin/sh\nexec "${process.execPath}" "${target}" "$@"\n`);
+    await chmod(join(bin, name), 0o755);
+  };
+  await shim('mariachi', resolve(pkgRoot, '../cli/dist/index.js'));
+  await shim('tsc', join(pkgRoot, 'node_modules/typescript/bin/tsc'));
+  try {
+    const { stdout } = await run('sh', ['-c', script], {
+      cwd,
+      maxBuffer: 16 * 1024 * 1024,
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH ?? ''}`, FORCE_COLOR: '0', NO_COLOR: '1' },
+    });
+    return stdout;
+  } catch (error) {
+    const e = error as { stdout?: string; stderr?: string };
+    throw new Error(`lint failed:\n${e.stdout ?? ''}\n${e.stderr ?? ''}`); // mariachi-lint-ignore
+  } finally {
+    await rm(bin, { recursive: true, force: true });
   }
 }
 
@@ -217,11 +246,40 @@ describe('generated project', () => {
     expect({ status, output }).toMatchObject({ status: 200 });
   }, 180_000);
 
-  it('passes mariachi validate with no findings', async () => {
+  it('passes mariachi validate and its lint script; the controller generated without its service is the one warning', async () => {
     const result = await validate(project);
-    expect(result.violations).toEqual([]);
+    expect(result.valid).toBe(true);
+    expect(result.violations).toEqual([
+      expect.objectContaining({ rule: 'procedure-registered', severity: 'warning', file: 'src/api/controllers/status.controller.ts', line: 14 }),
+    ]);
     expect(result.filesChecked).toBeGreaterThan(15);
-  });
+    expect(await lint(project)).toMatch(/0 error\(s\), 1 warning\(s\)/);
+  }, 120_000);
+
+  it('flags a handler that drops ctx, a route without a schema and a misnamed procedure, and its lint fails', async () => {
+    const handler = join(project, 'src/services/notes/notes.handler.ts');
+    const controller = join(project, 'src/api/controllers/notes.controller.ts');
+    const originals = [await readFile(handler, 'utf-8'), await readFile(controller, 'utf-8')] as const;
+    await writeFile(
+      handler,
+      originals[0]
+        .replace('handler: (ctx, input) => service.create(ctx, input)', 'handler: (input) => service.create(input as never, input as never)')
+        .replace("'notes.update'", "'notes.update-note'"),
+    );
+    await writeFile(controller, originals[1].replace("{ schema: { query: listNotesInput, response: noteListSchema }, summary: 'List notes' }", "{ summary: 'List notes' }"));
+    try {
+      const result = await validate(project);
+      expect(result.violations.filter((v) => v.severity === 'error').map((v) => `${v.rule}@${v.file}:${v.line}`)).toEqual([
+        'zod-at-boundaries@src/api/controllers/notes.controller.ts:24',
+        'ctx-first@src/services/notes/notes.handler.ts:16',
+        'procedure-name-format@src/services/notes/notes.handler.ts:26',
+      ]);
+      await expect(lint(project)).rejects.toThrow(/3 error\(s\)/);
+    } finally {
+      await writeFile(handler, originals[0]);
+      await writeFile(controller, originals[1]);
+    }
+  }, 120_000);
 
   it('flags a controller that imports a service', async () => {
     const file = join(project, 'src/api/controllers/notes.controller.ts');
@@ -230,7 +288,7 @@ describe('generated project', () => {
     try {
       const result = await validate(project);
       expect(result.valid).toBe(false);
-      expect(result.violations).toMatchObject([{ rule: 'no-service-import-in-controller', file: 'src/api/controllers/notes.controller.ts', line: 1 }]);
+      expect(result.violations.filter((v) => v.severity === 'error')).toMatchObject([{ rule: 'no-service-import-in-controller', file: 'src/api/controllers/notes.controller.ts', line: 1 }]);
     } finally {
       await writeFile(file, original);
     }
@@ -311,10 +369,11 @@ describe('generated project with --auth gotrue', () => {
     expect(stdout).not.toMatch(/failed/);
   }, 300_000);
 
-  it('passes mariachi validate with no findings', async () => {
+  it('passes mariachi validate with no findings, and its lint script', async () => {
     const result = await validate(app);
     expect(result.violations).toEqual([]);
-  });
+    expect(await lint(app)).toMatch(/0 error\(s\), 0 warning\(s\)/);
+  }, 120_000);
 });
 
 const JWT_SECRET = 'scaffold-test-secret-at-least-32-characters';
@@ -392,10 +451,11 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth
     expect(probed).toEqual(auth === 'jwt' ? { anonymous: 401, tenantless: 400, code: 'organizations/invitation-invalid' } : { anonymous: 401 });
   }, 180_000);
 
-  it('passes mariachi validate with no findings', async () => {
+  it('passes mariachi validate with no findings, and its lint script', async () => {
     const result = await validate(app);
     expect(result.violations).toEqual([]);
-  });
+    expect(await lint(app)).toMatch(/0 error\(s\), 0 warning\(s\)/);
+  }, 120_000);
 });
 
 describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %s)', (auth) => {
@@ -486,10 +546,11 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %
     });
   }, 180_000);
 
-  it('passes mariachi validate with no findings', async () => {
+  it('passes mariachi validate with no findings, and its lint script', async () => {
     const result = await validate(app);
     expect(result.violations).toEqual([]);
-  });
+    expect(await lint(app)).toMatch(/0 error\(s\), 0 warning\(s\)/);
+  }, 120_000);
 
   it('will not start without its design kit, and says what to run', async () => {
     await rm(join(app, 'src/design'), { recursive: true, force: true });

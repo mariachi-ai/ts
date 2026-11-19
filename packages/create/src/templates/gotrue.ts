@@ -1398,7 +1398,7 @@ pnpm mariachi generate service <name>
 pnpm mariachi generate controller <name>
 pnpm mariachi generate job <name>
 pnpm mariachi generate integration <name>
-pnpm validate                            # architecture rules; run before committing
+pnpm lint                                # mariachi validate (layers, ctx first, Zod at boundaries, procedure names) + tsc; run before committing
 pnpm test && pnpm typecheck
 \`\`\`
 `;
@@ -1500,4 +1500,10 @@ This page is an example to start from, not a finished sign-in. Before you ship o
 | \`AUTH_PERSONAL_TENANTS\` | \`true\` | Give a user in no organization a personal tenant |
 | \`AUTH_LINK_SESSIONS\` | \`false\` | Let the sign-in page take a session from an admin-made link (invites, \`generate_link\`), after showing whose it is |
 | \`MIGRATE_ON_START\` | \`false\` | Apply \`drizzle/\` migrations at start |
+
+## Checks
+
+\`pnpm lint\` runs \`mariachi validate\` (layers, \`ctx\` first, Zod at boundaries, procedure names; each
+finding names the file, the line, the rule and the fix) and \`tsc --noEmit\`. Run it before committing
+and in CI.
 `;
