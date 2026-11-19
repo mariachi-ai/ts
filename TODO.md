@@ -15,8 +15,8 @@ The goal: `mariachi init` gives a working multi-user app with nothing else to in
 
 Built for it already: organizations with a request check, invitation emails and `init --orgs`; a
 generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi token`; pages
-(`init --ui`, `generate page`) with static files and an escaping `html` template; `mariachi docs` and
-`llms.txt`; cron schedules in the in-memory job queue. What is left:
+(`init --ui`, `generate page`) with static files, an escaping `html` template and a design kit the
+project owns; `mariachi docs` and `llms.txt`; cron schedules in the in-memory job queue. What is left:
 
 1. **Sign-in a person can use in a new project.**
    - A local GoTrue in the `--auth gotrue` project's Compose file, so its sign-in page works with no
@@ -25,17 +25,14 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
      through sign-in and back, then posts the token. `INVITATION_URL` can then have a default.
    - A browser sign-in for the default (`--auth jwt`) project, or a decision that it has none. Its
      pages can show only public content today.
-2. **Design kits in a generated project.** After the kits package lands: `init --ui` copies a kit into
-   `src/design`, serves it under `/assets/design` and links its imports, and token overrides move to
-   `src/design.css`. Serve `@mariachi/design/behaviors` and a kit's `motion.js` from `/assets`.
-3. **What an agent reads and runs.**
+2. **What an agent reads and runs.**
    - Listing routes, procedures and jobs from the CLI.
    - Generators for an event and its subscriber, a webhook endpoint, a procedure on an existing
      service and a seed. The entity generator's fixed `name` column and naive plurals.
    - `mariachi validate` checking `ctx` first, Zod at boundaries and procedure names, not only imports.
      A `lint` script in generated projects.
    - The example entity indexed for search, as a worked example of `deps.search`.
-4. **Small fixes.**
+3. **Small fixes.**
    - FusionAuth's three `IdentityClient` methods that throw `auth/not-supported` (resetting a password
      with a token, and the two halves of verifying an email with a code).
    - Settling usage records that were never forwarded and are past the resend window. Agreed shape:

@@ -216,6 +216,26 @@ describe('pages beside the API', () => {
     await api.close();
   });
 
+  it('serves one named file at its own path, and nothing else from beside it', async () => {
+    const api = createApiServer({ name: 'pages-test', prefix: '/api', logger: silent as never })
+      .withStaticFile('/assets/site.css', join(dir, 'css/app.css'))
+      .withStaticFile('/assets/gone.css', join(dir, 'css/missing.css'))
+      .withStaticFile('/assets/folder.css', join(dir, 'css'))
+      .withStatic('/assets', dir);
+    const css = await api.inject({ method: 'GET', url: '/assets/site.css' });
+    expect(css.statusCode).toBe(200);
+    expect(css.body).toBe('body { margin: 0 }');
+    expect(css.headers).toMatchObject({ 'content-type': 'text/css; charset=utf-8', 'x-content-type-options': 'nosniff', 'cache-control': 'no-cache' });
+    expect((await api.inject({ method: 'GET', url: '/assets/site.css', headers: { 'if-none-match': css.headers.etag as string } })).statusCode).toBe(304);
+    // Only the file it names: a path below it, a missing file and a directory are not found
+    for (const url of ['/assets/site.css/x', '/assets/gone.css', '/assets/folder.css']) {
+      expect((await api.inject({ method: 'GET', url })).statusCode, url).toBe(404);
+    }
+    // The directory route beside it still answers for its own files
+    expect((await api.inject({ method: 'GET', url: '/assets/app.js' })).statusCode).toBe(200);
+    await api.close();
+  });
+
   it('lets a browser keep files that never change under their name', async () => {
     const api = createApiServer({ name: 'pages-test', prefix: '/api', logger: silent as never }).withStatic('/static/', dir, { maxAgeSeconds: 31536000, immutable: true });
     expect((await api.inject({ method: 'GET', url: '/static/app.js' })).headers['cache-control']).toBe('public, max-age=31536000, immutable');

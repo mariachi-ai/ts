@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startPostgres, startRedis, stopAll } from '../../../test/setup';
 import { JWTAdapter } from '@mariachi/auth';
+import { addKit } from '@mariachi/design-kits';
 import { createProject, generateController, generateEntity, generateIntegration, generateJob, generatePage, generateSeed, generateService, validate } from './index';
 
 const run = promisify(execFile);
@@ -404,6 +405,9 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %
     await rm(app, { recursive: true, force: true });
     // With organizations too, so the three options are shown to work together
     await createProject({ name: `${auth}-ui-app`, outputDir: app, auth, organizations: true, ui: true });
+    // What `mariachi init --ui` does next: the kit into src/design (the generator's design.css stays)
+    const kit = addKit('linen', { dir: join(app, 'src/design') });
+    expect(kit.designCss.created).toBe(false);
     await generatePage({ name: 'team-settings', projectRoot: app });
   }, 30_000);
 
@@ -426,7 +430,7 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %
     expect(stdout).not.toMatch(/\d+ failed/);
   }, 120_000);
 
-  it("passes its own end-to-end tests: the pages, the design library's styles and the app's own files over HTTP", async () => {
+  it("passes its own end-to-end tests: the pages, the design kit, the library's components and the app's own files over HTTP", async () => {
     const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', app, '--config', join(app, 'vitest.e2e.config.ts')], app);
     expect(stdout).toMatch(/src\/pages\.e2e\.test\.ts/);
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
@@ -451,7 +455,12 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %
           bar: (await home.text()).includes('<a class="m-navbar-link" href="/team-settings" aria-current="false">Team settings</a>'),
           page: page.status,
           current: (await page.text()).includes('<a class="m-navbar-link" href="/team-settings" aria-current="page">Team settings</a>'),
-          design: (await fetch(`${base}/assets/design/mariachi.css`)).status,
+          theme: (await fetch(`${base}/`).then((res) => res.text())).includes('<html lang="en" data-theme="linen" data-mode="auto">'),
+          kit: (await fetch(`${base}/assets/design/index.css`)).status,
+          motion: (await fetch(`${base}/assets/design/motion/motion.js`)).status,
+          components: (await fetch(`${base}/assets/lib/components.css`)).status,
+          behaviors: (await fetch(`${base}/assets/lib/behaviors.js`)).status,
+          own: (await fetch(`${base}/assets/design.css`)).status,
           script: (await fetch(`${base}/assets/home.js`)).status,
           source: (await fetch(`${base}/assets/../src/app.ts`)).status,
           api: (await fetch(`${base}/api/organizations`)).status,
@@ -459,11 +468,39 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %
       },
     );
     expect({ status, output }).toMatchObject({ status: 200 });
-    expect(probed).toEqual({ home: 200, type: 'text/html; charset=utf-8', bar: true, page: 200, current: true, design: 200, script: 200, source: 404, api: 401 });
+    expect(probed).toEqual({
+      home: 200,
+      type: 'text/html; charset=utf-8',
+      bar: true,
+      page: 200,
+      current: true,
+      theme: true,
+      kit: 200,
+      motion: 200,
+      components: 200,
+      behaviors: 200,
+      own: 200,
+      script: 200,
+      source: 404,
+      api: 401,
+    });
   }, 180_000);
 
   it('passes mariachi validate with no findings', async () => {
     const result = await validate(app);
     expect(result.violations).toEqual([]);
   });
+
+  it('will not start without its design kit, and says what to run', async () => {
+    await rm(join(app, 'src/design'), { recursive: true, force: true });
+    const { status, output } = await bootReady(app, {
+      SERVICE_NAME: `${auth}-ui-app`,
+      NODE_ENV: 'development',
+      DATABASE_URL: 'postgres://nobody@127.0.0.1:1/none',
+      ...(auth === 'gotrue' ? { AUTH_URL: 'https://auth.example.test/auth/v1' } : { JWT_SECRET }),
+    });
+    expect(status).toBeNull();
+    expect(output).toContain('app/design-kit-missing');
+    expect(output).toContain('pnpm mariachi design add linen');
+  }, 60_000);
 });

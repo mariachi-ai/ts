@@ -44,6 +44,34 @@ const TYPES: Record<string, string> = {
 
 const notFound = (): MariachiError => new MariachiError('http/not-found', 'Not found');
 
+const cacheControlOf = (options: StaticOptions): string => {
+  const maxAge = Math.max(0, Math.floor(options.maxAgeSeconds ?? 0));
+  return maxAge > 0 ? `public, max-age=${maxAge}${options.immutable ? ', immutable' : ''}` : 'no-cache';
+};
+
+/** Sends one regular file: its type by extension, `nosniff`, an `ETag` (304 when the browser has it), and a sandbox for SVG. */
+async function send(ctx: HttpContext, file: string, options: StaticOptions, cacheControl: string): Promise<HttpResponse | StreamResponse> {
+  const info = await stat(file).catch(() => undefined);
+  if (!info?.isFile()) throw notFound();
+
+  const extension = extname(file).toLowerCase();
+  const etag = `W/"${info.size.toString(16)}-${Math.floor(info.mtimeMs).toString(16)}"`;
+  const headers: Record<string, string> = {
+    etag,
+    'cache-control': cacheControl,
+    'x-content-type-options': 'nosniff',
+    // An SVG is a document: opened on its own it could run script. This lets it draw and nothing else.
+    ...(extension === '.svg' ? { 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox" } : {}),
+    ...options.headers,
+  };
+  const seen = ctx.request.headers['if-none-match'];
+  if (typeof seen === 'string' && seen.split(',').some((tag) => tag.trim() === etag)) return new HttpResponse(304, undefined, headers);
+  return new StreamResponse(createReadStream(file), {
+    contentType: TYPES[extension] ?? 'application/octet-stream',
+    headers: { ...headers, 'content-length': String(info.size) },
+  });
+}
+
 /**
  * A handler that serves the files of one directory, for a route whose path ends in `*`
  * (`api.withStatic` registers one for you). It is for files that are part of the app: its styles,
@@ -63,8 +91,7 @@ const notFound = (): MariachiError => new MariachiError('http/not-found', 'Not f
  * publish the app's own source and settings.
  */
 export function staticFiles(directory: string, options: StaticOptions = {}): (ctx: HttpContext, body: unknown, params: Record<string, string>) => Promise<HttpResponse | StreamResponse> {
-  const maxAge = Math.max(0, Math.floor(options.maxAgeSeconds ?? 0));
-  const cacheControl = maxAge > 0 ? `public, max-age=${maxAge}${options.immutable ? ', immutable' : ''}` : 'no-cache';
+  const cacheControl = cacheControlOf(options);
   let root: Promise<string> | undefined;
   const holdsTheApp = (served: string, running: string): boolean => running === served || running.startsWith(served.endsWith(sep) ? served : served + sep);
   const refuse = (): ConfigError =>
@@ -96,24 +123,19 @@ export function staticFiles(directory: string, options: StaticOptions = {}): (ct
       throw notFound();
     }
     if (!file.startsWith(base + sep)) throw notFound();
-    const info = await stat(file).catch(() => undefined);
-    if (!info?.isFile()) throw notFound();
-
-    const extension = extname(file).toLowerCase();
-    const etag = `W/"${info.size.toString(16)}-${Math.floor(info.mtimeMs).toString(16)}"`;
-    const headers: Record<string, string> = {
-      etag,
-      'cache-control': cacheControl,
-      'x-content-type-options': 'nosniff',
-      // An SVG is a document: opened on its own it could run script. This lets it draw and nothing else.
-      ...(extension === '.svg' ? { 'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox" } : {}),
-      ...options.headers,
-    };
-    const seen = ctx.request.headers['if-none-match'];
-    if (typeof seen === 'string' && seen.split(',').some((tag) => tag.trim() === etag)) return new HttpResponse(304, undefined, headers);
-    return new StreamResponse(createReadStream(file), {
-      contentType: TYPES[extension] ?? 'application/octet-stream',
-      headers: { ...headers, 'content-length': String(info.size) },
-    });
+    return send(ctx, file, options, cacheControl);
   };
+}
+
+/**
+ * A handler that serves one named file, for a route of its own (`api.withStaticFile` registers one
+ * for you): a stylesheet that lives beside source code that must stay private, or one file out of a
+ * package. Only that file is ever sent, read each time, as `staticFiles` sends one: its type by
+ * extension, `nosniff`, an `ETag`, and the sandbox for SVG. A missing file, or one that isn't a
+ * regular file, is not found.
+ */
+export function staticFile(file: string, options: StaticOptions = {}): (ctx: HttpContext) => Promise<HttpResponse | StreamResponse> {
+  const cacheControl = cacheControlOf(options);
+  const path = resolve(file);
+  return async (ctx) => send(ctx, path, options, cacheControl);
 }
