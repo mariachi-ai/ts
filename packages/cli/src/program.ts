@@ -8,6 +8,7 @@ import { registerDoctorCommand } from './commands/doctor';
 import { registerExploreCommand } from './commands/explore';
 import { registerGenerateCommand } from './commands/generate';
 import { registerInitCommand } from './commands/init';
+import { registerListCommand } from './commands/list';
 import { registerTokenCommand } from './commands/token';
 import { registerValidateCommand } from './commands/validate';
 
@@ -23,6 +24,7 @@ export function createProgram(): Command {
   registerDevCommand(program);
   registerTokenCommand(program);
   registerDoctorCommand(program);
+  registerListCommand(program);
   registerDbCommand(program);
   registerDocsCommand(program);
   registerDesignCommand(program);

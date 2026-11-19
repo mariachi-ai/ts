@@ -1,7 +1,7 @@
 {
   "name": "@mariachi/cli",
   "version": "0.1.1",
-  "description": "The mariachi binary: init, generate, validate, db (generate, check, migrate, seed), design and explore.",
+  "description": "The mariachi binary: init, generate, validate, list (routes, procedures, jobs), db (generate, check, migrate, seed), design and explore.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mariachi-ai/ts.git",
@@ -10,7 +10,7 @@
   "mariachi": {
     "category": "tooling",
     "status": "beta",
-    "useWhen": "Creating projects, generating code, running migrations, building design themes, browsing the explorer",
+    "useWhen": "Creating projects, generating code, listing an app's routes, procedures and jobs, running migrations, building design themes, browsing the explorer",
     "entry": []
   },
   "type": "module",
@@ -52,7 +52,8 @@
     "@mariachi/database-postgres": "workspace:*",
     "commander": "^13",
     "drizzle-kit": "^0.30",
-    "jiti": "^2.4"
+    "jiti": "^2.4",
+    "typescript": "^5.7"
   },
   "peerDependencies": {
     "@mariachi/design": "workspace:>=0.0.5 <1",
@@ -71,12 +72,16 @@
     }
   },
   "devDependencies": {
+    "@mariachi/api-facade": "workspace:*",
+    "@mariachi/communication": "workspace:*",
     "@mariachi/design": "workspace:*",
     "@mariachi/design-kits": "workspace:*",
+    "@mariachi/jobs": "workspace:*",
+    "@mariachi/organizations": "workspace:*",
     "drizzle-orm": "^0.38",
     "postgres": "^3.4",
     "tsup": "^8",
-    "typescript": "^5.7",
-    "vitest": "^3"
+    "vitest": "^3",
+    "zod": "^3.24"
   }
 }
