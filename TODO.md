@@ -36,8 +36,6 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
      A `lint` script in generated projects.
    - The example entity indexed for search, as a worked example of `deps.search`.
 4. **Small fixes.**
-   - FusionAuth's three `IdentityClient` methods that throw `auth/not-supported` (resetting a password
-     with a token, and the two halves of verifying an email with a code).
    - Settling usage records that were never forwarded and are past the resend window. Agreed shape:
      `listStaleUsage` (an operator call, across tenants) and `settleStaleUsage` with an outcome of
      `provider-has-it` or `written-off` (a note required), kept in new columns (`settlement`,
