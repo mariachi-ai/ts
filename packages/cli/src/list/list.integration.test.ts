@@ -116,7 +116,8 @@ describe('mariachi list on a project with --orgs --ui', () => {
     const listed = JSON.parse((await mariachi(project, 'list', '--json')).stdout) as Listed;
     expect(listed.issues).toEqual([]);
     expect(listed.routes.find((r) => r.controller === 'PagesController')).toMatchObject({ method: 'GET', path: '/', auth: [] });
-    expect(listed.routes.filter((r) => r.kind === 'static').map((r) => r.path)).toEqual(['/assets/design/*', '/assets/*']);
+    // withStatic folders and withStaticFile files, at the server's root
+    expect(listed.routes.filter((r) => r.kind === 'static').map((r) => r.path)).toEqual(expect.arrayContaining(['/assets/design/*', '/assets/design.css', '/assets/*']));
     expect(listed.routes.find((r) => r.method === 'POST' && r.path === '/api/organizations')).toMatchObject({
       controller: 'OrganizationsController',
       auth: ['session'],

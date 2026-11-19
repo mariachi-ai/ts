@@ -21,7 +21,7 @@ export async function loadTypeScript(): Promise<Ts> {
   return loaded;
 }
 
-/** A route the API server adds itself, from its builder calls (`withHealth`, `withOpenApi`, `withStatic`). */
+/** A route the API server adds itself, from its builder calls (`withHealth`, `withOpenApi`, `withStatic`, `withStaticFile`). */
 export interface ServerRoute {
   method: 'GET';
   path: string;
@@ -121,6 +121,8 @@ export function readApiServer(ts: Ts, file: string, text: string): ApiServerSour
         server.routes.push({ method: 'GET', path: joinPath(server.prefix, stringOf(ts, property(ts, args[0], 'path')) ?? '/openapi.json'), root: false, kind: 'openapi' });
       } else if (method === 'withStatic' && args[0]) {
         server.routes.push({ method: 'GET', path: `${textOf(ts, args[0], source).replace(/\/+$/, '')}/*`, root: true, kind: 'static' });
+      } else if (method === 'withStaticFile' && args[0]) {
+        server.routes.push({ method: 'GET', path: textOf(ts, args[0], source), root: true, kind: 'static' });
       }
       call = call.parent.parent;
     }

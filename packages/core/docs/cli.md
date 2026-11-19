@@ -260,7 +260,7 @@ The composition root, `src/app.ts`, and `main.ts` are never run, so nothing conn
 a queue or the network, and no setting is needed. What only exists once the app runs is read from
 `src/app.ts`'s source with the TypeScript parser: the API prefix (`createApiServer({ prefix })`),
 the default auth (`.withAuth(...)`), and the routes the server adds itself (`withHealth`,
-`withOpenApi`, `withStatic`). Cron schedules are the `jobs.schedule({ cron, jobName })` calls
+`withOpenApi`, `withStatic`, `withStaticFile`). Cron schedules are the `jobs.schedule({ cron, jobName })` calls
 anywhere in `src`. A value held in a variable shows as its source in angle brackets
 (`<config.prefix>`).
 

@@ -14,6 +14,7 @@ export async function createApp() {
     .withAuthStrategy('session', bearerStrategy(verifier))
     .withAuth(['session', 'api-key'])
     .withStatic('/assets/design/', DESIGN_CSS)
+    .withStaticFile('/assets/design.css', 'src/design.css')
     .withHealth(lifecycle.health, { path: '/healthz' })
     .withOpenApi({ info: { title: 'x', version: '1' } });
   jobs.schedule({ name: 'nightly-digest', cron: '0 6 * * *', timezone: 'Europe/Amsterdam', jobName: 'send-digest', data: {} });
@@ -30,6 +31,7 @@ describe('readApiServer', () => {
       line: 4,
       routes: [
         { method: 'GET', path: '/assets/design/*', root: true, kind: 'static' },
+        { method: 'GET', path: '/assets/design.css', root: true, kind: 'static' },
         { method: 'GET', path: '/api/healthz/live', root: false, kind: 'health' },
         { method: 'GET', path: '/api/healthz/ready', root: false, kind: 'health' },
         { method: 'GET', path: '/api/healthz/startup', root: false, kind: 'health' },
@@ -56,8 +58,8 @@ describe('readApiServer', () => {
 describe('findSchedules', () => {
   it('finds jobs.schedule() calls with a cron and a job, and where each is', () => {
     expect(findSchedules(ts, 'src/app.ts', APP)).toEqual([
-      { name: 'nightly-digest', cron: '0 6 * * *', jobName: 'send-digest', timezone: 'Europe/Amsterdam', file: 'src/app.ts', line: 14 },
-      { name: 'cleanup', cron: '<EVERY_HOUR>', jobName: 'cleanup', file: 'src/app.ts', line: 15 },
+      { name: 'nightly-digest', cron: '0 6 * * *', jobName: 'send-digest', timezone: 'Europe/Amsterdam', file: 'src/app.ts', line: 15 },
+      { name: 'cleanup', cron: '<EVERY_HOUR>', jobName: 'cleanup', file: 'src/app.ts', line: 16 },
     ]);
   });
 });
