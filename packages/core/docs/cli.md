@@ -6,7 +6,7 @@ in the environment win.
 ## init
 
 ```bash
-npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue, --orgs, --ui
+npx @mariachi/cli init my-app            # --name <pkg>, --no-example, --no-e2e, --mariachi-version <range>, --auth jwt|gotrue, --orgs, --ui [--kit <id>]
 ```
 
 Creates the [project layout](./architecture.md#project-layout): `src/app.ts` (`createApp()`: config, lifecycle,
@@ -51,14 +51,41 @@ log. With `--auth gotrue`, whether an invitee's address is verified is read from
 then needs no key), never from what the user can edit. The page that accepts an invitation is yours
 to build.
 
-`--ui` adds pages, sent by the same server as the API and styled with `@mariachi/design`
-([design.md](./design.md)). The project gets a layout and a home page (`src/api/pages/`), a
-controller that gives each page a route at the server's root (`src/api/controllers/pages.controller.ts`),
-`public/` for the files pages load (served under `/assets`), the design library's stylesheets under
-`/assets/design`, and tests. A page is a function that returns `html`, which escapes what is put
-into it ([http.md](./http.md#pages-and-files)); its script, if it has one, is a file in `public/`.
-There is no client framework and no build step. `mariachi generate page <name>` adds a page. It
-works with either `--auth` and with `--orgs`.
+`--ui` adds pages, sent by the same server as the API, built from `@mariachi/design`'s components
+and given their look by a design kit the project owns ([design.md](./design.md#copying-a-language-into-a-project-kits)).
+The project gets a layout and a home page (`src/api/pages/`), a controller that gives each page a
+route at the server's root (`src/api/controllers/pages.controller.ts`), `public/` for the files
+pages load (served under `/assets`), and tests. A page is a function that returns `html`, which
+escapes what is put into it ([http.md](./http.md#pages-and-files)); its script, if it has one, is a
+file in `public/`. There is no client framework and no build step. `mariachi generate page <name>`
+adds a page. It works with either `--auth` and with `--orgs`.
+
+The look is a kit copied into `src/design/`: `linen` unless `--kit <id>` names another
+(`mariachi design list --kits` lists them). `init` copies it with `@mariachi/design-kits` when that
+can be imported, and otherwise runs `npx @mariachi/design-kits@<the project's @mariachi range> add <id>`
+in the new project; if that fails, it says what to run by hand and exits 1. An unknown id is refused
+before anything is written when the package is installed. Without `--ui`, `init` neither loads nor
+fetches the kits.
+
+```
+src/
+  design/          the kit, the project's own copy: index.css, tokens.css, fonts/, motion/, DESIGN.md, kit.json
+  design.css       the project's own design changes (token overrides), loaded last
+  design-kit.ts    where the kit is, and data-theme: the id in src/design/kit.json, read again when it changes
+  api/pages/layout.ts
+public/
+  enhance.js       runs on every page: @mariachi/design's behaviours and the kit's motion
+  home.js
+```
+
+Every page loads, in this order: `/assets/design/index.css` (the kit's fonts, base styles and
+tokens), `/assets/design/motion/motion.css`, `/assets/lib/components.css` (`@mariachi/design`'s
+components only; the kit brings the base) and `/assets/design.css`. Then the module scripts:
+`/assets/enhance.js`, which starts `/assets/lib/behaviors.js` and `/assets/design/motion/motion.js`,
+and the page's own. `<html data-theme>` is the kit's id, so `mariachi design add <id>` changes the
+look with no code change. The app won't start without a kit in `src/design/`
+(`app/design-kit-missing`, naming the command to run). `src/design/`, `src/design.css` and
+`public/` are read at run time: ship them beside `dist/`.
 
 ## generate
 

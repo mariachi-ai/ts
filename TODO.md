@@ -44,8 +44,8 @@ The goal: `mariachi init` gives a working multi-user app with nothing else to in
 
 Built for it already: organizations with a request check, invitation emails and `init --orgs`; a
 generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi token`; pages
-(`init --ui`, `generate page`) with static files and an escaping `html` template; `mariachi docs` and
-`llms.txt`; cron schedules in the in-memory job queue. What is left:
+(`init --ui`, `generate page`) with static files, an escaping `html` template and a design kit the
+project owns; `mariachi docs` and `llms.txt`; cron schedules in the in-memory job queue. What is left:
 
 1. **Sign-in a person can use in a new project.**
    - A local GoTrue in the `--auth gotrue` project's Compose file, so its sign-in page works with no
@@ -64,7 +64,7 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
    - `mariachi validate` checking `ctx` first, Zod at boundaries and procedure names, not only imports.
      A `lint` script in generated projects.
    - The example entity indexed for search, as a worked example of `deps.search`.
-4. **Small fixes.**
+3. **Small fixes.**
    - FusionAuth's three `IdentityClient` methods that throw `auth/not-supported` (resetting a password
      with a token, and the two halves of verifying an email with a code).
    - A rate limiter in Postgres, so a project with organizations and several processes shares its
