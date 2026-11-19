@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { appCommand, servicesFromEnv } from '../commands/dev';
 import { formatDoctor } from '../commands/doctor';
 import { envFiles, projectEnv, readEnvFiles } from '../env-files';
-import { exampleKeys, isLocal, redact, safeUrl, satisfiesMinimum, secretsIn } from './checks';
+import { composeServices, exampleKeys, isLocal, redact, redisService, redisStartHint, safeUrl, satisfiesMinimum, secretsIn } from './checks';
 import { reason } from './probe';
 
 const tmp = () => mkdtempSync(join(tmpdir(), 'mariachi-doctor-'));
@@ -107,6 +107,68 @@ describe('doctor helpers', () => {
     // A list that isn't a list of names is ignored
     writeFileSync(join(dir, 'package.json'), JSON.stringify({ mariachi: { envFiles: 'all of them' } }));
     expect(envFiles(dir)).toEqual({ files: ['.env'], configured: false });
+  });
+});
+
+describe("doctor's hint for a Redis that isn't answering", () => {
+  const GENERATED = `services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+    ports: ["5432:5432"]
+  # To run jobs on Redis (BullMQ) instead, add this service.
+  # redis:
+  #   image: redis:7-alpine
+  #   ports: ["6379:6379"]
+`;
+
+  it("reads a Compose file's services and their images, not the commented-out ones", () => {
+    expect(composeServices(GENERATED)).toEqual([{ name: 'postgres', image: 'postgres:16-alpine' }]);
+    const text = `name: app
+volumes:
+  data: {}
+services:
+    db:
+        image: "postgis/postgis:16-3.4"   # with PostGIS
+    "cache":
+        image: 'bitnami/redis:7.2'
+        ports:
+          - "6379:6379"
+    worker:
+        build: .
+        environment:
+          image: not-this-one
+networks:
+  default: {}
+`;
+    expect(composeServices(text)).toEqual([{ name: 'db', image: 'postgis/postgis:16-3.4' }, { name: 'cache', image: 'bitnami/redis:7.2' }, { name: 'worker' }]);
+    expect(composeServices('version: "3"\n')).toEqual([]);
+  });
+
+  it('finds the service that runs Redis by its image, or by its name when it is built here', () => {
+    expect(redisService(composeServices(GENERATED))).toBeUndefined();
+    expect(redisService([{ name: 'postgres', image: 'postgres:16' }, { name: 'cache', image: 'redis:7-alpine' }])).toBe('cache');
+    for (const image of ['redis', 'redis/redis-stack:latest', 'valkey/valkey:8', 'docker.dragonflydb.io/dragonflydb/dragonfly', 'redis@sha256:abc']) {
+      expect(redisService([{ name: 'kv', image }]), image).toBe('kv');
+    }
+    expect(redisService([{ name: 'redis-proxy', image: 'acme/redisproxy:1' }])).toBeUndefined();
+    expect(redisService([{ name: 'redis' }])).toBe('redis');
+  });
+
+  it("names the Compose service to start, or says the Compose file doesn't run Redis", () => {
+    const dir = tmp();
+    const url = 'redis://localhost:6379';
+    expect(redisStartHint(dir, url, '.env')).toBe('Start Redis on localhost:6379');
+    writeFileSync(join(dir, 'docker-compose.yml'), GENERATED);
+    expect(redisStartHint(dir, url, '.env')).toBe('Nothing in docker-compose.yml runs Redis: add a redis service to it, or set REDIS_URL in .env to a Redis that is running');
+    expect(redisStartHint(dir, url, '.env.local')).toMatch(/set REDIS_URL in \.env\.local/);
+    writeFileSync(join(dir, 'docker-compose.override.yml'), 'services:\n  cache:\n    image: redis:7-alpine\n');
+    expect(redisStartHint(dir, url, '.env')).toBe('docker compose up -d cache (or: mariachi dev, which starts the services and waits for them)');
+    writeFileSync(join(dir, 'docker-compose.yml'), `${GENERATED}  redis:\n    image: redis:7-alpine\n`);
+    expect(redisStartHint(dir, url, '.env')).toBe('docker compose up -d redis (or: mariachi dev, which starts the services and waits for them)');
+    // Not on this machine: Compose has nothing to do with it
+    expect(redisStartHint(dir, 'rediss://default:pw@cache.example.com:6380', '.env')).toBe('Check that Redis at rediss://default:***@cache.example.com:6380 is running and reachable from here');
   });
 });
 

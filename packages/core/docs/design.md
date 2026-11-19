@@ -7,6 +7,8 @@ one thing is one line. Status: **alpha**. Browse every component and preset in t
 
 ## Use it
 
+The design packages (`@mariachi/design`, `@mariachi/design-kits` and `@mariachi/motion`) install nothing of the backend framework: a site or app can use them on their own. Their errors (`DesignError`, `DesignKitsError`) have the same shape as `MariachiError` (a stable `code`, a message, optional `metadata`), but aren't subclasses of it.
+
 ```html
 <link rel="stylesheet" href="node_modules/@mariachi/design/dist/css/mariachi.css">
 <link rel="stylesheet" href="node_modules/@mariachi/design/dist/css/themes/minimal.css">
@@ -226,6 +228,28 @@ A project has one kit, and `<html data-theme>` names the language, so the folder
 - `--dry-run` reports without writing; `--json` prints the result (or the error, with the files) for a tool.
 
 The same from code: `addKit(id, { dir, force, dryRun })`, `listKits()`, `readKit(id)` and `installedKit(dir)` from `@mariachi/design-kits`.
+
+### Building a component: `design reference`
+
+When the project needs a component, ask how its language builds it:
+
+```bash
+mariachi design reference card                 # for the project's own kit (the one in src/design)
+mariachi design reference "data table" --kit meridian
+mariachi design reference player               # a language's named pattern (a player, a job card …)
+mariachi design reference --list               # every component, and the language's patterns
+```
+
+The answer is Markdown, in this order:
+- **How the language draws it:** its entry in the kit's `DESIGN.md`, and its own `--m-<component>-*` values (already in the copied tokens).
+- **Anatomy and options:** each class and attribute, when to use it, and the accessibility rules.
+- **Example markup.**
+- **The CSS to copy:** it reads only `--m-*` tokens, so the copy takes the language's look from the kit. Long files are named by path instead of quoted.
+- **Where it appears** in the language's page recipes, when it fits.
+
+A name that isn't a component or a pattern gets the nearest components to compose it from, and exits 1. `--json` prints the answer for a tool. A plain preset answers on the library's defaults, with its tokens.
+
+Everything comes from `@mariachi/design-kits`: the catalog, the kit, and the component CSS and named patterns packed beside them. Nothing is fetched, and the library doesn't become a dependency of the app. From code: `designReference(name, kit)` and `referenceList(kit)`.
 
 ## Markup contract
 

@@ -150,7 +150,8 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
     const results = byName(await doctor({ DATABASE_URL: NOWHERE, REDIS_URL: 'redis://127.0.0.1:1' }));
     expect(results.database).toMatchObject({ status: 'fail', fix: expect.stringContaining('docker compose up -d') });
     expect(results.database?.detail).toMatch(/^Can't reach Postgres at postgres:\/\/postgres:\*\*\*@127\.0\.0\.1:1\/none: /);
-    expect(results.redis).toMatchObject({ status: 'fail', fix: expect.stringContaining('docker compose up -d') });
+    // The generated Compose file runs Postgres only: starting it would not bring Redis up
+    expect(results.redis).toMatchObject({ status: 'fail', fix: 'Nothing in docker-compose.yml runs Redis: add a redis service to it, or set REDIS_URL in .env to a Redis that is running' });
     // Whether migrations are applied can't be told without the database: skipped, not failed twice
     expect(results.migrations?.status).toBe('skip');
     const remote = byName(await doctor({ DATABASE_URL: 'postgres://app:secret@db.example.invalid:5432/app' }));

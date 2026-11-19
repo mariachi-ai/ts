@@ -1,10 +1,10 @@
 import path from 'node:path';
 import { parseArgs } from 'node:util';
-import { MariachiError } from '@mariachi/core/errors';
-import { addKit, type KitChanges } from './add';
+import { addKit, installedKit, type KitChanges } from './add';
 import { DesignKitsError } from './errors';
 import { formatAddResult, formatChanges, formatKitList } from './format';
-import { type KitStore, listKits } from './store';
+import { designReference, openReferenceSource, referenceList } from './reference';
+import { defaultStoreRoot, type KitStore, listKits } from './store';
 
 export interface CliIO {
   cwd: string;
@@ -20,10 +20,16 @@ const USAGE = [
   'Usage:',
   '  mariachi-design-kits list [--json]',
   '  mariachi-design-kits add <kit> [--dir src/design] [--force] [--dry-run] [--json]',
+  '  mariachi-design-kits reference <name> [--kit <id>] [--dir src/design] [--json]',
+  '  mariachi-design-kits reference --list [--kit <id>]',
   '',
   'add copies a kit into <dir> (tokens, base styles, fonts, motion, DESIGN.md, kit.json) and makes design.css',
   "beside that folder, once, for the project's own changes. Taking a kit when another is there replaces the",
   'old one in the same folder. A copy the project has edited is reported and left alone unless --force.',
+  '',
+  "reference says how a kit's design language builds a component: how it draws it, its anatomy, example markup,",
+  "the CSS to copy (on --m-* tokens) and where it appears in the language's pages. The kit is the project's own",
+  '(the one in <dir>) unless --kit names another.',
 ];
 
 export interface AddCommandOptions {
@@ -46,7 +52,7 @@ export function runAdd(id: string, opts: AddCommandOptions, io: CliIO): number {
     else for (const line of formatAddResult(result, io.cwd)) io.out(line);
     return 0;
   } catch (error) {
-    if (!(error instanceof MariachiError)) throw error;
+    if (!(error instanceof DesignKitsError)) throw error;
     if (opts.json) io.out(JSON.stringify({ error: { code: error.code, message: error.message, ...error.metadata } }, null, 2));
     else {
       io.err(`error ${error.message}`);
@@ -64,6 +70,37 @@ export function runList(opts: { json?: boolean }, io: CliIO): number {
   return 0;
 }
 
+export interface ReferenceCommandOptions {
+  kit?: string;
+  dir?: string;
+  list?: boolean;
+  json?: boolean;
+}
+
+/**
+ * `design reference <name>`: how the kit's language builds a component, as Markdown (or the answer as JSON). The kit
+ * is `--kit`, else the project's own in `--dir`. Returns the exit code.
+ */
+export function runReference(name: string | undefined, opts: ReferenceCommandOptions, io: CliIO): number {
+  const kit = opts.kit ?? installedKit(path.resolve(io.cwd, opts.dir ?? DEFAULT_DESIGN_DIR))?.id ?? null;
+  const source = openReferenceSource(io.store?.root ?? defaultStoreRoot(), io.store);
+  if (opts.list) {
+    io.out(referenceList(kit, source));
+    return 0;
+  }
+  if (!name) throw new DesignKitsError('design-kits/usage', 'reference takes the name of a component or pattern (or --list)');
+  if (!kit) {
+    throw new DesignKitsError(
+      'design-kits/no-kit',
+      `There's no kit in ${opts.dir ?? DEFAULT_DESIGN_DIR} to answer for. Name one with --kit <id>, or add one first (design add <kit>).`,
+    );
+  }
+  const answer = designReference(name, kit, source);
+  if (opts.json) io.out(JSON.stringify(answer, null, 2));
+  else io.out(answer.markdown);
+  return answer.found === 'none' ? 1 : 0;
+}
+
 /** The package's own command line (`npx @mariachi/design-kits …`). Returns the exit code. */
 export function run(argv: string[], io: CliIO): number {
   let parsed: ReturnType<typeof parseArgs>;
@@ -76,6 +113,8 @@ export function run(argv: string[], io: CliIO): number {
         force: { type: 'boolean' },
         'dry-run': { type: 'boolean' },
         json: { type: 'boolean' },
+        kit: { type: 'string', short: 'k' },
+        list: { type: 'boolean' },
         help: { type: 'boolean', short: 'h' },
       },
     });
@@ -104,9 +143,16 @@ export function run(argv: string[], io: CliIO): number {
         io,
       );
     }
-    throw new DesignKitsError('design-kits/usage', command === 'add' ? 'add takes one kit id' : `Unknown command "${command}"`);
+    if (command === 'reference' && !rest.length) {
+      return runReference(
+        id,
+        { kit: values.kit as string | undefined, dir: values.dir as string | undefined, list: values.list as boolean | undefined, json: values.json as boolean | undefined },
+        io,
+      );
+    }
+    throw new DesignKitsError('design-kits/usage', command === 'add' ? 'add takes one kit id' : command === 'reference' ? 'reference takes one name' : `Unknown command "${command}"`);
   } catch (error) {
-    if (!(error instanceof MariachiError)) throw error;
+    if (!(error instanceof DesignKitsError)) throw error;
     io.err(`error ${error.message}`);
     if (error.code === 'design-kits/usage') for (const line of USAGE) io.err(line);
     return error.code === 'design-kits/usage' ? 2 : 1;
