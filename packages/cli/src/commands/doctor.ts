@@ -31,10 +31,10 @@ export function formatDoctor(results: CheckResult[]): string[] {
 export function registerDoctorCommand(program: Command): void {
   program
     .command('doctor [path]')
-    .description('Check that the project is ready to run (Node, packages, .env, config, database, migrations, Redis, architecture) and say how to fix what is not')
+    .description('Check that the project is ready to run (Node, packages, .env, config, database, migrations, Redis, GoTrue, architecture) and say how to fix what is not')
     .option('-s, --schema <path>', 'module exporting defineTable() tables', 'src/schema/index.ts')
     .option('-o, --out <dir>', 'migrations folder', 'drizzle')
-    .option('--timeout <ms>', 'how long to wait for Postgres and Redis', '5000')
+    .option('--timeout <ms>', 'how long to wait for Postgres, Redis and GoTrue', '5000')
     .option('--env-file <file>', "an env file the app starts with (repeatable, later wins); default: package.json's mariachi.envFiles, else .env", collect, [])
     .option('--strict', 'exit 1 on warnings too')
     .option('--json', 'machine-readable output')

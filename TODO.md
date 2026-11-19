@@ -45,13 +45,11 @@ The goal: `mariachi init` gives a working multi-user app with nothing else to in
 Built for it already: organizations with a request check, invitation emails and `init --orgs`; a
 generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi token`; pages
 (`init --ui`, `generate page`) with static files, an escaping `html` template and a design kit the
-project owns; `mariachi docs` and `llms.txt`; cron schedules in the in-memory job queue. What is left:
+project owns; `mariachi docs` and `llms.txt`; cron schedules in the in-memory job queue; a local
+GoTrue and mailbox in the `--auth gotrue` project, and its page that accepts an invitation
+(`--orgs --ui`). What is left:
 
 1. **Sign-in a person can use in a new project.**
-   - A local GoTrue in the `--auth gotrue` project's Compose file, so its sign-in page works with no
-     account anywhere. It needs an `auth` schema, a signing key written at `init`, and a mail sink.
-   - A page that accepts an invitation (`--orgs --ui`): it carries the visitor from the emailed link
-     through sign-in and back, then posts the token. `INVITATION_URL` can then have a default.
    - A browser sign-in for the default (`--auth jwt`) project, or a decision that it has none. Its
      pages can show only public content today.
 2. **Design kits in a generated project.** `init --ui` copies a kit into

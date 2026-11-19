@@ -106,6 +106,15 @@ it), so the mark comes with it.
 | **`@mariachi/auth-workos`** | Implements `AuthProvider`: verifies WorkOS AuthKit JWTs via JWKS (issuer and `client_id` checked; `audience` for tokens AuthKit issues as an OAuth server, e.g. MCP), maps `org_id` → `tenantId`, `permissions` → scopes; `WorkOSWebhookHandler` verifies `WorkOS-Signature`. Implements `IdentityClient` (`createWorkOSIdentityClient()`) on `@workos-inc/node`, an optional peer loaded on first use. |
 | **`@mariachi/auth-oidc`** | Implements `AuthProvider` for any standard OpenID Connect issuer (Auth0, Cognito, Keycloak, Entra ID, Okta, Firebase, your own): finds the keys through discovery, verifies signature, issuer and a required audience, never HMAC, over HTTPS only, and maps tenant, roles and scopes from configurable claims (`org_id`, `roles`, `scope`/`scp`/`permissions` by default; roles are not scopes unless `rolesAsScopes`); `validate` for provider-specific checks; provides `createOidcAuth()`. No webhooks and no `IdentityClient`: the provider's own page signs users in. See its [README](../../auth-oidc/README.md). |
 
+### A local GoTrue for development
+
+`mariachi init --auth gotrue` runs GoTrue (`supabase/auth`) in the project's Compose file, on the
+project's own Postgres (in an `auth` schema), with Mailpit as the mailbox its email goes to, so
+sign-up, confirmation and sign-in links work with no account anywhere. It signs ES256 tokens with
+a key made for the project and kept in `.env` (`GOTRUE_JWT_KEYS`), and `AUTH_URL` points the app at
+it; `mariachi dev` starts it and `mariachi doctor` checks it ([cli.md](./cli.md#init)). Pointing
+`AUTH_URL` at a Supabase project is the only change needed to leave it.
+
 ## Headless sign-in: `IdentityClient`
 
 `AuthProvider` checks the tokens a provider issues. `IdentityClient` asks the provider for them, for apps whose own pages and backend drive sign-in (no hosted login page):

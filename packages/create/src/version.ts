@@ -15,4 +15,5 @@ export const THIRD_PARTY_VERSIONS = {
   vitest: '^3.0.0',
   '@types/node': '^22.0.0',
   testcontainers: '^10.0.0',
+  nodemailer: '^10.5.0',
 } as const;

@@ -1,10 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
 import { readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { type AddressInfo, createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { promisify } from 'node:util';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { parseEnv, promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startPostgres, startRedis, stopAll } from '../../../test/setup';
 import { JWTAdapter } from '@mariachi/auth';
@@ -52,7 +53,8 @@ async function bootReady<T = undefined>(
   env: Record<string, string>,
   probe?: (base: string) => Promise<T>,
 ): Promise<{ status: number | null; output: string; probed?: T }> {
-  const port = await freePort();
+  // A port of the test's choosing (env.PORT) when something outside the app has to know it beforehand
+  const port = Number(env.PORT) || (await freePort());
   const child = spawn(process.execPath, [viteNode, 'src/main.ts'], {
     cwd,
     env: { ...process.env, ...env, PORT: String(port), FORCE_COLOR: '0', NO_COLOR: '1' },
@@ -503,4 +505,205 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %
     expect(output).toContain('app/design-kit-missing');
     expect(output).toContain('pnpm mariachi design add linen');
   }, 60_000);
+});
+
+/**
+ * A new `--auth gotrue --orgs --ui` project, run as `pnpm dev` runs it: its own Compose file brings up
+ * Postgres, GoTrue and Mailpit (on free ports, through an override file, since the defaults may be
+ * taken here), and the app starts against them with the .env `init` wrote. Then two people use it
+ * from the generated pages' own scripts, run in the generated fake browser: one signs up, confirms by
+ * email and invites the other; the other opens the emailed link, signs up through the accept page,
+ * confirms, comes back and accepts. Every email is read from Mailpit's API.
+ */
+describe('generated project with --auth gotrue --orgs --ui, on its own Compose services', () => {
+  const app = join(workDir, 'local-auth-app');
+  const projectName = `mariachi-scaffold-${process.pid}`;
+  const docker = (args: string[], env: Record<string, string> = {}) =>
+    run('docker', ['compose', '-p', projectName, '-f', 'docker-compose.yml', '-f', 'compose.test.yml', ...args], {
+      cwd: app,
+      env: { ...process.env, ...env },
+      maxBuffer: 16 * 1024 * 1024,
+    });
+  const ports = { postgres: 0, auth: 0, mailbox: 0, smtp: 0, app: 0 };
+  let started = false;
+
+  beforeAll(async () => {
+    await rm(app, { recursive: true, force: true });
+    await createProject({ name: 'local-auth-app', outputDir: app, auth: 'gotrue', organizations: true, ui: true });
+    addKit('linen', { dir: join(app, 'src/design') });
+    for (const name of Object.keys(ports) as Array<keyof typeof ports>) ports[name] = await freePort();
+    // What a developer whose ports are taken would write: the same services, elsewhere on this machine
+    await writeFile(
+      join(app, 'compose.test.yml'),
+      `services:
+  postgres:
+    ports: !override ["${ports.postgres}:5432"]
+  auth:
+    ports: !override ["${ports.auth}:9999"]
+    environment:
+      API_EXTERNAL_URL: http://localhost:${ports.auth}
+      GOTRUE_JWT_ISSUER: http://localhost:${ports.auth}
+  mail:
+    ports: !override ["${ports.mailbox}:8025", "${ports.smtp}:1025"]
+`,
+    );
+    started = true;
+    // PORT is the app's: the Compose file reads it for the addresses GoTrue's links may send people back to
+    await docker(['up', '-d', '--wait', '--wait-timeout', '240'], { PORT: String(ports.app) });
+  }, 300_000);
+
+  afterAll(async () => {
+    if (started) await docker(['down', '-v', '--remove-orphans']).catch(() => undefined);
+    await rm(workDir, { recursive: true, force: true });
+  }, 120_000);
+
+  it('runs GoTrue on its own Postgres with the keys init wrote: an ES256 key in its JWKS, and the issuer AUTH_URL names', async () => {
+    const env = parseEnv(await readFile(join(app, '.env'), 'utf8'));
+    const health = (await (await fetch(`http://localhost:${ports.auth}/health`)).json()) as { version: string };
+    expect(health.version).toMatch(/^v\d+\.\d+\.\d+$/);
+    const jwks = (await (await fetch(`http://localhost:${ports.auth}/.well-known/jwks.json`)).json()) as { keys: Array<{ kid: string; alg: string; d?: string }> };
+    const [key] = JSON.parse(env.GOTRUE_JWT_KEYS as string) as Array<{ kid: string }>;
+    expect(jwks.keys).toEqual([expect.objectContaining({ kid: key?.kid, alg: 'ES256' })]);
+    // The public half only
+    expect(jwks.keys[0]?.d).toBeUndefined();
+    // GoTrue's tables are in the app's database, in their own schema
+    const tables = await run('docker', ['compose', '-p', projectName, 'exec', '-T', 'postgres', 'psql', '-U', 'postgres', '-d', 'local_auth_app', '-Atc', "select count(*) from information_schema.tables where table_schema = 'auth' and table_name = 'users'"], { cwd: app });
+    expect(tables.stdout.trim()).toBe('1');
+  });
+
+  it('signs up and in against the local GoTrue, and carries an invitation from the email through sign-up and back to accepted', async () => {
+    const databaseUrl = `postgres://postgres:postgres@localhost:${ports.postgres}/local_auth_app`;
+    // The project's own tables, as its first migration would make them (mariachi dev's step)
+    const script = join(app, 'apply-schema.mts');
+    await writeFile(
+      script,
+      `import { applySchema, createPostgresDatabase } from '@mariachi/database-postgres';\nimport * as schema from './src/schema/index';\nconst database = createPostgresDatabase({ url: process.argv[2] as string });\nawait database.connect();\nawait applySchema(database.db, schema);\nawait database.disconnect();\n`,
+    );
+    await run(process.execPath, [viteNode, script, databaseUrl], { cwd: app, env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' } });
+    await rm(script, { force: true });
+
+    const origin = `http://localhost:${ports.app}`;
+    const authUrl = `http://localhost:${ports.auth}`;
+    const mailbox = `http://localhost:${ports.mailbox}`;
+    type FakePage = {
+      url(): string;
+      session: Map<string, string>;
+      local: Map<string, string>;
+      text(id: string): string;
+      hidden(id: string): boolean;
+      assigned(): string | undefined;
+      type(id: string, value: string): void;
+      fire(id: string, event: 'click' | 'submit'): Promise<void>;
+    };
+    const { openPage } = (await import(pathToFileURL(join(app, 'src/api/pages/fake-browser.ts')).href)) as {
+      openPage(options: { script: string; url: string; fetch: (input: string, init?: RequestInit) => Promise<Response>; local?: Map<string, string>; session?: Map<string, string> }): Promise<FakePage>;
+    };
+
+    /** The newest email to `address` whose body has `marker`, from Mailpit's API. */
+    const emailTo = async (address: string, marker: string): Promise<{ HTML: string; Text: string }> => {
+      for (let attempt = 0; attempt < 75; attempt++) {
+        const found = (await (await fetch(`${mailbox}/api/v1/search?query=${encodeURIComponent(`to:${address}`)}`)).json()) as { messages: Array<{ ID: string }> };
+        for (const { ID } of found.messages) {
+          const message = (await (await fetch(`${mailbox}/api/v1/message/${ID}`)).json()) as { HTML: string; Text: string };
+          if (message.HTML.includes(marker) || message.Text.includes(marker)) return message;
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
+      throw new Error(`no email to ${address} with ${marker}`); // mariachi-lint-ignore test helper
+    };
+    /** The confirmation link GoTrue emailed, followed as a browser does, to where it sends the browser back. */
+    const confirm = async (address: string): Promise<string> => {
+      const message = await emailTo(address, '/verify?');
+      const href = /href="([^"]*\/verify\?[^"]*)"/.exec(message.HTML)?.[1]?.replaceAll('&amp;', '&') as string;
+      expect(new URL(href).origin).toBe(authUrl);
+      const res = await fetch(href, { redirect: 'manual' });
+      expect(res.status).toBe(303);
+      return res.headers.get('location') as string;
+    };
+    const signUp = async (tab: FakePage, address: string, password: string) => {
+      tab.type('email', address);
+      tab.type('password', password);
+      await tab.fire('sign-up', 'click');
+      expect(tab.text('status')).toBe('Check your email for the confirmation link.');
+    };
+    const tokenOf = (tab: FakePage) => (JSON.parse(tab.session.get('session') ?? 'null') as { accessToken: string }).accessToken;
+
+    const { status, output, probed } = await bootReady(
+      app,
+      {
+        ...parseEnv(await readFile(join(app, '.env'), 'utf8')),
+        PORT: String(ports.app),
+        DATABASE_URL: databaseUrl,
+        AUTH_URL: authUrl,
+        SMTP_URL: `smtp://localhost:${ports.smtp}`,
+      },
+      async (base) => {
+        // The page's requests: the app's own go to the running app, GoTrue's to GoTrue
+        const browser = (input: string, init?: RequestInit) => fetch(input.startsWith('/') ? base + input : input, init);
+        const api = (path: string, token: string, body?: unknown) =>
+          fetch(base + path, {
+            method: body === undefined ? 'GET' : 'POST',
+            headers: { authorization: `Bearer ${token}`, ...(body === undefined ? {} : { 'content-type': 'application/json' }) },
+            body: body === undefined ? undefined : JSON.stringify(body),
+          });
+        // The scripts as the app serves them, with the settings it writes in
+        const signIn = await (await fetch(`${base}/api/sign-in/client.js`)).text();
+        expect(signIn).toContain(`const AUTH = ${JSON.stringify(authUrl)};`);
+        const acceptPage = await (await fetch(`${base}/invitations/accept`)).text();
+        expect(acceptPage).toContain('href="/api/sign-in#return=/invitations/accept"');
+        const accept = await (await fetch(`${base}/assets/accept-invitation.js`)).text();
+
+        // Ada signs up, confirms her address from the email, and is signed in: the app checked GoTrue's ES256 token
+        const ada = 'ada@example.test';
+        const adaPassword = `pw-${randomUUID()}`;
+        const asked = await openPage({ script: signIn, url: `${origin}/api/sign-in`, fetch: browser });
+        await signUp(asked, ada, adaPassword);
+        const adaTab = await openPage({ script: signIn, url: await confirm(ada), fetch: browser, local: asked.local });
+        expect(adaTab.text('status')).toBe('Signed in.');
+        const me = (await (await api('/api/me', tokenOf(adaTab))).json()) as { email: string; personal: boolean };
+        expect(me).toMatchObject({ email: ada, personal: true });
+        // And her password signs her in from now on
+        const later = await openPage({ script: signIn, url: `${origin}/api/sign-in`, fetch: browser });
+        later.type('email', ada);
+        later.type('password', adaPassword);
+        await later.fire('password-form', 'submit');
+        expect(later.text('status')).toBe('Signed in.');
+
+        // She creates an organization and invites Ivy, by email: the token never comes back to her
+        const created = await api('/api/organizations', tokenOf(adaTab), { name: 'Acme Rockets' });
+        expect(created.status).toBe(201);
+        const { organization } = (await created.json()) as { organization: { id: string } };
+        const ivy = 'ivy@example.test';
+        const invited = await api(`/api/organizations/${organization.id}/invitations`, tokenOf(adaTab), { email: ivy, role: 'member' });
+        expect(invited.status).toBe(201);
+        expect(await invited.json()).not.toHaveProperty('token');
+
+        // The link in Ivy's email is the accept page on this app: INVITATION_URL's default
+        const invitation = await emailTo(ivy, '/invitations/accept#token=');
+        const link = invitation.Text.split(/\s+/).find((word) => word.startsWith(`${origin}/invitations/accept#token=`)) as string;
+        expect(link).toBeTruthy();
+
+        // She opens it: not signed in, so the page keeps the token and sends her to sign in
+        const landed = await openPage({ script: accept, url: link, fetch: browser });
+        expect(landed.url()).toBe(`${origin}/invitations/accept`);
+        expect(landed.hidden('invitation-sign-in')).toBe(false);
+        // She follows that link, signs up, and confirms from the email, which opens a new tab
+        const signingUp = await openPage({ script: signIn, url: `${origin}/api/sign-in#return=/invitations/accept`, fetch: browser, local: landed.local });
+        await signUp(signingUp, ivy, `pw-${randomUUID()}`);
+        const confirmed = await openPage({ script: signIn, url: await confirm(ivy), fetch: browser, local: landed.local });
+        // Signed in there, and sent back to the accept page
+        expect(confirmed.assigned()).toBe(`${origin}/invitations/accept`);
+        const back = await openPage({ script: accept, url: `${origin}/invitations/accept`, fetch: browser, local: landed.local, session: confirmed.session });
+        expect(back.text('invitation-status')).toBe(`You are signed in as ${ivy}. Accept the invitation as this account, or sign in with another.`);
+        // Accepting reads her confirmed address from GoTrue with the service key init wrote
+        await back.fire('invitation-accept', 'click');
+        expect(back.text('invitation-status')).toBe('You joined Acme Rockets as member.');
+
+        const hers = (await (await api('/api/organizations', tokenOf(confirmed))).json()) as Array<{ organization: { id: string }; role: string }>;
+        return { joined: hers.find((m) => m.organization.id === organization.id)?.role };
+      },
+    );
+    expect({ status, output: status === 200 ? '' : output }).toMatchObject({ status: 200 });
+    expect(probed).toEqual({ joined: 'member' });
+  }, 300_000);
 });
