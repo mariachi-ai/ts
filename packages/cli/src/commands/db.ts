@@ -16,7 +16,7 @@ import { planMigration } from '../db/migrations';
 import { importModule, writePlannedMigration } from '../db/project';
 
 import { DIM, GREEN, RED, RESET, YELLOW } from '../colors';
-import { isLocal, safeUrl } from '../doctor/checks';
+import { isLocalHost, safeUrl } from '../doctor/checks';
 import { fail } from '../output';
 
 interface DbOptions {
@@ -65,32 +65,47 @@ export function seedEnvironment(flag: string | undefined, nodeEnv: string | unde
 }
 
 /**
- * A database that is taken to be near: reached through a Unix socket (no host, or a path for one),
- * or at a host with no dot in its name, which is a Compose or container-network service
- * (`postgres`, `db`). A short name can also be a real database (an /etc/hosts alias, a private DNS
- * name); that is the price of not asking every containerised dev setup for `--env`.
+ * The hosts a database URL connects to, picked as Postgres clients pick them: the URL's own host,
+ * else its `host=` parameter, else PGHOST, else this machine. A list (`a,b`) gives each one.
  */
-function isNearby(url: string): boolean {
-  try {
-    const parsed = new URL(url);
-    const host = decodeURIComponent(parsed.hostname);
-    if (host === '' || host.startsWith('/') || parsed.searchParams.get('host')?.startsWith('/')) return true;
-    return !host.includes('.') && !host.includes(':');
-  } catch {
-    return false;
-  }
+export function databaseHosts(url: string, pgHost?: string): string[] {
+  const parsed = new URL(url);
+  const named = decodeURIComponent(parsed.hostname) || parsed.searchParams.get('host') || pgHost || '';
+  const hosts = named.split(',').map((host) => host.trim()).filter(Boolean);
+  return hosts.length ? hosts : ['localhost'];
+}
+
+/**
+ * A host that is taken to be near: this machine, a Unix socket (a path), or a name with no dot in
+ * it, which is a Compose or container-network service (`postgres`, `db`). A short name can also be
+ * a real database (an /etc/hosts alias, a private DNS name); that is the price of not asking every
+ * containerised dev setup for `--env`.
+ */
+function isNearbyHost(host: string): boolean {
+  if (isLocalHost(host) || host.startsWith('/')) return true;
+  return !host.includes('.') && !host.includes(':');
 }
 
 /**
  * Refuses the one mix-up that seeds demo data into a real database: a database on another machine,
  * seeded as development because nothing said otherwise (a laptop's .env sets NODE_ENV=development,
  * and `--url` pointed somewhere else). Saying `--env` is how a person confirms what the database is.
+ * Where the URL names no host, the host is its `host=` parameter, else `pgHost` (PGHOST).
  */
-export function assertSeedTarget(url: string, environment: string, explicit: boolean): void {
-  if (explicit || environment !== 'development' || isLocal(url) || isNearby(url)) return;
+export function assertSeedTarget(url: string, environment: string, explicit: boolean, pgHost?: string): void {
+  if (explicit || environment !== 'development') return;
+  let where = safeUrl(url);
+  try {
+    const hosts = databaseHosts(url, pgHost);
+    if (hosts.every(isNearbyHost)) return;
+    // The URL alone doesn't show the host it reaches
+    if (!new URL(url).hostname) where += `, host ${hosts.join(', ')}`;
+  } catch {
+    // Not a URL: not known to be near
+  }
   throw new ConfigError(
     'cli/seed-target-unclear',
-    `This database (${safeUrl(url)}) is not on this machine, and the seeds would run as development. Pass --env to say what it is: --env development if it really is a development database`,
+    `This database (${where}) is not on this machine, and the seeds would run as development. Pass --env to say what it is: --env development if it really is a development database`,
   );
 }
 
@@ -175,7 +190,7 @@ export function registerDbCommand(program: Command): void {
       try {
         const environment = seedEnvironment(options.env, readEnv('NODE_ENV'));
         const target = databaseUrl(options);
-        assertSeedTarget(target, environment, Boolean(options.env?.trim()));
+        assertSeedTarget(target, environment, Boolean(options.env?.trim()), readEnv('PGHOST'));
         const mod = await importModule(options.file);
         const seeds = (Array.isArray(mod.seeds) ? mod.seeds : Array.isArray(mod.default) ? mod.default : Object.values(mod)).filter(
           (s): s is SeedDefinition<DrizzleDb> => !!s && typeof s === 'object' && 'name' in s && 'run' in s,
