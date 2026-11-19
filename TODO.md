@@ -44,10 +44,6 @@ project owns; `mariachi docs` and `llms.txt`; cron schedules in the in-memory jo
      different one is refused.
    - A rate limiter in Postgres, so a project with organizations and several processes shares its
      limits without Redis.
-   - `mariachi doctor`'s hint for an unreachable Redis says `docker compose up -d` even when the
-     Compose file has no Redis service.
-   - `mariachi db seed` takes a database URL with no host as local even when a `host=` parameter or
-     `PGHOST` names a remote one.
 
 ## Later
 

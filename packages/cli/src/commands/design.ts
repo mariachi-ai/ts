@@ -40,7 +40,7 @@ const design = async (): Promise<DesignBuild> => {
   }
 };
 
-/** `@mariachi/design-kits` is an optional peer too: only `design add` and `design list` load it. */
+/** `@mariachi/design-kits` is an optional peer too: only `design add`, `design list` and `design reference` load it. */
 const designKits = async (): Promise<DesignKits> => {
   try {
     return await import('@mariachi/design-kits');
@@ -48,7 +48,7 @@ const designKits = async (): Promise<DesignKits> => {
     if (isMissing(err)) {
       throw new ConfigError(
         'cli/design-kits-missing',
-        'mariachi design add needs @mariachi/design-kits: pnpm add -D @mariachi/design-kits (or, with nothing installed: npx @mariachi/design-kits add <kit>)',
+        'mariachi design add, list and reference need @mariachi/design-kits: pnpm add -D @mariachi/design-kits (or, with nothing installed: npx @mariachi/design-kits add <kit>)',
       );
     }
     throw err;
@@ -179,6 +179,22 @@ export function registerDesignCommand(program: Command): void {
       try {
         const { runAdd } = await designKits();
         process.exitCode = runAdd(kit, opts, { cwd: process.cwd(), out: (line) => console.log(line), err: (line) => console.error(line) });
+      } catch (error) {
+        fail(error);
+      }
+    });
+
+  cmd
+    .command('reference [name]')
+    .description("How the project's design language builds a component: how it draws it, its anatomy, example markup and the CSS to copy")
+    .option('-k, --kit <id>', "a kit's id; default: the project's own (the one in --dir)")
+    .option('-d, --dir <dir>', "where the project's kit is", 'src/design')
+    .option('--list', 'name every component, and the language\'s named patterns')
+    .option('--json', 'machine-readable output')
+    .action(async (name: string | undefined, opts: { kit?: string; dir: string; list?: boolean; json?: boolean }) => {
+      try {
+        const { runReference } = await designKits();
+        process.exitCode = runReference(name, opts, { cwd: process.cwd(), out: (line) => console.log(line), err: (line) => console.error(line) });
       } catch (error) {
         fail(error);
       }

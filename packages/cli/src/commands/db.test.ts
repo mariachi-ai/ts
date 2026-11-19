@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { assertSeedTarget, seedEnvironment } from './db';
+import { assertSeedTarget, databaseHosts, seedEnvironment } from './db';
 
 describe('the environment `db seed` runs as', () => {
   it('is --env when given, whatever the process says', () => {
@@ -47,6 +47,46 @@ describe('where `db seed` will run', () => {
       'postgresql://app@%2Fvar%2Frun%2Fpostgresql/app',
     ]) {
       expect(() => assertSeedTarget(local, 'development', false)).not.toThrow();
+    }
+  });
+
+  it('takes the host a URL without one reaches from its host= parameter, else PGHOST, else this machine', () => {
+    expect(databaseHosts('postgres://app@db.example.com/app?host=/tmp', '10.0.0.9')).toEqual(['db.example.com']);
+    expect(databaseHosts('postgres:///app?host=db.example.com', '/tmp')).toEqual(['db.example.com']);
+    expect(databaseHosts('postgres:///app', 'db.example.com')).toEqual(['db.example.com']);
+    expect(databaseHosts('postgres:///app', '')).toEqual(['localhost']);
+    expect(databaseHosts('postgres:///app')).toEqual(['localhost']);
+    expect(databaseHosts('postgres:///app?host=a.example.com,/tmp')).toEqual(['a.example.com', '/tmp']);
+  });
+
+  it('refuses a URL with no host when its host= parameter or PGHOST names another machine', () => {
+    const unclear = expect.objectContaining({ code: 'cli/seed-target-unclear' });
+    expect(() => assertSeedTarget('postgres://app:secret@/app?host=db.example.com', 'development', false)).toThrowError(unclear);
+    expect(() => assertSeedTarget('postgres:///app', 'development', false, 'db.example.com')).toThrowError(unclear);
+    expect(() => assertSeedTarget('postgres:///app', 'development', false, '10.0.4.12')).toThrowError(unclear);
+    // Every host of a list has to be near
+    expect(() => assertSeedTarget('postgres:///app', 'development', false, '/var/run/postgresql,db.example.com')).toThrowError(unclear);
+    // The URL's own host decides, whatever the parameter says
+    expect(() => assertSeedTarget('postgres://app@db.example.com/app?host=/var/run/postgresql', 'development', false)).toThrowError(unclear);
+    // The message names the host the URL doesn't show
+    expect(() => assertSeedTarget('postgres:///app', 'development', false, 'db.example.com')).toThrowError(/postgres:\/\/\/app, host db\.example\.com\) is not on this machine/);
+    // --env still lets it run
+    expect(() => assertSeedTarget('postgres:///app', 'development', true, 'db.example.com')).not.toThrow();
+  });
+
+  it('runs a URL with no host when what it falls back to is near', () => {
+    for (const [url, pgHost] of [
+      ['postgres:///app', undefined],
+      ['postgres:///app', 'localhost'],
+      ['postgres:///app', '127.0.0.1'],
+      ['postgres:///app', '::1'],
+      ['postgres:///app', '/var/run/postgresql'],
+      ['postgres:///app', 'postgres'],
+      ['postgres:///app?host=localhost', 'db.example.com'],
+      ['postgres:///app?host=/tmp', 'db.example.com'],
+      ['postgres://app@localhost/app', 'db.example.com'],
+    ] as const) {
+      expect(() => assertSeedTarget(url, 'development', false, pgHost), `${url} ${pgHost}`).not.toThrow();
     }
   });
 });

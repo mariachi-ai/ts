@@ -394,7 +394,7 @@ export const uiAgents = (auth: ProjectAuth): string => `
   (tokens, base styles, fonts, motion). \`<html data-theme>\` is its id, read from
   \`src/design/kit.json\`. Don't edit the kit's files: change tokens in \`src/design.css\`, which loads
   last. To build something the library has no component for, follow the kit's reference
-  (\`src/design/DESIGN.md\`, or \`pnpm mariachi design reference <name>\` where the CLI has it), on
+  (\`src/design/DESIGN.md\`, or \`pnpm mariachi design reference <name>\`), on
   \`--m-*\` tokens. Another kit: \`pnpm mariachi design add <id>\`.
 - **A page's script is a file** in \`public/\`, loaded with \`scripts: ['/assets/<name>.js']\`. Inline
   \`<script>\` does not run (Content-Security-Policy). Pass data to a script in a \`data-\` attribute.
