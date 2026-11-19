@@ -64,9 +64,7 @@ project owns; `mariachi docs` and `llms.txt`; cron schedules in the in-memory jo
    - `mariachi validate` checking `ctx` first, Zod at boundaries and procedure names, not only imports.
      A `lint` script in generated projects.
    - The example entity indexed for search, as a worked example of `deps.search`.
-3. **Small fixes.**
-   - FusionAuth's three `IdentityClient` methods that throw `auth/not-supported` (resetting a password
-     with a token, and the two halves of verifying an email with a code).
+4. **Small fixes.**
    - A rate limiter in Postgres, so a project with organizations and several processes shares its
      limits without Redis.
 
