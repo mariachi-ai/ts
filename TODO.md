@@ -29,7 +29,6 @@ generated app that needs only Postgres, starts with `pnpm dev` and has `mariachi
    `src/design`, serves it under `/assets/design` and links its imports, and token overrides move to
    `src/design.css`. Serve `@mariachi/design/behaviors` and a kit's `motion.js` from `/assets`.
 3. **What an agent reads and runs.**
-   - Listing routes, procedures and jobs from the CLI.
    - Generators for an event and its subscriber, a webhook endpoint, a procedure on an existing
      service and a seed. The entity generator's fixed `name` column and naive plurals.
    - `mariachi validate` checking `ctx` first, Zod at boundaries and procedure names, not only imports.

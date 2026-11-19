@@ -1,6 +1,6 @@
 # CLI
 
-`@mariachi/cli` installs the `mariachi` binary (`init`, `generate`, `validate`, `db`, `design`, `explore`). It loads `./.env` when present; variables already set
+`@mariachi/cli` installs the `mariachi` binary (`init`, `generate`, `validate`, `list`, `db`, `design`, `explore`). It loads `./.env` when present; variables already set
 in the environment win.
 
 ## init
@@ -183,6 +183,80 @@ warnings too; `--timeout <ms>` sets how long to wait for a service.
 - **No secret appears in `detail` or `fix`**, whatever a driver's error says: passwords in URLs,
   secret-looking query parameters, and the values of variables named like secrets (`*_SECRET`,
   `*_TOKEN`, `*_KEY`, `*_PASSWORD`) are replaced by `***`. A variable is named, never quoted.
+
+## list
+
+```bash
+mariachi list                   # routes, procedures and jobs
+mariachi list routes            # or: procedures, jobs
+mariachi list procedures --json # { version, root, procedures: [...], issues: [...] }
+mariachi list -C path/to/app
+```
+
+Says what the app exposes without reading every file or starting it: each HTTP route with its
+method, full path, auth and the procedure its handler calls; each procedure with its input and
+output, where it is registered and which routes call it; each job with its payload, retries,
+timeout and cron schedules. Every entry says where it is written (`file:line`), so the next thing
+to open is on the line.
+
+```
+Routes (9)
+GET     /api/health/live     public   (health)      src/app.ts:120
+...
+POST    /api/notes           session  notes.create  NotesController src/api/controllers/notes.controller.ts:19
+GET     /api/notes/:id       session  notes.get     NotesController src/api/controllers/notes.controller.ts:29
+...
+
+Procedures (5)
+notes.create  src/services/notes/notes.handler.ts:14  ← POST /api/notes
+  in  { name: string }
+  out { id: uuid, name: string, createdAt: date, updatedAt: date }
+...
+
+Jobs (1)
+send-digest  src/jobs/send-digest.job.ts:10  5 attempts, exponential from 1s; timeout 60s
+  payload  { id: string }
+  schedule 0 6 * * * Europe/Amsterdam (nightly-digest)  src/app.ts:98
+```
+
+**Where it looks.** It reads the app's own registrations, not a search of its text. It loads the
+modules the generated layout keeps its wiring in, as `mariachi db` loads the schema, and calls them
+with a communication layer that only notes what is registered and dependencies that do nothing:
+
+| Section | Loaded from | What it reads |
+| --- | --- | --- |
+| Routes | `src/api/controllers/index.ts` | `createControllers(communication)`, then each controller's `routes()` |
+| Procedures | `src/services/index.ts`, `src/organizations.ts` (`--orgs`) | what `registerServices(communication, deps)` and `setupOrganizations(deps)` register |
+| Jobs | `src/jobs/index.ts` | the `jobs` array |
+
+The composition root, `src/app.ts`, and `main.ts` are never run, so nothing connects to a database,
+a queue or the network, and no setting is needed. What only exists once the app runs is read from
+`src/app.ts`'s source with the TypeScript parser: the API prefix (`createApiServer({ prefix })`),
+the default auth (`.withAuth(...)`), and the routes the server adds itself (`withHealth`,
+`withOpenApi`, `withStatic`). Cron schedules are the `jobs.schedule({ cron, jobName })` calls
+anywhere in `src`. A value held in a variable shows as its source in angle brackets
+(`<config.prefix>`).
+
+- **Auth** is the route's own `auth`, or else the server's default: `public` for none, strategies
+  joined with `|`, and `tenant optional` or the scopes when the route sets them.
+- **The procedure a route calls** is read from its handler's code (`this.call(ctx, 'notes.create', ...)`).
+  A name built at run time is shown as written (`organizations.${action}`).
+- **Schemas** are summed up in one line, TypeScript-like: `?` marks a key the input may leave out
+  (optional or defaulted), and objects more than three levels down are `{…}`.
+- **What it misses**: a controller registered in `src/app.ts` rather than through
+  `createControllers`, procedures registered anywhere but the two files above, and a schedule whose
+  arguments aren't an object literal.
+- **Issues** follow the list: `cli/list-load-failed` (an error: a module could not be loaded or its
+  registration threw, and what it registers is missing), `cli/duplicate-procedure` (an error: the app
+  would stop at startup), `cli/unknown-procedure` (a route calls a procedure nothing registers) and
+  `cli/unknown-job` (a schedule names a job `src/jobs/index.ts` doesn't have). It exits 1 on an
+  error.
+- Keep the top level of those modules free of side effects, as the layout already asks: loading
+  them runs it.
+- `--json`'s `version` changes if the shape does. Each route is `{ method, path, auth, defaultAuth,
+  tenant?, scopes, procedures, controller, kind, location?, summary?, schema: { params?, query?,
+  body?, response? } }`, each procedure `{ name, input?, output?, service?, location?, calledBy }`
+  and each job `{ name, payload?, retry?, timeoutMs?, nonRetryableCodes?, schedules, location? }`.
 
 ## docs
 
