@@ -17,6 +17,7 @@ Browse it: [explorer.md](../core/docs/explorer.md)
 | `@mariachi/design` | Browser-safe API: `defineTheme`, `extendTheme`, `defineDesign`, presets, the contract, `checkTheme`, colour and contrast helpers |
 | `@mariachi/design/build` | Node API: `buildDesign`, `packageAssets`, `buildCatalog` (used by `mariachi design`) |
 | `@mariachi/design/behaviors` | Optional browser script: `enhance()`, `toast()` |
+| `@mariachi/design/behaviors.js` | The same script as a file, for a server to send to the browser (`require.resolve` finds it) |
 | `@mariachi/design/mariachi.css` | Foundation and every component, no theme (`mariachi.min.css` minified) |
 | `@mariachi/design/base.css`, `components.css`, `components/<name>.css` | Pieces, for importing only what you use |
 | `@mariachi/design/themes/<preset>.css` | One preset, scoped to `[data-theme="<preset>"]` |

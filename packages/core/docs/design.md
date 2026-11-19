@@ -26,9 +26,11 @@ only what you use: `@mariachi/design/base.css` plus `@mariachi/design/components
   `data-theme`.
 - The element with `data-theme` paints its own canvas, text colour and font.
 
-A project made with `mariachi init --ui` has this set up: the stylesheets are served under
-`/assets/design`, `src/api/pages/layout.ts` links them and sets `data-theme` from one constant
-(`THEME`), and its pages are written with the markup below. See [cli.md](./cli.md#init).
+A project made with `mariachi init --ui` has this set up with a [kit](#copying-a-language-into-a-project-kits)
+in place of a preset: the kit (`linen` unless `--kit` names another) is copied into `src/design/` and
+served under `/assets/design`, the components come from this package (`components.css`, under
+`/assets/lib`), `src/api/pages/layout.ts` links them and sets `data-theme` to the kit's id from
+`src/design/kit.json`, and its pages are written with the markup below. See [cli.md](./cli.md#init).
 
 ## Presets
 
@@ -229,6 +231,15 @@ A project has one kit, and `<html data-theme>` names the language, so the folder
 
 The same from code: `addKit(id, { dir, force, dryRun })`, `listKits()`, `readKit(id)` and `installedKit(dir)` from `@mariachi/design-kits`.
 
+`mariachi init --ui` does this for a new project: it copies a kit (`linen`, or `--kit <id>`) into
+`src/design/`, writes `src/design.css` itself (`design add` keeps it), and serves and links
+everything: the kit, its motion, this package's `components.css` (the components alone, since the kit
+has the base), then `design.css`, with `behaviors.js` and the kit's `motion.js` started from
+`public/enhance.js`. The layout reads `data-theme` from `src/design/kit.json`, so a later
+`mariachi design add <other>` switches the look with no code change. In that project the components
+stay this package's; the kit gives them the look, and its `DESIGN.md` (or `mariachi design reference <name>`, below) says
+how to build what the library has no component for. See [cli.md](./cli.md#init).
+
 ### Building a component: `design reference`
 
 When the project needs a component, ask how its language builds it:
@@ -379,3 +390,8 @@ import { enhance, toast } from '@mariachi/design/behaviors';
 enhance(); // tabs and menus (keyboard), dialog openers, copy buttons, auto-growing composer
 toast({ title: 'Saved', tone: 'success' });
 ```
+
+With no bundler, serve the file itself and import it from a module script: `@mariachi/design/behaviors.js`
+is its path (`createRequire(import.meta.url).resolve('@mariachi/design/behaviors.js')`). A project
+made with `mariachi init --ui` serves it as `/assets/lib/behaviors.js` and starts it from
+`public/enhance.js`.

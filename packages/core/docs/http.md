@@ -245,6 +245,10 @@ api.withStatic('/assets', 'public');     // GET /assets/app.css → public/app.c
   [storage](./storage.md), and are best served from another origin (a storage or CDN host), so a
   file someone uploaded can never run as a page of your site. `staticFiles(directory, options)` is the handler alone, for a route of
   your own ending in `*`.
+- **`withStaticFile(urlPath, file, options?)`** serves one file at one path, the same way, and
+  nothing else from its directory: a stylesheet that sits beside source code
+  (`withStaticFile('/assets/design.css', 'src/design.css')`), or one file from a package.
+  `staticFile(file, options)` is the handler alone.
 
 ## Rate limits
 
