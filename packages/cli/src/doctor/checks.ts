@@ -60,9 +60,12 @@ export function exampleKeys(text: string): string[] {
   return [...text.matchAll(/^([A-Z][A-Z0-9_]*)=/gm)].map((m) => m[1] as string);
 }
 
+/** True for a host name that is this machine. */
+export const isLocalHost = (host: string): boolean => ['localhost', '127.0.0.1', '::1', '[::1]'].includes(host.toLowerCase());
+
 export const isLocal = (url: string): boolean => {
   try {
-    return ['localhost', '127.0.0.1', '::1', '[::1]'].includes(new URL(url).hostname);
+    return isLocalHost(new URL(url).hostname);
   } catch {
     return false;
   }
@@ -70,10 +73,83 @@ export const isLocal = (url: string): boolean => {
 
 export const composeFile = (cwd: string): string | undefined => ['docker-compose.yml', 'docker-compose.yaml', 'compose.yml', 'compose.yaml'].find((f) => existsSync(join(cwd, f)));
 
+const COMPOSE_OVERRIDES = ['docker-compose.override.yml', 'docker-compose.override.yaml', 'compose.override.yml', 'compose.override.yaml'];
+
+export interface ComposeService {
+  name: string;
+  image?: string;
+}
+
+/**
+ * The services a Compose file defines, read line by line: the keys under the top-level `services:`
+ * and each one's `image`. Covers the block style Compose files are written in; commented-out
+ * services don't count.
+ */
+export function composeServices(text: string): ComposeService[] {
+  const services: ComposeService[] = [];
+  let inServices = false;
+  // The indentation of the service names, and of each service's own keys
+  let indent = -1;
+  let keys = -1;
+  let current: ComposeService | undefined;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.replace(/\s+#.*$/, '').trimEnd();
+    if (!line.trim() || line.trimStart().startsWith('#')) continue;
+    const depth = line.length - line.trimStart().length;
+    if (depth === 0) {
+      inServices = line === 'services:';
+      indent = -1;
+      current = undefined;
+    } else if (inServices) {
+      if (indent === -1) indent = depth;
+      if (depth === indent) {
+        const name = /^\s*(["']?)([\w.-]+)\1:(?:\s|$)/.exec(line)?.[2];
+        current = name ? { name } : undefined;
+        if (current) services.push(current);
+        keys = -1;
+      } else if (depth > indent && current) {
+        if (keys === -1) keys = depth;
+        const image = depth === keys ? /^\s*image:\s*(["']?)([^"'\s]+)\1$/.exec(line)?.[2] : undefined;
+        if (image) current.image = image;
+      }
+    }
+  }
+  return services;
+}
+
+const REDIS_IMAGE = /(?:^|\/)(?:redis|redis-stack|redis-stack-server|valkey|keydb|dragonfly)(?:[:@]|$)/i;
+
+/** The Compose service that runs Redis: by its image, or by its name when it has none (built here). */
+export function redisService(services: ComposeService[]): string | undefined {
+  return services.find((s) => (s.image ? REDIS_IMAGE.test(s.image) : /redis|valkey/i.test(s.name)))?.name;
+}
+
+/** The services of a project's Compose file and its override file, if any. */
+function projectComposeServices(cwd: string, file: string): ComposeService[] {
+  return [file, ...COMPOSE_OVERRIDES.filter((f) => existsSync(join(cwd, f)))].flatMap((f) => {
+    try {
+      return composeServices(readFileSync(join(cwd, f), 'utf8'));
+    } catch {
+      return [];
+    }
+  });
+}
+
+const DEV_HINT = '(or: mariachi dev, which starts the services and waits for them)';
+
 /** What to do about a local service that isn't answering. */
 function startHint(cwd: string, url: string, service: string): string {
   if (!isLocal(url)) return `Check that ${service} at ${safeUrl(url)} is running and reachable from here`;
-  return composeFile(cwd) ? 'docker compose up -d (or: mariachi dev, which starts the services and waits for them)' : `Start ${service} on ${new URL(url).host}`;
+  return composeFile(cwd) ? `docker compose up -d ${DEV_HINT}` : `Start ${service} on ${new URL(url).host}`;
+}
+
+/** As `startHint`, naming the Compose service that runs Redis, or saying there is none. */
+export function redisStartHint(cwd: string, url: string, envFile: string): string {
+  const compose = composeFile(cwd);
+  if (!compose || !isLocal(url)) return startHint(cwd, url, 'Redis');
+  const service = redisService(projectComposeServices(cwd, compose));
+  if (service) return `docker compose up -d ${service} ${DEV_HINT}`;
+  return `Nothing in ${compose} runs Redis: add a redis service to it, or set REDIS_URL in ${envFile} to a Redis that is running`;
 }
 
 const SECRET_NAME = /secret|token|password|passwd|pwd|key|credential|signature|sig$|auth/i;
@@ -242,7 +318,7 @@ export async function runDoctor(options: DoctorOptions): Promise<CheckResult[]> 
       await probeRedis(redisUrl, timeoutMs);
       add('redis', 'ok', `Redis at ${safeUrl(redisUrl)}`);
     } catch (error) {
-      add('redis', 'fail', `Can't reach Redis at ${safeUrl(redisUrl)}: ${reason(error)}`, startHint(cwd, redisUrl, 'Redis'));
+      add('redis', 'fail', `Can't reach Redis at ${safeUrl(redisUrl)}: ${reason(error)}`, redisStartHint(cwd, redisUrl, last));
     }
   }
 
