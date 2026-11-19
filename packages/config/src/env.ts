@@ -95,6 +95,7 @@ export function buildConfigFromEnv(env: Env = process.env): AppConfigInput {
         }) as NonNullable<AppConfigInput['database']>
       : undefined,
     redis: env.REDIS_URL ? { url: env.REDIS_URL } : undefined,
+    rateLimit: env.RATE_LIMIT_ADAPTER ? { adapter: env.RATE_LIMIT_ADAPTER as 'memory' | 'redis' | 'postgres' } : undefined,
     auth: compact({
       adapter: env.AUTH_ADAPTER,
       jwtSecret: env.JWT_SECRET,

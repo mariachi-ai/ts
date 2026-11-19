@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { FusionAuthIdentityClient, fusionAuthEmailVouched, type FusionAuthUser } from './identity-client';
+import { FusionAuthIdentityClient, fusionAuthEmailVouched, type FusionAuthIdentityClientConfig, type FusionAuthUser } from './identity-client';
 import { createFusionAuthIdentityClient } from './index';
 
 const CONFIG = {
@@ -28,7 +28,7 @@ const faUser = (over: Partial<FusionAuthUser> = {}): FusionAuthUser => ({
 
 type Call = { method: string; url: string; headers: Record<string, string>; body?: string };
 
-function fakeFetch(respond: (call: Call) => { status: number; body?: unknown }) {
+function fakeFetch(respond: (call: Call) => { status: number; body?: unknown }, config: Partial<FusionAuthIdentityClientConfig> = {}) {
   const calls: Call[] = [];
   const impl = (async (url: string, init: RequestInit) => {
     const call = { method: init.method ?? 'GET', url, headers: init.headers as Record<string, string>, body: init.body as string | undefined };
@@ -36,7 +36,7 @@ function fakeFetch(respond: (call: Call) => { status: number; body?: unknown }) 
     const { status, body } = respond(call);
     return new Response(body === undefined ? '' : JSON.stringify(body), { status });
   }) as unknown as typeof fetch;
-  return { calls, client: new FusionAuthIdentityClient({ ...CONFIG, fetch: impl }) };
+  return { calls, client: new FusionAuthIdentityClient({ ...CONFIG, ...config, fetch: impl }) };
 }
 
 describe('fusionAuthEmailVouched (ID0 F1)', () => {
@@ -193,14 +193,192 @@ describe('FusionAuthIdentityClient', () => {
     await expect(wrong.client.signInWithEmailCode({ email: 'a@x', code: 'nope' })).rejects.toMatchObject({ code: 'auth/invalid-grant' });
   });
 
-  it('sets a password through the User API; held sign-ins and app-side resets are FusionAuth\'s own', async () => {
+  it('sets a password through the User API', async () => {
     const { client, calls } = fakeFetch(() => ({ status: 200, body: { user: faUser() } }));
     await client.setPassword('fa-user-1', 'pw-2');
     expect(calls[0]).toMatchObject({ method: 'PATCH', url: 'https://auth.example.org/api/user/fa-user-1' });
     expect(JSON.parse(calls[0]!.body!)).toEqual({ user: { password: 'pw-2' } });
-    await expect(client.resetPassword()).rejects.toMatchObject({ code: 'auth/not-supported' });
-    await expect(client.pendingVerificationCode()).rejects.toMatchObject({ code: 'auth/not-supported' });
-    await expect(client.verifyEmailAndSignIn()).rejects.toMatchObject({ code: 'auth/not-supported' });
+  });
+
+  it("returns the reset token for the app to send with emailsSentBy 'app'", async () => {
+    const { client, calls } = fakeFetch(() => ({ status: 200, body: { changePasswordId: 'cp-1' } }), { emailsSentBy: 'app' });
+    expect(await client.sendPasswordReset('ada@example.org')).toEqual({ deliveredBy: 'app', token: 'cp-1' });
+    expect(JSON.parse(calls[0]!.body!)).toEqual({ loginId: 'ada@example.org', applicationId: 'app-1', sendForgotPasswordEmail: false });
+    const missing = fakeFetch(() => ({ status: 200, body: {} }), { emailsSentBy: 'app' });
+    await expect(missing.client.sendPasswordReset('ada@example.org')).rejects.toMatchObject({ code: 'auth/identity-provider' });
+  });
+
+  describe('resetPassword', () => {
+    it('changes the password with the changePasswordId, then names the user with a token-less one-time-password login', async () => {
+      const { client, calls } = fakeFetch((c) =>
+        c.url.endsWith('/api/user/change-password') ? { status: 200, body: { oneTimePassword: 'otp-1' } } : { status: 200, body: { user: faUser() } },
+      );
+      const user = await client.resetPassword({ token: 'cp-1', password: 'new-long-password' });
+      expect(user).toMatchObject({ id: 'fa-user-1', email: 'ada@example.org', emailVerified: true });
+      expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(['POST https://auth.example.org/api/user/change-password', 'POST https://auth.example.org/api/login']);
+      expect(JSON.parse(calls[0]!.body!)).toEqual({ changePasswordId: 'cp-1', password: 'new-long-password' });
+      expect(JSON.parse(calls[1]!.body!)).toEqual({ oneTimePassword: 'otp-1', applicationId: 'app-1', noJWT: true });
+    });
+
+    it('names the user when the login is held for email verification (212)', async () => {
+      const unverified = faUser({ identities: [{ type: 'email', value: 'ada@example.org', verified: false, verifiedReason: 'Pending' }] });
+      const { client } = fakeFetch((c) =>
+        c.url.endsWith('/api/user/change-password') ? { status: 200, body: { oneTimePassword: 'otp-1' } } : { status: 212, body: { user: unverified, emailVerificationId: 'ev-1' } },
+      );
+      expect(await client.resetPassword({ token: 'cp-1', password: 'pw' })).toMatchObject({ id: 'fa-user-1', emailVerified: false });
+    });
+
+    it.each([
+      ['a used, expired or unknown token', 404, undefined, 'auth/invalid-grant'],
+      ['a password the tenant refuses', 400, { fieldErrors: { password: [{ code: '[tooShort]password', message: 'The [password] property is shorter than the minimum of [8] characters.' }] } }, 'auth/invalid-grant'],
+      ['a user with two-factor', 400, { generalErrors: [{ code: '[TrustTokenRequired]', message: 'This request requires a Trust Token.' }] }, 'auth/not-supported'],
+      ['the rate limit', 429, undefined, 'auth/rate-limited'],
+      ['a FusionAuth failure', 500, undefined, 'auth/identity-provider'],
+    ])('maps %s (%s) to %s', async (_name, status, body, code) => {
+      const { client, calls } = fakeFetch(() => ({ status, body }));
+      await expect(client.resetPassword({ token: 'cp-1', password: 'pw' })).rejects.toMatchObject({ code });
+      expect(calls).toHaveLength(1);
+    });
+
+    it("says what FusionAuth refused about the password, with its error codes", async () => {
+      const body = { fieldErrors: { password: [{ code: '[tooShort]password', message: 'The [password] property is shorter than the minimum of [8] characters.' }] } };
+      const { client } = fakeFetch(() => ({ status: 400, body }));
+      await expect(client.resetPassword({ token: 'cp-1', password: 'pw' })).rejects.toMatchObject({
+        message: expect.stringContaining('shorter than the minimum'),
+        metadata: { status: 400, errors: ['[tooShort]password'] },
+      });
+    });
+
+    it('fails as the provider when the one-time-password login names nobody', async () => {
+      for (const [status, code] of [[404, 'auth/identity-provider'], [242, 'auth/identity-provider'], [429, 'auth/rate-limited']] as const) {
+        const { client } = fakeFetch((c) => (c.url.endsWith('/api/user/change-password') ? { status: 200, body: { oneTimePassword: 'otp-1' } } : { status, body: {} }));
+        await expect(client.resetPassword({ token: 'cp-1', password: 'pw' })).rejects.toMatchObject({ code });
+      }
+    });
+  });
+
+  describe('email verification with a code', () => {
+    const held = { user: faUser({ identities: [{ type: 'email', value: 'ada@example.org', verified: false, verifiedReason: 'Pending' }] }), emailVerificationId: 'ev-current' };
+
+    /** FusionAuth for a held sign-in: the login, a new verification, the Verify Email API and the passwordless sign-in. */
+    function fusionAuth(over: (c: Call) => { status: number; body?: unknown } | undefined = () => undefined, config: Partial<FusionAuthIdentityClientConfig> = {}) {
+      return fakeFetch((c) => {
+        const answer = over(c);
+        if (answer) return answer;
+        if (c.url.endsWith('/api/login')) return { status: 212, body: held };
+        if (c.method === 'PUT' && c.url.includes('/api/user/verify-email')) return { status: 200, body: { verificationId: 'ev-new', oneTimeCode: 'K7Q2ZD' } };
+        if (c.url.endsWith('/api/user/verify-email')) return { status: 200 };
+        if (c.url.endsWith('/api/passwordless/start')) return { status: 200, body: { code: 'pl-code' } };
+        if (c.url.endsWith('/api/passwordless/login')) return { status: 200, body: { token: ACCESS, refreshToken: 'rt-1', user: faUser() } };
+        return { status: 500 };
+      }, config);
+    }
+
+    async function pendingFrom(client: FusionAuthIdentityClient) {
+      const out = await client.signInWithPassword({ email: 'ada@example.org', password: 'pw' });
+      if (out.status !== 'pending') throw new Error('expected a held sign-in');
+      return out;
+    }
+
+    it("app sends the email: the sign-in starts a verification without FusionAuth's email, and its code is sealed in the pending token", async () => {
+      const { client, calls } = fusionAuth(undefined, { emailsSentBy: 'app' });
+      const pending = await pendingFrom(client);
+      expect(pending).toMatchObject({ status: 'pending', reason: 'email-verification', email: 'ada@example.org', user: { id: 'fa-user-1', emailVerified: false } });
+      expect(calls[1]).toMatchObject({ method: 'PUT', url: 'https://auth.example.org/api/user/verify-email?email=ada%40example.org&applicationId=app-1&sendVerifyEmail=false', headers: { Authorization: 'fa-api-key' } });
+      // Neither the code nor FusionAuth's ids are readable in the token.
+      expect(pending.pendingToken).toMatch(/^fa1\./);
+      for (const secret of ['K7Q2ZD', 'ev-new', 'fa-user-1']) {
+        expect(pending.pendingToken).not.toContain(secret);
+        expect(Buffer.from(pending.pendingToken!.split('.')[2]!, 'base64url').toString('latin1')).not.toContain(secret);
+      }
+      expect(await client.pendingVerificationCode(pending)).toBe('K7Q2ZD');
+      expect(calls).toHaveLength(2);
+
+      const out = await client.verifyEmailAndSignIn({ pendingToken: pending.pendingToken!, code: 'K7Q2ZD', ipAddress: '203.0.113.7' });
+      expect(out).toMatchObject({ status: 'signed-in', user: { id: 'fa-user-1' }, tokens: { accessToken: ACCESS, refreshToken: 'rt-1' } });
+      expect(calls.slice(2).map((c) => `${c.method} ${c.url}`)).toEqual([
+        'POST https://auth.example.org/api/user/verify-email',
+        'POST https://auth.example.org/api/passwordless/start',
+        'POST https://auth.example.org/api/passwordless/login',
+      ]);
+      expect(JSON.parse(calls[2]!.body!)).toEqual({ verificationId: 'ev-new', oneTimeCode: 'K7Q2ZD' });
+      expect(calls[2]!.headers['X-Forwarded-For']).toBe('203.0.113.7');
+      expect(JSON.parse(calls[3]!.body!)).toEqual({ loginId: 'ada@example.org', applicationId: 'app-1' });
+      expect(JSON.parse(calls[4]!.body!)).toEqual({ code: 'pl-code', ipAddress: '203.0.113.7' });
+    });
+
+    it("reads the code under the documented name (verificationOneTimeCode) too", async () => {
+      const { client } = fusionAuth((c) => (c.method === 'PUT' ? { status: 200, body: { verificationId: 'ev-new', verificationOneTimeCode: 'AB12CD' } } : undefined), { emailsSentBy: 'app' });
+      expect(await client.pendingVerificationCode(await pendingFrom(client))).toBe('AB12CD');
+    });
+
+    it('FusionAuth sends the email: the pending token names its current verification, and there is no code for the app', async () => {
+      const { client, calls } = fusionAuth();
+      const pending = await pendingFrom(client);
+      expect(calls).toHaveLength(1);
+      await expect(client.pendingVerificationCode(pending)).rejects.toMatchObject({ code: 'auth/not-supported' });
+      expect((await client.verifyEmailAndSignIn({ pendingToken: pending.pendingToken!, code: 'FROMFA' })).status).toBe('signed-in');
+      expect(JSON.parse(calls[1]!.body!)).toEqual({ verificationId: 'ev-current', oneTimeCode: 'FROMFA' });
+    });
+
+    it('holds a sign-in without a pending token when FusionAuth verifies by link (no verification id)', async () => {
+      const { client, calls } = fusionAuth((c) => (c.url.endsWith('/api/login') ? { status: 212, body: { user: held.user } } : undefined), { emailsSentBy: 'app' });
+      const pending = await pendingFrom(client);
+      expect(pending.pendingToken).toBeUndefined();
+      expect(calls).toHaveLength(1);
+      await expect(client.pendingVerificationCode(pending)).rejects.toMatchObject({ code: 'auth/not-supported' });
+      await expect(client.pendingVerificationCode({ status: 'pending', reason: 'mfa', pendingToken: 'tf-1' })).rejects.toMatchObject({ code: 'auth/not-supported' });
+    });
+
+    it('refuses a pending token it did not seal, or sealed with another client secret, before calling FusionAuth', async () => {
+      const { client, calls } = fusionAuth(undefined, { emailsSentBy: 'app' });
+      const pending = await pendingFrom(client);
+      const other = fusionAuth(undefined, { emailsSentBy: 'app', clientSecret: 'another-secret' });
+      const [prefix, iv, data] = pending.pendingToken!.split('.');
+      const flipped = Buffer.from(data!, 'base64url');
+      flipped[0] = flipped[0]! ^ 1;
+      for (const pendingToken of ['ev-new', 'fa1.', `${prefix}.${iv}.${flipped.toString('base64url')}`]) {
+        await expect(client.verifyEmailAndSignIn({ pendingToken, code: 'K7Q2ZD' })).rejects.toMatchObject({ code: 'auth/invalid-grant' });
+        await expect(client.pendingVerificationCode({ ...pending, pendingToken })).rejects.toMatchObject({ code: 'auth/invalid-grant' });
+      }
+      await expect(other.client.verifyEmailAndSignIn({ pendingToken: pending.pendingToken!, code: 'K7Q2ZD' })).rejects.toMatchObject({ code: 'auth/invalid-grant' });
+      expect(calls).toHaveLength(2);
+      expect(other.calls).toHaveLength(0);
+    });
+
+    it.each([
+      ['a wrong code', 400, { fieldErrors: { verificationId: [{ code: '[invalid]verificationId', message: 'The [verificationId] property is invalid.' }] } }, 'auth/invalid-grant'],
+      ['a used, replaced or expired verification', 404, undefined, 'auth/invalid-grant'],
+      ["a tenant that doesn't verify emails", 403, undefined, 'auth/not-supported'],
+      ['the rate limit', 429, undefined, 'auth/rate-limited'],
+      ['a FusionAuth failure', 503, undefined, 'auth/identity-provider'],
+    ])('maps %s (%s) from the Verify Email API to %s, and signs nobody in', async (_name, status, body, code) => {
+      const { client, calls } = fusionAuth((c) => (c.method === 'POST' && c.url.endsWith('/api/user/verify-email') ? { status, body } : undefined), { emailsSentBy: 'app' });
+      const pending = await pendingFrom(client);
+      await expect(client.verifyEmailAndSignIn({ pendingToken: pending.pendingToken!, code: 'K7Q2ZD' })).rejects.toMatchObject({ code });
+      expect(calls.some((c) => c.url.includes('/api/passwordless/'))).toBe(false);
+    });
+
+    it.each([
+      ['passwordless login off for the application', 400, { fieldErrors: { applicationId: [{ code: '[disabled]applicationId', message: 'The Application for the Id provided has passwordless login disabled.' }] } }, 'auth/not-supported'],
+      ['a user deleted since', 404, undefined, 'auth/invalid-grant'],
+      ['a FusionAuth failure', 500, undefined, 'auth/identity-provider'],
+    ])('maps %s (%s) from the sign-in after verifying to %s', async (_name, status, body, code) => {
+      const { client } = fusionAuth((c) => (c.url.endsWith('/api/passwordless/start') ? { status, body } : undefined), { emailsSentBy: 'app' });
+      const pending = await pendingFrom(client);
+      await expect(client.verifyEmailAndSignIn({ pendingToken: pending.pendingToken!, code: 'K7Q2ZD' })).rejects.toMatchObject({ code });
+    });
+
+    it('refuses to hand out tokens for a different user than the one verified', async () => {
+      const { client } = fusionAuth((c) => (c.url.endsWith('/api/passwordless/login') ? { status: 200, body: { token: ACCESS, refreshToken: 'rt-1', user: faUser({ id: 'someone-else' }) } } : undefined), { emailsSentBy: 'app' });
+      const pending = await pendingFrom(client);
+      await expect(client.verifyEmailAndSignIn({ pendingToken: pending.pendingToken!, code: 'K7Q2ZD' })).rejects.toMatchObject({ code: 'auth/identity-provider' });
+    });
+
+    it('a failed start of the verification fails the sign-in', async () => {
+      const { client } = fusionAuth((c) => (c.method === 'PUT' ? { status: 429 } : undefined), { emailsSentBy: 'app' });
+      await expect(client.signInWithPassword({ email: 'ada@example.org', password: 'pw' })).rejects.toMatchObject({ code: 'auth/rate-limited' });
+    });
   });
 
   it('reports an unreachable FusionAuth as an identity-provider error', async () => {

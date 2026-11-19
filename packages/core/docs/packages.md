@@ -56,7 +56,7 @@
 | [`@mariachi/auth-oidc`](../../auth-oidc/README.md) | alpha | OpenID Connect token verification for any standard provider (Auth0, Cognito, Keycloak, Entra ID, Okta, Firebase, ...): discovery, JWKS, and configurable tenant, role and scope claims. | Using an identity provider that issues standard OIDC tokens and has no package of its own | `createOidcAuth`, `OidcAuthProvider` |
 | `@mariachi/auth-workos` | alpha | WorkOS (AuthKit) JWT verification through its JWKS, signed webhooks, and an IdentityClient for headless sign-in. | Using WorkOS AuthKit as the identity provider | `createWorkOSAuth`, `WorkOSWebhookHandler`, `createWorkOSIdentityClient` |
 | [`@mariachi/organizations`](../../organizations/README.md) | alpha | Organizations, memberships and invitations kept in the app's own database, for apps whose identity provider supplies none. | Users belong to shared organizations and your identity provider doesn't manage them | `DefaultOrganizations`, `createOrganizationAccess`, `registerOrganizationProcedures`, `DrizzleOrganizationStore` |
-| [`@mariachi/rate-limit`](../../rate-limit/README.md) | beta | Rate limiting on Redis or memory: sliding window, fixed window and token bucket, with per-tenant tiers. | Throttling callers (api-facade wires it per route) or metering per-tenant quotas | `createRateLimiter`, `DefaultRateLimiting` |
+| [`@mariachi/rate-limit`](../../rate-limit/README.md) | beta | Rate limiting on Redis, Postgres or memory: sliding window, fixed window and token bucket, with per-tenant tiers. | Throttling callers (api-facade wires it per route) or metering per-tenant quotas | `createRateLimiter`, `DefaultRateLimiting`, `PostgresRateLimiter` |
 | `@mariachi/tenancy` | beta | Tenant resolution (subdomain, header, token) that fails closed. | Multi-tenant apps resolving the tenant per request | `createTenancy`, `createTenantResolver`, `createTenancyMiddleware` |
 
 ## Domain features
@@ -81,7 +81,7 @@
 
 | Package | Status | What it is | Use it when | Entry points |
 | --- | --- | --- | --- | --- |
-| `@mariachi/cli` | beta | The mariachi binary: init, generate, validate, db (generate, check, migrate, seed), design and explore. | Creating projects, generating code, running migrations, building design themes, browsing the explorer | - |
+| `@mariachi/cli` | beta | The mariachi binary: init, generate, validate, list (routes, procedures, jobs), db (generate, check, migrate, seed), design and explore. | Creating projects, generating code, listing an app's routes, procedures and jobs, running migrations, building design themes, browsing the explorer | - |
 | `@mariachi/create` | beta | Project scaffolding, generators and architecture validation used by the CLI. | Programmatic scaffolding; most users run the CLI instead | `createProject`, `generateEntity`, `validate` |
 | [`@mariachi/explorer`](../../explorer/README.md) | alpha | Explorer for the whole framework: packages, docs, API, error codes, dependency graph, CLI, tables and the design library, generated from the repo. | Browsing every package, API, error code and design component, locally (mariachi explore) or hosted | - |
 | [`@mariachi/testing`](../../testing/README.md) | beta | Test doubles kept honest by contract suites shared with the real adapters, plus factories and a harness. | Testing services without real infrastructure | `createTestHarness`, `createTestContext`, `TestRepository`, `createTestAuth`, `startPostgres` |
