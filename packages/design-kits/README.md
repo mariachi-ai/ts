@@ -55,6 +55,23 @@ same when the language changes.
 Flags: `--dir <dir>` (default `src/design`), `--force`, `--dry-run`, `--json`. Only kit files are ever
 removed, and nothing is written but the kit's folder and, once, the `design.css` beside it.
 
+## What `reference` does
+
+```bash
+npx @mariachi/design-kits reference card                 # how the project's kit (in src/design) builds a card
+npx @mariachi/design-kits reference card --kit meridian   # or another kit's
+npx @mariachi/design-kits reference --list                # every component, and the language's named patterns
+```
+
+With the Mariachi CLI it's `mariachi design reference card`. Components aren't copied with a kit. When the project needs one, this answers in Markdown:
+- how the language draws it (its `DESIGN.md` entry and its own tokens);
+- its anatomy, use and accessibility;
+- example markup;
+- the CSS to copy, on `--m-*` tokens only;
+- where it appears in the language's pages.
+
+A language's named patterns (a player, a job card …) are answered too. Something it has no answer for gets the nearest components and exit code 1. `--json` prints the answer. The component CSS and the patterns are packed in this package, under `dist/reference/`.
+
 ## From code
 
 ```ts
