@@ -57,6 +57,13 @@ describe('loadConfig', () => {
     expect(loadConfig({}, { env: { EMAIL_ADAPTER: 'resend', RESEND_API_KEY: 'resend-key' } }).email?.apiKey).toBe('resend-key');
   });
 
+  it('reads the rate limiter adapter from env, and refuses one that does not exist', () => {
+    expect(loadConfig({}, { env: {} }).rateLimit).toBeUndefined();
+    expect(loadConfig({}, { env: { RATE_LIMIT_ADAPTER: 'postgres' } }).rateLimit).toEqual({ adapter: 'postgres' });
+    expect(loadConfig({ rateLimit: { adapter: 'memory' } }, { env: { RATE_LIMIT_ADAPTER: 'redis' } }).rateLimit).toEqual({ adapter: 'memory' });
+    expect(() => loadConfig({}, { env: { RATE_LIMIT_ADAPTER: 'postgress' } })).toThrow(expect.objectContaining({ code: 'config/invalid', message: expect.stringContaining('rateLimit.adapter') }));
+  });
+
   it('throws ConfigError with readable issues on invalid input', () => {
     expect(() => loadConfig({}, { env: { DATABASE_URL: 'not a url' } })).toThrow(ConfigError);
     try {

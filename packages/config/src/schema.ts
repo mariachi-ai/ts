@@ -32,6 +32,15 @@ export const AppConfigSchema = z.object({
       url: secretUrl(z.string().url()),
     })
     .optional(),
+  /**
+   * Where `createRateLimiter` keeps its counts (`RATE_LIMIT_ADAPTER`): `memory` (one process),
+   * `redis` (`REDIS_URL`) or `postgres` (the app's database). Unset, the app chooses.
+   */
+  rateLimit: z
+    .object({
+      adapter: z.enum(['memory', 'redis', 'postgres']),
+    })
+    .optional(),
   auth: z
     .object({
       adapter: z.string().default('jwt'),
