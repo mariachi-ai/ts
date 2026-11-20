@@ -1,5 +1,54 @@
 # @mariachi/rate-limit
 
+## 0.2.0
+
+### Minor Changes
+
+- bd1e82d: Rate limits can be kept in Postgres, so an app whose processes share one database shares its limits
+  without Redis.
+  - `createRateLimiter({ adapter: 'postgres', db })` (or `new PostgresRateLimiter({ db })`) keeps one
+    row per key in `rate_limit_buckets`, from `@mariachi/rate-limit/schema`: add
+    `rateLimitBucketsTable` to your schema and generate a migration. It gives the same answers as the
+    Redis limiter for all three algorithms, weighted requests and `reset`.
+  - Each check is one `INSERT … ON CONFLICT … DO UPDATE … RETURNING` statement on the database
+    server's clock, so concurrent checks from any number of processes never lose a count, with no
+    transaction or advisory lock.
+  - Rows of keys whose windows have passed are deleted by `sweep()`, which each process starts in the
+    background from a check at most once per `sweepIntervalMs` (default a minute; 0 turns it off).
+  - `RATE_LIMIT_ADAPTER` (`memory`, `redis` or `postgres`) is read into `config.rateLimit.adapter`; an
+    unknown name fails the boot with `config/invalid`.
+  - `@mariachi/rate-limit` now depends on `@mariachi/database`, and takes `drizzle-orm` as an optional
+    peer, loaded only by the Postgres limiter.
+
+- 1613fb7: **Breaking for installs:** vendor SDKs are optional peer dependencies. A Mariachi package no longer
+  installs the SDK of an adapter you may not use; add the ones you do use to your app.
+
+  | If you use                                                                      | Add                                                                     |
+  | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+  | Redis for cache, rate limits, realtime across instances, or the Redis event bus | `ioredis`                                                               |
+  | The NATS event bus                                                              | `nats`                                                                  |
+  | The BullMQ job queue                                                            | `bullmq`                                                                |
+  | Typesense search                                                                | `typesense`                                                             |
+  | S3 storage                                                                      | `@aws-sdk/client-s3 @aws-sdk/lib-storage @aws-sdk/s3-request-presigner` |
+  | Stripe billing                                                                  | `stripe`                                                                |
+  | The Resend email adapter                                                        | `resend`                                                                |
+  | The OpenAI adapter                                                              | `@ai-sdk/openai`                                                        |
+
+  Nothing in the API changed. An adapter whose SDK is missing throws `dependency/missing-peer` when it
+  is first made or used, naming the package to add. The Postgres and in-memory adapters need none of
+  them, so an app on the Postgres job queue and Postgres search installs no Redis or Typesense client.
+
+  The OpenAI adapter now loads its SDK on the first call, as the Anthropic and Google adapters do.
+
+  The packages' type declarations still name the SDKs' types (a Redis client you pass in, a Stripe
+  object). With `skipLibCheck` on, as generated projects have it, a missing SDK is no type error.
+
+### Patch Changes
+
+- Updated dependencies [fb0b344]
+  - @mariachi/core@0.2.0
+  - @mariachi/database@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

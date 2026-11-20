@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/lifecycle",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Composition root: bootstrap, ordered startup and shutdown, liveness/readiness/startup health.",
   "repository": {
     "type": "git",

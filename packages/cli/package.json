@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/cli",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "The mariachi binary: init, generate, validate, list (routes, procedures, jobs), db (generate, check, migrate, seed), design and explore.",
   "repository": {
     "type": "git",

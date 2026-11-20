@@ -38,8 +38,7 @@ describe.each(Object.entries(VARIANTS))('a generated project (%s) needs only Pos
     expect(app).toContain('await search.ensureIndexes(options.searchIndexes ?? searchIndexes)');
     expect(files['src/schema/search.ts']).toContain("export { searchDocumentsTable, searchIndexesTable } from '@mariachi/search/schema';");
     expect(files['src/schema/index.ts']).toContain("export * from './search';");
-    // Empty until an entity is generated with --search (the example notes are, in createProject)
-    expect(files['src/search/index.ts']).toContain('export const searchIndexes: SearchIndex[] = [\n  // mariachi:search\n];');
+    expect(files['src/search/index.ts']).toContain('export const searchIndexes: SearchIndex[] = [];');
     expect(files['src/services/index.ts']).toContain('search: Search;');
     expect(JSON.parse(files['package.json'] as string).dependencies).toHaveProperty('@mariachi/search', '^0.1.0');
   });

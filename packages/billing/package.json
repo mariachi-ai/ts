@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/billing",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Stripe billing with a local Postgres mirror: customers, subscriptions, plans, charges, refunds, a credit ledger, usage and replayable webhooks.",
   "repository": {
     "type": "git",

@@ -14,10 +14,6 @@ export const LAYOUT = {
   controllersIndex: 'src/api/controllers/index.ts',
   jobsDir: 'src/jobs',
   jobsIndex: 'src/jobs/index.ts',
-  /** Search index definitions (`<plural>.ts`), and the list of them the app keeps. */
-  searchDir: 'src/search',
-  /** `searchIndexes`: the indexes made sure of at start. */
-  searchIndex: 'src/search/index.ts',
   integrationsDir: 'src/integrations',
   /** Event definitions (`<name>.event.ts`), and `subscribers/`. */
   eventsDir: 'src/events',
@@ -38,8 +34,6 @@ export const MARKERS = {
   controllers: 'mariachi:controllers',
   jobs: 'mariachi:jobs',
   seeds: 'mariachi:seeds',
-  /** In `src/search/index.ts`: where an index is listed. */
-  search: 'mariachi:search',
   /** In `pages.controller.ts`: where a page's route goes. */
   pages: 'mariachi:pages',
   /** In the pages' `layout.ts`: where a page's link in the bar goes. */

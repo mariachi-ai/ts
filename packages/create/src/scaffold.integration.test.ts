@@ -230,10 +230,7 @@ describe('generated project', () => {
 
   it('registers generated pieces in the registry files', async () => {
     const services = await readFile(join(project, 'src/services/index.ts'), 'utf-8');
-    // The example notes are kept in a search index; entities generated without --search are not
-    expect(services).toContain('registerNotesHandlers(communication, new NotesService(new NotesRepository(deps.db), deps.search, deps.db));');
-    expect(services).toContain('registerPeopleHandlers(communication, new PeopleService(new PeopleRepository(deps.db)));');
-    expect(await readFile(join(project, 'src/search/index.ts'), 'utf-8')).toMatch(/export const searchIndexes: SearchIndex\[\] = \[\n\s+notesIndex,\n\s+\/\/ mariachi:search\n\];/);
+    expect(services).toContain('registerNotesHandlers(communication, new NotesService(new NotesRepository(deps.db)));');
     expect(services).toContain('registerInvoiceItemsHandlers(');
     expect(services).toContain('registerBillingReportHandlers(communication, new BillingReportService());');
     const controllers = await readFile(join(project, 'src/api/controllers/index.ts'), 'utf-8');
@@ -339,38 +336,6 @@ describe('generated project', () => {
     expect(probed).toMatchObject({ first: 202, again: 200, duplicate: { duplicate: true }, unsigned: 401 });
   }, 180_000);
 
-  it('boots its main.ts and searches its notes over HTTP in its own Postgres, each tenant finding only its own', async () => {
-    const secret = 'scaffold-test-secret-at-least-32-characters';
-    const { status, output, probed } = await bootReady(
-      project,
-      { SERVICE_NAME: 'scaffold-app', NODE_ENV: 'development', DATABASE_URL: await migratedDatabase(project), JWT_SECRET: secret },
-      async (base) => {
-        const jwt = new JWTAdapter({ secret });
-        const as = async (tenantId: string) => ({ authorization: `Bearer ${await jwt.sign({ userId: `user-${tenantId}`, tenantId, scopes: [] })}` });
-        const create = async (tenantId: string, name: string) => {
-          const res = await fetch(`${base}/api/notes`, { method: 'POST', headers: { ...(await as(tenantId)), 'content-type': 'application/json' }, body: JSON.stringify({ name }) });
-          return ((await res.json()) as { id: string }).id;
-        };
-        const search = async (tenantId: string, q: string) => {
-          const res = await fetch(`${base}/api/notes/search?q=${encodeURIComponent(q)}`, { headers: await as(tenantId) });
-          return ((await res.json()) as { data: Array<{ id: string; name: string }> }).data;
-        };
-        const acme = await create('acme', 'Quarterly harbour report');
-        const globex = await create('globex', 'Harbour inspection');
-        const found = { acme: await search('acme', 'harb'), globex: await search('globex', 'harbour'), initech: await search('initech', 'harbour') };
-        await fetch(`${base}/api/notes/${acme}`, { method: 'PATCH', headers: { ...(await as('acme')), 'content-type': 'application/json' }, body: JSON.stringify({ name: 'Annual report' }) });
-        return { acme, globex, found, afterUpdate: { harbour: await search('acme', 'harbour'), annual: await search('acme', 'annual') } };
-      },
-    );
-    expect({ status, output }).toMatchObject({ status: 200 });
-    const { acme, globex, found, afterUpdate } = probed as NonNullable<typeof probed>;
-    expect(found.acme).toEqual([expect.objectContaining({ id: acme, name: 'Quarterly harbour report' })]);
-    expect(found.globex.map((note) => note.id)).toEqual([globex]);
-    expect(found.initech).toEqual([]);
-    expect(afterUpdate.harbour).toEqual([]);
-    expect(afterUpdate.annual.map((note) => note.id)).toEqual([acme]);
-  }, 180_000);
-
   it('boots its main.ts against Postgres alone and answers ready', async () => {
     const { status, output } = await bootReady(project, {
       SERVICE_NAME: 'scaffold-app',
@@ -426,14 +391,11 @@ describe('generated project', () => {
     // Where the findings land in the handler, read from the file so a template change doesn't move them
     const lineOf = (needle: string) => broken.split('\n').findIndex((l) => l.includes(needle)) + 1;
     await writeFile(handler, broken);
-    const listRoute = "{ schema: { query: listNotesInput, response: noteListSchema }, summary: 'List notes' }";
-    // Reported on the route's call, two lines above its options
-    const listLine = originals[1].split('\n').findIndex((l) => l.includes(listRoute)) - 1;
-    await writeFile(controller, originals[1].replace(listRoute, "{ summary: 'List notes' }"));
+    await writeFile(controller, originals[1].replace("{ schema: { query: listNotesInput, response: noteListSchema }, summary: 'List notes' }", "{ summary: 'List notes' }"));
     try {
       const result = await validate(project);
       expect(result.violations.filter((v) => v.severity === 'error').map((v) => `${v.rule}@${v.file}:${v.line}`)).toEqual([
-        `zod-at-boundaries@src/api/controllers/notes.controller.ts:${listLine}`,
+        'zod-at-boundaries@src/api/controllers/notes.controller.ts:24',
         `ctx-first@src/services/notes/notes.handler.ts:${lineOf('handler: (input) =>')}`,
         `procedure-name-format@src/services/notes/notes.handler.ts:${lineOf("'notes.update-note'")}`,
       ]);

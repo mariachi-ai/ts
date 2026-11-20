@@ -4,7 +4,6 @@ import { THIRD_PARTY_VERSIONS as V } from '../version';
 import { databaseName } from '../names';
 import { E2E_GLOBAL_SETUP, E2E_HARNESS_FILE, VITEST_E2E_CONFIG, e2eHarness } from './e2e';
 import { gotrueFiles } from './gotrue';
-import { SEARCH_EXAMPLE_AGENTS, searchAgentsRow } from './search';
 import {
   JWT_ORGANIZATIONS_CONFIG_TS,
   ORGANIZATION_DEPS,
@@ -66,15 +65,12 @@ export interface ProjectFileOptions {
   organizations?: boolean;
   /** Pages and `@mariachi/design`. Default false. */
   ui?: boolean;
-  /** The example notes will be generated (`createProject` without `example: false`): the docs point to them. Default true. */
-  example?: boolean;
 }
 
 export function projectFiles(name: string, mariachiRange: string, auth: ProjectAuth = 'jwt', options: ProjectFileOptions = {}): Record<string, string> {
   const e2e = options.e2e ?? true;
   const orgs = options.organizations ?? false;
   const ui = options.ui ?? false;
-  const example = options.example ?? true;
   const dependencies: Record<string, string> = {};
   for (const pkg of [...MARIACHI_DEPS, ...AUTH_DEPS[auth], ...(orgs ? ORGANIZATION_DEPS : []), ...(ui ? UI_DEPS : [])].sort()) dependencies[`@mariachi/${pkg}`] = mariachiRange;
   // A GoTrue project with organizations emails its invitations over SMTP, to the local mailbox to begin with
@@ -143,9 +139,9 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     '.env.example': ENV_EXAMPLE(name) + (orgs ? organizationsEnv('jwt') : ''),
     'docker-compose.yml': DOCKER_COMPOSE(databaseName(name)),
     'vitest.config.ts': VITEST_CONFIG,
-    'AGENTS.md': AGENTS_MD(e2e, example) + (orgs ? organizationsAgents('jwt') : '') + (ui ? uiAgents('jwt') : ''),
+    'AGENTS.md': AGENTS_MD(e2e) + (orgs ? organizationsAgents('jwt') : '') + (ui ? uiAgents('jwt') : ''),
     'CLAUDE.md': 'See [AGENTS.md](./AGENTS.md).\n',
-    'README.md': README(name, e2e, example) + (orgs ? organizationsReadme('jwt', ui) : '') + (ui ? UI_README : ''),
+    'README.md': README(name, e2e) + (orgs ? organizationsReadme('jwt', ui) : '') + (ui ? UI_README : ''),
     [LAYOUT.main]: MAIN_TS,
     [LAYOUT.app]: APP_TS(orgs, ui),
     ...(e2e
@@ -176,7 +172,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     if (e2e) files[ORGANIZATIONS_E2E_FILE] = organizationsE2eTest(auth);
   }
   if (ui) Object.assign(files, uiFiles(name, auth, e2e, orgs));
-  return auth === 'gotrue' ? { ...files, ...gotrueFiles(name, e2e, orgs, ui, example) } : files;
+  return auth === 'gotrue' ? { ...files, ...gotrueFiles(name, e2e, orgs, ui) } : files;
 }
 
 /** The schema index. Shared by both sign-in choices. */
@@ -196,24 +192,21 @@ const SEARCH_SCHEMA = `/** Search's tables (@mariachi/search/postgres): the inde
 export { searchDocumentsTable, searchIndexesTable } from '@mariachi/search/schema';
 `;
 
-const SEARCH_INDEXES_FILE = LAYOUT.searchIndex;
+const SEARCH_INDEXES_FILE = 'src/search/index.ts';
 const SEARCH_INDEXES = `import type { SearchIndex } from '@mariachi/search';
-// ${MARKERS.imports}
 
 /**
  * The search indexes this app keeps. Each is created at start when it doesn't exist yet.
  *
- * \`mariachi generate entity <name> --search\` writes one (src/search/<plural>.ts), lists it here and
- * has the entity's service keep it in step with the table; the example notes are made that way. By
- * hand: define the index, then in a service \`deps.search.indexDocument(ctx, index, { id, ... })\` when a
- * row is written (inside withTransaction it commits with the write), \`removeDocument\` when it is
- * deleted, and \`deps.search.search(ctx, index, { query })\` to find. Every call sees only the documents
- * of ctx.tenantId. An index that exists is left as it is: change its fields and the app warns at
+ *   { name: 'notes', fields: [{ name: 'title', type: 'string' }, { name: 'tags', type: 'string[]', facet: true }] }
+ *
+ * Then, in a service: \`deps.search.indexDocument(ctx, 'notes', { id, title })\` when a note is written
+ * (inside withTransaction it commits with the write), \`removeDocument\` when it is deleted, and
+ * \`deps.search.search(ctx, 'notes', { query })\` to find. Every call sees only the documents of
+ * ctx.tenantId. An index that exists is left as it is: change its fields here and the app warns at
  * start, and the stored fields stay in use until you reindex (node_modules/@mariachi/core/docs/search.md).
  */
-export const searchIndexes: SearchIndex[] = [
-  // ${MARKERS.search}
-];
+export const searchIndexes: SearchIndex[] = [];
 `;
 
 const SEARCH_E2E_FILE = 'src/search.e2e.test.ts';
@@ -367,7 +360,7 @@ pnpm test:e2e      # the whole app over HTTP (src/**/*.e2e.test.ts): starts a th
   tenancy or the database.
 `;
 
-const AGENTS_MD = (e2e: boolean, example: boolean) => `# Agent guide
+const AGENTS_MD = (e2e: boolean) => `# Agent guide
 
 This is a Mariachi backend. Before writing code, read the framework docs shipped with
 \`@mariachi/core\`:
@@ -390,12 +383,12 @@ ${e2e ? '| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and t
 | \`src/services/<name>/\` | Service, repository and communication handlers for one domain |
 | \`src/schema/\` | \`defineTable\` tables; \`mariachi db generate\` turns them into migrations |
 | \`src/jobs/\` | \`defineJob\` background jobs |
-${searchAgentsRow(example)}
+| \`src/search/\` | The search indexes; services reach search as \`deps.search\` |
 | \`src/events/\` | \`defineEvent\` events and their subscribers; services publish through \`deps.outbox\` or \`deps.events\` |
 | \`src/webhooks/\` | Webhook controllers, served on \`WEBHOOK_PORT\`: signature checked, deduplicated, handed to a job |
 
 Postgres is the only service: jobs and search run in it (\`@mariachi/jobs/postgres\`,
-\`@mariachi/search/postgres\`). Don't add Redis or a search server to make either work.${example ? SEARCH_EXAMPLE_AGENTS : ''}
+\`@mariachi/search/postgres\`). Don't add Redis or a search server to make either work.
 
 ## Run and sign in
 
@@ -413,7 +406,6 @@ your users sign in.
 
 \`\`\`bash
 pnpm mariachi generate entity <name> [--field title:string --field done:boolean]   # schema + repository + service + handler + controller + unit and end-to-end tests
-pnpm mariachi generate entity <name> --search          # the same, kept in a search index, with GET /api/<plural>/search?q=
 pnpm mariachi generate service <name>
 pnpm mariachi generate controller <name>
 pnpm mariachi generate job <name>
@@ -438,7 +430,7 @@ The end-to-end tests start the app the way \`src/main.ts\` does (\`createApp()\`
 call it with \`fetch\`. They don't touch the database in \`.env\`. See \`AGENTS.md\` for how to write one.
 `;
 
-const README = (name: string, e2e: boolean, example: boolean) => `# ${name}
+const README = (name: string, e2e: boolean) => `# ${name}
 
 \`\`\`bash
 pnpm install
@@ -471,15 +463,9 @@ In production the tokens come from wherever your users sign in: an identity prov
 - **Jobs** (\`src/jobs/\`) run in Postgres, so a job enqueued inside \`withTransaction\` commits or rolls
   back with the write beside it. With \`pnpm add bullmq\` and \`REDIS_URL\` set they run on Redis
   (BullMQ) instead.
-- **Search** is in Postgres too, and tenant-scoped: a call sees only the documents of \`ctx.tenantId\`.
-${example
-  ? `  The example notes are the worked example: \`src/services/notes/notes.service.ts\` indexes a note
-  when it is created or updated and removes it when it is deleted, in the same transaction, and
-  \`GET /api/notes/search?q=\` finds them. \`mariachi generate entity <name> --search\` does the same
-  for another entity; the indexes are listed in \`src/search/index.ts\`.`
-  : `  \`mariachi generate entity <name> --search\` keeps an entity in a search index, kept up to date in
-  the transaction of each write, with \`GET /api/<plural>/search?q=\`; the indexes are listed in
-  \`src/search/index.ts\`.`}
+- **Search** is in Postgres too, and tenant-scoped: declare an index in \`src/search/index.ts\`, then
+  \`deps.search.indexDocument(ctx, …)\` and \`deps.search.search(ctx, …)\` in a service. A call sees
+  only the documents of \`ctx.tenantId\`.
 
 ## Checks
 

@@ -23,11 +23,8 @@ interface GenerateFlags {
   force?: boolean;
   field: string[];
   plural?: string;
-  search?: boolean;
   subscriber?: string | boolean;
 }
-
-type Flag = 'field' | 'plural' | 'search' | 'subscriber';
 
 interface Generator {
   /** What the positional arguments are, for messages. */
@@ -35,7 +32,7 @@ interface Generator {
   /** Takes a second positional argument: required (`procedure`) or optional (`subscriber`). */
   second?: 'required' | 'optional';
   /** The options it takes beyond --project-root and --force. */
-  flags?: Array<Flag>;
+  flags?: Array<'field' | 'plural' | 'subscriber'>;
   run(first: string, second: string | undefined, flags: GenerateFlags): Promise<GenerateResult>;
 }
 
@@ -46,10 +43,9 @@ const simple = (generate: (o: { name: string; projectRoot: string; force?: boole
 
 const GENERATORS: Record<string, Generator> = {
   entity: {
-    usage: '<name> [--field name:type ...] [--plural <word>] [--search]',
-    flags: ['field', 'plural', 'search'],
-    run: (name, _second, flags) =>
-      generateEntity({ name, projectRoot: flags.projectRoot, force: flags.force, fields: flags.field, plural: flags.plural, search: flags.search }),
+    usage: '<name> [--field name:type ...] [--plural <word>]',
+    flags: ['field', 'plural'],
+    run: (name, _second, flags) => generateEntity({ name, projectRoot: flags.projectRoot, force: flags.force, fields: flags.field, plural: flags.plural }),
   },
   service: simple(generateService),
   procedure: {
@@ -86,7 +82,6 @@ export function registerGenerateCommand(program: Command): void {
     .option('-f, --force', 'overwrite existing files')
     .option('--field <name:type>', `entity: a column, repeatable; name:type? is nullable. Types: ${FIELD_TYPES.join(', ')}`, collect, [])
     .option('--plural <word>', 'entity: its plural, when the rules get it wrong')
-    .option('--search', 'entity: keep it in a search index, with a <plural>.search procedure and route')
     .option('--subscriber [name]', 'event: also a subscriber to it (default on-<event>)')
     .addHelpText(
       'after',
@@ -107,12 +102,9 @@ export function registerGenerateCommand(program: Command): void {
         if (second === undefined && generator.second === 'required') {
           throw new ConfigError('cli/missing-argument', `generate ${kind} takes two: mariachi generate ${kind} ${generator.usage}`);
         }
-        const given = [
-          opts.field.length > 0 && 'field',
-          opts.plural !== undefined && 'plural',
-          opts.search !== undefined && 'search',
-          opts.subscriber !== undefined && 'subscriber',
-        ].filter((flag): flag is Flag => typeof flag === 'string');
+        const given = [opts.field.length > 0 && 'field', opts.plural !== undefined && 'plural', opts.subscriber !== undefined && 'subscriber'].filter(
+          (flag): flag is 'field' | 'plural' | 'subscriber' => typeof flag === 'string',
+        );
         const stray = given.find((flag) => !generator.flags?.includes(flag));
         if (stray) {
           throw new ConfigError('cli/unexpected-option', `--${stray} is not an option of generate ${kind}: mariachi generate ${kind} ${generator.usage}`);

@@ -1,5 +1,124 @@
 # @mariachi/cli
 
+## 0.2.0
+
+### Minor Changes
+
+- fb0b344: `mariachi list` says what an app exposes without starting it: `mariachi list routes`, `procedures`
+  or `jobs`, or all three, as a table or with `--json`.
+  - Routes: method, full path, auth (the route's own or the server's default, its tenant rule and
+    scopes), the procedure its handler calls, and the controller and `file:line` that declares it.
+    The server's own routes (health, OpenAPI, static files) are listed too.
+  - Procedures: input and output as one TypeScript-like line, where each is registered, and which
+    routes call it.
+  - Jobs: payload, retries, timeout, where each is defined, and its `jobs.schedule()` cron schedules.
+
+  It reads the app's real registrations: it loads `src/api/controllers/index.ts`,
+  `src/services/index.ts`, `src/organizations.ts` and `src/jobs/index.ts` with a communication layer
+  that only records and dependencies that do nothing, so nothing connects anywhere. `src/app.ts` is
+  never run; its API prefix, default auth and schedules are read from its source. It reports a route
+  calling a procedure nothing registers, a procedure registered twice, a schedule for a missing job,
+  and a module that failed to load (exit 1). `typescript` is now a dependency of the CLI.
+
+  The docs (`cli.md`, `ai-guide.md`) describe it.
+
+- ceec1b1: `mariachi design reference <name>` says how the project's design language builds a component: how
+  the language draws it, its tokens, anatomy and accessibility, example markup, the CSS to copy (on
+  `--m-*` tokens only), and where it appears in the language's pages. It answers a language's named
+  patterns too (a player, a job card …), and `--list` names everything it can answer. The kit is the
+  project's own (`--dir`, default `src/design`) unless `--kit` names another.
+
+  Every kit's headers and `DESIGN.md` already pointed here. `@mariachi/design-kits` now packs each
+  component's CSS and each language's patterns under `dist/reference/`, so the answer needs nothing
+  else installed (`npx @mariachi/design-kits reference card`). From code: `designReference(name, kit)`
+  and `referenceList(kit)`.
+
+- 91aac4c: New generators, and entities with columns of their own.
+  - `mariachi generate event <domain.thing.happened> [--subscriber [name]]`: the event's Zod payload and
+    `defineEvent` in `src/events/<name>.event.ts`, how to publish it (through the outbox, or straight
+    away), and a test. `mariachi generate subscriber <event> [name]` adds a subscriber, registered in
+    `src/events/index.ts`, with a test.
+  - `mariachi generate webhook <name>`: a `WebhookController` on the app's webhook server (its own port,
+    `WEBHOOK_PORT`) that checks a Standard Webhooks signature, parses the body with Zod, answers a
+    redelivery as a duplicate and hands the delivery to a job it also writes; with a test. The secret is
+    `<NAME>_WEBHOOK_SECRET`.
+  - `mariachi generate procedure <service> <name>`: one more procedure on a service that exists (its
+    contract, method, registration and a test). It refuses, naming the services there are, when the
+    service doesn't exist.
+  - `mariachi generate entity <name> --field title:string --field due_at:timestamp:optional`: the
+    entity's own columns (string, text, integer, number, boolean, timestamp, date, uuid) instead of the
+    fixed `name`, which stays the default. Plurals know irregular and uncountable words (`person` →
+    `people`, `leaf` → `leaves`, `sheep`) and more endings (`analysis` → `analyses`, `quiz` →
+    `quizzes`); `--plural` overrides them.
+
+  A new project sets up events (an in-process bus with the outbox in Postgres relayed to it: services
+  get `deps.events` and `deps.outbox`) and starts a webhook server once it has a webhook. It depends on
+  `@mariachi/events` and `@mariachi/webhooks`, and its first migration has the outbox table. Generated
+  services mark where `generate procedure` adds (`// mariachi:procedures`). A project made before this
+  gets the registries from its first `generate event` or `generate webhook`, and a note saying what to
+  add to its `src/app.ts`.
+
+- a3d1ba6: `mariachi init --ui` gives the project a design kit of its own. It copies a kit into `src/design/` (`linen` unless the new `--kit <id>` names another) with `@mariachi/design-kits` when that can be imported, and otherwise with `npx @mariachi/design-kits@<the project's @mariachi range> add <id>`. A kit that can't be copied is reported with the command to run by hand, and `init` exits 1. Without `--ui`, nothing loads or fetches the kits.
+
+  The generated pages load the kit (`/assets/design/index.css`), its motion, `@mariachi/design`'s components alone (`/assets/lib/components.css`) and then the project's own `src/design.css` (`/assets/design.css`), where token overrides now go; `public/app.css` is gone. `public/enhance.js` starts `@mariachi/design`'s behaviours (`/assets/lib/behaviors.js`) and the kit's `motion.js` on every page. `<html data-theme>` is the kit's id, read from `src/design/kit.json` by the new `src/design-kit.ts` (the layout's `THEME` constant is gone), so `mariachi design add <other>` changes the look with no code change. The app won't start without a kit (`app/design-kit-missing`, naming the command to run).
+
+  `@mariachi/api-facade` adds `withStaticFile(urlPath, file)` and `staticFile(file)`, which serve one file at one path and nothing else from its directory. `@mariachi/design` exports `./behaviors.js`, the behaviours script as a file a server can send.
+
+- 316d23a: A new `--auth gotrue` project signs people in with nothing to sign up for. Its `docker-compose.yml`
+  runs GoTrue (`supabase/auth:v2.197.0`) on the project's own Postgres, in an `auth` schema, and
+  Mailpit (`axllent/mailpit:v1.27.11`), the mailbox every email goes to, at `http://localhost:8025`.
+  `AUTH_URL` in `.env.example` points at it, and sign-ups confirm their address by email.
+  - `mariachi init --auth gotrue` writes `.env` with an ES256 signing key made for the project
+    (`GOTRUE_JWT_KEYS`, with `GOTRUE_JWT_SECRET`, and with `--orgs` an `AUTH_SERVICE_KEY` signed with
+    it). `.env.example` lists them empty. The next steps no longer include `cp .env.example .env`.
+  - `mariachi dev` makes those keys wherever `.env` has them empty (a fresh clone), and starts the
+    Compose services and waits when the local GoTrue isn't answering. `mariachi doctor` has an `auth`
+    check: GoTrue's `/health` where the app reads it, with the fix to run.
+  - The sign-in page sends a visitor back to the page that sent them, given
+    `/api/sign-in#return=/path` (a path on the same site only), after a password sign-in or an
+    emailed link, even one that opens another tab.
+  - With `--orgs --ui`, `/invitations/accept` accepts an invitation: it keeps the token from the
+    link, has the visitor sign in or sign up and come back, and accepts as them when they click
+    Accept. `INVITATION_URL` defaults to it (on `APP_ORIGIN`, or on `http://localhost:<PORT>` in
+    development). Invitations go to the mailbox over SMTP (`nodemailer` is now a dependency of a
+    GoTrue project with `--orgs`). In a `--auth jwt` project the page says what accepting in the
+    browser needs, since that project has no browser sign-in.
+  - `@mariachi/create` exports `fillLocalSecrets` and `LOCAL_SECRETS`.
+
+- 8459fd2: `mariachi validate` reads each file's syntax tree (with the TypeScript compiler, now a dependency of
+  `@mariachi/create`, loaded only when `validate` runs) and checks more than imports:
+  - `ctx-first`: procedure, route, job and event handlers, and the public methods of services and
+    repositories, take `ctx: Context` first; `communication.call`, `this.call`, `jobs.enqueue` and
+    `events.publish` pass it first.
+  - `zod-at-boundaries`: procedures have input and output schemas, routes a schema for the body, params
+    and query their handler reads, and jobs and events a payload schema.
+  - `procedure-name-format`: registered and called procedure names are `domainCamel.action`.
+  - `procedure-registered` (warning): each procedure called with a literal name is registered in the project.
+  - `unique-procedure-names` now reads registrations from the syntax tree too.
+
+  Each finding gives the file and line, the rule and a one-line fix; `--json` and the exit code are as before.
+
+  Projects made by `mariachi init` get a `lint` script, `mariachi validate && tsc --noEmit`, and their
+  README and AGENTS.md say to run it before committing.
+
+### Patch Changes
+
+- 1141edc: `mariachi doctor` suggests `docker compose up -d <service>` for an unreachable Redis only when the Compose file runs Redis, and otherwise says to add one or point `REDIS_URL` at one; `mariachi db seed` checks the host a URL without one actually reaches (its `host=` parameter, else `PGHOST`) before taking the database as local.
+- Updated dependencies [fb0b344]
+- Updated dependencies [91aac4c]
+- Updated dependencies [a3d1ba6]
+- Updated dependencies [316d23a]
+- Updated dependencies [c5823c2]
+- Updated dependencies [bd1e82d]
+- Updated dependencies [8459fd2]
+- Updated dependencies [1613fb7]
+  - @mariachi/core@0.2.0
+  - @mariachi/create@0.2.0
+  - @mariachi/config@0.2.0
+  - @mariachi/auth@0.2.0
+  - @mariachi/database@0.2.0
+  - @mariachi/database-postgres@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

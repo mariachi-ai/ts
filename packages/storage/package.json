@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/storage",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Object storage (S3 and compatibles, local disk, memory) with path-safe keys, streaming, presigned uploads and signed URLs.",
   "repository": {
     "type": "git",

@@ -1,5 +1,14 @@
 # @mariachi/server
 
+## 0.2.0
+
+### Patch Changes
+
+- Updated dependencies [fb0b344]
+- Updated dependencies [d957338]
+  - @mariachi/core@0.2.0
+  - @mariachi/observability@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

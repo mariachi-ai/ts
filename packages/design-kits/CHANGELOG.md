@@ -1,5 +1,29 @@
 # @mariachi/design-kits
 
+## 0.2.0
+
+### Minor Changes
+
+- ceec1b1: `mariachi design reference <name>` says how the project's design language builds a component: how
+  the language draws it, its tokens, anatomy and accessibility, example markup, the CSS to copy (on
+  `--m-*` tokens only), and where it appears in the language's pages. It answers a language's named
+  patterns too (a player, a job card …), and `--list` names everything it can answer. The kit is the
+  project's own (`--dir`, default `src/design`) unless `--kit` names another.
+
+  Every kit's headers and `DESIGN.md` already pointed here. `@mariachi/design-kits` now packs each
+  component's CSS and each language's patterns under `dist/reference/`, so the answer needs nothing
+  else installed (`npx @mariachi/design-kits reference card`). From code: `designReference(name, kit)`
+  and `referenceList(kit)`.
+
+- 1e0acf3: The design packages no longer depend on `@mariachi/core`: `@mariachi/design`, `@mariachi/design-kits` and
+  `@mariachi/motion` install nothing of the backend framework, so a site or a tool can use the design library
+  on its own.
+
+  `DesignError` and `DesignKitsError` keep their shape (a stable `code`, a message, optional `metadata`) but now
+  extend `Error`, not `MariachiError`. Code that caught them as `MariachiError` should catch them by their own
+  class, or check `code`. The explorer still lists their codes: it now treats any class that extends `Error`
+  and takes `code` first as an error root.
+
 ## 0.1.1
 
 ### Patch Changes

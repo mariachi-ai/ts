@@ -1,5 +1,16 @@
 # @mariachi/auth
 
+## 0.2.0
+
+### Patch Changes
+
+- Updated dependencies [fb0b344]
+- Updated dependencies [1613fb7]
+  - @mariachi/core@0.2.0
+  - @mariachi/cache@0.2.0
+  - @mariachi/communication@0.2.0
+  - @mariachi/database@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

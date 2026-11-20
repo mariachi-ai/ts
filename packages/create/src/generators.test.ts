@@ -131,53 +131,6 @@ describe('generate entity', () => {
     expect(files['src/api/controllers/notes.e2e.test.ts']).toContain("json: { name: 'Private' }");
   });
 
-  it('keeps nothing in a search index unless it is asked to', async () => {
-    await generateEntity({ name: 'task', projectRoot: project, fields: ['title:string'] });
-    expect(existsSync(join(project, 'src/search/tasks.ts'))).toBe(false);
-    expect(await text('src/search/index.ts')).not.toContain('tasksIndex');
-    expect(await text('src/services/index.ts')).toContain('registerTasksHandlers(communication, new TasksService(new TasksRepository(deps.db)));');
-    for (const file of ['src/services/tasks/tasks.service.ts', 'src/contracts/tasks.ts', 'src/api/controllers/tasks.controller.ts']) {
-      expect(await text(file)).not.toMatch(/search/i);
-    }
-  });
-
-  it('with search, keeps it in an index of its text fields that its service updates with every write', async () => {
-    const result = await generateEntity({ name: 'task', projectRoot: project, search: true, fields: ['done:boolean', 'title:string', 'body:text?'] });
-    expect(result.created).toContain('src/search/tasks.ts');
-    expect(result.updated).toContain('src/search/index.ts');
-    const index = await text('src/search/tasks.ts');
-    expect(index).toContain("export const tasksIndex: SearchIndex = {\n  name: 'tasks',\n  fields: [{ name: 'title', type: 'string' }, { name: 'body', type: 'string' }],\n};");
-    expect(index).toContain('return { id: task.id, title: task.title, body: task.body };');
-    expect(await text('src/search/index.ts')).toMatch(/import \{ notesIndex \} from '\.\/notes';\nimport \{ tasksIndex \} from '\.\/tasks';\n\/\/ mariachi:imports[\s\S]*\[\n {2}notesIndex,\n {2}tasksIndex,\n {2}\/\/ mariachi:search\n\];/);
-    expect(await text('src/services/index.ts')).toContain('registerTasksHandlers(communication, new TasksService(new TasksRepository(deps.db), deps.search, deps.db));');
-    const service = await text('src/services/tasks/tasks.service.ts');
-    expect(service).toMatch(/return withTransaction\(this\.db, ctx, async \(\) => \{\n {6}const task = await this\.tasks\.create\(ctx, [^\n]+\);\n {6}await this\.search\.indexDocument\(ctx, tasksIndex\.name, taskDocument\(task\)\);/);
-    expect(service).toMatch(/await this\.tasks\.softDelete\(ctx, id\);\n {6}await this\.search\.removeDocument\(ctx, tasksIndex\.name, id\);/);
-    expect(service).toContain("const rows = await this.tasks.findMany(ctx, [{ field: 'id', op: 'in', value: ids }]);");
-    expect(await text('src/contracts/tasks.ts')).toContain("'tasks.search': { input: z.input<typeof searchTasksInput>; output: TaskList };");
-    expect(await text('src/services/tasks/tasks.handler.ts')).toContain("communication.register('tasks.search', {\n    schema: { input: searchTasksInput, output: taskListSchema },\n    handler: (ctx, input) => service.find(ctx, input),");
-    expect(await text('src/api/controllers/tasks.controller.ts')).toContain("{ schema: { query: searchTasksInput, response: taskListSchema }, summary: 'Search tasks' },");
-    // The tests search by the first text field
-    expect(await text('src/services/tasks/tasks.service.test.ts')).toContain("expect(search.indexDocument).toHaveBeenCalledWith(ctx, 'tasks', { id: 'id-1', title: 'First', body: 'First' });");
-    const e2e = await text('src/api/controllers/tasks.e2e.test.ts');
-    expect(e2e).toContain("const id = await create(ada, { done: true, title: 'Wool hat for winter', body: 'First' });");
-    expect(e2e).toContain("json: { title: 'Linen shirt' }");
-  });
-
-  it('refuses to index an entity with no text to search, and writes nothing', async () => {
-    await expect(generateEntity({ name: 'reading', projectRoot: project, search: true, fields: ['value:number'] })).rejects.toMatchObject({ code: 'create/nothing-to-search' });
-    expect(existsSync(join(project, 'src/schema/readings.ts'))).toBe(false);
-  });
-
-  it('tells a project made before the search markers what to add by hand', async () => {
-    await writeFile(join(project, 'src/search/index.ts'), "import type { SearchIndex } from '@mariachi/search';\n\nexport const searchIndexes: SearchIndex[] = [];\n");
-    const result = await generateEntity({ name: 'task', projectRoot: project, search: true, fields: ['title:string'] });
-    expect(result.notes).toEqual(expect.arrayContaining([
-      "src/search/index.ts has no \"mariachi:imports\" marker; add manually: import { tasksIndex } from './tasks';",
-      'src/search/index.ts has no "mariachi:search" marker; add manually: tasksIndex,',
-    ]));
-  });
-
   it('names its table, routes and procedures with the plural', async () => {
     await generateEntity({ name: 'person', projectRoot: project });
     expect(await text('src/schema/people.ts')).toContain("defineTable('people'");
@@ -288,7 +241,7 @@ describe('generate procedure', () => {
     expect(result.created).toEqual(['src/services/notes/notes.archive.test.ts']);
     expect(result.updated).toEqual(['src/services/notes/notes.service.ts', 'src/services/notes/notes.handler.ts', 'src/contracts/notes.ts']);
     const service = await text('src/services/notes/notes.service.ts');
-    expect(service).toContain('import type { CreateNoteInput, ListNotesInput, SearchNotesInput, UpdateNoteInput, NotesArchiveInput, NotesArchiveOutput }');
+    expect(service).toContain('import type { CreateNoteInput, ListNotesInput, UpdateNoteInput, NotesArchiveInput, NotesArchiveOutput }');
     expect(service).toMatch(/\n\n {2}async archive\(ctx: Context, input: NotesArchiveInput\): Promise<NotesArchiveOutput> \{\n[\s\S]*\n {2}\}\n {2}\/\/ mariachi:procedures\n\}/);
     const handler = await text('src/services/notes/notes.handler.ts');
     expect(handler).toContain('  notesArchiveInput,\n  notesArchiveOutput,\n} from');
@@ -348,17 +301,6 @@ describe('the project', () => {
       expect(files['src/events/index.ts']).toContain('// mariachi:subscribers');
       expect(files['src/webhooks/index.ts']).toContain('// mariachi:webhooks');
     }
-  });
-
-  it('keeps the example notes in a search index, as the worked example of deps.search', async () => {
-    expect(await text('src/search/index.ts')).toMatch(/\[\n {2}notesIndex,\n {2}\/\/ mariachi:search\n\];/);
-    expect(await text('src/search/notes.ts')).toContain("name: 'notes',");
-    expect(await text('src/services/index.ts')).toContain('new NotesService(new NotesRepository(deps.db), deps.search, deps.db)');
-    expect(await text('src/api/controllers/notes.controller.ts')).toContain("this.call<NoteList>(ctx, 'notes.search', query)");
-    const bare = join(root, 'bare');
-    await createProject({ name: 'bare-app', outputDir: bare, example: false });
-    expect(await readFile(join(bare, 'src/search/index.ts'), 'utf-8')).toContain('export const searchIndexes: SearchIndex[] = [\n  // mariachi:search\n];');
-    expect(existsSync(join(bare, 'src/search/notes.ts'))).toBe(false);
   });
 
   it('starts the end-to-end app with its webhooks on a free port', () => {

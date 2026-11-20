@@ -1,5 +1,13 @@
 # @mariachi/auth-oidc
 
+## 0.2.0
+
+### Patch Changes
+
+- Updated dependencies [fb0b344]
+  - @mariachi/core@0.2.0
+  - @mariachi/auth@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

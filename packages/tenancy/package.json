@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/tenancy",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Tenant resolution (subdomain, header, token) that fails closed.",
   "repository": {
     "type": "git",

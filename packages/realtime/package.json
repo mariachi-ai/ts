@@ -1,6 +1,6 @@
 {
   "name": "@mariachi/realtime",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "WebSockets with channel authorization, heartbeats, presence and cross-instance fanout.",
   "repository": {
     "type": "git",

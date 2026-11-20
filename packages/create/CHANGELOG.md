@@ -1,5 +1,118 @@
 # @mariachi/create
 
+## 0.2.0
+
+### Minor Changes
+
+- 91aac4c: New generators, and entities with columns of their own.
+  - `mariachi generate event <domain.thing.happened> [--subscriber [name]]`: the event's Zod payload and
+    `defineEvent` in `src/events/<name>.event.ts`, how to publish it (through the outbox, or straight
+    away), and a test. `mariachi generate subscriber <event> [name]` adds a subscriber, registered in
+    `src/events/index.ts`, with a test.
+  - `mariachi generate webhook <name>`: a `WebhookController` on the app's webhook server (its own port,
+    `WEBHOOK_PORT`) that checks a Standard Webhooks signature, parses the body with Zod, answers a
+    redelivery as a duplicate and hands the delivery to a job it also writes; with a test. The secret is
+    `<NAME>_WEBHOOK_SECRET`.
+  - `mariachi generate procedure <service> <name>`: one more procedure on a service that exists (its
+    contract, method, registration and a test). It refuses, naming the services there are, when the
+    service doesn't exist.
+  - `mariachi generate entity <name> --field title:string --field due_at:timestamp:optional`: the
+    entity's own columns (string, text, integer, number, boolean, timestamp, date, uuid) instead of the
+    fixed `name`, which stays the default. Plurals know irregular and uncountable words (`person` →
+    `people`, `leaf` → `leaves`, `sheep`) and more endings (`analysis` → `analyses`, `quiz` →
+    `quizzes`); `--plural` overrides them.
+
+  A new project sets up events (an in-process bus with the outbox in Postgres relayed to it: services
+  get `deps.events` and `deps.outbox`) and starts a webhook server once it has a webhook. It depends on
+  `@mariachi/events` and `@mariachi/webhooks`, and its first migration has the outbox table. Generated
+  services mark where `generate procedure` adds (`// mariachi:procedures`). A project made before this
+  gets the registries from its first `generate event` or `generate webhook`, and a note saying what to
+  add to its `src/app.ts`.
+
+- a3d1ba6: `mariachi init --ui` gives the project a design kit of its own. It copies a kit into `src/design/` (`linen` unless the new `--kit <id>` names another) with `@mariachi/design-kits` when that can be imported, and otherwise with `npx @mariachi/design-kits@<the project's @mariachi range> add <id>`. A kit that can't be copied is reported with the command to run by hand, and `init` exits 1. Without `--ui`, nothing loads or fetches the kits.
+
+  The generated pages load the kit (`/assets/design/index.css`), its motion, `@mariachi/design`'s components alone (`/assets/lib/components.css`) and then the project's own `src/design.css` (`/assets/design.css`), where token overrides now go; `public/app.css` is gone. `public/enhance.js` starts `@mariachi/design`'s behaviours (`/assets/lib/behaviors.js`) and the kit's `motion.js` on every page. `<html data-theme>` is the kit's id, read from `src/design/kit.json` by the new `src/design-kit.ts` (the layout's `THEME` constant is gone), so `mariachi design add <other>` changes the look with no code change. The app won't start without a kit (`app/design-kit-missing`, naming the command to run).
+
+  `@mariachi/api-facade` adds `withStaticFile(urlPath, file)` and `staticFile(file)`, which serve one file at one path and nothing else from its directory. `@mariachi/design` exports `./behaviors.js`, the behaviours script as a file a server can send.
+
+- 316d23a: A new `--auth gotrue` project signs people in with nothing to sign up for. Its `docker-compose.yml`
+  runs GoTrue (`supabase/auth:v2.197.0`) on the project's own Postgres, in an `auth` schema, and
+  Mailpit (`axllent/mailpit:v1.27.11`), the mailbox every email goes to, at `http://localhost:8025`.
+  `AUTH_URL` in `.env.example` points at it, and sign-ups confirm their address by email.
+  - `mariachi init --auth gotrue` writes `.env` with an ES256 signing key made for the project
+    (`GOTRUE_JWT_KEYS`, with `GOTRUE_JWT_SECRET`, and with `--orgs` an `AUTH_SERVICE_KEY` signed with
+    it). `.env.example` lists them empty. The next steps no longer include `cp .env.example .env`.
+  - `mariachi dev` makes those keys wherever `.env` has them empty (a fresh clone), and starts the
+    Compose services and waits when the local GoTrue isn't answering. `mariachi doctor` has an `auth`
+    check: GoTrue's `/health` where the app reads it, with the fix to run.
+  - The sign-in page sends a visitor back to the page that sent them, given
+    `/api/sign-in#return=/path` (a path on the same site only), after a password sign-in or an
+    emailed link, even one that opens another tab.
+  - With `--orgs --ui`, `/invitations/accept` accepts an invitation: it keeps the token from the
+    link, has the visitor sign in or sign up and come back, and accepts as them when they click
+    Accept. `INVITATION_URL` defaults to it (on `APP_ORIGIN`, or on `http://localhost:<PORT>` in
+    development). Invitations go to the mailbox over SMTP (`nodemailer` is now a dependency of a
+    GoTrue project with `--orgs`). In a `--auth jwt` project the page says what accepting in the
+    browser needs, since that project has no browser sign-in.
+  - `@mariachi/create` exports `fillLocalSecrets` and `LOCAL_SECRETS`.
+
+- c5823c2: `mariachi init --orgs` projects keep their rate limits in their own database, so every process that
+  serves the API shares them, with no Redis.
+  - `src/schema/organizations.ts` exports `rateLimitBucketsTable` from `@mariachi/rate-limit/schema`, so
+    the first migration creates `rate_limit_buckets`.
+  - `src/app.ts` builds the limiter for creating organizations, inviting and accepting with
+    `createRateLimiter({ adapter: config.rateLimit?.adapter ?? (config.redis ? 'redis' : 'postgres'), url: config.redis?.url, db: database.db, prefix })`.
+    With `REDIS_URL` set the counts stay in Redis, as before; `RATE_LIMIT_ADAPTER` (`postgres`, `redis`
+    or `memory`) chooses for itself, and `RATE_LIMIT_ADAPTER=redis` without `REDIS_URL` stops the boot
+    with `app/rate-limit-redis-url-required`. The production warning that `REDIS_URL` was needed to
+    share the limits is gone.
+  - `.env.example` lists `RATE_LIMIT_ADAPTER` (commented), and the README and AGENTS.md say where the
+    counts are kept.
+
+- 8459fd2: `mariachi validate` reads each file's syntax tree (with the TypeScript compiler, now a dependency of
+  `@mariachi/create`, loaded only when `validate` runs) and checks more than imports:
+  - `ctx-first`: procedure, route, job and event handlers, and the public methods of services and
+    repositories, take `ctx: Context` first; `communication.call`, `this.call`, `jobs.enqueue` and
+    `events.publish` pass it first.
+  - `zod-at-boundaries`: procedures have input and output schemas, routes a schema for the body, params
+    and query their handler reads, and jobs and events a payload schema.
+  - `procedure-name-format`: registered and called procedure names are `domainCamel.action`.
+  - `procedure-registered` (warning): each procedure called with a literal name is registered in the project.
+  - `unique-procedure-names` now reads registrations from the syntax tree too.
+
+  Each finding gives the file and line, the rule and a one-line fix; `--json` and the exit code are as before.
+
+  Projects made by `mariachi init` get a `lint` script, `mariachi validate && tsc --noEmit`, and their
+  README and AGENTS.md say to run it before committing.
+
+### Patch Changes
+
+- 1613fb7: **Breaking for installs:** vendor SDKs are optional peer dependencies. A Mariachi package no longer
+  installs the SDK of an adapter you may not use; add the ones you do use to your app.
+
+  | If you use                                                                      | Add                                                                     |
+  | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------- |
+  | Redis for cache, rate limits, realtime across instances, or the Redis event bus | `ioredis`                                                               |
+  | The NATS event bus                                                              | `nats`                                                                  |
+  | The BullMQ job queue                                                            | `bullmq`                                                                |
+  | Typesense search                                                                | `typesense`                                                             |
+  | S3 storage                                                                      | `@aws-sdk/client-s3 @aws-sdk/lib-storage @aws-sdk/s3-request-presigner` |
+  | Stripe billing                                                                  | `stripe`                                                                |
+  | The Resend email adapter                                                        | `resend`                                                                |
+  | The OpenAI adapter                                                              | `@ai-sdk/openai`                                                        |
+
+  Nothing in the API changed. An adapter whose SDK is missing throws `dependency/missing-peer` when it
+  is first made or used, naming the package to add. The Postgres and in-memory adapters need none of
+  them, so an app on the Postgres job queue and Postgres search installs no Redis or Typesense client.
+
+  The OpenAI adapter now loads its SDK on the first call, as the Anthropic and Google adapters do.
+
+  The packages' type declarations still name the SDKs' types (a Redis client you pass in, a Stripe
+  object). With `skipLibCheck` on, as generated projects have it, a missing SDK is no type error.
+
+- Updated dependencies [fb0b344]
+  - @mariachi/core@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes
