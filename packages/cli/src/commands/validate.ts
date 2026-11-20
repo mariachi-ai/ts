@@ -7,7 +7,7 @@ import { fail } from '../output';
 export function registerValidateCommand(program: Command): void {
   program
     .command('validate [path]')
-    .description('Check the project against Mariachi architecture rules (exit 1 on errors)')
+    .description('Check the project against Mariachi rules: layers, ctx first, Zod at boundaries, procedure names (exit 1 on errors)')
     .option('-d, --disable <rules...>', 'rules to skip')
     .option('--strict', 'treat warnings as errors')
     .option('--list', 'print the rules and exit')

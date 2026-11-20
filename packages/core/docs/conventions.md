@@ -20,8 +20,11 @@ checked in this repo by `pnpm lint:conventions`. Suppress a single finding with 
   `this.call(ctx, 'domain.action', input)`. **(validate: `no-service-import-in-controller`, `no-db-in-controller`, lint)**
 - Services never import HTTP frameworks or `@mariachi/server`, `api-facade`, `webhooks`. **(validate: `no-http-in-service`)**
 - Each `*.service.ts` has a `*.handler.ts` registering its procedures, and a test. **(validate: warnings)**
-- Procedure names are `domain.action` and unique. Registering a name twice throws
-  `communication/duplicate-procedure` at startup. **(validate: `unique-procedure-names`)**
+- Procedure names are `domainCamel.action` and unique. Registering a name twice throws
+  `communication/duplicate-procedure` at startup. **(validate: `procedure-name-format`, `unique-procedure-names`)**
+- Every procedure a project calls with a literal name is registered in it. **(validate: `procedure-registered`,
+  a warning; it stays quiet about names built at runtime and about domains a package registers, such as
+  `registerOrganizationProcedures`)**
 
 ## Context
 
@@ -29,6 +32,14 @@ Every operation takes `ctx: Context` as its first argument: services, repositori
 `communication.call(ctx, name, input)`, `jobs.enqueue(ctx, ...)`, `events.publish(ctx, ...)`. Never build a
 fresh context mid-request; that drops the tenant, the user and the trace. Jobs and events serialize the
 context into their envelope and rebuild it on the consumer side.
+
+**(validate: `ctx-first`)** checks that the first parameter is the context in procedure handlers
+(`register(name, { handler })`, `defineProcedure`), route handlers in controllers, job handlers
+(`defineJob`), event subscribers (`events.subscribe`) and the public methods of classes in
+`*.service.ts` and `*.repository.ts`; and that the first argument of `communication.call` / `this.call`,
+`jobs.enqueue` and `events.publish` is one. A parameter counts when it is typed as a `…Context` or,
+untyped, named `ctx`, `context` or `…Ctx`; an argument counts when its name says so or it is a call
+(`createContext(...)`).
 
 ## Errors
 
@@ -68,12 +79,20 @@ Zod validates every input that crosses a boundary: HTTP body, params and query (
 procedure input and output (`register(name, { schema })`), job payloads (`defineJob({ schema })`), event
 payloads (`defineEvent(name, { schema })`) and config. Inside the service layer, trust the types.
 
+**(validate: `zod-at-boundaries`)** checks that a procedure's definition has `schema.input` and
+`schema.output`, that a route declares a `body`, `params` or `query` schema for each of those its handler
+reads (a parameter whose name starts with `_` is not read, and a page that takes none needs none),
+that `defineJob` has a `schema`, and that `defineEvent` is given one. A `WebhookController` route takes
+no schema option, since its signature is checked over the raw body first; its handler must pass the
+body to a Zod `.parse` or `.safeParse` instead. A definition it can't read (a variable, a spread) is
+left alone.
+
 ## Naming
 
 | Thing | Convention | Example |
 | --- | --- | --- |
 | Files | kebab-case with a role suffix | `invoice-items.service.ts` |
-| Procedures | `domainCamel.action` | `invoiceItems.create` |
+| Procedures | `domainCamel.action` **(validate: `procedure-name-format`)** | `invoiceItems.create` |
 | Events | lowercase, dot-separated **(validate: `event-name-format`)** | `billing.invoice.paid` |
 | Jobs | kebab-case | `send-digest` |
 | Tables | snake_case plural; DSL keys camelCase (columns become snake_case) | `invoice_items.created_at` |

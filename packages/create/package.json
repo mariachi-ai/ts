@@ -45,7 +45,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@mariachi/core": "workspace:*"
+    "@mariachi/core": "workspace:*",
+    "typescript": "^5.7"
   },
   "devDependencies": {
     "@mariachi/api-facade": "workspace:*",
@@ -70,7 +71,6 @@
     "@types/node": "^22",
     "drizzle-orm": "^0.38",
     "zod": "^3.24",
-    "typescript": "^5.7",
     "tsup": "^8",
     "vitest": "^3",
     "yaml": "^2"

@@ -1,21 +1,10 @@
 import { posix } from 'node:path';
 import type { Violation } from '../types';
+import { CODE_RULES } from './code-rules';
+import { isTest, type Rule, type SourceFile } from './source';
 
-export interface SourceFile {
-  /** Project-relative, forward slashes. */
-  path: string;
-  content: string;
-  lines: string[];
-  imports: Array<{ spec: string; line: number }>;
-}
+export type { Rule, SourceFile } from './source';
 
-export interface Rule {
-  name: string;
-  description: string;
-  check(files: SourceFile[], paths: Set<string>): Violation[];
-}
-
-const isTest = (p: string) => /\.(?:test|spec)\.[cm]?[jt]sx?$/.test(p) || /(^|\/)(?:__tests__|test|tests)\//.test(p);
 const segments = (p: string) => p.split('/');
 
 export const isController = (p: string) => /\.controller\.[cm]?[jt]sx?$/.test(p) || segments(p).slice(0, -1).includes('controllers');
@@ -224,33 +213,6 @@ export const RULES: Rule[] = [
         })),
   },
   {
-    name: 'unique-procedure-names',
-    description: 'A procedure name is registered once',
-    check: (files) => {
-      const seen = new Map<string, { file: string; line: number }>();
-      const out: Violation[] = [];
-      for (const f of files.filter((x) => !isTest(x.path))) {
-        for (const m of f.content.matchAll(/\.register\(\s*['"]([a-zA-Z][\w-]*\.[\w.-]+)['"]/g)) {
-          const line = f.content.slice(0, m.index).split('\n').length;
-          const prev = seen.get(m[1]);
-          if (prev) {
-            out.push({
-              rule: 'unique-procedure-names',
-              severity: 'error',
-              file: f.path,
-              line,
-              message: `Procedure "${m[1]}" is also registered at ${prev.file}:${prev.line}`,
-              suggestion: 'Rename one of them; duplicate registrations throw at startup',
-            });
-          } else {
-            seen.set(m[1], { file: f.path, line });
-          }
-        }
-      }
-      return out;
-    },
-  },
-  {
     name: 'event-name-format',
     description: 'Event names are lowercase and dot-separated (domain.entity.verb)',
     check: (files) =>
@@ -267,4 +229,5 @@ export const RULES: Rule[] = [
           })),
       ),
   },
+  ...CODE_RULES,
 ];

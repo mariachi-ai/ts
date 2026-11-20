@@ -1,6 +1,8 @@
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { ConfigError } from '@mariachi/core';
 import type { ValidateOptions, ValidationResult, Violation } from '../types';
+import { emptyFacts, readFacts, type TypeScript } from './ast';
 import { RULES, type SourceFile } from './rules';
 
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', '.git', '.turbo', 'coverage', 'drizzle', '.next']);
@@ -32,7 +34,8 @@ export function lineAt(content: string, index: number): number {
   return line;
 }
 
-export function parseSource(path: string, content: string): SourceFile {
+/** Reads a file's imports and, given the TypeScript compiler, the facts its syntax tree holds. */
+export function parseSource(path: string, content: string, ts?: TypeScript): SourceFile {
   const imports: SourceFile['imports'] = [];
   for (const pattern of IMPORT_PATTERNS) {
     for (const match of content.matchAll(pattern)) {
@@ -40,7 +43,21 @@ export function parseSource(path: string, content: string): SourceFile {
       imports.push({ spec: match[1], line: lineAt(content, at) });
     }
   }
-  return { path: path.replace(/\\/g, '/'), content, lines: content.split('\n'), imports };
+  const normalized = path.replace(/\\/g, '/');
+  const facts = ts ? readFacts(ts, normalized, content) : emptyFacts();
+  return { path: normalized, content, lines: content.split('\n'), imports, facts };
+}
+
+/** The compiler, loaded on first use so scaffolding never pays for it. */
+async function loadTypeScript(): Promise<TypeScript> {
+  try {
+    const mod = await import('typescript');
+    return ((mod as { default?: TypeScript }).default ?? mod) as TypeScript;
+  } catch (error) {
+    throw new ConfigError('create/typescript-missing', 'mariachi validate reads the code with the TypeScript compiler: install typescript', {
+      cause: error instanceof Error ? error.message : String(error),
+    });
+  }
 }
 
 const IGNORE = /mariachi-(?:validate|lint)-ignore(?:\s+([\w\s,-]+))?/;
@@ -62,7 +79,8 @@ function ignored(file: SourceFile, v: Violation): boolean {
  */
 export async function validate(projectRoot: string, options: ValidateOptions = {}): Promise<ValidationResult> {
   const paths = await collect(projectRoot);
-  const files = await Promise.all(paths.map(async (p) => parseSource(p, await readFile(join(projectRoot, p), 'utf-8'))));
+  const ts = await loadTypeScript();
+  const files = await Promise.all(paths.map(async (p) => parseSource(p, await readFile(join(projectRoot, p), 'utf-8'), ts)));
   const byPath = new Map(files.map((f) => [f.path, f]));
   const disabled = new Set(options.disable ?? []);
 

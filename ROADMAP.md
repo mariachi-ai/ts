@@ -85,7 +85,7 @@ Each package's status is listed in the [catalog](packages/core/docs/packages.md)
 **CLI and docs.**
 - `mariachi init` generates a working project, and `mariachi generate entity|service|procedure|controller|job|event|subscriber|webhook|integration` fills it in.
 - `mariachi init --ui` adds pages styled by a design kit the project owns (`linen` unless `--kit` names another), copied into `src/design/`.
-- `mariachi validate` checks architecture rules.
+- `mariachi validate` checks architecture rules: layers, `ctx` first, Zod at boundaries and procedure names. Generated projects run it as `pnpm lint`.
 - A scaffold test generates a project, then typechecks it and runs its tests against the real packages.
 - `packages/core/docs/` holds the canonical docs.
 - The package catalog is generated from `package.json`.
