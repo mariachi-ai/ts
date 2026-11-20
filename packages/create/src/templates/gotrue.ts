@@ -13,6 +13,7 @@ import {
 } from './organizations';
 import { ACCEPT_INVITATION_PATH } from './invitations';
 import { fillLocalSecrets, GOTRUE_DOCKER_COMPOSE, LOCAL_AUTH_URL, MAILBOX_URL } from './local-auth';
+import { SEARCH_EXAMPLE_AGENTS, searchAgentsRow } from './search';
 import { UI_APP_CHECK, UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_README, uiAgents } from './ui';
 import {
   WIRING_APP_EVENTS,
@@ -34,7 +35,7 @@ import {
 /** GoTrue's path when it's served under the app's own origin; hosted Supabase uses the same path. */
 export const AUTH_PATH = '/auth/v1';
 
-export function gotrueFiles(name: string, e2e = true, orgs = false, ui = false): Record<string, string> {
+export function gotrueFiles(name: string, e2e = true, orgs = false, ui = false, example = true): Record<string, string> {
   const envExample = ENV_EXAMPLE(name, databaseName(name)) + (orgs ? organizationsEnv('gotrue', ui) : '');
   return {
     '.env.example': envExample,
@@ -42,7 +43,7 @@ export function gotrueFiles(name: string, e2e = true, orgs = false, ui = false):
     '.env': fillLocalSecrets(envExample).text,
     'docker-compose.yml': GOTRUE_DOCKER_COMPOSE(databaseName(name)),
     'README.md': README(name) + (orgs ? organizationsReadme('gotrue', ui) : '') + (ui ? UI_README : ''),
-    'AGENTS.md': AGENTS_AUTH(e2e) + (orgs ? organizationsAgents('gotrue') : '') + (ui ? uiAgents('gotrue') : ''),
+    'AGENTS.md': AGENTS_AUTH(e2e, example) + (orgs ? organizationsAgents('gotrue') : '') + (ui ? uiAgents('gotrue') : ''),
     'src/config.ts': CONFIG_TS(orgs, ui),
     ...(orgs && ui ? { 'src/config.test.ts': INVITATION_URL_TEST } : {}),
     'src/auth.ts': AUTH_TS,
@@ -1497,7 +1498,7 @@ pnpm test:e2e      # the whole app over HTTP (src/**/*.e2e.test.ts): starts a th
 
 `;
 
-const AGENTS_AUTH = (e2e: boolean) => `# Agent guide
+const AGENTS_AUTH = (e2e: boolean, example: boolean) => `# Agent guide
 
 This is a Mariachi backend. Before writing code, read the framework docs shipped with
 \`@mariachi/core\`:
@@ -1523,12 +1524,13 @@ ${e2e ? '| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and t
 | \`src/services/<name>/\` | Service, repository and communication handlers for one domain |
 | \`src/schema/\` | \`defineTable\` tables; \`mariachi db generate\` turns them into migrations |
 | \`src/jobs/\` | \`defineJob\` background jobs |
-| \`src/search/\` | The search indexes; services reach search as \`deps.search\` |
+${searchAgentsRow(example)}
 | \`src/events/\` | \`defineEvent\` events and their subscribers; services publish through \`deps.outbox\` or \`deps.events\` |
 | \`src/webhooks/\` | Webhook controllers, served on \`WEBHOOK_PORT\`: signature checked, deduplicated, handed to a job |
 
 Jobs and search run in Postgres (\`@mariachi/jobs/postgres\`, \`@mariachi/search/postgres\`): don't add
-Redis or a search server to make either work. \`pnpm dev\` starts the services in
+Redis or a search server to make either work.${example ? SEARCH_EXAMPLE_AGENTS : ''}
+\`pnpm dev\` starts the services in
 \`docker-compose.yml\` (Postgres, a local GoTrue at ${LOCAL_AUTH_URL} and Mailpit, the mailbox its email
 goes to, at ${MAILBOX_URL}), applies migrations and runs the app with reload. To read an email GoTrue or
 the app sent, ask Mailpit's API: \`curl '${MAILBOX_URL}/api/v1/search?query=to:ada@example.com'\`.
@@ -1553,6 +1555,7 @@ ${e2e ? AGENTS_AUTH_TESTS : ''}## Sign-in, tenants and roles
 
 \`\`\`bash
 pnpm mariachi generate entity <name> [--field title:string --field done:boolean]   # schema + repository + service + handler + controller + test
+pnpm mariachi generate entity <name> --search          # the same, kept in a search index, with GET /api/<plural>/search?q=
 pnpm mariachi generate service <name>
 pnpm mariachi generate controller <name>
 pnpm mariachi generate job <name>

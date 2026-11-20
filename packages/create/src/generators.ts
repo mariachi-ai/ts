@@ -47,7 +47,8 @@ import { mergeResults, writeFiles, type Insertion } from './writer';
 const NPM_NAME = /^(?:@[a-z0-9-~][a-z0-9-._~]*\/)?[a-z0-9-~][a-z0-9-._~]*$/;
 
 /**
- * Scaffolds a runnable project and, unless `example: false`, a `note` entity wired end to end.
+ * Scaffolds a runnable project and, unless `example: false`, a `note` entity wired end to end and
+ * kept in a search index: the worked example of `deps.search`.
  * `auth: 'gotrue'` signs users in with GoTrue (see `ProjectConfig.auth`); `organizations: true` adds
  * organizations, memberships and invitations (see `ProjectConfig.organizations`).
  */
@@ -64,9 +65,9 @@ export async function createProject(config: ProjectConfig): Promise<GenerateResu
   }
   await mkdir(config.outputDir, { recursive: true });
   const range = config.mariachiVersion ?? `^${MARIACHI_VERSION}`;
-  const project = await writeFiles(config.outputDir, projectFiles(config.name, range, auth, { e2e: config.e2e, organizations: config.organizations, ui: config.ui }));
+  const project = await writeFiles(config.outputDir, projectFiles(config.name, range, auth, { e2e: config.e2e, organizations: config.organizations, ui: config.ui, example: config.example !== false }));
   if (config.example === false) return project;
-  const example = await generateEntity({ name: 'note', projectRoot: config.outputDir });
+  const example = await generateEntity({ name: 'note', projectRoot: config.outputDir, search: true });
   return { ...mergeResults(project, example), updated: [] };
 }
 
@@ -79,12 +80,16 @@ function assertProject(root: string): void {
 /**
  * Table, contract, repository, service, handlers, controller and a service test; registers all of
  * them. `fields` are its columns (`title:string`, `dueAt:timestamp?`); without them it has a `name`.
+ * `search: true` also keeps it in a search index, listed in `src/search/index.ts`, with a
+ * `<plural>.search` procedure and route.
  */
 export async function generateEntity(config: GenerateEntityConfig): Promise<GenerateResult> {
   assertProject(config.projectRoot);
   const n = names(config.name, { plural: config.plural });
   const fields = parseFields(config.fields);
   const svc = `./${n.pluralKebab}/${n.pluralKebab}`;
+  const search = config.search ?? false;
+  const files = entityFiles(n, fields, { search });
   const insertions: Insertion[] = [
     { file: LAYOUT.schemaIndex, marker: MARKERS.schema, line: `export * from './${n.pluralKebab}';` },
     { file: LAYOUT.servicesIndex, marker: MARKERS.imports, line: `import { ${n.pluralPascal}Repository } from '${svc}.repository';` },
@@ -93,11 +98,16 @@ export async function generateEntity(config: GenerateEntityConfig): Promise<Gene
     {
       file: LAYOUT.servicesIndex,
       marker: MARKERS.services,
-      line: `register${n.pluralPascal}Handlers(communication, new ${n.pluralPascal}Service(new ${n.pluralPascal}Repository(deps.db)));`,
+      line: `register${n.pluralPascal}Handlers(communication, new ${n.pluralPascal}Service(new ${n.pluralPascal}Repository(deps.db)${search ? ', deps.search, deps.db' : ''}));`,
     },
     ...controllerInsertions(n.pluralPascal, n.pluralKebab),
+    ...(search
+      ? [
+          { file: LAYOUT.searchIndex, marker: MARKERS.imports, line: `import { ${n.pluralCamel}Index } from './${n.pluralKebab}';` },
+          { file: LAYOUT.searchIndex, marker: MARKERS.search, line: `${n.pluralCamel}Index,` },
+        ]
+      : []),
   ];
-  const files = entityFiles(n, fields);
   // A project made without end-to-end support has no harness for the test to use
   if (!existsSync(join(config.projectRoot, E2E_HARNESS_FILE))) delete files[`${LAYOUT.controllersDir}/${n.pluralKebab}.e2e.test.ts`];
   const result = await writeFiles(config.projectRoot, files, insertions, config);

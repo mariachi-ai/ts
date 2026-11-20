@@ -41,6 +41,47 @@ the definition is every tenant's, and their documents were indexed under it. The
 effect when you [reindex](#reindex-without-downtime). A project from `mariachi init` does this with the indexes in
 `src/search/index.ts`.
 
+## The generated example
+
+A project from `mariachi init` keeps its example notes in a search index, as a worked example of
+`deps.search` on the Postgres adapter: nothing to run beside the app's own database.
+
+| File | What it does |
+| --- | --- |
+| `src/search/notes.ts` | `notesIndex` (the `name` field) and `noteDocument(note)`, what the index keeps of a note |
+| `src/search/index.ts` | Lists `notesIndex`, so `ensureIndexes` creates it at start |
+| `src/services/notes/notes.service.ts` | `create` and `update` index the note, `remove` removes it, each inside `withTransaction` with the write; `find` searches |
+| `src/contracts/notes.ts` | `searchNotesInput` (`q`, `limit`, `cursor`) and the `notes.search` procedure, which answers a page like `notes.list` |
+| `src/api/controllers/notes.controller.ts` | `GET /api/notes/search?q=` |
+| `notes.service.test.ts`, `notes.e2e.test.ts` | Indexing, search, update, delete, paging and tenant isolation, the last over HTTP against Postgres |
+
+```bash
+curl -H "authorization: Bearer $TOKEN" 'localhost:3000/api/notes/search?q=harb&limit=10'
+# { "data": [ { "id": "…", "name": "Harbour report", … } ], "nextCursor": null, "hasMore": false }
+```
+
+- **No async indexing.** The document is written in the transaction of the change, so there is no
+  outbox, job or reindex loop to keep it current. A note whose write fails isn't indexed, and an
+  index write that fails fails the request.
+- **The index finds, the table answers.** `find` takes the ids of a page of hits, most relevant first,
+  and reads those rows through the repository. A hit is the note as it is now, with the tenant and
+  soft-delete rules of every other read.
+- **Paging.** `limit` and `cursor` as `notes.list` takes them; the cursor is the next page's number.
+- **Tenants.** `deps.search` is tenant-scoped, so another tenant's notes never match.
+- **Reindexing.** Needed only after the fields in `src/search/notes.ts` change (the app warns at start
+  when they differ from the stored ones), or for notes written before the index existed: for each
+  tenant, `new SearchIndexer(createPostgresSearch(db).forTenant(tenantId)).reindexAll('notes', notesIndex,
+  notes.map(noteDocument))` with that tenant's notes, from a seed or a one-off job. See
+  [reindex](#reindex-without-downtime).
+- **Another entity.** `mariachi generate entity <name> --search` writes the same for it, indexing its
+  `string` and `text` fields. Entities generated without `--search` are not indexed.
+- **Another adapter.** Typesense gives typo tolerance and takes the load off the database: build the
+  client with `createSearch({ adapter: 'typesense', … })` in `src/app.ts`, drop `tenantScoped`, and
+  add `tenantId` to the documents and a `tenantId` filter to every query (Typesense doesn't keep
+  tenants apart). Indexing is then outside the transaction: a document can reach Typesense and its
+  write still roll back, so index from the [outbox](./events.md#transactional-outbox) or a job, after
+  the commit.
+
 ## Define an index
 
 ```ts
