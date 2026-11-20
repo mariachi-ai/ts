@@ -31,7 +31,7 @@ finish.
 | Let users share a workspace, invite each other, hold roles | `DefaultOrganizations` (when the identity provider has no organizations of its own) | [organizations.md](./organizations.md) |
 | Turn a feature on per tenant | `createFeatureFlags` + `DrizzleFeatureFlagStore` | [feature-flags.md](./feature-flags.md) |
 | Store or serve files | `DefaultStorage` | [storage.md](./storage.md) |
-| Full-text search | `DefaultSearch` on `createPostgresSearch(db)` (no extra server) or Typesense (typo tolerance) | [search.md](./search.md) |
+| Full-text search | `DefaultSearch` on `createPostgresSearch(db)` (no extra server) or Typesense (typo tolerance); `generate entity --search`, as the example notes are | [search.md](./search.md#the-generated-example) |
 | Limit a tenant's usage outside HTTP | `DefaultRateLimiting.consumeTier` | [http.md](./http.md#rate-limits) |
 | Test without infrastructure | `@mariachi/testing` doubles | [testing.md](./testing.md) |
 | Style a UI consistently | `@mariachi/design` classes + a preset (`data-theme`) | [design.md](./design.md), [design-catalog.md](./design-catalog.md) |

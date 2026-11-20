@@ -11,7 +11,9 @@ mariachi generate entity order --field status:string --field total_cents:integer
 `--field name:type` gives it its columns (`string`, `text`, `integer`, `number`, `boolean`,
 `timestamp`, `date`, `uuid`; `:optional` or `?` for a nullable one); without any it has a `name`. The
 plural names the table, the routes and the procedures (`person` → `people`); `--plural` overrides it.
-See [cli.md](../cli.md#generate).
+See [cli.md](../cli.md#generate). `--search` also keeps it in a search index, found through
+`orders.search` (`GET /api/orders/search?q=`), as the example notes of a new project are: see
+[search.md](../search.md#the-generated-example).
 
 This writes the files below and registers them in `src/schema/index.ts`, `src/services/index.ts` and
 `src/api/controllers/index.ts`. The steps that follow explain each file and what to change. If you

@@ -47,6 +47,16 @@ describe('mariachi generate', () => {
     expect(table).toContain('  title: column.text().notNull(),\n  wateredAt: column.timestamp(),');
   });
 
+  it('keeps an entity in a search index only when asked to', async () => {
+    await generate('entity', 'task', '--field', 'title:string', '--search');
+    expect(await text('src/search/index.ts')).toContain('  tasksIndex,\n  // mariachi:search');
+    expect(await text('src/contracts/tasks.ts')).toContain("'tasks.search'");
+    await generate('entity', 'tag');
+    expect(existsSync(join(project, 'src/search/tags.ts'))).toBe(false);
+    await expect(generate('job', 'send-digest', '--search')).rejects.toThrow('exit 1');
+    expect(errors()).toContain('--search is not an option of generate job');
+  });
+
   it('makes an event with its subscriber, and a subscriber on its own', async () => {
     await generate('event', 'billing.invoice.paid', '--subscriber', 'send-receipt');
     expect(existsSync(join(project, 'src/events/subscribers/send-receipt.subscriber.ts'))).toBe(true);

@@ -3,7 +3,11 @@ export interface ProjectConfig {
   name: string;
   /** Directory to create. It must not exist or must be empty. */
   outputDir: string;
-  /** Generate the example `note` entity (schema, service, handlers, controller, test). Default true. */
+  /**
+   * Generate the example `note` entity (schema, service, handlers, controller, tests), kept in a
+   * search index with `notes.search` (`GET /api/notes/search?q=`): the worked example of
+   * `deps.search`. Default true.
+   */
   example?: boolean;
   /** Override the `@mariachi/*` version range written to package.json. Default `^<framework version>`. */
   mariachiVersion?: string;
@@ -55,6 +59,13 @@ export interface GenerateEntityConfig extends GenerateOptions {
   fields?: string[];
   /** The plural (table, routes, procedure namespace) when the rules get it wrong: `cactus` → `cacti`. */
   plural?: string;
+  /**
+   * Keep it in a search index: `src/search/<plural>.ts`, listed in `src/search/index.ts`. Its service
+   * indexes a row when it is created or updated and removes it when it is deleted, in the same
+   * transaction, and `<plural>.search` (`GET /api/<plural>/search?q=`) finds rows by the words in its
+   * text fields, tenant-scoped. Needs a string or text field. Default false.
+   */
+  search?: boolean;
 }
 export type GenerateServiceConfig = GenerateOptions;
 export type GenerateControllerConfig = GenerateOptions;

@@ -13,7 +13,8 @@ Creates the [project layout](./architecture.md#project-layout): `src/app.ts` (`c
 Postgres, jobs, search, communication, API server with JWT auth, health and OpenAPI), a `src/main.ts`
 that starts it, registry files, `docker-compose.yml` (Postgres), `.env.example`,
 `vitest.config.ts`, end-to-end test support (`pnpm test:e2e`, see [testing.md](./testing.md#end-to-end-tests)),
-`AGENTS.md`, and an example `note` entity wired end to end. Dependencies are pinned to the framework version that generated the
+`AGENTS.md`, and an example `note` entity wired end to end and kept in a search index
+(`GET /api/notes/search?q=`; see [search.md](./search.md#the-generated-example)). Dependencies are pinned to the framework version that generated the
 project. The directory must be empty or not exist.
 
 **Postgres is the only service a new project needs.** Jobs run in it (`@mariachi/jobs/postgres`,
@@ -121,6 +122,7 @@ look with no code change. The app won't start without a kit in `src/design/`
 mariachi generate entity invoice-item     # alias: mariachi g
 mariachi generate entity task --field title:string --field done:boolean --field due_at:timestamp:optional
 mariachi generate entity cactus --plural cacti
+mariachi generate entity article --field title:string --field body:text --search
 mariachi generate service billing-report
 mariachi generate procedure billing-report summarize-month
 mariachi generate controller billing-report
@@ -133,7 +135,7 @@ mariachi generate integration acme
 
 | Type | Creates | Registers in |
 | --- | --- | --- |
-| `entity` | `schema/<plural>.ts`, `contracts/<plural>.ts`, `services/<plural>/{repository,service,handler,service.test}.ts`, `api/controllers/<plural>.controller.ts` with CRUD + cursor pagination, and `api/controllers/<plural>.e2e.test.ts` | `schema/index.ts`, `services/index.ts`, `api/controllers/index.ts` |
+| `entity` | `schema/<plural>.ts`, `contracts/<plural>.ts`, `services/<plural>/{repository,service,handler,service.test}.ts`, `api/controllers/<plural>.controller.ts` with CRUD + cursor pagination, and `api/controllers/<plural>.e2e.test.ts`. `--search` adds `search/<plural>.ts` and a search | `schema/index.ts`, `services/index.ts`, `api/controllers/index.ts`; with `--search`, `search/index.ts` |
 | `service` | `contracts/<name>.ts` with an `<name>.execute` procedure, service, handler, test | `services/index.ts` |
 | `procedure <service> <name>` | On a service that exists: the input and output schemas and the `Procedures` entry, appended to its contract; a method on the service; `services/<service>/<service>.<name>.test.ts`, which calls it through communication | the service's `register…Handlers()` |
 | `controller` | `api/controllers/<name>.controller.ts`; reuses `contracts/<name>.ts` if it exists | `api/controllers/index.ts` |
@@ -157,6 +159,14 @@ contract, the service and both tests. Types: `string` (text, 1 to 200 characters
 `--field 'due_at:timestamp?'`. Names may be snake or kebab case; they become camelCase keys and
 snake_case columns. `id`, `tenantId`, `createdAt`, `updatedAt` and `deletedAt` are every entity's
 already. With no `--field`, the entity has a `name`.
+
+**Search.** `--search` keeps the entity in a search index of its `string` and `text` fields
+(`src/search/<plural>.ts`, listed in `src/search/index.ts`): its service indexes a row when it is
+created or updated and removes it when it is deleted, in the same transaction, and
+`<plural>.search` (`GET /api/<plural>/search?q=&limit=&cursor=`) answers a page of rows, most
+relevant first, from the caller's tenant only. An entity with no text field is refused
+(`create/nothing-to-search`). Without `--search`, nothing is indexed. The example `note` is made
+this way; see [search.md](./search.md#the-generated-example).
 
 **Plurals** name the table, the routes and the procedures: `person` → `people`, `category` →
 `categories`, `analysis` → `analyses`, `leaf` → `leaves`, `sheep` → `sheep`, and so on for the

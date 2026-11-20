@@ -131,3 +131,23 @@ describe('the generated project can be started from a test', () => {
     expect(test).toContain('const invoiceItem = (await created.json())');
   });
 });
+
+describe('the generated project points to its search example', () => {
+  it('in the README and for agents, with either sign-in, when it has the example notes', () => {
+    for (const set of [files, gotrue]) {
+      expect(set['AGENTS.md']).toContain('`GET /api/notes/search?q=` finds them, in the caller\'s tenant only.');
+      expect(set['AGENTS.md']).toContain("The search indexes (the example notes' is `notes.ts`)");
+      expect(set['AGENTS.md']).toContain('pnpm mariachi generate entity <name> --search');
+    }
+    expect(files['README.md']).toContain('The example notes are the worked example: `src/services/notes/notes.service.ts` indexes a note');
+  });
+
+  it('and not when it was made without them', () => {
+    for (const auth of ['jwt', 'gotrue'] as const) {
+      const bare = projectFiles('acme-app', '^0.1.0', auth, { example: false });
+      expect(bare['AGENTS.md']).not.toContain('/api/notes/search');
+      expect(bare['AGENTS.md']).toContain('| `src/search/` | The search indexes; services reach search as `deps.search` |');
+    }
+    expect(projectFiles('acme-app', '^0.1.0', 'jwt', { example: false })['README.md']).toContain('`mariachi generate entity <name> --search` keeps an entity in a search index');
+  });
+});
