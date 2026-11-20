@@ -152,6 +152,53 @@ describe('zod-at-boundaries', () => {
   });
 });
 
+const WEBHOOK = 'src/webhooks/acme.controller.ts';
+const webhook = (routes: string) => `import { StandardWebhookAuth, WebhookController } from '@mariachi/webhooks';
+import { fromZodError } from '@mariachi/errors';
+import { acmeWebhookPayload } from '../contracts/acme-webhook';
+
+export class AcmeWebhookController extends WebhookController {
+  readonly prefix = 'acme';
+  init(): void {
+    ${routes}
+  }
+}
+`;
+
+describe('zod-at-boundaries, webhook routes', () => {
+  it('passes a webhook route that parses the delivery with Zod in its handler, since its options take no schema', () => {
+    expect(
+      check('zod-at-boundaries', {
+        [WEBHOOK]: webhook(
+          [
+            "this.post('/events', { mode: 'queue', jobName: 'acme-webhook' }, async (_ctx, body) => { const parsed = acmeWebhookPayload.safeParse(body); if (!parsed.success) throw fromZodError(parsed.error, 'bad'); return parsed.data; });",
+            "this.post('/other', { mode: 'direct', procedure: 'acme.handle' }, async (_ctx, payload) => acmeWebhookPayload.parse(payload));",
+            "this.post('/ping', { mode: 'direct', procedure: 'acme.ping' }, async (_ctx, _body) => ({ ok: true }));",
+          ].join('\n    '),
+        ),
+      }),
+    ).toEqual([]);
+  });
+
+  it('flags a webhook route that uses the delivery without parsing it', () => {
+    expect(
+      check('zod-at-boundaries', {
+        [WEBHOOK]: webhook("this.post('/events', { mode: 'queue', jobName: 'acme-webhook' }, async (_ctx, body) => body as { id: string });"),
+      }),
+    ).toEqual([
+      `${WEBHOOK}:8 POST /events reads the webhook delivery without parsing it with Zod → Parse it in the handler: const parsed = payloadSchema.safeParse(body); if (!parsed.success) throw fromZodError(parsed.error, '…')`,
+    ]);
+  });
+
+  it('still wants a schema option on an ordinary controller route that calls safeParse itself', () => {
+    expect(
+      check('zod-at-boundaries', {
+        [CONTROLLER]: controller("this.post('/', (ctx, body) => this.call(ctx, 'notes.create', noteIdInput.parse(body)));"),
+      }),
+    ).toHaveLength(1);
+  });
+});
+
 describe('procedure-name-format', () => {
   it('passes domainCamel.action names, nested ones too', () => {
     expect(

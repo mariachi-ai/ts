@@ -105,6 +105,18 @@ const zodRule: Rule = {
       }
 
       for (const r of f.facts.routes) {
+        if (r.webhook) {
+          // A webhook route takes no schema option: the signature is checked over the raw body, then the handler parses it.
+          const body = r.handler?.params[1];
+          if (body && used(body) && !(body.name && r.parsed?.includes(body.name))) {
+            push(
+              r.line,
+              `${route(r)} reads the webhook delivery without parsing it with Zod`,
+              `Parse it in the handler: const parsed = payloadSchema.safeParse(${body.name ?? 'body'}); if (!parsed.success) throw fromZodError(parsed.error, '…')`,
+            );
+          }
+          continue;
+        }
         if (r.schema === 'unknown' || !r.handler) continue;
         const [, body, params, query] = r.handler.params;
         const missing = [

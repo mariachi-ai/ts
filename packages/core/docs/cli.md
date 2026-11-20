@@ -338,7 +338,7 @@ reads each file's syntax tree (with the TypeScript compiler) for:
 | Rule | Checks |
 | --- | --- |
 | `ctx-first` | Procedure, route, job and event handlers and service and repository methods take `ctx: Context` first; `communication.call`, `this.call`, `jobs.enqueue` and `events.publish` pass it first |
-| `zod-at-boundaries` | Procedures have input and output schemas; routes have a schema for the body, params and query their handler reads; jobs and events have a payload schema |
+| `zod-at-boundaries` | Procedures have input and output schemas; routes have a schema for the body, params and query their handler reads (a webhook route parses its body with Zod in the handler); jobs and events have a payload schema |
 | `procedure-name-format` | Registered and called procedure names are `domainCamel.action` |
 | `unique-procedure-names` | No name is registered twice |
 | `procedure-registered` (warning) | Each procedure called with a literal name is registered in the project |

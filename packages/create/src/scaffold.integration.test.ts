@@ -260,19 +260,19 @@ describe('generated project', () => {
     const handler = join(project, 'src/services/notes/notes.handler.ts');
     const controller = join(project, 'src/api/controllers/notes.controller.ts');
     const originals = [await readFile(handler, 'utf-8'), await readFile(controller, 'utf-8')] as const;
-    await writeFile(
-      handler,
-      originals[0]
-        .replace('handler: (ctx, input) => service.create(ctx, input)', 'handler: (input) => service.create(input as never, input as never)')
-        .replace("'notes.update'", "'notes.update-note'"),
-    );
+    const broken = originals[0]
+      .replace('handler: (ctx, input) => service.create(ctx, input)', 'handler: (input) => service.create(input as never, input as never)')
+      .replace("'notes.update'", "'notes.update-note'");
+    // Where the findings land in the handler, read from the file so a template change doesn't move them
+    const lineOf = (needle: string) => broken.split('\n').findIndex((l) => l.includes(needle)) + 1;
+    await writeFile(handler, broken);
     await writeFile(controller, originals[1].replace("{ schema: { query: listNotesInput, response: noteListSchema }, summary: 'List notes' }", "{ summary: 'List notes' }"));
     try {
       const result = await validate(project);
       expect(result.violations.filter((v) => v.severity === 'error').map((v) => `${v.rule}@${v.file}:${v.line}`)).toEqual([
         'zod-at-boundaries@src/api/controllers/notes.controller.ts:24',
-        'ctx-first@src/services/notes/notes.handler.ts:16',
-        'procedure-name-format@src/services/notes/notes.handler.ts:26',
+        `ctx-first@src/services/notes/notes.handler.ts:${lineOf('handler: (input) =>')}`,
+        `procedure-name-format@src/services/notes/notes.handler.ts:${lineOf("'notes.update-note'")}`,
       ]);
       await expect(lint(project)).rejects.toThrow(/3 error\(s\)/);
     } finally {

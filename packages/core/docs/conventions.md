@@ -82,8 +82,10 @@ payloads (`defineEvent(name, { schema })`) and config. Inside the service layer,
 **(validate: `zod-at-boundaries`)** checks that a procedure's definition has `schema.input` and
 `schema.output`, that a route declares a `body`, `params` or `query` schema for each of those its handler
 reads (a parameter whose name starts with `_` is not read, and a page that takes none needs none),
-that `defineJob` has a `schema`, and that `defineEvent` is given one. A definition it can't read (a
-variable, a spread) is left alone.
+that `defineJob` has a `schema`, and that `defineEvent` is given one. A `WebhookController` route takes
+no schema option, since its signature is checked over the raw body first; its handler must pass the
+body to a Zod `.parse` or `.safeParse` instead. A definition it can't read (a variable, a spread) is
+left alone.
 
 ## Naming
 

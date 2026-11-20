@@ -58,6 +58,13 @@ export interface RouteFact {
   /** Keys of the options' `schema`; undefined when there is none, `unknown` when unreadable. */
   schema?: Keys;
   handler?: FunctionFact;
+  /**
+   * A route of a class that extends `WebhookController`. Its options take no schema: the signature is
+   * checked over the raw body first, so the handler parses the body with Zod itself.
+   */
+  webhook?: boolean;
+  /** For a webhook route: the identifiers the handler passes to a Zod `.parse`/`.safeParse` (or their async forms). */
+  parsed?: string[];
 }
 
 export interface JobFact {
@@ -108,6 +115,7 @@ const CTX_NAME = /(?:ctx|context)$/i;
 const CTX_ARG = /ctx|context/i;
 const CTX_TYPE = /Context\b/;
 const ROUTE_METHODS = new Set(['get', 'post', 'put', 'patch', 'delete']);
+const ZOD_PARSE = new Set(['parse', 'safeParse', 'parseAsync', 'safeParseAsync']);
 const SERVICE_FILE = /\.(?:service|repository)\.[cm]?[jt]sx?$/;
 
 function scriptKind(t: TypeScript, path: string): ts.ScriptKind {
@@ -198,6 +206,20 @@ export function readFacts(t: TypeScript, path: string, content: string): SourceF
     return '';
   };
 
+  /** The identifiers a function passes to `.parse`/`.safeParse`/`.parseAsync`/`.safeParseAsync` anywhere in its body. */
+  const zodParsed = (fn: ts.Node | undefined): string[] => {
+    const out: string[] = [];
+    const walk = (n: ts.Node): void => {
+      if (t.isCallExpression(n) && t.isPropertyAccessExpression(n.expression) && ZOD_PARSE.has(n.expression.name.text)) {
+        const first = n.arguments[0] && unwrap(n.arguments[0]);
+        if (first && t.isIdentifier(first)) out.push(first.text);
+      }
+      t.forEachChild(n, walk);
+    };
+    if (fn) walk(fn);
+    return out;
+  };
+
   const packageImports = new Set<string>();
   for (const stmt of sf.statements) {
     if (!t.isImportDeclaration(stmt) || !t.isStringLiteral(stmt.moduleSpecifier) || stmt.moduleSpecifier.text.startsWith('.')) continue;
@@ -207,11 +229,16 @@ export function readFacts(t: TypeScript, path: string, content: string): SourceF
 
   const isService = SERVICE_FILE.test(path);
 
+  let webhookClass = false;
+
   const visit = (node: ts.Node, inClass: boolean): void => {
     if (t.isClassDeclaration(node) || t.isClassExpression(node)) {
       if (isService && node.name) collectMethods(node, node.name.text);
-      const extended = !!node.heritageClauses?.some((h) => h.token === t.SyntaxKind.ExtendsKeyword);
-      t.forEachChild(node, (child) => visit(child, extended));
+      const base = node.heritageClauses?.find((h) => h.token === t.SyntaxKind.ExtendsKeyword)?.types[0];
+      const outer = webhookClass;
+      webhookClass = base !== undefined && tail(base.expression) === 'WebhookController';
+      t.forEachChild(node, (child) => visit(child, base !== undefined));
+      webhookClass = outer;
       return;
     }
     if (t.isCallExpression(node)) onCall(node, inClass);
@@ -295,6 +322,7 @@ export function readFacts(t: TypeScript, path: string, content: string): SourceF
         line: line(node),
         schema: opts ? schemaOf(opts) : undefined,
         handler,
+        ...(webhookClass ? { webhook: true, parsed: zodParsed(args[args.length - 1]) } : {}),
       });
     }
   };
