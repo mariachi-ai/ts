@@ -1,6 +1,7 @@
-import { randomUUID } from 'node:crypto';
+import { generateKeyPairSync, randomUUID, sign } from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
 import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createServer as createHttpServer, type Server } from 'node:http';
 import { createRequire } from 'node:module';
 import { type AddressInfo, createServer } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
@@ -9,8 +10,10 @@ import { parseEnv, promisify } from 'node:util';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startPostgres, startRedis, stopAll } from '../../../test/setup';
 import { JWTAdapter } from '@mariachi/auth';
+import { createPostgresDatabase } from '@mariachi/database-postgres';
 import { addKit } from '@mariachi/design-kits';
 import { signStandardWebhook } from '@mariachi/webhooks';
+import { sql } from 'drizzle-orm';
 import {
   createProject,
   generateController,
@@ -500,16 +503,73 @@ describe('generated project with --auth gotrue', () => {
 
 const JWT_SECRET = 'scaffold-test-secret-at-least-32-characters';
 
+/** Runs this repo's built CLI (`mariachi`) in a project. */
+async function mariachi(args: string[], cwd: string): Promise<string> {
+  try {
+    const { stdout } = await run(process.execPath, [resolve(pkgRoot, '../cli/dist/index.js'), ...args], {
+      cwd,
+      maxBuffer: 16 * 1024 * 1024,
+      env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1' },
+    });
+    return stdout;
+  } catch (error) {
+    const e = error as { stdout?: string; stderr?: string };
+    throw new Error(`mariachi ${args.join(' ')} failed:\n${e.stdout ?? ''}\n${e.stderr ?? ''}`); // mariachi-lint-ignore
+  }
+}
+
+/** Runs one query against a database and closes the connection. */
+async function query<T>(url: string, statement: string): Promise<T[]> {
+  const database = createPostgresDatabase({ url });
+  await database.connect();
+  try {
+    return (await database.db.execute(sql.raw(statement))) as unknown as T[];
+  } finally {
+    await database.disconnect();
+  }
+}
+
+/**
+ * A stand-in for GoTrue's signing key: an ES256 key whose JWKS is served on a local port, and tokens
+ * signed with it, as GoTrue issues them. The app reads the JWKS at AUTH_JWKS_URL.
+ */
+async function fakeGoTrueKeys(issuer: string): Promise<{ jwksUrl: string; token: (claims: Record<string, unknown>) => string; close: () => Promise<void> }> {
+  const { privateKey, publicKey } = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+  const jwk = { ...publicKey.export({ format: 'jwk' }), kid: 'scaffold-test', alg: 'ES256', use: 'sig' };
+  const server: Server = createHttpServer((_req, res) => {
+    res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ keys: [jwk] }));
+  });
+  await new Promise<void>((ok) => server.listen(0, '127.0.0.1', ok));
+  const { port } = server.address() as AddressInfo;
+  const part = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
+  return {
+    jwksUrl: `http://127.0.0.1:${port}/.well-known/jwks.json`,
+    token: (claims) => {
+      const now = Math.floor(Date.now() / 1000);
+      const input = `${part({ alg: 'ES256', typ: 'JWT', kid: jwk.kid })}.${part({ iss: issuer, aud: 'authenticated', role: 'authenticated', iat: now, exp: now + 3600, ...claims })}`;
+      return `${input}.${sign('sha256', Buffer.from(input), { key: privateKey, dsaEncoding: 'ieee-p1363' }).toString('base64url')}`;
+    },
+    close: () => new Promise<void>((ok) => server.close(() => ok())),
+  };
+}
+
+/** The limit on creating organizations: 10 an hour per user (@mariachi/organizations). */
+const CREATE_LIMIT = 10;
+
 describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth %s)', (auth) => {
   const app = join(workDir, `${auth}-orgs-app`);
+  const AUTH_URL = 'https://auth.example.test/auth/v1';
+  let gotrueKeys: Awaited<ReturnType<typeof fakeGoTrueKeys>> | undefined;
 
   beforeAll(async () => {
     await rm(app, { recursive: true, force: true });
     await createProject({ name: `${auth}-orgs-app`, outputDir: app, auth, organizations: true });
     await generateEntity({ name: 'invoice-item', projectRoot: app });
+    if (auth === 'gotrue') gotrueKeys = await fakeGoTrueKeys(AUTH_URL);
   }, 30_000);
 
   afterAll(async () => {
+    await gotrueKeys?.close();
     await rm(workDir, { recursive: true, force: true });
     await stopAll();
     // The Postgres the boots shared went with it
@@ -578,6 +638,92 @@ describe.each(['jwt', 'gotrue'] as const)('generated project with --orgs (--auth
     expect(result.violations).toEqual([]);
     expect(await lint(app)).toMatch(/0 error\(s\), 0 warning\(s\)/);
   }, 120_000);
+
+  /** A signed-in user in no organization yet, with a real token the app's own verifier accepts. */
+  const signedIn = async (userId: string): Promise<Record<string, string>> => {
+    const email = `${userId}@example.test`;
+    const token =
+      auth === 'jwt'
+        ? await new JWTAdapter({ secret: JWT_SECRET }).sign({ userId, tenantId: '', scopes: [] }, '1h', { email, email_verified: true })
+        : (gotrueKeys as NonNullable<typeof gotrueKeys>).token({ sub: userId, email });
+    return { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  };
+  const envFor = (databaseUrl: string, extra: Record<string, string> = {}): Record<string, string> => ({
+    SERVICE_NAME: `${auth}-orgs-app`,
+    NODE_ENV: 'development',
+    DATABASE_URL: databaseUrl,
+    ...(auth === 'gotrue' ? { AUTH_URL, AUTH_JWKS_URL: (gotrueKeys as NonNullable<typeof gotrueKeys>).jwksUrl } : { JWT_SECRET }),
+    ...extra,
+  });
+
+  /**
+   * Two processes of the app's main.ts on one database. One user asks both of them, at once, to create
+   * CREATE_LIMIT + 2 organizations, half through each. Returns the statuses, sorted.
+   */
+  async function createThroughTwoProcesses(env: Record<string, string>): Promise<{ statuses: number[]; outputs: string[] }> {
+    const headers = await signedIn(randomUUID());
+    const outputs: string[] = [];
+    const first = await bootReady(app, env, async (a) => {
+      const second = await bootReady(app, env, async (b) => {
+        const attempts = Array.from({ length: CREATE_LIMIT + 2 }, (_, i) =>
+          fetch(`${i % 2 ? a : b}/api/organizations`, { method: 'POST', headers, body: JSON.stringify({ name: `Shared ${i}` }) }).then((res) => res.status),
+        );
+        return (await Promise.all(attempts)).sort();
+      });
+      outputs.push(second.output);
+      expect({ status: second.status, output: second.output }).toMatchObject({ status: 200 });
+      return second.probed as number[];
+    });
+    outputs.push(first.output);
+    expect({ status: first.status, output: first.output }).toMatchObject({ status: 200 });
+    return { statuses: first.probed as number[], outputs };
+  }
+  const sharedLimit = [...Array(CREATE_LIMIT).fill(201), 429, 429];
+
+  it('creates rate_limit_buckets in its first migration, and with no REDIS_URL its processes share the organizations limits there', async () => {
+    try {
+      // What a new project does first: mariachi db generate, then db migrate
+      await mariachi(['db', 'generate', '--name', 'init'], app);
+      const journal = JSON.parse(await readFile(join(app, 'drizzle/meta/_journal.json'), 'utf-8')) as { entries: Array<{ tag: string }> };
+      expect(journal.entries).toHaveLength(1);
+      const migration = await readFile(join(app, 'drizzle', `${journal.entries[0]?.tag}.sql`), 'utf-8');
+      expect(migration).toContain('CREATE TABLE "rate_limit_buckets" (');
+      const databaseUrl = await migratedDatabase(app, true);
+      await mariachi(['db', 'migrate', '--url', databaseUrl], app);
+      expect(await query(databaseUrl, "select to_regclass('public.rate_limit_buckets')::text as name")).toEqual([{ name: 'rate_limit_buckets' }]);
+
+      // Each process admits only half of what one alone would: the count is shared
+      const { statuses, outputs } = await createThroughTwoProcesses(envFor(databaseUrl));
+      expect(statuses).toEqual(sharedLimit);
+      for (const output of outputs) expect(output).not.toContain('rate limiter unavailable');
+      const rows = await query<{ key: string; used: number | null; hits: unknown[] | null }>(databaseUrl, 'select key, used, hits from rate_limit_buckets');
+      expect(rows).toEqual([expect.objectContaining({ key: expect.stringMatching(new RegExp(`^${auth}-orgs-app:rate-limit:organizations:`)) })]);
+      expect(rows[0]?.hits).toHaveLength(CREATE_LIMIT);
+    } finally {
+      await rm(join(app, 'drizzle'), { recursive: true, force: true });
+      await rm(join(app, 'drizzle.config.ts'), { force: true });
+    }
+  }, 300_000);
+
+  it('counts the limits in Redis once REDIS_URL is set, still shared by its processes, with nothing in rate_limit_buckets', async () => {
+    const databaseUrl = await migratedDatabase(app);
+    const { statuses, outputs } = await createThroughTwoProcesses(envFor(databaseUrl, { REDIS_URL: await startRedis() }));
+    expect(statuses).toEqual(sharedLimit);
+    for (const output of outputs) expect(output).not.toContain('rate limiter unavailable');
+    expect(await query(databaseUrl, 'select count(*)::int as n from rate_limit_buckets')).toEqual([{ n: 0 }]);
+  }, 300_000);
+
+  it('takes the store RATE_LIMIT_ADAPTER names: memory counts each process apart, and redis needs REDIS_URL', async () => {
+    const databaseUrl = await migratedDatabase(app);
+    // The contrast that shows the test above measures sharing: each process admits its own CREATE_LIMIT
+    const { statuses } = await createThroughTwoProcesses(envFor(databaseUrl, { RATE_LIMIT_ADAPTER: 'memory' }));
+    expect(statuses).toEqual(Array(CREATE_LIMIT + 2).fill(201));
+    expect(await query(databaseUrl, 'select count(*)::int as n from rate_limit_buckets')).toEqual([{ n: 0 }]);
+
+    const { status, output } = await bootReady(app, envFor(databaseUrl, { RATE_LIMIT_ADAPTER: 'redis' }));
+    expect(status).toBeNull();
+    expect(output).toContain('app/rate-limit-redis-url-required');
+  }, 300_000);
 });
 
 describe.each(['jwt', 'gotrue'] as const)('generated project with --ui (--auth %s)', (auth) => {

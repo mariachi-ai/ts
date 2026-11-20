@@ -60,10 +60,14 @@ provider keeps none. It works with either `--auth`. The project gets the tables
 (`src/schema/organizations.ts`), the wiring in one file (`src/organizations.ts`), the routes under
 `/api/organizations`, the check that puts a request in the organization its `x-organization-id`
 header names once the user's membership is confirmed, rate limits on creating, inviting and
-accepting, and end-to-end tests for all of it. Invitations are emailed once `INVITATION_URL` (your
-accept page) and an email adapter (`EMAIL_ADAPTER`) are set; until then the invite's response
-carries the token. The link carries the token in its fragment (`#token=`), which reaches no server
-log. With `--auth gotrue`, whether an invitee's address is verified is read from the user's record
+accepting, and end-to-end tests for all of it. The limits are counted in the app's database (the
+`rate_limit_buckets` table, from `@mariachi/rate-limit/schema`, which the first migration creates),
+so every process that serves the API shares them with no Redis; with `REDIS_URL` set they are
+counted in Redis, and `RATE_LIMIT_ADAPTER` (`postgres`, `redis` or `memory`) chooses for itself.
+Invitations are emailed once `INVITATION_URL` (your accept page) and an email adapter
+(`EMAIL_ADAPTER`) are set; until then the invite's response carries the token. The link carries the
+token in its fragment (`#token=`), which reaches no server log. With `--auth gotrue`, whether an
+invitee's address is verified is read from the user's record
 (`AUTH_SERVICE_KEY`) or from a claim your own token hook adds (`AUTH_EMAIL_VERIFIED_CLAIM=required`
 then needs no key), never from what the user can edit. With `--auth gotrue`, invitations are
 emailed through SMTP to the local mailbox (`EMAIL_ADAPTER=smtp`, with `nodemailer` among the
