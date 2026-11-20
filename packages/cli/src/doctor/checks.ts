@@ -1,15 +1,15 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadConfig } from '@mariachi/config';
-import { validate } from '@mariachi/create';
+import { LOCAL_SECRETS, validate } from '@mariachi/create';
 import { planProjectMigration } from '../db/project';
 import { readJournal } from '../db/migrations';
-import { probeDatabase, probeRedis, reason, type DatabaseProbe } from './probe';
+import { probeDatabase, probeGoTrue, probeRedis, reason, type DatabaseProbe } from './probe';
 
 export type CheckStatus = 'ok' | 'warn' | 'fail' | 'skip';
 
 export interface CheckResult {
-  /** Stable id: `node`, `project`, `dependencies`, `env`, `config`, `database`, `migrations`, `redis`, `architecture`. */
+  /** Stable id: `node`, `project`, `dependencies`, `env`, `config`, `database`, `migrations`, `redis`, `auth`, `architecture`. */
   name: string;
   status: CheckStatus;
   detail: string;
@@ -124,6 +124,41 @@ export function redisService(services: ComposeService[]): string | undefined {
   return services.find((s) => (s.image ? REDIS_IMAGE.test(s.image) : /redis|valkey/i.test(s.name)))?.name;
 }
 
+const GOTRUE_IMAGE = /(?:^|\/)(?:gotrue|supabase\/auth)(?:[:@]|$)/i;
+
+/** The Compose service that runs GoTrue (Supabase Auth), by its image. */
+export function gotrueService(services: ComposeService[]): string | undefined {
+  return services.find((s) => s.image && GOTRUE_IMAGE.test(s.image))?.name;
+}
+
+/** The service in the project's Compose files that runs GoTrue, if one does: a local GoTrue that `mariachi dev` starts. */
+export function composeGoTrue(cwd: string): string | undefined {
+  const file = composeFile(cwd);
+  return file ? gotrueService(projectComposeServices(cwd, file)) : undefined;
+}
+
+/**
+ * Where an `--auth gotrue` project reads GoTrue, worked out from its environment as its `src/auth.ts`
+ * does: `AUTH_URL`; else `AUTH_ORIGIN` (or `APP_ORIGIN`) with `AUTH_PATH`; else `AUTH_INTERNAL_URL`.
+ */
+export function goTrueUrl(env: Record<string, string | undefined>): string {
+  if (env.AUTH_URL) return env.AUTH_URL;
+  const origin = env.AUTH_ORIGIN || env.APP_ORIGIN;
+  if (origin) return `${origin.replace(/\/+$/, '')}${env.AUTH_PATH || '/auth/v1'}`;
+  return env.AUTH_INTERNAL_URL || 'http://127.0.0.1:9999';
+}
+
+/** What to do about a GoTrue that isn't answering: start the Compose service that runs it, or say there is none. */
+export function goTrueStartHint(cwd: string, url: string, env: Record<string, string | undefined>, envFile: string): string {
+  const compose = composeFile(cwd);
+  if (!compose || !isLocal(url)) return startHint(cwd, url, 'GoTrue');
+  const service = composeGoTrue(cwd);
+  if (!service) return `Nothing in ${compose} runs GoTrue: set AUTH_URL in ${envFile} to a GoTrue that is running (a Supabase project's https://<project>.supabase.co/auth/v1)`;
+  const unset = LOCAL_SECRETS.filter((name) => name !== 'AUTH_SERVICE_KEY' && !env[name]);
+  if (unset.length) return `${unset.join(' and ')} ${unset.length === 1 ? 'is' : 'are'} empty, and the local GoTrue signs with them: mariachi dev writes new ones into .env, then starts it`;
+  return `docker compose up -d ${service} ${DEV_HINT}`;
+}
+
 /** The services of a project's Compose file and its override file, if any. */
 function projectComposeServices(cwd: string, file: string): ComposeService[] {
   return [file, ...COMPOSE_OVERRIDES.filter((f) => existsSync(join(cwd, f)))].flatMap((f) => {
@@ -153,6 +188,8 @@ export function redisStartHint(cwd: string, url: string, envFile: string): strin
 }
 
 const SECRET_NAME = /secret|token|password|passwd|pwd|key|credential|signature|sig$|auth/i;
+/** Sign-in settings whose names say "auth" but that hold an address or a switch, which messages may show. */
+const NOT_SECRET = /^(?:AUTH_(?:URL|ORIGIN|PATH|INTERNAL_URL|JWKS_URL|ORG_CLAIM|ORG_ROLE_CLAIM|PERSONAL_TENANTS|LINK_SESSIONS|EMAIL_VERIFIED_CLAIM))$/;
 
 /** A URL without its password or the secrets in its query string, for messages. */
 export function safeUrl(url: string): string {
@@ -174,7 +211,7 @@ export function secretsIn(env: Record<string, string | undefined>): string[] {
   const found = new Set<string>();
   for (const [name, value] of Object.entries(env)) {
     if (!value) continue;
-    if (SECRET_NAME.test(name) && value.length >= 6) found.add(value);
+    if (SECRET_NAME.test(name) && !NOT_SECRET.test(name) && value.length >= 6) found.add(value);
     if (/^[a-z][a-z0-9+.-]*:\/\//i.test(value)) {
       try {
         const url = new URL(value);
@@ -202,7 +239,7 @@ export function redact(text: string, secrets: string[]): string {
 /**
  * Checks that a project is ready to run, in the order a first run goes wrong: Node, the project
  * itself, installed packages, `.env`, the configuration the app would load, the database, its
- * migrations, Redis, and the architecture rules. Each result says what it found and what to do.
+ * migrations, Redis, GoTrue (for a project that signs in with it), and the architecture rules. Each result says what it found and what to do.
  * Later checks that depend on an earlier failure are skipped, not failed twice.
  */
 export async function runDoctor(options: DoctorOptions): Promise<CheckResult[]> {
@@ -260,7 +297,10 @@ export async function runDoctor(options: DoctorOptions): Promise<CheckResult[]> 
   } else if (!present.length && example.length) {
     add('env', missing.length ? 'fail' : 'warn', `.env is missing${missing.length ? `, and the environment has no ${missing.join(', ')}` : ' (the environment has what .env.example lists)'}`, 'cp .env.example .env');
   } else if (missing.length) {
-    add('env', 'warn', `.env.example lists ${missing.join(', ')}, which ${missing.length === 1 ? 'is' : 'are'} empty or missing here`, 'Set them in .env (copy the lines from .env.example)');
+    // The local GoTrue's keys are made, not copied
+    const made = missing.filter((key) => (LOCAL_SECRETS as readonly string[]).includes(key));
+    const fix = made.length === missing.length ? 'mariachi dev (it writes the local GoTrue\'s keys into .env where they are empty)' : 'Set them in .env (copy the lines from .env.example)';
+    add('env', 'warn', `.env.example lists ${missing.join(', ')}, which ${missing.length === 1 ? 'is' : 'are'} empty or missing here`, fix);
   } else add('env', 'ok', example.length ? `Every variable in .env.example is set (${example.length})` : 'No .env.example to compare with');
 
   // --- the configuration the app would load
@@ -319,6 +359,19 @@ export async function runDoctor(options: DoctorOptions): Promise<CheckResult[]> 
       add('redis', 'ok', `Redis at ${safeUrl(redisUrl)}`);
     } catch (error) {
       add('redis', 'fail', `Can't reach Redis at ${safeUrl(redisUrl)}: ${reason(error)}`, redisStartHint(cwd, redisUrl, last));
+    }
+  }
+
+  // --- sign-in: a GoTrue project's GoTrue
+  if (!deps['@mariachi/auth-gotrue']) {
+    add('auth', 'skip', 'This project does not sign in with GoTrue');
+  } else {
+    const url = goTrueUrl(env);
+    try {
+      const probe = await probeGoTrue(url, timeoutMs, env.AUTH_ANON_KEY);
+      add('auth', 'ok', `GoTrue${probe.version ? ` ${probe.version}` : ''} at ${safeUrl(url)}${composeGoTrue(cwd) && isLocal(url) ? ' (the local one, in Compose)' : ''}`);
+    } catch (error) {
+      add('auth', 'fail', `Can't reach GoTrue at ${safeUrl(url)}: ${reason(error)}`, goTrueStartHint(cwd, url, env, last));
     }
   }
 

@@ -1,4 +1,6 @@
 import type { ProjectAuth } from '../types';
+import { ACCEPT_INVITATION_PATH } from './invitations';
+import { MAILBOX_SMTP_URL, MAILBOX_URL } from './local-auth';
 
 /**
  * What `mariachi init --orgs` adds to a project: organizations, memberships and invitations in the
@@ -99,30 +101,45 @@ registerConfigSection(APP_CONFIG, {
 });
 `;
 
-/** Lines for `.env.example`. */
-export const organizationsEnv = (auth: ProjectAuth): string => `
+/**
+ * Lines for `.env.example`. A GoTrue project sends its email to the local mailbox in its Compose
+ * file, and with `ui` it has a page that accepts invitations, which `INVITATION_URL` defaults to.
+ */
+export const organizationsEnv = (auth: ProjectAuth, ui = false): string => `
 # Organizations (src/organizations.ts). An invitation is emailed when both of these are set; until
 # then whoever invites gets the token back in the response.
 #   INVITATION_URL  the page of your app that accepts an invitation; the token is added as its fragment, #token=
-#   EMAIL_ADAPTER   resend, postmark, sendgrid (with EMAIL_API_KEY) or smtp (with SMTP_URL; pnpm add nodemailer)
-# INVITATION_URL=https://app.example.com/invitations/accept
-# EMAIL_ADAPTER=
-# EMAIL_API_KEY=
-# EMAIL_FROM=
+${
+  auth === 'gotrue' && ui
+    ? `#                   Default: ${ACCEPT_INVITATION_PATH} on APP_ORIGIN, or on http://localhost:<PORT> in development
+`
+    : ''
+}#   EMAIL_ADAPTER   resend, postmark, sendgrid (with EMAIL_API_KEY) or smtp (with SMTP_URL${auth === 'gotrue' ? '' : '; pnpm add nodemailer'})
+${auth === 'gotrue' && ui ? '# INVITATION_URL=' : '# INVITATION_URL=https://app.example.com/invitations/accept'}
 ${
   auth === 'gotrue'
-    ? `# Accepting an invitation needs to know the user's email address is verified. GoTrue's token doesn't
+    ? `# As written, email goes to the local mailbox (Mailpit, in docker-compose.yml): read it at ${MAILBOX_URL}
+EMAIL_ADAPTER=smtp
+SMTP_URL=${MAILBOX_SMTP_URL}
+EMAIL_FROM=no-reply@example.com
+# EMAIL_API_KEY=
+# Accepting an invitation needs to know the user's email address is verified. GoTrue's token doesn't
 # say so anywhere the user can't rewrite. Choose one:
 #   AUTH_SERVICE_KEY            a service-role key (a secret, never sent to a browser): the app reads
 #                               the user's record. A GoTrue that confirms sign-ups without sending mail
-#                               (GOTRUE_MAILER_AUTOCONFIRM) then counts as unverified.
+#                               (GOTRUE_MAILER_AUTOCONFIRM) then counts as unverified. For the local
+#                               GoTrue, mariachi init wrote one into .env, signed with GOTRUE_JWT_KEYS
+#                               (mariachi dev writes one when it is empty); for a hosted GoTrue, use its own.
 #   AUTH_EMAIL_VERIFIED_CLAIM   set to "required" when an access token hook of yours always adds a
 #                               top-level email_verified claim: no key and no lookup, and a token
 #                               without the claim is refused.
-# AUTH_SERVICE_KEY=
+AUTH_SERVICE_KEY=
 # AUTH_EMAIL_VERIFIED_CLAIM=optional
 `
-    : `# Accepting an invitation reads the user's address from their token: put \`email\` and
+    : `# EMAIL_ADAPTER=
+# EMAIL_API_KEY=
+# EMAIL_FROM=
+# Accepting an invitation reads the user's address from their token: put \`email\` and
 # \`email_verified: true\` in the tokens you issue, once you have confirmed the address.
 `
 }`;
@@ -220,8 +237,20 @@ export const organizationsAgents = (auth: ProjectAuth): string => `
   (the first user named is its owner). \`tenantId: ''\` is a user in no organization.
 `;
 
+/** What the README says about invitations in development, where a GoTrue project has a mailbox and, with pages, an accept page. */
+const localInvitations = (auth: ProjectAuth, ui: boolean): string => {
+  if (auth !== 'gotrue') {
+    return ui
+      ? ` \`${ACCEPT_INVITATION_PATH}\` (\`src/api/pages/accept-invitation.ts\`) is where that page goes. For now it says what it needs: this project has no sign-in in the browser yet, so nothing there can sign the visitor in. Leave \`INVITATION_URL\` unset until it can.`
+      : '';
+  }
+  return ui
+    ? ` As generated, both are set for development: the email goes to the local mailbox (${MAILBOX_URL}), and \`INVITATION_URL\` defaults to \`${ACCEPT_INVITATION_PATH}\` on this app (\`APP_ORIGIN\`, else \`http://localhost:<PORT>\` in development), the page that does all of this (\`src/api/pages/accept-invitation.ts\`). In production set \`APP_ORIGIN\` (or \`INVITATION_URL\`) and a real email adapter.`
+    : ` As generated, email goes to the local mailbox (${MAILBOX_URL}); set \`INVITATION_URL\` to your page and the invitations go there too.`;
+};
+
 /** A section for README.md. */
-export const organizationsReadme = (auth: ProjectAuth): string => `
+export const organizationsReadme = (auth: ProjectAuth, ui = false): string => `
 ## Organizations
 
 Users share workspaces: organizations, memberships and invitations are kept in this app's own
@@ -250,7 +279,7 @@ curl -X POST localhost:3000/api/organizations/$ORGANIZATION_ID/invitations -H "a
   pass the link on yourself. Your page signs the user in, then calls
   \`POST /api/organizations/invitations/accept\` with \`{ "token": "…" }\` as them. The token is in
   the link's fragment (\`#token=…\`), which the browser sends to no server: read it from
-  \`location.hash\`, and don't copy it into a query string, a log or an analytics event.
+  \`location.hash\`, and don't copy it into a query string, a log or an analytics event.${localInvitations(auth, ui)}
 - **Only the invited address can accept**, and only once it is verified. ${
     auth === 'gotrue'
       ? "GoTrue's token states that only inside `user_metadata`, which a user can rewrite, so the app needs another source. Either set `AUTH_SERVICE_KEY` (a service-role key, a secret) and it reads the user's record; a GoTrue that confirms sign-ups without sending mail (`GOTRUE_MAILER_AUTOCONFIRM`) then counts every address as unverified, because anyone can sign up as any address there. Or have an access token hook add a top-level `email_verified` claim and set `AUTH_EMAIL_VERIFIED_CLAIM=required`: the app then holds no service key and looks nothing up. With neither, accepting answers `auth/verified-email-unavailable`."

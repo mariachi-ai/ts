@@ -1,6 +1,7 @@
 import { MARKERS } from '../layout';
 import type { Names } from '../names';
 import type { ProjectAuth } from '../types';
+import { ACCEPT_INVITATION_IMPORT, ACCEPT_INVITATION_ROUTE, acceptInvitationFiles } from './invitations';
 
 /**
  * What `mariachi init --ui` adds to a project: pages sent by the same server as the API, built from
@@ -253,8 +254,8 @@ export function designTheme(): string {
 }
 `;
 
-const PAGES_CONTROLLER = `import { BaseController, htmlResponse } from '@mariachi/api-facade';
-import { homePage } from '../pages/home';
+const PAGES_CONTROLLER = (orgs: boolean) => `import { BaseController, htmlResponse } from '@mariachi/api-facade';
+${orgs ? ACCEPT_INVITATION_IMPORT : ''}import { homePage } from '../pages/home';
 // ${MARKERS.imports}
 
 /**
@@ -270,7 +271,7 @@ export class PagesController extends BaseController {
 
   init(): void {
     this.get('/', { root: true, auth: false }, async () => htmlResponse(homePage()));
-    // ${MARKERS.pages}
+${orgs ? ACCEPT_INVITATION_ROUTE : ''}    // ${MARKERS.pages}
   }
 }
 `;
@@ -328,13 +329,14 @@ describe('the pages, served beside the API', () => {
 });
 `;
 
-/** Files of a project with pages. */
-export function uiFiles(name: string, auth: ProjectAuth, e2e: boolean): Record<string, string> {
+/** Files of a project with pages. With organizations, the page that accepts an invitation is one of them. */
+export function uiFiles(name: string, auth: ProjectAuth, e2e: boolean, orgs = false): Record<string, string> {
   return {
+    ...(orgs ? acceptInvitationFiles(auth, e2e) : {}),
     [PAGES_LAYOUT_FILE]: LAYOUT_TS(name, auth),
     [`${PAGES_DIR}/home.ts`]: HOME_PAGE,
     [`${PAGES_DIR}/home.test.ts`]: HOME_PAGE_TEST,
-    [PAGES_CONTROLLER_FILE]: PAGES_CONTROLLER,
+    [PAGES_CONTROLLER_FILE]: PAGES_CONTROLLER(orgs),
     'public/home.js': HOME_JS,
     'public/enhance.js': ENHANCE_JS,
     [DESIGN_CSS_FILE]: DESIGN_CSS,
@@ -403,7 +405,7 @@ export const uiAgents = (auth: ProjectAuth): string => `
   \`/api\` with the user's token. Never render another user's data, a secret or a token into a page.
 ${
   auth === 'gotrue'
-    ? "- **The user's token comes from the session the sign-in page keeps** (\`src/api/pages/sign-in.ts\`: \`sessionStorage\`, key \`session\`). A page's script reads it from there. Don't keep a second copy anywhere, and never put a token in a URL, a page or a log.\n"
+    ? "- **The user's token comes from the session the sign-in page keeps** (\`src/api/pages/sign-in.ts\`: \`sessionStorage\`, key \`session\`). A page's script reads it from there. Don't keep a second copy anywhere, and never put a token in a URL, a page or a log. A page sends a visitor to sign in and gets them back by linking to \`/api/sign-in#return=/its/path\`.\n"
     : "- **There is no sign-in in the browser yet.** This project checks tokens signed with \`JWT_SECRET\`, and nothing here gives a browser one. Until you add a sign-in, pages show public content and call public routes. Never put a token in a URL or a page, and never ship \`JWT_SECRET\` or a token made with \`mariachi token\` to a browser.\n"
 }- \`public/\` and \`src/design/\` are served to everyone, as they are. Nothing private goes in them.
 `;

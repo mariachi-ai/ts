@@ -90,3 +90,30 @@ export function probeRedis(url: string, ms = 5000): Promise<void> {
     socket.once('error', (error) => done(error));
   });
 }
+
+export interface GoTrueProbe {
+  /** Its version, from `/health`, or `null` when it answered without saying (hosted Supabase wants its key there). */
+  version: string | null;
+}
+
+/** Asks GoTrue's `/health` (under its base URL, path included). `anonKey` is sent as hosted Supabase wants it. */
+export async function probeGoTrue(url: string, ms = 5000, anonKey?: string): Promise<GoTrueProbe> {
+  let res: Response;
+  try {
+    res = await fetch(`${url.replace(/\/+$/, '')}/health`, {
+      headers: { accept: 'application/json', ...(anonKey ? { apikey: anonKey } : {}) },
+      signal: AbortSignal.timeout(ms),
+    });
+  } catch (error) {
+    if ((error as Error).name === 'TimeoutError') throw unreachable(`GoTrue did not answer in ${ms} ms`);
+    // fetch says only "fetch failed"; the cause (or each address tried, for a name with two) has the code
+    const cause = (error as { cause?: { code?: string; errors?: Array<{ code?: string }> } }).cause;
+    const code = cause?.code ?? cause?.errors?.find((e) => e.code)?.code;
+    throw unreachable(code ? `nothing answered (${code})` : reason(error));
+  }
+  // A gateway in front of GoTrue that wants a key has still answered: something is there
+  if (res.status === 401 || res.status === 403) return { version: null };
+  if (!res.ok) throw unreachable(`${url}/health answered ${res.status}`);
+  const body = (await res.json().catch(() => null)) as { version?: unknown } | null;
+  return { version: typeof body?.version === 'string' ? body.version : null };
+}

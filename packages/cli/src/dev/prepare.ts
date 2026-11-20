@@ -1,13 +1,14 @@
-import { constants, existsSync } from 'node:fs';
-import { copyFile } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ConfigError, type Logger } from '@mariachi/core';
+import { fillLocalSecrets } from '@mariachi/create';
 import { PostgresAdapter, runMigrations } from '@mariachi/database-postgres';
 import { envFiles as projectEnvFiles, projectEnv, type EnvFiles } from '../env-files';
 import { readJournal } from '../db/migrations';
 import { planProjectMigration, writePlannedMigration } from '../db/project';
-import { composeFile, isLocal, safeUrl } from '../doctor/checks';
-import { probeDatabase, probeRedis, reason } from '../doctor/probe';
+import { composeFile, composeGoTrue, goTrueUrl, isLocal, safeUrl } from '../doctor/checks';
+import { probeDatabase, probeGoTrue, probeRedis, reason } from '../doctor/probe';
 
 export interface PrepareOptions {
   cwd: string;
@@ -16,7 +17,7 @@ export interface PrepareOptions {
   /** Default `drizzle`. */
   migrations?: string;
   /**
-   * Start the Compose services when a local Postgres or Redis isn't answering. Default true. With
+   * Start the Compose services when a local Postgres, Redis or GoTrue isn't answering. Default true. With
    * `false`, something else runs them (an environment's own Compose, a container platform): this
    * only waits for them to answer.
    */
@@ -36,7 +37,7 @@ export interface PrepareOptions {
 export interface Prepared {
   /** The environment the app starts with. */
   env: Record<string, string | undefined>;
-  /** What was done, in order: `env`, `services`, `migration`, `migrate`. */
+  /** What was done, in order: `env` (or `keys`), `services`, `migration`, `migrate`. */
   did: string[];
 }
 
@@ -56,15 +57,17 @@ async function reachable(probe: () => Promise<unknown>): Promise<string | null> 
 /**
  * What stands between a fresh checkout and a running app, done in order:
  *
- * 1. `.env` from `.env.example` when there is none.
- * 2. The Compose services, when the project has a Compose file and its local Postgres or Redis
- *    isn't answering; then waits for them.
+ * 1. `.env` from `.env.example` when there is none. In a project whose Compose file runs GoTrue,
+ *    the local GoTrue's keys that `.env.example` lists empty are made for it, and made for an
+ *    existing `.env` that has them empty.
+ * 2. The Compose services, when the project has a Compose file and its local Postgres, Redis or
+ *    GoTrue isn't answering; then waits for them.
  * 3. A first migration, when the schema has tables and no migration exists yet. Later schema
  *    changes are not turned into migrations here: that stays a deliberate `mariachi db generate`.
  * 4. Pending migrations, applied.
  *
- * Nothing here is destructive: an existing `.env` is never written, and a migration is only ever
- * generated for an empty migrations folder.
+ * Nothing here is destructive: an existing `.env` is written only to fill in an empty key of the
+ * local GoTrue, and a migration is only ever generated for an empty migrations folder.
  */
 export async function prepareDev(options: PrepareOptions): Promise<Prepared> {
   const { cwd, log } = options;
@@ -78,18 +81,34 @@ export async function prepareDev(options: PrepareOptions): Promise<Prepared> {
   }
 
   const files = options.envFiles ?? projectEnvFiles(cwd);
+  // The Compose service that runs a local GoTrue, which signs with keys made for this checkout
+  const gotrue = composeGoTrue(cwd);
+  const keys = (text: string) => (gotrue ? fillLocalSecrets(text) : { text, filled: [] });
+  const made = (filled: string[]) => `new keys for the local GoTrue (${filled.join(', ')})`;
   // Only for the default `.env`: a project that names its env files decides what's in them
-  if (!files.configured && !existsSync(join(cwd, '.env')) && existsSync(join(cwd, '.env.example'))) {
-    // EXCL: never over a file that appeared since the check
-    await copyFile(join(cwd, '.env.example'), join(cwd, '.env'), constants.COPYFILE_EXCL);
-    log('created .env from .env.example');
+  const dotenv = join(cwd, '.env');
+  if (!files.configured && !existsSync(dotenv) && existsSync(join(cwd, '.env.example'))) {
+    const { text, filled } = keys(await readFile(join(cwd, '.env.example'), 'utf8'));
+    // wx: never over a file that appeared since the check
+    await writeFile(dotenv, text, { flag: 'wx' });
+    log(`created .env from .env.example${filled.length ? `, with ${made(filled)}` : ''}`);
     did.push('env');
+  } else if (!files.configured && gotrue && existsSync(dotenv)) {
+    const { text, filled } = keys(await readFile(dotenv, 'utf8'));
+    if (filled.length) {
+      await writeFile(dotenv, text);
+      log(`wrote ${made(filled)} into .env, where they were empty`);
+      did.push('keys');
+    }
   }
   const env = projectEnv(cwd, files.files);
 
   const services: Array<{ name: string; url: string; probe: () => Promise<unknown> }> = [];
   if (env.DATABASE_URL) services.push({ name: 'Postgres', url: env.DATABASE_URL, probe: () => probeDatabase(env.DATABASE_URL as string, probeMs) });
   if (env.REDIS_URL) services.push({ name: 'Redis', url: env.REDIS_URL, probe: () => probeRedis(env.REDIS_URL as string, probeMs) });
+  // GoTrue too, when the app reads the one the Compose file runs. A hosted one is not this command's to start
+  const authUrl = goTrueUrl(env);
+  if (gotrue && isLocal(authUrl)) services.push({ name: 'GoTrue', url: authUrl, probe: () => probeGoTrue(authUrl, probeMs) });
 
   const down: typeof services = [];
   for (const service of services) if (await reachable(service.probe)) down.push(service);

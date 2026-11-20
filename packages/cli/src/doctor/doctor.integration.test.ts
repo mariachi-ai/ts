@@ -80,6 +80,8 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
       migrations: 'fail',
       // A new project runs its jobs in Postgres: Redis is not asked for
       redis: 'skip',
+      // Sign-in is the project's own HS256 tokens: there is no GoTrue to reach
+      auth: 'skip',
       architecture: 'ok',
     });
     const found = byName(results);
@@ -119,7 +121,7 @@ describe('mariachi doctor and mariachi dev, on a freshly generated project', () 
 
   it('doctor then finds the project ready', async () => {
     const results = await doctor();
-    expect(statuses(results)).toEqual({ node: 'ok', project: 'ok', dependencies: 'ok', env: 'ok', config: 'ok', database: 'ok', migrations: 'ok', redis: 'ok', architecture: 'ok' });
+    expect(statuses(results)).toEqual({ node: 'ok', project: 'ok', dependencies: 'ok', env: 'ok', config: 'ok', database: 'ok', migrations: 'ok', redis: 'ok', auth: 'skip', architecture: 'ok' });
     expect(byName(results).migrations?.detail).toBe('1 migration(s), all applied, matching the schema');
     expect(byName(results).database?.detail).toMatch(/^Postgres \d+.* at postgres(ql)?:\/\//);
     // The password never appears in a message

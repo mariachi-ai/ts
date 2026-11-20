@@ -189,3 +189,70 @@ describe('mariachi generate page', () => {
     await expect(generatePage({ name: 'settings', projectRoot: bare })).rejects.toMatchObject({ code: 'create/no-pages' });
   });
 });
+
+describe('a project with --orgs --ui', () => {
+  const both = {
+    jwt: projectFiles('acme-app', '^0.1.0', 'jwt', { ui: true, organizations: true }),
+    gotrue: projectFiles('acme-app', '^0.1.0', 'gotrue', { ui: true, organizations: true }),
+  };
+
+  it('has a page that accepts an invitation, at the address invitation emails link to', () => {
+    for (const auth of AUTHS) {
+      const files = both[auth];
+      expect(files['src/api/pages/accept-invitation.ts'], auth).toContain("path: '/invitations/accept',");
+      expect(files['src/api/pages/accept-invitation.test.ts'], auth).toBeTruthy();
+      const controller = files['src/api/controllers/pages.controller.ts'] as string;
+      expect(controller).toContain("import { acceptInvitationPage } from '../pages/accept-invitation';");
+      expect(controller).toContain("this.get('/invitations/accept', { root: true, auth: false }, async () =>");
+      // Nothing about the visit is kept or passed on: the page is no-store, and no Referer carries its address
+      expect(controller).toContain("{ headers: { 'cache-control': 'no-store', 'referrer-policy': 'no-referrer' } }");
+      expect(Object.values(files).join('\n')).not.toMatch(/\bundefined\b\n|\[object Object\]/);
+    }
+    // Pages without organizations have no such page
+    expect(ui.gotrue['src/api/pages/accept-invitation.ts']).toBeUndefined();
+    expect(ui.gotrue['src/api/controllers/pages.controller.ts']).not.toContain('accept-invitation');
+  });
+
+  it('carries a GoTrue visitor through sign-in and back, and accepts as them', () => {
+    const files = both.gotrue;
+    const page = files['src/api/pages/accept-invitation.ts'] as string;
+    expect(page).toContain("export const SIGN_IN_AND_RETURN = '/api/sign-in#return=/invitations/accept';");
+    expect(page).toContain("scripts: ['/assets/accept-invitation.js'],");
+    const script = files['public/accept-invitation.js'] as string;
+    expect(script).toContain("history.replaceState(null, '', location.pathname);");
+    expect(script).toContain("fetch('/api/organizations/invitations/accept', {");
+    expect(script).toContain("sessionStorage.getItem('session')");
+    // The token is sent to this app's accept route and nowhere else
+    expect(script.match(/fetch\(/g)).toHaveLength(2);
+    // Plain browser JavaScript: the fake browser runs it as it is
+    expect(script).not.toMatch(/`|\\|^import /m);
+    expect(files['src/accept-invitation.e2e.test.ts']).toContain("await back.fire('invitation-accept', 'click');");
+    // INVITATION_URL defaults to the page
+    expect(files['src/config.ts']).toContain("invitationUrl: optional(read('INVITATION_URL')) ?? acceptPage(read),");
+    expect(files['src/config.test.ts']).toContain("toBe('http://localhost:4000/invitations/accept')");
+    expect(files['.env.example']).toMatch(/^# INVITATION_URL=$/m);
+    expect(projectFiles('acme-app', '^0.1.0', 'gotrue', { ui: true, organizations: true, e2e: false })['src/accept-invitation.e2e.test.ts']).toBeUndefined();
+  });
+
+  it('explains, in a JWT project, what accepting in the browser needs, and runs no script', () => {
+    const files = both.jwt;
+    const page = files['src/api/pages/accept-invitation.ts'] as string;
+    expect(page).toContain('<div class="m-alert" data-tone="info" role="status">');
+    expect(page).not.toContain('scripts:');
+    expect(files['public/accept-invitation.js']).toBeUndefined();
+    expect(files['src/accept-invitation.e2e.test.ts']).toBeUndefined();
+    // No default: the invitation goes to whoever invites until the app can sign the visitor in
+    expect(files['src/config.ts']).not.toContain('acceptPage');
+    expect(files['README.md']).toContain('Leave `INVITATION_URL` unset until it can.');
+  });
+
+  it("uses @mariachi/design's markup only: no style blocks, classes of its own or colour values", () => {
+    for (const auth of AUTHS) {
+      const page = both[auth]['src/api/pages/accept-invitation.ts'] as string;
+      expect(page).not.toMatch(/<style|#[0-9a-f]{3,6}\b|rgb\(|hsl\(/i);
+      for (const [, classes] of page.matchAll(/class="([^"]+)"/g)) {
+        for (const name of (classes as string).split(' ')) expect(name, auth).toMatch(/^m-/);
+      }
+    }
+  });
+});

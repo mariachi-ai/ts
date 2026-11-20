@@ -98,15 +98,20 @@ describe('what init says to do next', () => {
       .join('\n');
 
   it('is install and dev: dev makes .env, starts Postgres and migrates', async () => {
-    expect(nextSteps('app', 'jwt')).toEqual(['cd app', 'pnpm install', 'pnpm dev']);
+    expect(nextSteps('app')).toEqual(['cd app', 'pnpm install', 'pnpm dev']);
     await init(join(dir, 'app'), '--no-example');
     expect(said()).not.toMatch(/docker compose up|db:migrate/);
     expect(said()).toContain('$(pnpm -s mariachi token)" localhost:3000/api/health/ready');
     expect(JSON.parse(await readFile(join(dir, 'app/package.json'), 'utf-8')).scripts.dev).toBe('mariachi dev');
   });
 
-  it('has a GoTrue project make its .env first, since AUTH_URL has to be set in it', () => {
-    expect(nextSteps('app', 'gotrue')).toEqual(['cd app', 'pnpm install', 'cp .env.example .env', 'pnpm dev']);
+  it('has a GoTrue project start the same way: it runs its own GoTrue, whose keys init wrote into .env', async () => {
+    await init(join(dir, 'app'), '--no-example', '--auth', 'gotrue');
+    expect(said()).not.toContain('cp .env.example .env');
+    expect(said()).toContain('a local GoTrue and a mailbox');
+    expect(said()).toContain('http://localhost:8025');
+    const env = await readFile(join(dir, 'app/.env'), 'utf-8');
+    expect(env).toMatch(/^GOTRUE_JWT_KEYS='\[\{.+\}\]'$/m);
   });
 
   it('names a token with no tenant for a project with organizations', async () => {

@@ -73,6 +73,8 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
   const ui = options.ui ?? false;
   const dependencies: Record<string, string> = {};
   for (const pkg of [...MARIACHI_DEPS, ...AUTH_DEPS[auth], ...(orgs ? ORGANIZATION_DEPS : []), ...(ui ? UI_DEPS : [])].sort()) dependencies[`@mariachi/${pkg}`] = mariachiRange;
+  // A GoTrue project with organizations emails its invitations over SMTP, to the local mailbox to begin with
+  if (auth === 'gotrue' && orgs) dependencies.nodemailer = V.nodemailer;
   dependencies.zod = V.zod;
   dependencies['drizzle-orm'] = V['drizzle-orm'];
   dependencies.postgres = V.postgres;
@@ -139,7 +141,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     'vitest.config.ts': VITEST_CONFIG,
     'AGENTS.md': AGENTS_MD(e2e) + (orgs ? organizationsAgents('jwt') : '') + (ui ? uiAgents('jwt') : ''),
     'CLAUDE.md': 'See [AGENTS.md](./AGENTS.md).\n',
-    'README.md': README(name, e2e) + (orgs ? organizationsReadme('jwt') : '') + (ui ? UI_README : ''),
+    'README.md': README(name, e2e) + (orgs ? organizationsReadme('jwt', ui) : '') + (ui ? UI_README : ''),
     [LAYOUT.main]: MAIN_TS,
     [LAYOUT.app]: APP_TS(orgs, ui),
     ...(e2e
@@ -169,7 +171,7 @@ export function projectFiles(name: string, mariachiRange: string, auth: ProjectA
     if (auth === 'jwt') files['src/config.ts'] = JWT_ORGANIZATIONS_CONFIG_TS;
     if (e2e) files[ORGANIZATIONS_E2E_FILE] = organizationsE2eTest(auth);
   }
-  if (ui) Object.assign(files, uiFiles(name, auth, e2e));
+  if (ui) Object.assign(files, uiFiles(name, auth, e2e, orgs));
   return auth === 'gotrue' ? { ...files, ...gotrueFiles(name, e2e, orgs, ui) } : files;
 }
 
