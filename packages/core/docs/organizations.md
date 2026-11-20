@@ -239,7 +239,11 @@ await organizations.acceptInvitation(ctx, { token });
   that routes by fragment gives a function and builds its own link.
 - **The accept page is yours.** It reads the token from `location.hash`, needs the user signed in as
   the invited address, and then makes one call. Keep the token out of logs and analytics on that
-  page, and take it out of the address bar once read (`history.replaceState`).
+  page, and take it out of the address bar once read (`history.replaceState`). A project made with
+  `mariachi init --auth gotrue --orgs --ui` has one at `/invitations/accept`, and `INVITATION_URL`
+  defaults to it ([cli.md](./cli.md#init)): it keeps the token in the browser while the visitor signs
+  in or signs up, even when an emailed confirmation link finishes that in another tab, and accepts
+  only when they click Accept.
 
 **The invitee's email address is not an argument.** Accepting reads it from the user's verified
 identity, so nothing a client sends can stand in for it. By default that is the standard claims of

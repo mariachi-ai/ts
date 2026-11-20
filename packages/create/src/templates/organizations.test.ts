@@ -82,7 +82,9 @@ describe('a project with --orgs', () => {
     expect(config).toContain("emailVerifiedClaim: z.enum(['optional', 'required']).default('optional'),");
     expect(config).toContain("emailVerifiedClaim: optional(read('AUTH_EMAIL_VERIFIED_CLAIM')),");
     expect(orgs.gotrue['.env.example']).toContain('# AUTH_EMAIL_VERIFIED_CLAIM=optional');
-    expect(orgs.gotrue['.env.example']).toContain('# AUTH_SERVICE_KEY=');
+    // Listed empty for the project's own key: .env has one for the local GoTrue (see local-auth.test.ts)
+    expect(orgs.gotrue['.env.example']).toMatch(/^AUTH_SERVICE_KEY=$/m);
+    expect(orgs.gotrue['.env']).toMatch(/^AUTH_SERVICE_KEY=eyJ[\w-]+\.[\w-]+\.[\w-]+$/m);
     // A JWT project reads the address from the token it issued itself
     expect(orgs.jwt['src/app.ts']).not.toContain('verifiedEmail');
     expect(orgs.jwt['.env.example']).not.toContain('AUTH_SERVICE_KEY');
@@ -112,7 +114,22 @@ describe('a project with --orgs', () => {
       expect(bare['src/organizations.ts']).toBeTruthy();
     }
     expect(orgs.gotrue['README.md']).toContain('GOTRUE_MAILER_AUTOCONFIRM');
+    expect(orgs.gotrue['README.md']).toContain('goes to the local mailbox (http://localhost:8025)');
     expect(orgs.gotrue['src/app.e2e.test.ts']).toContain('puts a member in the organization the request names');
     expect(plain.gotrue['src/app.e2e.test.ts']).toContain('puts a member in their organization, with the role the token gives them there');
+  });
+});
+
+describe('a GoTrue project with --orgs, in development', () => {
+  it('emails invitations to the local mailbox over SMTP, with nodemailer installed to send them', () => {
+    const env = orgs.gotrue['.env.example'] as string;
+    expect(env).toMatch(/^EMAIL_ADAPTER=smtp$/m);
+    expect(env).toMatch(/^SMTP_URL=smtp:\/\/localhost:1025$/m);
+    expect(env).toMatch(/^EMAIL_FROM=\S+@\S+$/m);
+    expect(JSON.parse(orgs.gotrue['package.json'] as string).dependencies.nodemailer).toMatch(/^\^\d+/);
+    // A JWT project has no mailbox in its Compose file, and so no email set up
+    expect(orgs.jwt['.env.example']).toMatch(/^# EMAIL_ADAPTER=$/m);
+    expect(JSON.parse(orgs.jwt['package.json'] as string).dependencies.nodemailer).toBeUndefined();
+    expect(JSON.parse(plain.gotrue['package.json'] as string).dependencies.nodemailer).toBeUndefined();
   });
 });

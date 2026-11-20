@@ -35,7 +35,24 @@ default). A user whose token names no organization gets a personal tenant, so th
 with a plain Supabase project; `AUTH_PERSONAL_TENANTS=false` requires an organization instead. It
 adds `GET /api/me`, `MIGRATE_ON_START`, and an example sign-in page at `/api/sign-in` (password,
 sign-up, magic link; emailed links use PKCE, so a link works once and only in the browser that
-asked for it).
+asked for it). Another page sends a visitor to sign in and gets them back by linking to
+`/api/sign-in#return=/its/path`.
+
+The project runs its own GoTrue, so its sign-in works with no account anywhere. Its
+`docker-compose.yml` has, beside Postgres:
+
+| Service | Image | Where | |
+| --- | --- | --- | --- |
+| `auth-schema` | `postgres:16-alpine` | | Runs once: GoTrue's role and the `auth` schema it keeps its tables in, in the app's own database |
+| `auth` | `supabase/auth:v2.197.0` | `http://localhost:9999` | GoTrue. Sign-ups confirm their address by email; it issues ES256 tokens with `http://localhost:9999` as their issuer, which `AUTH_URL` in `.env.example` names |
+| `mail` | `axllent/mailpit:v1.27.11` | `http://localhost:8025` (SMTP on 1025) | Mailpit: every email GoTrue and the app send lands here, readable in a browser and from its API (`/api/v1/search?query=to:<address>`) |
+
+GoTrue signs with an ES256 key made for the project. `init` writes it into `.env` (which is
+ignored by git) as `GOTRUE_JWT_KEYS`, with `GOTRUE_JWT_SECRET` (GoTrue wants one set) and, with
+`--orgs`, an `AUTH_SERVICE_KEY` signed with it; `.env.example` lists them empty, and
+[`mariachi dev`](#dev) makes new ones wherever `.env` has them empty, as on a fresh clone. They are
+for development only. To use a Supabase project instead, set `AUTH_URL` to it and `AUTH_ANON_KEY` to
+its publishable key.
 
 `--orgs` adds organizations, memberships and invitations kept in the app's own database
 (`@mariachi/organizations`, see [organizations.md](./organizations.md)), for apps whose identity
@@ -48,8 +65,19 @@ accept page) and an email adapter (`EMAIL_ADAPTER`) are set; until then the invi
 carries the token. The link carries the token in its fragment (`#token=`), which reaches no server
 log. With `--auth gotrue`, whether an invitee's address is verified is read from the user's record
 (`AUTH_SERVICE_KEY`) or from a claim your own token hook adds (`AUTH_EMAIL_VERIFIED_CLAIM=required`
-then needs no key), never from what the user can edit. The page that accepts an invitation is yours
-to build.
+then needs no key), never from what the user can edit. With `--auth gotrue`, invitations are
+emailed through SMTP to the local mailbox (`EMAIL_ADAPTER=smtp`, with `nodemailer` among the
+dependencies), and the user's record is read with the `AUTH_SERVICE_KEY` `init` wrote.
+
+With `--orgs --ui` the project has the page that accepts an invitation, at `/invitations/accept`.
+With `--auth gotrue` it keeps the token from the link's fragment in the browser for an hour, sends a
+visitor who isn't signed in to `/api/sign-in#return=/invitations/accept` (sign-up and the email
+confirmation included, even when that finishes in another tab), and accepts the invitation as them
+when they click Accept. `INVITATION_URL` then defaults to it: `/invitations/accept` on `APP_ORIGIN`,
+or on `http://localhost:<PORT>` in development; in production with neither, whoever invites gets the
+token. With `--auth jwt` there is no sign-in in the browser to carry the visitor through, so the page
+says what accepting needs, and `INVITATION_URL` has no default. Without `--ui` the page is yours to
+build.
 
 `--ui` adds pages, sent by the same server as the API, built from `@mariachi/design`'s components
 and given their look by a design kit the project owns ([design.md](./design.md#copying-a-language-into-a-project-kits)).
@@ -123,8 +151,8 @@ Gets a project from a fresh checkout to running, doing only what's missing:
 
 | Step | When | What it does |
 | --- | --- | --- |
-| `.env` | There is none, and the project hasn't named its own env files | Copies `.env.example`. An existing `.env` is never written |
-| Services | The project has a Compose file, and its local Postgres or Redis isn't answering | `docker compose up -d`, then waits up to a minute for them (`--wait <ms>`) |
+| `.env` | There is none, and the project hasn't named its own env files | Copies `.env.example`. When the Compose file runs GoTrue, the local GoTrue's keys that `.env.example` lists empty are made for this checkout. An existing `.env` is written only to fill in those keys where it has them empty |
+| Services | The project has a Compose file, and its local Postgres or Redis isn't answering, or the GoTrue its Compose file runs (when `AUTH_URL` points at this machine) | `docker compose up -d`, then waits up to a minute for them (`--wait <ms>`) |
 | First migration | The schema has tables and the migrations folder is empty | Writes `drizzle/0000_init.sql`. Later schema changes are never turned into migrations here: it prints a note, and `mariachi db generate` stays a deliberate step |
 | Migrate | Migrations are pending | Applies them |
 | Run | Always | `tsx watch --env-file=.env src/main.ts` (`--entry <file>`, `--no-watch`) |
@@ -193,6 +221,7 @@ for each problem:
 | `database` | `DATABASE_URL` is unset or Postgres doesn't answer | |
 | `migrations` | The schema has tables and no migration exists, or migrations aren't applied | The schema has changes no migration captures |
 | `redis` | `REDIS_URL` is unset though `.env.example` lists it, or Redis doesn't answer | |
+| `auth` | The project signs in with GoTrue (`@mariachi/auth-gotrue`) and GoTrue's `/health` doesn't answer where the app reads it (`AUTH_URL`, ...). The fix names the Compose service that runs it, or says its keys are empty | |
 | `architecture` | `mariachi validate` finds errors | It finds warnings |
 
 A check that depends on one that failed is skipped, not failed twice. `--strict` exits 1 on

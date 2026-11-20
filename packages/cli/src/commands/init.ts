@@ -7,9 +7,9 @@ import { DIM, GREEN, RESET } from '../colors';
 import { fail, printResult } from '../output';
 import { type DesignKits, optionalDesignKits } from './design';
 
-/** What to type after `init`. GoTrue's address has to be in .env before the app can start, so that project makes its .env first. */
-export function nextSteps(cd: string, auth: ProjectAuth): string[] {
-  return [`cd ${cd}`, 'pnpm install', ...(auth === 'gotrue' ? ['cp .env.example .env'] : []), 'pnpm dev'];
+/** What to type after `init`: the same for either sign-in, since a GoTrue project runs its own GoTrue and `init` wrote its keys into .env. */
+export function nextSteps(cd: string): string[] {
+  return [`cd ${cd}`, 'pnpm install', 'pnpm dev'];
 }
 
 /** What a command run by `init` gave back. `error` is set when it couldn't be started at all. */
@@ -144,11 +144,15 @@ export function registerInitCommand(program: Command, deps: InitDeps = {}): void
           if (copied) console.log(copiedLine(copied));
           const cd = relative(process.cwd(), outputDir) || '.';
           console.log(`\n${GREEN}Created ${name}.${RESET} Next steps:\n`);
-          for (const step of nextSteps(cd, auth)) console.log(`  ${DIM}$${RESET} ${step}`);
-          console.log(`\n  ${DIM}pnpm dev${RESET} creates .env, starts Postgres (Docker Compose), applies the first migration and runs the app.`);
+          for (const step of nextSteps(cd)) console.log(`  ${DIM}$${RESET} ${step}`);
           if (auth === 'gotrue') {
-            console.log(`  Sign-in is GoTrue's: set ${DIM}AUTH_URL${RESET} in .env (see README.md), then open ${DIM}/api/sign-in${RESET}.`);
+            console.log(
+              `\n  ${DIM}pnpm dev${RESET} starts Postgres, a local GoTrue and a mailbox (Docker Compose), applies the first migration and runs the app.`,
+            );
+            console.log(`  Sign in at ${DIM}http://localhost:3000/api/sign-in${RESET}; the email GoTrue sends is at ${DIM}http://localhost:8025${RESET}.`);
+            console.log(`  .env holds the local GoTrue's keys, made for this project. To use a Supabase project instead, set ${DIM}AUTH_URL${RESET} (see README.md).`);
           } else {
+            console.log(`\n  ${DIM}pnpm dev${RESET} creates .env, starts Postgres (Docker Compose), applies the first migration and runs the app.`);
             const route = opts.orgs ? 'organizations' : opts.example ? 'notes' : 'health/ready';
             console.log(`  To call the API: ${DIM}curl -H "authorization: Bearer $(pnpm -s mariachi token${opts.orgs ? ' --no-tenant' : ''})" localhost:3000/api/${route}${RESET}`);
           }
@@ -159,7 +163,13 @@ export function registerInitCommand(program: Command, deps: InitDeps = {}): void
             );
           }
           if (opts.orgs) {
-            console.log(`\n  Organizations: the routes are under ${DIM}/api/organizations${RESET}. To email invitations, set ${DIM}INVITATION_URL${RESET} and ${DIM}EMAIL_ADAPTER${RESET} in .env (see README.md).`);
+            const invitations =
+              auth === 'gotrue' && opts.ui
+                ? `Invitations are emailed to the mailbox, and their link opens ${DIM}/invitations/accept${RESET}, which signs the invitee in and accepts.`
+                : auth === 'gotrue'
+                  ? `To email invitations (to the mailbox), set ${DIM}INVITATION_URL${RESET} to your accept page in .env (see README.md).`
+                  : `To email invitations, set ${DIM}INVITATION_URL${RESET} and ${DIM}EMAIL_ADAPTER${RESET} in .env (see README.md).`;
+            console.log(`\n  Organizations: the routes are under ${DIM}/api/organizations${RESET}. ${invitations}`);
           }
         } catch (error) {
           fail(error);

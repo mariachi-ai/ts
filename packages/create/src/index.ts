@@ -14,6 +14,7 @@ export { LAYOUT, MARKERS } from './layout';
 export { MARIACHI_VERSION } from './version';
 export { PROJECT_AUTH } from './types';
 export { DEFAULT_KIT, DESIGN_KIT_DIR } from './templates/ui';
+export { fillLocalSecrets, LOCAL_SECRETS } from './templates/local-auth';
 
 export type {
   ProjectAuth,

@@ -41,9 +41,9 @@ export function registerDevCommand(program: Command): void {
     .option('-e, --entry <file>', 'the app to run', 'src/main.ts')
     .option('-s, --schema <path>', 'module exporting defineTable() tables', 'src/schema/index.ts')
     .option('-o, --out <dir>', 'migrations folder', 'drizzle')
-    .option('--no-services', "don't start the Compose services; wait for the database and Redis to answer instead (also: MARIACHI_DEV_SERVICES=off)")
+    .option('--no-services', "don't start the Compose services; wait for the database, Redis and a local GoTrue to answer instead (also: MARIACHI_DEV_SERVICES=off)")
     .option('--env-file <file>', "an env file the app starts with (repeatable, later wins); default: package.json's mariachi.envFiles, else .env", collect, [])
-    .option('--wait <ms>', 'how long to wait for the database and Redis to answer', '60000')
+    .option('--wait <ms>', 'how long to wait for the database, Redis and a local GoTrue to answer', '60000')
     .option('--no-watch', 'run once, without reloading on changes')
     .option('--prepare-only', 'do the preparation and stop before starting the app')
     .action(async (path: string | undefined, opts: { entry: string; schema: string; out: string; services: boolean; watch: boolean; envFile: string[]; wait: string; prepareOnly?: boolean }) => {

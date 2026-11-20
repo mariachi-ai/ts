@@ -11,6 +11,8 @@ import {
   organizationsEnv,
   organizationsReadme,
 } from './organizations';
+import { ACCEPT_INVITATION_PATH } from './invitations';
+import { fillLocalSecrets, GOTRUE_DOCKER_COMPOSE, LOCAL_AUTH_URL, MAILBOX_URL } from './local-auth';
 import { UI_APP_CHECK, UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_README, uiAgents } from './ui';
 
 /**
@@ -24,11 +26,16 @@ import { UI_APP_CHECK, UI_APP_CONSTANTS, UI_APP_IMPORTS, UI_APP_STATIC, UI_READM
 export const AUTH_PATH = '/auth/v1';
 
 export function gotrueFiles(name: string, e2e = true, orgs = false, ui = false): Record<string, string> {
+  const envExample = ENV_EXAMPLE(name, databaseName(name)) + (orgs ? organizationsEnv('gotrue', ui) : '');
   return {
-    '.env.example': ENV_EXAMPLE(name, databaseName(name)) + (orgs ? organizationsEnv('gotrue') : ''),
-    'README.md': README(name) + (orgs ? organizationsReadme('gotrue') : '') + (ui ? UI_README : ''),
+    '.env.example': envExample,
+    // The local GoTrue's keys, made for this project here and kept out of git (.gitignore lists .env)
+    '.env': fillLocalSecrets(envExample).text,
+    'docker-compose.yml': GOTRUE_DOCKER_COMPOSE(databaseName(name)),
+    'README.md': README(name) + (orgs ? organizationsReadme('gotrue', ui) : '') + (ui ? UI_README : ''),
     'AGENTS.md': AGENTS_AUTH(e2e) + (orgs ? organizationsAgents('gotrue') : '') + (ui ? uiAgents('gotrue') : ''),
-    'src/config.ts': CONFIG_TS(orgs),
+    'src/config.ts': CONFIG_TS(orgs, ui),
+    ...(orgs && ui ? { 'src/config.test.ts': INVITATION_URL_TEST } : {}),
     'src/auth.ts': AUTH_TS,
     'src/auth.test.ts': AUTH_TEST(orgs),
     [LAYOUT.app]: APP_TS(orgs, ui),
@@ -54,7 +61,9 @@ DATABASE_URL=postgres://postgres:postgres@localhost:5432/${db}
 MIGRATE_ON_START=false
 
 # Sign-in (GoTrue). Tokens are ES256, checked against GoTrue's JWKS, issuer and audience. Name the
-# GoTrue whose tokens this app accepts with one of:
+# GoTrue whose tokens this app accepts with one of the settings below. As written, it is the local GoTrue
+# in docker-compose.yml (pnpm dev starts it); for a Supabase project, set AUTH_URL to its
+# https://<project>.supabase.co${AUTH_PATH} and AUTH_ANON_KEY to its publishable key.
 #   AUTH_URL       its public base URL, path included: https://<project>.supabase.co/auth/v1, or
 #                  https://app.example.com/auth/v1 for your own GoTrue
 #   AUTH_ORIGIN    the origin it's served under; AUTH_PATH (default ${AUTH_PATH}) is appended
@@ -62,7 +71,7 @@ MIGRATE_ON_START=false
 # and optionally AUTH_JWKS_URL, where to read the JWKS if not <AUTH_URL>/.well-known/jwks.json.
 # With none of them set, GoTrue is read at AUTH_INTERNAL_URL (default http://127.0.0.1:9999, its own
 # default port) and the issuer comes from its discovery document.
-AUTH_URL=
+AUTH_URL=${LOCAL_AUTH_URL}
 # Hosted Supabase wants its publishable (anon) key on every auth request from the browser. Not a secret.
 # AUTH_ANON_KEY=
 # The claim holding the user's organization, if your tokens carry one, and their role in it.
@@ -73,9 +82,16 @@ AUTH_URL=
 # Let the sign-in page take a session from a link an admin made (an invite, GoTrue's generate_link). Such
 # links can't use PKCE. Off by default; when on, the page shows whose session it is and asks first.
 # AUTH_LINK_SESSIONS=false
+
+# The local GoTrue (docker-compose.yml) and its mailbox: the email it sends (confirmations, sign-in
+# links) is at ${MAILBOX_URL}. It signs tokens with GOTRUE_JWT_KEYS (an ES256 key; GoTrue also wants
+# GOTRUE_JWT_SECRET set). mariachi init wrote both into .env, and mariachi dev writes new ones wherever
+# they are empty. They are this checkout's own: never commit them or use them for a GoTrue with real users.
+GOTRUE_JWT_SECRET=
+GOTRUE_JWT_KEYS=
 `;
 
-const CONFIG_TS = (orgs: boolean) => `import { registerConfigSection${orgs ? ', secret' : ''} } from '@mariachi/config';
+const CONFIG_TS = (orgs: boolean, ui: boolean) => `import { registerConfigSection${orgs ? ', secret' : ''} } from '@mariachi/config';
 import { z } from 'zod';
 
 /** This app's own settings, read from the environment by \`@mariachi/config\` (\`useConfigSection(APP_CONFIG)\`). */
@@ -112,14 +128,14 @@ ${orgs
   : ''}    })
     .default({}),
 ${orgs
-  ? '  /** The page that accepts an invitation (`INVITATION_URL`). Invitations are emailed only when this and `EMAIL_ADAPTER` are set. */\n  invitationUrl: z.string().url().optional(),\n'
+  ? `  /** The page that accepts an invitation (\`INVITATION_URL\`${ui ? `; default ${ACCEPT_INVITATION_PATH} on this app's origin` : ''}). Invitations are emailed only when this and \`EMAIL_ADAPTER\` are set. */\n  invitationUrl: z.string().url().optional(),\n`
   : ''}  /** Apply the committed migrations (\`drizzle/\`) at start (\`MIGRATE_ON_START\`). */
   migrateOnStart: z.boolean().default(false),
 });
 
 export type AppSettings = z.infer<typeof appSchema>;
 export type AuthSettings = AppSettings['auth'];
-
+${orgs && ui ? ACCEPT_PAGE_DEFAULT : ''}
 registerConfigSection(APP_CONFIG, {
   schema: appSchema,
   fromEnv: (read) => ({
@@ -135,8 +151,47 @@ registerConfigSection(APP_CONFIG, {
       personalTenants: flag(read('AUTH_PERSONAL_TENANTS')),
       linkSessions: flag(read('AUTH_LINK_SESSIONS')),
 ${orgs ? "      serviceKey: optional(read('AUTH_SERVICE_KEY')),\n      emailVerifiedClaim: optional(read('AUTH_EMAIL_VERIFIED_CLAIM')),\n" : ''}    },
-${orgs ? "    invitationUrl: optional(read('INVITATION_URL')),\n" : ''}    migrateOnStart: flag(read('MIGRATE_ON_START')),
+${orgs ? `    invitationUrl: optional(read('INVITATION_URL'))${ui ? ' ?? acceptPage(read)' : ''},\n` : ''}    migrateOnStart: flag(read('MIGRATE_ON_START')),
   }),
+});
+`;
+
+/** With \`--orgs --ui\`: where \`INVITATION_URL\` points when it isn't set. */
+const ACCEPT_PAGE_DEFAULT = `
+/**
+ * The page that accepts an invitation (src/api/pages/accept-invitation.ts) on this app's origin:
+ * APP_ORIGIN, else http://localhost:<PORT> in development. In production, set APP_ORIGIN or
+ * INVITATION_URL: with neither there is no page to link to, and whoever invites gets the token.
+ */
+function acceptPage(read: (key: string) => string | undefined): string | undefined {
+  const development = (read('NODE_ENV') ?? 'development') === 'development';
+  const origin = optional(read('APP_ORIGIN')) ?? (development ? \`http://localhost:\${read('PORT') || '3000'}\` : undefined);
+  return origin ? \`\${origin.replace(/\\/+$/, '')}${ACCEPT_INVITATION_PATH}\` : undefined;
+}
+`;
+
+const INVITATION_URL_TEST = `import { afterEach, describe, expect, it } from 'vitest';
+import { loadConfig, resetConfig, useConfigSection } from '@mariachi/config';
+import { APP_CONFIG, type AppSettings } from './config';
+
+afterEach(() => resetConfig());
+
+const invitationUrl = (env: Record<string, string>) => {
+  loadConfig({}, { env });
+  return useConfigSection<AppSettings>(APP_CONFIG).invitationUrl;
+};
+
+describe('INVITATION_URL', () => {
+  it("defaults to the page that accepts invitations, on APP_ORIGIN or, in development, on localhost", () => {
+    expect(invitationUrl({ NODE_ENV: 'development', PORT: '4000' })).toBe('http://localhost:4000${ACCEPT_INVITATION_PATH}');
+    expect(invitationUrl({ NODE_ENV: 'production', APP_ORIGIN: 'https://app.example.com/' })).toBe('https://app.example.com${ACCEPT_INVITATION_PATH}');
+    expect(invitationUrl({ NODE_ENV: 'development', INVITATION_URL: 'https://app.example.com/join' })).toBe('https://app.example.com/join');
+  });
+
+  it('has no default in production without APP_ORIGIN: whoever invites gets the token', () => {
+    expect(invitationUrl({ NODE_ENV: 'production' })).toBeUndefined();
+    expect(invitationUrl({ NODE_ENV: 'test' })).toBeUndefined();
+  });
 });
 `;
 
@@ -861,6 +916,10 @@ export const SIGN_IN_JS = \`const KEY = 'session';
 // browser kept when it asked for the link. It's in localStorage because the link opens in a new tab.
 const VERIFIER = 'sign-in-verifier';
 const VERIFIER_SECONDS = 3600;
+// A page that sent the visitor here to sign in (#return=/path) gets them back once they have. Kept in
+// localStorage like the verifier, because a sign-in by emailed link finishes in another tab.
+const RETURN = 'sign-in-return';
+const RETURN_SECONDS = 3600;
 // A session a link brought, shown to the user and not yet accepted. In memory only.
 let offered = null;
 // Said in place of "Signed in." on the next render
@@ -884,6 +943,36 @@ function load() {
   } catch {
     return null;
   }
+}
+
+// A path on this site, as the address to go to; anything that would leave the site (//host, a scheme) is null.
+function onThisSite(path) {
+  if (typeof path !== 'string' || path.charAt(0) !== '/') return null;
+  try {
+    const target = new URL(path, location.origin);
+    return target.origin === location.origin ? target.pathname + target.search + target.hash : null;
+  } catch {
+    return null;
+  }
+}
+
+function keepReturn(path) {
+  if (onThisSite(path)) localStorage.setItem(RETURN, JSON.stringify({ path: path, at: Math.floor(Date.now() / 1000) }));
+}
+
+// Just signed in: back to the page that sent the visitor here, if one did in the last hour. Used once.
+function goBack() {
+  let kept = null;
+  try {
+    kept = JSON.parse(localStorage.getItem(RETURN) || 'null');
+  } catch {
+    kept = null;
+  }
+  localStorage.removeItem(RETURN);
+  const target = kept && Date.now() / 1000 - Number(kept.at) < RETURN_SECONDS ? onThisSite(kept.path) : null;
+  if (!target) return false;
+  location.assign(target);
+  return true;
 }
 
 // GoTrue's endpoints (what supabase-js calls): POST JSON, errors as { msg } or { error_description }.
@@ -945,12 +1034,15 @@ async function render() {
 
 // After a magic or confirmation link, GoTrue redirects here with a one-time code (or an error) in the query.
 // A session is never taken from the address bar: a link that carried tokens could sign someone in as its sender.
+// Another page links here with #return=/its/path to have the visitor sent back once signed in.
+// Resolves to true when the visitor has just been signed in.
 async function fromRedirect() {
-  if (!location.search && !location.hash) return;
+  if (!location.search && !location.hash) return false;
   const query = new URLSearchParams(location.search);
   const hash = new URLSearchParams(location.hash.slice(1));
   // Out of the address bar first, so the code isn't kept in history
   history.replaceState(null, '', location.pathname);
+  if (hash.get('return')) keepReturn(hash.get('return'));
   const code = query.get('code');
   if (code) {
     const kept = (localStorage.getItem(VERIFIER) || '').split('.');
@@ -959,15 +1051,17 @@ async function fromRedirect() {
     if (!verifier) return show('This link was not asked for in this browser, is more than an hour old, or was already used. Ask for a new one here.');
     try {
       save(await gotrue('/token?grant_type=pkce', { auth_code: code, code_verifier: verifier }));
+      return true;
     } catch (error) {
       show('The link did not work: ' + error.message);
     }
-    return;
+    return false;
   }
   // The page's own words, never the link's: a crafted link can't put text on this page
   if (query.get('error') || query.get('error_description') || hash.get('error') || hash.get('error_description')) {
     show('The link is invalid or has expired. Ask for a new one here.');
   } else if (hash.get('access_token')) await offer(hash);
+  return false;
 }
 
 // Who a token belongs to, asked of GoTrue.
@@ -1000,6 +1094,7 @@ byId('password-form').addEventListener('submit', async (event) => {
   event.preventDefault();
   try {
     save(await gotrue('/token?grant_type=password', credentials()));
+    if (goBack()) return;
     await render();
   } catch (error) {
     show('Sign-in failed: ' + error.message);
@@ -1012,6 +1107,7 @@ byId('sign-up').addEventListener('click', async () => {
     if (result.access_token) {
       localStorage.removeItem(VERIFIER);
       save(result);
+      if (goBack()) return;
       await render();
     } else show('Check your email for the confirmation link.');
   } catch (error) {
@@ -1032,6 +1128,7 @@ byId('link-accept').addEventListener('click', async () => {
   const session = offered;
   offered = null;
   if (session) save(session);
+  if (session && goBack()) return;
   await render();
 });
 
@@ -1051,7 +1148,7 @@ byId('sign-out').addEventListener('click', async () => {
 });
 
 // Tests wait on this
-const ready = fromRedirect().then(render);
+const ready = fromRedirect().then((signedIn) => (signedIn && goBack() ? undefined : render()));
 \`;
 
 /** The script as served: where the browser reaches GoTrue, and the key hosted Supabase wants, written in as JSON. */
@@ -1082,6 +1179,10 @@ export interface FakePage {
   local: Map<string, string>;
   /** The text of the element with this id */
   text(id: string): string;
+  /** Whether the element with this id is hidden */
+  hidden(id: string): boolean;
+  /** Where the script sent the browser with location.assign, if it did */
+  assigned(): string | undefined;
   /** Types into an input */
   type(id: string, value: string): void;
   /** Clicks a button, or submits a form, and waits for the script's handler */
@@ -1109,6 +1210,7 @@ const storage = (map: Map<string, string>) => ({
 /** Opens the page: runs the script and waits until it has dealt with the address it was opened at. */
 export async function openPage(options: FakePageOptions): Promise<FakePage> {
   let url = new URL(options.url);
+  let assigned: string | undefined;
   const session = options.session ?? new Map<string, string>();
   const local = options.local ?? new Map<string, string>();
   const elements = new Map<string, { value: string; hidden: boolean; textContent: string; handlers: Map<string, (event: unknown) => unknown> }>();
@@ -1129,12 +1231,14 @@ export async function openPage(options: FakePageOptions): Promise<FakePage> {
       get pathname() { return url.pathname; },
       get search() { return url.search; },
       get hash() { return url.hash; },
+      assign: (to: string) => void (assigned = new URL(to, url).href),
     },
     history: { replaceState: (_state: unknown, _title: string, to: string) => void (url = new URL(to, url)) },
     sessionStorage: storage(session),
     localStorage: storage(local),
     fetch: options.fetch,
     crypto: webcrypto,
+    URL,
     URLSearchParams,
     TextEncoder,
     btoa,
@@ -1146,6 +1250,8 @@ export async function openPage(options: FakePageOptions): Promise<FakePage> {
     session,
     local,
     text: (id) => element(id).textContent,
+    hidden: (id) => element(id).hidden,
+    assigned: () => assigned,
     type: (id, value) => void (element(id).value = value),
     fire: async (id, event) => {
       await element(id).handlers.get(event)?.({ preventDefault() {} });
@@ -1314,6 +1420,44 @@ describe('the sign-in page', () => {
     });
   });
 
+  describe('sent here by another page (#return=/path)', () => {
+    it('sends the visitor back once they sign in, and only then', async () => {
+      const { calls, fetch } = recorder({ '/token?grant_type=password': () => json(session) });
+      const tab = await openPage({ script, url: page + '#return=/invitations/accept', fetch });
+      expect(tab.url()).toBe(page);
+      expect(tab.assigned()).toBeUndefined();
+      tab.type('email', 'ada@example.test');
+      tab.type('password', 'correct horse');
+      await tab.fire('password-form', 'submit');
+      expect(tab.assigned()).toBe('https://app.example.test/invitations/accept');
+      expect(JSON.parse(tab.session.get('session') as string)).toMatchObject({ accessToken: 'access-1' });
+      // Once: the next sign-in stays here
+      expect(tab.local.has('sign-in-return')).toBe(false);
+      expect(calls.some((c) => c.url === '/api/me')).toBe(false);
+    });
+
+    it('sends them back from the tab an emailed link opens', async () => {
+      const { fetch } = recorder({ '/token?grant_type=pkce': () => json(session) });
+      const asked = await openPage({ script, url: page + '#return=/invitations/accept', fetch });
+      asked.type('email', 'ada@example.test');
+      await asked.fire('magic-link', 'click');
+      const tab = await openPage({ script, url: page + '?code=one-time-code', fetch, local: asked.local });
+      expect(tab.assigned()).toBe('https://app.example.test/invitations/accept');
+    });
+
+    it('never sends anyone off this site', async () => {
+      const { fetch } = recorder({ '/token?grant_type=password': () => json(session) });
+      for (const elsewhere of ['//evil.example/x', 'https://evil.example/x', '/%09/evil.example', 'javascript:alert(1)']) {
+        const tab = await openPage({ script, url: page + '#return=' + elsewhere, fetch });
+        tab.type('email', 'ada@example.test');
+        tab.type('password', 'correct horse');
+        await tab.fire('password-form', 'submit');
+        expect(tab.assigned(), elsewhere).toBeUndefined();
+        expect(tab.text('status'), elsewhere).toBe('Signed in.');
+      }
+    });
+  });
+
   it('signs in with a password and calls GET /api/me with the token', async () => {
     const { calls, fetch } = recorder({ '/token?grant_type=password': () => json(session) });
     const tab = await openPage({ script, url: page, fetch });
@@ -1372,9 +1516,13 @@ ${e2e ? '| \`src/testing/\` | Support for end-to-end tests: \`startApp()\` and t
 | \`src/jobs/\` | \`defineJob\` background jobs |
 | \`src/search/\` | The search indexes; services reach search as \`deps.search\` |
 
-Postgres is the only service the app itself needs: jobs and search run in it
-(\`@mariachi/jobs/postgres\`, \`@mariachi/search/postgres\`). Don't add Redis or a search server to
-make either work. \`pnpm dev\` starts Postgres, applies migrations and runs the app with reload.
+Jobs and search run in Postgres (\`@mariachi/jobs/postgres\`, \`@mariachi/search/postgres\`): don't add
+Redis or a search server to make either work. \`pnpm dev\` starts the services in
+\`docker-compose.yml\` (Postgres, a local GoTrue at ${LOCAL_AUTH_URL} and Mailpit, the mailbox its email
+goes to, at ${MAILBOX_URL}), applies migrations and runs the app with reload. To read an email GoTrue or
+the app sent, ask Mailpit's API: \`curl '${MAILBOX_URL}/api/v1/search?query=to:ada@example.com'\`.
+\`GOTRUE_JWT_KEYS\` and \`GOTRUE_JWT_SECRET\` in \`.env\` are the local GoTrue's keys: never print them,
+copy them into code or commit them.
 
 ${e2e ? AGENTS_AUTH_TESTS : ''}## Sign-in, tenants and roles
 
@@ -1413,20 +1561,34 @@ token names, or the user's own personal tenant when it names none.
 
 \`\`\`bash
 pnpm install
-cp .env.example .env    # then set AUTH_URL, e.g. https://<project>.supabase.co${AUTH_PATH}
 pnpm dev
 \`\`\`
 
-\`pnpm dev\` (\`mariachi dev\`) starts Postgres with Docker Compose, writes and applies the first
-migration, and runs the app, reloading on changes. Postgres is the only service the app itself
-needs: jobs and search run in it (\`pnpm add bullmq\` and set \`REDIS_URL\` to run jobs on Redis instead).
+\`pnpm dev\` (\`mariachi dev\`) starts the services in \`docker-compose.yml\` with Docker Compose,
+writes and applies the first migration, and runs the app, reloading on changes. Then open
+\`http://localhost:3000/api/sign-in\`, sign up, and confirm the address with the link in the email,
+which is in the local mailbox at ${MAILBOX_URL}.
+
+| Service | Where | |
+| --- | --- | --- |
+| \`postgres\` | \`localhost:5432\` | The app's database. Jobs and search run in it, and GoTrue keeps its tables in its \`auth\` schema |
+| \`auth\` | ${LOCAL_AUTH_URL} | GoTrue (Supabase Auth): sign-up, password sign-in, sign-in links. \`AUTH_URL\` points the app at it |
+| \`mail\` | ${MAILBOX_URL} | Mailpit: every email GoTrue and the app send lands here, in a mailbox you read in the browser |
 
 The API listens on \`PORT\` (default 3000) under \`/api\`. Health checks: \`/api/health/live\`,
-\`/api/health/ready\`, \`/api/health/startup\`. OpenAPI: \`/api/openapi.json\`.
+\`/api/health/ready\`, \`/api/health/startup\`. OpenAPI: \`/api/openapi.json\`. \`pnpm mariachi doctor\`
+checks each service and says how to start the one that isn't answering.
 
-GoTrue isn't in \`docker-compose.yml\`: point \`AUTH_URL\` at a Supabase project, or at a GoTrue you
-run. It must sign tokens with an asymmetric key (ES256 by default) and publish its JWKS; a GoTrue
-that still signs with a shared secret is refused.
+**The local GoTrue's keys are this project's own.** It signs tokens with an ES256 key
+(\`GOTRUE_JWT_KEYS\`, beside \`GOTRUE_JWT_SECRET\`, which GoTrue also wants set) that \`mariachi init\`
+made and wrote into \`.env\`. \`.env\` isn't committed, and \`.env.example\` lists the keys empty:
+on a fresh clone, \`pnpm dev\` writes new ones wherever they are empty. They are for development on
+this machine. Never use them for a GoTrue with real users.
+
+**To use a Supabase project, or a GoTrue you run,** set \`AUTH_URL\` to it
+(\`https://<project>.supabase.co${AUTH_PATH}\`) and \`AUTH_ANON_KEY\` to its publishable key. It must sign
+tokens with an asymmetric key (ES256 by default) and publish its JWKS; a GoTrue that still signs
+with a shared secret is refused. The \`auth\` and \`mail\` services can then leave \`docker-compose.yml\`.
 
 ## Sign-in
 
@@ -1467,7 +1629,11 @@ This page is an example to start from, not a finished sign-in. Before you ship o
   Continue, and never while someone is already signed in.
 - **GoTrue only redirects to addresses on its allow list** (\`GOTRUE_URI_ALLOW_LIST\`; "Redirect URLs"
   in Supabase). Add this app's \`/api/sign-in\` there, for each host you run it on, or the links in
-  its emails are refused.
+  its emails are refused. The local GoTrue allows every page of \`http://localhost:<PORT>\`.
+- **Another page can send a visitor to sign in and get them back**: link to
+  \`/api/sign-in#return=/your/page\`. Once they have signed in (by password, or by an emailed link,
+  even in another tab, within the hour) the page sends them to that path. Only a path on this site
+  is followed.
 - **Sign-out ends every session of the user**, GoTrue's default scope. Call \`/logout?scope=local\`
   to end only this one.
 - If a proxy serves GoTrue under this app's origin, route the whole prefix (\`${AUTH_PATH}/...\`) to it.
@@ -1499,6 +1665,7 @@ This page is an example to start from, not a finished sign-in. Before you ship o
 | \`AUTH_ORG_CLAIM\`, \`AUTH_ORG_ROLE_CLAIM\` | \`org_id\`, \`org_role\` | The claims holding the organization and the role in it |
 | \`AUTH_PERSONAL_TENANTS\` | \`true\` | Give a user in no organization a personal tenant |
 | \`AUTH_LINK_SESSIONS\` | \`false\` | Let the sign-in page take a session from an admin-made link (invites, \`generate_link\`), after showing whose it is |
+| \`GOTRUE_JWT_KEYS\`, \`GOTRUE_JWT_SECRET\` | written to \`.env\` | The local GoTrue's signing key and secret (\`docker-compose.yml\` reads them). Not read by the app |
 | \`MIGRATE_ON_START\` | \`false\` | Apply \`drizzle/\` migrations at start |
 
 ## Checks

@@ -28,11 +28,17 @@ describe('mariachi init --auth gotrue', () => {
     const basePkg = JSON.parse(base['package.json']);
     expect(pkg.scripts).toEqual(basePkg.scripts);
     expect(pkg.engines).toEqual(basePkg.engines);
-    expect(files['docker-compose.yml']).toBe(base['docker-compose.yml']);
+    // The same Postgres, with a local GoTrue and a mailbox beside it (see local-auth.test.ts)
+    const compose = parseYaml(files['docker-compose.yml']) as { services: Record<string, { image?: string; environment?: Record<string, string> }> };
+    const baseCompose = parseYaml(base['docker-compose.yml']) as { services: Record<string, { image?: string; environment?: Record<string, string> }> };
+    expect(compose.services.postgres?.image).toBe(baseCompose.services.postgres?.image);
+    expect(compose.services.postgres?.environment).toEqual(baseCompose.services.postgres?.environment);
+    expect(Object.keys(compose.services)).toEqual(['postgres', 'auth-schema', 'auth', 'mail']);
   });
 
   it('writes the sign-in page, /api/me and the auth wiring, and nothing else', () => {
     expect(Object.keys(files).filter((f) => !(f in base)).sort()).toEqual([
+      '.env',
       'src/api/controllers/me.controller.test.ts',
       'src/api/controllers/me.controller.ts',
       'src/api/controllers/sign-in.controller.test.ts',
@@ -53,8 +59,10 @@ describe('mariachi init --auth gotrue', () => {
     expect(main).toContain('.withMiddleware(createTenancyMiddleware(tenancy))');
     expect(main).toContain('bearerStrategy(auth)');
     expect(main).not.toMatch(/JWTAdapter|JWT_SECRET|jwtSecret/);
-    expect(files['.env.example']).not.toContain('JWT_SECRET');
-    expect(files['.env.example']).toMatch(/^AUTH_URL=$/m);
+    // GOTRUE_JWT_SECRET is the local GoTrue's, which the app never reads
+    expect(files['.env.example']).not.toMatch(/^JWT_SECRET=/m);
+    // The local GoTrue in docker-compose.yml, until AUTH_URL names another
+    expect(files['.env.example']).toMatch(/^AUTH_URL=http:\/\/localhost:9999$/m);
     expect(files['src/api/controllers/index.ts']).toMatch(/new MeController\(communication\),\n\s+new SignInController\(communication\),\n\s+\/\/ mariachi:controllers/);
   });
 
