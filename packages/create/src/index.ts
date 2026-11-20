@@ -7,9 +7,14 @@ export {
   generateIntegration,
   generatePage,
   generateSeed,
+  generateEvent,
+  generateSubscriber,
+  generateWebhook,
+  generateProcedure,
 } from './generators';
 export { validate, RULES } from './validate/index';
-export { names, pluralize, type Names } from './names';
+export { names, pluralize, eventNames, type Names, type NamesOptions, type EventNames } from './names';
+export { parseFields, FIELD_TYPES, type EntityField, type FieldType } from './fields';
 export { LAYOUT, MARKERS } from './layout';
 export { MARIACHI_VERSION } from './version';
 export { PROJECT_AUTH } from './types';
@@ -27,6 +32,10 @@ export type {
   GenerateIntegrationConfig,
   GeneratePageConfig,
   GenerateSeedConfig,
+  GenerateEventConfig,
+  GenerateSubscriberConfig,
+  GenerateWebhookConfig,
+  GenerateProcedureConfig,
   GenerateResult,
   ValidateOptions,
   ValidationResult,

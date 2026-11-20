@@ -53,8 +53,6 @@ GoTrue and mailbox in the `--auth gotrue` project, and its page that accepts an 
    - A browser sign-in for the default (`--auth jwt`) project, or a decision that it has none. Its
      pages can show only public content today.
 2. **What an agent reads and runs.**
-   - Generators for an event and its subscriber, a webhook endpoint and a procedure on an existing
-     service. The entity generator's fixed `name` column and naive plurals.
    - The example entity indexed for search, as a worked example of `deps.search`.
 
 ## Later

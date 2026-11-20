@@ -10,7 +10,22 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startPostgres, startRedis, stopAll } from '../../../test/setup';
 import { JWTAdapter } from '@mariachi/auth';
 import { addKit } from '@mariachi/design-kits';
-import { createProject, generateController, generateEntity, generateIntegration, generateJob, generatePage, generateSeed, generateService, validate } from './index';
+import { signStandardWebhook } from '@mariachi/webhooks';
+import {
+  createProject,
+  generateController,
+  generateEntity,
+  generateEvent,
+  generateIntegration,
+  generateJob,
+  generatePage,
+  generateProcedure,
+  generateSeed,
+  generateService,
+  generateSubscriber,
+  generateWebhook,
+  validate,
+} from './index';
 
 const run = promisify(execFile);
 const pkgRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -130,6 +145,32 @@ if (process.argv[3] !== 'empty') {
 console.log('DATABASE_URL=' + url.href);
 `;
 
+/** Written into the project: an event added to the outbox in a transaction reaches its subscriber, as app.ts wires them. */
+const OUTBOX_E2E_TEST = `import { afterAll, beforeAll, expect, it, vi } from 'vitest';
+import { withTransaction } from '@mariachi/database-postgres';
+import { Outbox } from '@mariachi/events/outbox';
+import { createTestContext } from '@mariachi/testing';
+import { billingInvoicePaid } from './events/billing-invoice-paid.event';
+import { startApp, type RunningApp } from './testing/e2e';
+
+let running: RunningApp;
+beforeAll(async () => {
+  running = await startApp();
+});
+afterAll(() => running?.stop());
+
+it('relays an event from the outbox, once the transaction commits, to a subscriber in the publisher tenant', async () => {
+  const seen = vi.fn();
+  running.app.events.subscribe(billingInvoicePaid, async (ctx, payload) => {
+    seen(ctx.tenantId, payload);
+  });
+  const ctx = createTestContext({ tenantId: 'tenant-a', userId: 'user-a' });
+  const outbox = new Outbox(running.app.database.db);
+  await withTransaction(running.app.database.db, ctx, () => outbox.add(ctx, billingInvoicePaid, { id: 'invoice-1' }));
+  await vi.waitFor(() => expect(seen).toHaveBeenCalledWith('tenant-a', { id: 'invoice-1' }), { timeout: 10_000 });
+});
+`;
+
 // One Postgres for every boot below; each gets a database of its own in it
 let postgres: Promise<string> | undefined;
 
@@ -163,6 +204,18 @@ describe('generated project', () => {
     await generateJob({ name: 'send-digest', projectRoot: project });
     await generateIntegration({ name: 'acme', projectRoot: project });
     await generateSeed({ name: 'demo-data', projectRoot: project });
+    await generateEntity({
+      name: 'task',
+      projectRoot: project,
+      fields: ['title:string', 'done:boolean', 'dueAt:timestamp?', 'points:integer:optional', 'day:date', 'ownerId:uuid', 'score:number', 'notes:text?'],
+    });
+    await generateEntity({ name: 'person', projectRoot: project });
+    await generateEvent({ name: 'billing.invoice.paid', projectRoot: project, subscriber: 'send-receipt' });
+    await generateSubscriber({ event: 'billing.invoice.paid', name: 'audit-payment', projectRoot: project });
+    await generateWebhook({ name: 'acme', projectRoot: project });
+    await generateProcedure({ service: 'note', name: 'archive', projectRoot: project });
+    await generateProcedure({ service: 'billing-report', name: 'summarize-month', projectRoot: project });
+    await writeFile(join(project, 'src/events.e2e.test.ts'), OUTBOX_E2E_TEST);
   }, 30_000);
 
   afterAll(async () => {
@@ -188,6 +241,19 @@ describe('generated project', () => {
     expect(pkg.dependencies['@mariachi/core']).toMatch(/^\^\d+\.\d+\.\d+/);
   });
 
+  it('registers the events, webhooks and procedures it was given', async () => {
+    const events = await readFile(join(project, 'src/events/index.ts'), 'utf-8');
+    expect(events).toMatch(/registerSendReceiptSubscriber\(events, deps\);\n\s+registerAuditPaymentSubscriber\(events, deps\);/);
+    expect(await readFile(join(project, 'src/webhooks/index.ts'), 'utf-8')).toContain("signed('ACME_WEBHOOK_SECRET'");
+    expect(await readFile(join(project, 'src/jobs/index.ts'), 'utf-8')).toContain('acmeWebhookJob,');
+    const schema = await readFile(join(project, 'src/schema/index.ts'), 'utf-8');
+    expect(schema).toContain("export * from './events';");
+    expect(schema).toContain("export * from './webhooks';");
+    expect(schema).toContain("export * from './people';");
+    expect(await readFile(join(project, 'src/services/notes/notes.handler.ts'), 'utf-8')).toContain("communication.register('notes.archive'");
+    expect(await readFile(join(project, 'src/contracts/billing-report.ts'), 'utf-8')).toContain("'billingReport.summarizeMonth'");
+  });
+
   it('refuses to overwrite and leaves registries untouched', async () => {
     const before = await readFile(join(project, 'src/services/index.ts'), 'utf-8');
     await expect(generateEntity({ name: 'note', projectRoot: project })).rejects.toMatchObject({ code: 'create/file-exists' });
@@ -200,6 +266,17 @@ describe('generated project', () => {
 
   it('passes its own generated tests', async () => {
     const { stdout } = await sh('vitest/vitest.mjs', ['run', '--root', project]);
+    for (const test of [
+      'billing-invoice-paid.event.test.ts',
+      'send-receipt.subscriber.test.ts',
+      'audit-payment.subscriber.test.ts',
+      'acme.controller.test.ts',
+      'notes.archive.test.ts',
+      'billing-report.summarize-month.test.ts',
+      'tasks.service.test.ts',
+    ]) {
+      expect(stdout).toContain(test);
+    }
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
   }, 120_000);
 
@@ -209,9 +286,52 @@ describe('generated project', () => {
     expect(stdout).toMatch(/src\/search\.e2e\.test\.ts/);
     expect(stdout).toMatch(/notes\.e2e\.test\.ts/);
     expect(stdout).toMatch(/invoice-items\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/tasks\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/people\.e2e\.test\.ts/);
+    expect(stdout).toMatch(/src\/events\.e2e\.test\.ts/);
     expect(stdout).toMatch(/Tests\s+\d+ passed/);
     expect(stdout).not.toMatch(/failed/);
   }, 300_000);
+
+  it('serves its webhook on WEBHOOK_PORT once its secret is set: a signed delivery is taken once, an unsigned one refused', async () => {
+    const key = Buffer.from('the scaffold test signing key 32');
+    const webhookPort = await freePort();
+    const { status, output, probed } = await bootReady(
+      project,
+      {
+        SERVICE_NAME: 'scaffold-app',
+        NODE_ENV: 'development',
+        DATABASE_URL: await migratedDatabase(project),
+        JWT_SECRET: 'scaffold-test-secret-at-least-32-characters',
+        WEBHOOK_PORT: String(webhookPort),
+        ACME_WEBHOOK_SECRET: `whsec_${key.toString('base64')}`,
+      },
+      async () => {
+        const url = `http://127.0.0.1:${webhookPort}/webhooks/acme/events`;
+        const payload = JSON.stringify({ type: 'thing.updated', data: { id: 'thing-1' } });
+        const timestamp = Math.floor(Date.now() / 1000);
+        const headers = {
+          'content-type': 'application/json',
+          'webhook-id': 'msg_scaffold',
+          'webhook-timestamp': String(timestamp),
+          'webhook-signature': signStandardWebhook(key, 'msg_scaffold', timestamp, payload),
+        };
+        // The webhook server starts with the API, at the same priority: wait for it
+        let first: Response | undefined;
+        for (const deadline = Date.now() + 10_000; !first && Date.now() < deadline; ) {
+          first = await fetch(url, { method: 'POST', headers, body: payload }).catch(async () => {
+            await new Promise((ok) => setTimeout(ok, 100));
+            return undefined;
+          });
+        }
+        const again = await fetch(url, { method: 'POST', headers, body: payload });
+        const unsigned = await fetch(url, { method: 'POST', headers: { 'content-type': 'application/json' }, body: payload });
+        return { first: first?.status, again: again.status, duplicate: await again.json(), unsigned: unsigned.status };
+      },
+    );
+    expect({ status, output }).toMatchObject({ status: 200 });
+    expect(probed).toMatchObject({ first: 202, again: 200, duplicate: { duplicate: true }, unsigned: 401 });
+  }, 180_000);
 
   it('boots its main.ts against Postgres alone and answers ready', async () => {
     const { status, output } = await bootReady(project, {

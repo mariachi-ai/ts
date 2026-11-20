@@ -7,6 +7,12 @@ retry policy.
 
 ## Define, publish, subscribe
 
+In a generated project, `mariachi generate event users.user.signed-up --subscriber send-welcome` writes
+the definition (`src/events/users-user-signed-up.event.ts`), a subscriber registered in
+`src/events/index.ts`, and their tests. The project's `src/app.ts` builds `events` on an in-process
+bus with the [outbox](#transactional-outbox) relayed to it, and gives services `deps.events` and
+`deps.outbox` (see [cli.md](./cli.md#generate)).
+
 ```ts
 import { createEventBus, DefaultEvents, defineEvent } from '@mariachi/events';
 

@@ -1,28 +1,101 @@
+import { DEFAULT_FIELDS, type EntityField, type FieldType } from '../fields';
+import { MARKERS } from '../layout';
 import type { Names } from '../names';
 
-/** Files for a full vertical slice (table → repository → service → handlers → controller → test). */
-export function entityFiles(n: Names): Record<string, string> {
+/** How each field type is written in the table, the contract and the tests. */
+interface FieldKind {
+  column: string;
+  /** In the output schema. */
+  zod: string;
+  /** In the create input. */
+  input: string;
+  /** The entity's TypeScript type. */
+  ts: string;
+  /** The type a client sees in JSON. */
+  json: string;
+  /** Two different values, as TypeScript (the unit test) and as JSON (the end-to-end test). */
+  values: [string, string];
+  jsonValues: [string, string];
+  /** A value the create input refuses. */
+  invalid: string;
+}
+
+const text = (input: string): FieldKind => ({
+  column: 'column.text()',
+  zod: 'z.string()',
+  input,
+  ts: 'string',
+  json: 'string',
+  values: ["'First'", "'Renamed'"],
+  jsonValues: ["'First'", "'Renamed'"],
+  invalid: "''",
+});
+
+const KINDS: Record<FieldType, FieldKind> = {
+  string: text('z.string().trim().min(1).max(200)'),
+  text: text('z.string().trim().min(1)'),
+  integer: { column: 'column.integer()', zod: 'z.number().int()', input: 'z.number().int()', ts: 'number', json: 'number', values: ['1', '2'], jsonValues: ['1', '2'], invalid: '1.5' },
+  number: { column: 'column.double()', zod: 'z.number()', input: 'z.number()', ts: 'number', json: 'number', values: ['1.5', '2.5'], jsonValues: ['1.5', '2.5'], invalid: "'many'" },
+  boolean: { column: 'column.boolean()', zod: 'z.boolean()', input: 'z.boolean()', ts: 'boolean', json: 'boolean', values: ['true', 'false'], jsonValues: ['true', 'false'], invalid: "'yes'" },
+  timestamp: {
+    column: 'column.timestamp()',
+    zod: 'z.date()',
+    input: 'z.coerce.date()',
+    ts: 'Date',
+    json: 'string',
+    values: ["new Date('2026-01-01T00:00:00.000Z')", "new Date('2026-02-01T00:00:00.000Z')"],
+    jsonValues: ["'2026-01-01T00:00:00.000Z'", "'2026-02-01T00:00:00.000Z'"],
+    invalid: "'not-a-date'",
+  },
+  date: { column: 'column.date()', zod: 'z.string()', input: 'z.string().date()', ts: 'string', json: 'string', values: ["'2026-01-01'", "'2026-02-01'"], jsonValues: ["'2026-01-01'", "'2026-02-01'"], invalid: "'not-a-date'" },
+  uuid: {
+    column: 'column.uuid()',
+    zod: 'z.string().uuid()',
+    input: 'z.string().uuid()',
+    ts: 'string',
+    json: 'string',
+    values: ["'00000000-0000-4000-8000-000000000001'", "'00000000-0000-4000-8000-000000000002'"],
+    jsonValues: ["'00000000-0000-4000-8000-000000000001'", "'00000000-0000-4000-8000-000000000002'"],
+    invalid: "'not-a-uuid'",
+  },
+};
+
+const kind = (f: EntityField) => KINDS[f.type];
+const lines = (fields: readonly EntityField[], line: (f: EntityField) => string) => fields.map((f) => `  ${line(f)}\n`).join('');
+/** `a: x, b: y` from each field's value; `first` stands in for the first field's. */
+const props = (fields: readonly EntityField[], value: (f: EntityField) => string, first?: string) =>
+  fields.map((f, i) => `${f.key}: ${i === 0 && first !== undefined ? first : value(f)}`);
+/** An object literal: on one line when it is short, else one property a line under `indent`. */
+const obj = (entries: string[], indent: string) => {
+  const line = `{ ${entries.join(', ')} }`;
+  return line.length <= 80 ? line : `{\n${entries.map((e) => `${indent}  ${e},\n`).join('')}${indent}}`;
+};
+
+/**
+ * Files for a full vertical slice (table → repository → service → handlers → controller → test).
+ * `fields` are the entity's own columns; without them it has a `name`.
+ */
+export function entityFiles(n: Names, fields: readonly EntityField[] = DEFAULT_FIELDS): Record<string, string> {
   const dir = `src/services/${n.pluralKebab}`;
   return {
-    [`src/schema/${n.pluralKebab}.ts`]: schema(n),
-    [`src/contracts/${n.pluralKebab}.ts`]: contracts(n),
+    [`src/schema/${n.pluralKebab}.ts`]: schema(n, fields),
+    [`src/contracts/${n.pluralKebab}.ts`]: contracts(n, fields),
     [`${dir}/${n.pluralKebab}.repository.ts`]: repository(n),
-    [`${dir}/${n.pluralKebab}.service.ts`]: service(n),
+    [`${dir}/${n.pluralKebab}.service.ts`]: service(n, fields),
     [`${dir}/${n.pluralKebab}.handler.ts`]: handler(n),
-    [`${dir}/${n.pluralKebab}.service.test.ts`]: serviceTest(n),
+    [`${dir}/${n.pluralKebab}.service.test.ts`]: serviceTest(n, fields),
     [`src/api/controllers/${n.pluralKebab}.controller.ts`]: controller(n),
-    [`src/api/controllers/${n.pluralKebab}.e2e.test.ts`]: e2eTest(n),
+    [`src/api/controllers/${n.pluralKebab}.e2e.test.ts`]: e2eTest(n, fields),
   };
 }
 
-const schema = (n: Names) => `import { column, defineTable, type InferEntity } from '@mariachi/database';
+const schema = (n: Names, fields: readonly EntityField[]) => `import { column, defineTable, type InferEntity } from '@mariachi/database';
 
 /** Tenant-scoped (tenantId) and soft-deleted (deletedAt); repositories enforce both. */
 export const ${n.pluralCamel}Table = defineTable('${n.pluralSnake}', {
   id: column.uuid().primaryKey().defaultRandom(),
   tenantId: column.text().notNull(),
-  name: column.text().notNull(),
-  createdAt: column.timestamp().notNull().defaultNow(),
+${lines(fields, (f) => `${f.key}: ${kind(f).column}${f.optional ? '' : '.notNull()'},`)}  createdAt: column.timestamp().notNull().defaultNow(),
   updatedAt: column.timestamp().notNull().defaultNow(),
   deletedAt: column.timestamp(),
 });
@@ -30,18 +103,16 @@ export const ${n.pluralCamel}Table = defineTable('${n.pluralSnake}', {
 export type ${n.pascal} = InferEntity<typeof ${n.pluralCamel}Table>;
 `;
 
-const contracts = (n: Names) => `import { z } from 'zod';
+const contracts = (n: Names, fields: readonly EntityField[]) => `import { z } from 'zod';
 
 export const ${n.camel}Schema = z.object({
   id: z.string().uuid(),
-  name: z.string(),
-  createdAt: z.date(),
+${lines(fields, (f) => `${f.key}: ${kind(f).zod}${f.optional ? '.nullable()' : ''},`)}  createdAt: z.date(),
   updatedAt: z.date(),
 });
 
 export const create${n.pascal}Input = z.object({
-  name: z.string().trim().min(1).max(200),
-});
+${lines(fields, (f) => `${f.key}: ${kind(f).input}${f.optional ? '.nullable().optional()' : ''},`)}});
 
 export const update${n.pascal}Body = create${n.pascal}Input.partial();
 
@@ -87,7 +158,7 @@ export class ${n.pluralPascal}Repository extends DrizzleRepository<${n.pascal}> 
 }
 `;
 
-const service = (n: Names) => `import type { Context, CursorPaginatedResult } from '@mariachi/core';
+const service = (n: Names, fields: readonly EntityField[]) => `import type { Context, CursorPaginatedResult } from '@mariachi/core';
 import type { Create${n.pascal}Input, List${n.pluralPascal}Input, Update${n.pascal}Input } from '../../contracts/${n.pluralKebab}';
 import type { ${n.pascal} } from '../../schema/${n.pluralKebab}';
 import type { ${n.pluralPascal}Repository } from './${n.pluralKebab}.repository';
@@ -96,7 +167,7 @@ export class ${n.pluralPascal}Service {
   constructor(private readonly ${n.pluralCamel}: ${n.pluralPascal}Repository) {}
 
   create(ctx: Context, input: Create${n.pascal}Input): Promise<${n.pascal}> {
-    return this.${n.pluralCamel}.create(ctx, { name: input.name });
+    return this.${n.pluralCamel}.create(ctx, ${obj(props(fields, (f) => `input.${f.key}`), '    ')});
   }
 
   get(ctx: Context, id: string): Promise<${n.pascal}> {
@@ -115,6 +186,7 @@ export class ${n.pluralPascal}Service {
   async remove(ctx: Context, id: string): Promise<void> {
     await this.${n.pluralCamel}.softDelete(ctx, id);
   }
+  // ${MARKERS.procedures}
 }
 `;
 
@@ -151,10 +223,17 @@ export function register${n.pluralPascal}Handlers(communication: CommunicationLa
     schema: { input: ${n.camel}IdInput, output: z.void() },
     handler: (ctx, input) => service.remove(ctx, input.id),
   });
+  // ${MARKERS.procedures}
 }
 `;
 
-const serviceTest = (n: Names) => `import { describe, expect, it, vi } from 'vitest';
+const serviceTest = (n: Names, fields: readonly EntityField[]) => {
+  const first = fields[0];
+  const values = props(fields, (f) => kind(f).values[0]);
+  const created = obj(values, '    ');
+  const renamed = `${first.key}: ${kind(first).values[1]}`;
+  const shape = fields.map((f) => `${f.key}${f.optional ? '?' : ''}: ${kind(f).ts}${f.optional ? ' | null' : ''}`).join('; ');
+  return `import { describe, expect, it, vi } from 'vitest';
 import { createContext, type Logger } from '@mariachi/core';
 import type { ${n.pluralPascal}Repository } from './${n.pluralKebab}.repository';
 import { ${n.pluralPascal}Service } from './${n.pluralKebab}.service';
@@ -164,7 +243,7 @@ const ctx = createContext({ logger, tenantId: 'tenant-1', userId: 'user-1' });
 
 function setup() {
   const repo = {
-    create: vi.fn(async (_ctx: unknown, data: { name: string }) => ({ id: 'id-1', tenantId: 'tenant-1', ...data })),
+    create: vi.fn(async (_ctx: unknown, data: { ${shape} }) => ({ id: 'id-1', tenantId: 'tenant-1', ...data })),
     update: vi.fn(async (_ctx: unknown, id: string, data: object) => ({ id, ...data })),
     softDelete: vi.fn(async () => undefined),
   };
@@ -174,15 +253,15 @@ function setup() {
 describe('${n.pluralPascal}Service', () => {
   it('creates within the caller context', async () => {
     const { repo, service } = setup();
-    const created = await service.create(ctx, { name: 'First' });
-    expect(created).toMatchObject({ id: 'id-1', name: 'First' });
-    expect(repo.create).toHaveBeenCalledWith(ctx, { name: 'First' });
+    const created = await service.create(ctx, ${created});
+    expect(created).toMatchObject(${obj(["id: 'id-1'", ...values], '    ')});
+    expect(repo.create).toHaveBeenCalledWith(ctx, ${created});
   });
 
   it('updates only the provided fields', async () => {
     const { repo, service } = setup();
-    await service.update(ctx, { id: 'id-1', name: 'Renamed' });
-    expect(repo.update).toHaveBeenCalledWith(ctx, 'id-1', { name: 'Renamed' });
+    await service.update(ctx, { id: 'id-1', ${renamed} });
+    expect(repo.update).toHaveBeenCalledWith(ctx, 'id-1', { ${renamed} });
   });
 
   it('soft deletes', async () => {
@@ -192,6 +271,7 @@ describe('${n.pluralPascal}Service', () => {
   });
 });
 `;
+};
 
 const controller = (n: Names) => `import { BaseController } from '@mariachi/api-facade';
 import {
@@ -235,7 +315,14 @@ export class ${n.pluralPascal}Controller extends BaseController {
 }
 `;
 
-const e2eTest = (n: Names) => `import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+const e2eTest = (n: Names, fields: readonly EntityField[]) => {
+  const first = fields[0];
+  const k = kind(first);
+  const isText = k.invalid === "''";
+  const json = (value: string) => obj(props(fields, (f) => kind(f).jsonValues[0], value), '    ');
+  const one = (value: string) => `${first.key}: ${value}`;
+  const [private_, taken] = isText ? ["'Private'", "'Taken'"] : k.jsonValues;
+  return `import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { startApp, type RunningApp } from '../../testing/e2e';
 
 // Two people in two tenants
@@ -251,34 +338,34 @@ afterAll(() => running?.stop());
 
 describe('${n.pluralKebab.replace(/-/g, ' ')} over HTTP', () => {
   it('creates, reads, lists, updates and deletes', async () => {
-    const created = await running.request(path, { as: ada, json: { name: 'First' } });
+    const created = await running.request(path, { as: ada, json: ${json(k.jsonValues[0])} });
     expect(created.status).toBe(201);
-    const ${n.camel} = (await created.json()) as { id: string; name: string };
-    expect(${n.camel}).toMatchObject({ name: 'First' });
+    const ${n.camel} = (await created.json()) as { id: string; ${first.key}: ${k.json}${first.optional ? ' | null' : ''} };
+    expect(${n.camel}).toMatchObject({ ${one(k.jsonValues[0])} });
 
     const read = await running.request(\`\${path}/\${${n.camel}.id}\`, { as: ada });
-    expect(await read.json()).toMatchObject({ id: ${n.camel}.id, name: 'First' });
+    expect(await read.json()).toMatchObject({ id: ${n.camel}.id, ${one(k.jsonValues[0])} });
 
     const listed = (await (await running.request(path, { as: ada })).json()) as { data: Array<{ id: string }> };
     expect(listed.data.map((row) => row.id)).toContain(${n.camel}.id);
 
-    const updated = await running.request(\`\${path}/\${${n.camel}.id}\`, { as: ada, method: 'PATCH', json: { name: 'Renamed' } });
-    expect(await updated.json()).toMatchObject({ id: ${n.camel}.id, name: 'Renamed' });
+    const updated = await running.request(\`\${path}/\${${n.camel}.id}\`, { as: ada, method: 'PATCH', json: { ${one(k.jsonValues[1])} } });
+    expect(await updated.json()).toMatchObject({ id: ${n.camel}.id, ${one(k.jsonValues[1])} });
 
     expect((await running.request(\`\${path}/\${${n.camel}.id}\`, { as: ada, method: 'DELETE' })).status).toBe(204);
     expect((await running.request(\`\${path}/\${${n.camel}.id}\`, { as: ada })).status).toBe(404);
   });
 
   it("keeps one tenant's rows from another", async () => {
-    const created = await running.request(path, { as: ada, json: { name: 'Private' } });
+    const created = await running.request(path, { as: ada, json: ${json(private_)} });
     const { id } = (await created.json()) as { id: string };
 
     expect((await running.request(\`\${path}/\${id}\`, { as: lin })).status).toBe(404);
-    expect((await running.request(\`\${path}/\${id}\`, { as: lin, method: 'PATCH', json: { name: 'Taken' } })).status).toBe(404);
+    expect((await running.request(\`\${path}/\${id}\`, { as: lin, method: 'PATCH', json: { ${one(taken)} } })).status).toBe(404);
     expect((await running.request(\`\${path}/\${id}\`, { as: lin, method: 'DELETE' })).status).toBe(404);
     const theirs = (await (await running.request(path, { as: lin })).json()) as { data: Array<{ id: string }> };
     expect(theirs.data.map((row) => row.id)).not.toContain(id);
-    expect(await (await running.request(\`\${path}/\${id}\`, { as: ada })).json()).toMatchObject({ name: 'Private' });
+    expect(await (await running.request(\`\${path}/\${id}\`, { as: ada })).json()).toMatchObject({ ${one(private_)} });
   });
 
   it('asks for a token, and refuses one it does not know', async () => {
@@ -290,9 +377,10 @@ describe('${n.pluralKebab.replace(/-/g, ' ')} over HTTP', () => {
   });
 
   it('refuses a body the contract rules out', async () => {
-    const res = await running.request(path, { as: ada, json: { name: '' } });
+    const res = await running.request(path, { as: ada, json: ${json(k.invalid)} });
     expect(res.status).toBe(400);
     expect(await res.json()).toMatchObject({ error: { code: expect.any(String) } });
   });
 });
 `;
+};

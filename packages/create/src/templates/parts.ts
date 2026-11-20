@@ -1,3 +1,4 @@
+import { MARKERS } from '../layout';
 import type { Names } from '../names';
 
 export function serviceFiles(n: Names): Record<string, string> {
@@ -39,6 +40,7 @@ export class ${n.pascal}Service {
     ctx.logger.info({ id: input.id }, '${n.camel}.execute');
     return { id: input.id, processedAt: new Date() };
   }
+  // ${MARKERS.procedures}
 }
 `;
 
@@ -51,6 +53,7 @@ export function register${n.pascal}Handlers(communication: CommunicationLayer, s
     schema: { input: ${n.camel}ExecuteInput, output: ${n.camel}ExecuteOutput },
     handler: (ctx, input) => service.execute(ctx, input),
   });
+  // ${MARKERS.procedures}
 }
 `;
 
@@ -251,5 +254,92 @@ export const ${n.camel}Seed = defineSeed<DrizzleDb>({
     void db;
     ctx.logger.info({ seed: '${n.kebab}' }, 'seed ran');
   },
+});
+`;
+
+/** One procedure added to an existing service: `<service>.<action>`. `svc` names the service's folder. */
+export interface ProcedureNames {
+  /** `notes.archive` */
+  procedure: string;
+  /** `notesArchive`: the schemas are `notesArchiveInput` and `notesArchiveOutput` */
+  camel: string;
+  /** `NotesArchive`: the types are `NotesArchiveInput` and `NotesArchiveOutput` */
+  pascal: string;
+  /** `archive`: the service's method */
+  method: string;
+}
+
+export function procedureNames(svc: Names, action: Names): ProcedureNames {
+  return {
+    procedure: `${svc.camel}.${action.camel}`,
+    camel: `${svc.camel}${action.pascal}`,
+    pascal: `${svc.pascal}${action.pascal}`,
+    method: action.camel,
+  };
+}
+
+/** Appended to the service's contract (its own `declare module` block, which TypeScript merges with the others). */
+export const procedureContract = (p: ProcedureNames): string => `
+export const ${p.camel}Input = z.object({
+  id: z.string().min(1),
+});
+
+export const ${p.camel}Output = z.object({
+  id: z.string(),
+});
+
+export type ${p.pascal}Input = z.infer<typeof ${p.camel}Input>;
+export type ${p.pascal}Output = z.infer<typeof ${p.camel}Output>;
+
+declare module '@mariachi/communication' {
+  interface Procedures {
+    '${p.procedure}': { input: ${p.pascal}Input; output: ${p.pascal}Output };
+  }
+}
+`;
+
+/** Inserted into the service class. */
+export const procedureMethod = (p: ProcedureNames): string => `
+  async ${p.method}(ctx: Context, input: ${p.pascal}Input): Promise<${p.pascal}Output> {
+    ctx.logger.info({ id: input.id }, '${p.procedure}');
+    return { id: input.id };
+  }`;
+
+/** Inserted into `register…Handlers()`. */
+export const procedureRegistration = (p: ProcedureNames): string => `communication.register('${p.procedure}', {
+  schema: { input: ${p.camel}Input, output: ${p.camel}Output },
+  handler: (ctx, input) => service.${p.method}(ctx, input),
+});`;
+
+/**
+ * The procedure as a caller reaches it: through communication, its contract checked on the way in
+ * and out. `needsDeps`: the service's constructor takes dependencies, so the test builds it without them.
+ */
+export const procedureTest = (svc: Names, p: ProcedureNames, register: string, serviceClass: string, needsDeps: boolean): string => `import { describe, expect, it } from 'vitest';
+import { createCommunication } from '@mariachi/communication';
+import { createContext, type Logger } from '@mariachi/core';
+import { ${register} } from './${svc.kebab}.handler';
+import { ${serviceClass} } from './${svc.kebab}.service';
+
+const logger = { debug() {}, info() {}, warn() {}, error() {}, child: () => logger } as unknown as Logger;
+const ctx = createContext({ logger, tenantId: 'tenant-1', userId: 'user-1' });
+
+function setup() {
+  const communication = createCommunication({}, { logger });
+${needsDeps
+  ? `  // Built without its constructor's dependencies, which ${p.method} doesn't use yet: pass fakes once it does
+  ${register}(communication, Object.create(${serviceClass}.prototype) as ${serviceClass});`
+  : `  ${register}(communication, new ${serviceClass}());`}
+  return communication;
+}
+
+describe('${p.procedure}', () => {
+  it('answers through communication', async () => {
+    await expect(setup().call(ctx, '${p.procedure}', { id: 'abc' })).resolves.toEqual({ id: 'abc' });
+  });
+
+  it('refuses input its contract rules out', async () => {
+    await expect(setup().call(ctx, '${p.procedure}', { id: '' })).rejects.toMatchObject({ code: 'validation/invalid-input' });
+  });
 });
 `;

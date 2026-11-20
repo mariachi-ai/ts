@@ -12,11 +12,12 @@ finish.
 | --- | --- | --- |
 | Add a resource with CRUD endpoints | table + repository + service + handler + controller | `mariachi generate entity <name>`, [recipe](./recipes/add-domain-entity.md) |
 | Add business logic callable from HTTP | service + handler (`communication.register`) | `mariachi generate service <name>` |
+| Add an operation to a service that exists | contract + method + `communication.register` | `mariachi generate procedure <service> <name>` |
 | Expose a procedure over HTTP | `BaseController` calling `this.call(ctx, name, input)` | `mariachi generate controller <name>`, [http.md](./http.md) |
 | Do work later, with retries, or on a cron | `defineJob` + `jobs.enqueue(ctx, ...)` / `jobs.schedule` | `mariachi generate job <name>`, [jobs.md](./jobs.md) |
-| Tell other modules something happened | `defineEvent` + `events.publish(ctx, ...)` / `subscribe` | [events.md](./events.md) |
+| Tell other modules something happened | `defineEvent` + `events.publish(ctx, ...)` / `subscribe` | `mariachi generate event <domain.thing.happened> --subscriber <name>`, [events.md](./events.md) |
 | Publish an event atomically with a DB write | transactional outbox | [events.md](./events.md#transactional-outbox) |
-| Receive a signed callback from a provider | `WebhookController` + `GitHubWebhookAuth` / `StripeWebhookAuth` / `StandardWebhookAuth` / `HmacWebhookAuth` (or `SignatureAuthController` for another scheme) | [recipe](./recipes/add-webhook-endpoint.md) |
+| Receive a signed callback from a provider | `WebhookController` + `GitHubWebhookAuth` / `StripeWebhookAuth` / `StandardWebhookAuth` / `HmacWebhookAuth` (or `SignatureAuthController` for another scheme) | `mariachi generate webhook <name>`, [recipe](./recipes/add-webhook-endpoint.md) |
 | Call a third-party API | typed client with retry + `IntegrationError` | `mariachi generate integration <name>` |
 | Push live updates to browsers | `DefaultRealtime` + `WSAdapter` | [realtime.md](./realtime.md) |
 | Cache or lock | `DefaultCache.getOrSet`, `createLock().withLock` | below |
