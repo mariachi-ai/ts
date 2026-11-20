@@ -332,8 +332,27 @@ mariachi validate [path]      # --strict (warnings fail), --disable <rules...>, 
 
 Checks the rules in [conventions.md](./conventions.md): layer boundaries (controllers ↔ services ↔
 database ↔ HTTP), extensionless relative imports, no deep `@mariachi/*` imports, no `process.env`
-outside config, no raw `Error` throws, unique procedure names, event naming, and a handler and test for
-each service. Exits 1 on errors. Run it in CI next to `tsc`.
+outside config, no raw `Error` throws, event naming, and a handler and test for each service. It also
+reads each file's syntax tree (with the TypeScript compiler) for:
+
+| Rule | Checks |
+| --- | --- |
+| `ctx-first` | Procedure, route, job and event handlers and service and repository methods take `ctx: Context` first; `communication.call`, `this.call`, `jobs.enqueue` and `events.publish` pass it first |
+| `zod-at-boundaries` | Procedures have input and output schemas; routes have a schema for the body, params and query their handler reads (a webhook route parses its body with Zod in the handler); jobs and events have a payload schema |
+| `procedure-name-format` | Registered and called procedure names are `domainCamel.action` |
+| `unique-procedure-names` | No name is registered twice |
+| `procedure-registered` (warning) | Each procedure called with a literal name is registered in the project |
+
+Each finding gives the file and line, the rule and the fix:
+
+```
+error src/services/notes/notes.handler.ts:16 ctx-first
+  The handler of procedure "notes.create" takes input first, not the Context
+  → Take ctx first: handler: (ctx, input) => …
+```
+
+Exits 1 on errors (and on warnings with `--strict`); `--json` prints `{ valid, violations, filesChecked }`.
+A project made by `mariachi init` runs it, then `tsc --noEmit`, as `pnpm lint`. Run that in CI.
 
 ## db
 

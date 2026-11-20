@@ -54,14 +54,9 @@ project owns; `mariachi docs` and `llms.txt`; cron schedules in the in-memory jo
      through sign-in and back, then posts the token. `INVITATION_URL` can then have a default.
    - A browser sign-in for the default (`--auth jwt`) project, or a decision that it has none. Its
      pages can show only public content today.
-2. **Design kits in a generated project.** `init --ui` copies a kit into
-   `src/design`, serves it under `/assets/design` and links its imports, and token overrides move to
-   `src/design.css`. Serve `@mariachi/design/behaviors` and a kit's `motion.js` from `/assets`.
-3. **What an agent reads and runs.**
+2. **What an agent reads and runs.**
    - Generators for an event and its subscriber, a webhook endpoint and a procedure on an existing
      service. The entity generator's fixed `name` column and naive plurals.
-   - `mariachi validate` checking `ctx` first, Zod at boundaries and procedure names, not only imports.
-     A `lint` script in generated projects.
    - The example entity indexed for search, as a worked example of `deps.search`.
 
 ## Later
