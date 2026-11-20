@@ -21,6 +21,8 @@ export const ORGANIZATIONS_SCHEMA = `/**
  */
 export { tenantsTable } from '@mariachi/database/schema';
 export { organizationInvitationsTable, organizationMembershipsTable } from '@mariachi/organizations/schema';
+/** The counts behind the limits on creating organizations, inviting and accepting (see src/app.ts). */
+export { rateLimitBucketsTable } from '@mariachi/rate-limit/schema';
 `;
 
 /** `src/organizations.ts`: the one place the app builds its organizations. */
@@ -142,7 +144,12 @@ AUTH_SERVICE_KEY=
 # Accepting an invitation reads the user's address from their token: put \`email\` and
 # \`email_verified: true\` in the tokens you issue, once you have confirmed the address.
 `
-}`;
+}# Creating organizations, inviting and accepting are rate limited. The counts are kept in the database
+# (the rate_limit_buckets table), so every process shares them; with REDIS_URL set, in Redis
+# (pnpm add ioredis). RATE_LIMIT_ADAPTER chooses for itself: postgres, redis (needs REDIS_URL) or
+# memory (each process counts apart: one process only).
+# RATE_LIMIT_ADAPTER=postgres
+`;
 
 /** Imports `app.ts` gains. */
 export const organizationsAppImports = (auth: ProjectAuth): string =>
@@ -168,18 +175,19 @@ export const ORGANIZATIONS_APP_FIELD = `  organizations: DefaultOrganizations;
 /** The statements of `createApp()` that build the organizations, after the services are registered. */
 export const organizationsAppSetup = (auth: ProjectAuth): string => `
   // Organizations, memberships and invitations, in this app's own database: see src/organizations.ts.
-  // The limits are counted in this process's memory, which is right for one process. With REDIS_URL
-  // set (and ioredis installed) they are counted in Redis, and so shared by every process that serves the API.
+  // Creating, inviting and accepting are rate limited. The counts are kept in this database (the
+  // rate_limit_buckets table, src/schema/organizations.ts), so every process that serves the API shares
+  // them. With REDIS_URL set (and ioredis installed) they are kept in Redis. RATE_LIMIT_ADAPTER chooses
+  // for itself: postgres, redis or memory (one process only).
+  const rateLimitAdapter = config.rateLimit?.adapter ?? (config.redis ? 'redis' : 'postgres');
+  if (rateLimitAdapter === 'redis' && !config.redis) {
+    throw new ConfigError('app/rate-limit-redis-url-required', 'RATE_LIMIT_ADAPTER=redis needs REDIS_URL');
+  }
   const limiter = lifecycle.manage(
     'rate-limit',
-    config.redis
-      ? createRateLimiter({ adapter: 'redis', url: config.redis.url, prefix: \`\${config.serviceName}:rate-limit\` })
-      : createRateLimiter({ adapter: 'memory' }),
+    createRateLimiter({ adapter: rateLimitAdapter, url: config.redis?.url, db: database.db, prefix: \`\${config.serviceName}:rate-limit\` }),
     { priority: 20 },
   );
-  if (!config.redis && config.env === 'production') {
-    logger.warn({ setting: 'REDIS_URL' }, 'Rate limits on creating organizations, inviting and accepting are counted per process: set REDIS_URL so every process shares them');
-  }
   const { organizations, access } = setupOrganizations({
     db: database.db,
     communication,
@@ -232,6 +240,10 @@ export const organizationsAgents = (auth: ProjectAuth): string => `
 - The routes are under \`/api/organizations\` (\`OrganizationsController\`); they call the
   \`organizations.*\` procedures. From your own services use the \`organizations\` object \`createApp()\`
   returns. Write through it, never with SQL: the last-owner rule and the membership cache live there.
+- Creating, inviting and accepting are rate limited (\`limiter\` in \`src/app.ts\`). The counts are in
+  this app's database (\`rate_limit_buckets\`, exported from \`src/schema/organizations.ts\`), shared by
+  every process; with \`REDIS_URL\` set they are in Redis. \`RATE_LIMIT_ADAPTER\` overrides the choice.
+  Keep the table in the schema while the limiter uses Postgres.
 - In an end-to-end test, \`{ as: { userId, tenantId: 'acme' } }\` is a member of an organization the
   test calls \`acme\`: the harness creates it, and the membership, the first time they are named
   (the first user named is its owner). \`tenantId: ''\` is a user in no organization.
@@ -286,8 +298,10 @@ curl -X POST localhost:3000/api/organizations/$ORGANIZATION_ID/invitations -H "a
       : 'The address is read from the token: issue tokens with `email`, and with `email_verified: true` once you have confirmed it. `mariachi token --email <address>` signs a development token that says both.'
   }
 - Creating, inviting and accepting are rate limited, per user and per organization. The counts are
-  in this process's memory; when more than one process serves the API, \`pnpm add ioredis\` and set
-  \`REDIS_URL\`, so they share them.
+  kept in this app's database (the \`rate_limit_buckets\` table, created by the first migration), so
+  every process that serves the API shares them, with nothing more to run. With \`REDIS_URL\` set
+  they are kept in Redis instead (\`pnpm add ioredis\`). \`RATE_LIMIT_ADAPTER\` (\`postgres\`,
+  \`redis\` or \`memory\`) chooses for itself; \`memory\` counts each process apart.
 ${
   auth === 'gotrue'
     ? "- **Leave the organization out of the token.** If a hook of yours puts one there (`AUTH_ORG_CLAIM`), a request runs in that organization without naming it (the membership here still admits it, and the role comes from the membership, never the token), but a request that names a different one is refused (`tenancy/mismatch`), so a user in two organizations could not switch. Let the header name the organization.\n"

@@ -169,7 +169,26 @@ are in `ORGANIZATION_PROCEDURES`), so a controller of your own can call them too
 **Limits.** Give `registerOrganizationProcedures` the rate limiter your API uses, and creating,
 inviting and accepting are limited: 10 organizations an hour per user; 30 invitations an hour per
 user and 200 per organization; 10 accept attempts in ten minutes per user and 30 per address.
-`limits` changes the numbers. Without a limiter there are none.
+`limits` changes the numbers. Without a limiter there are none. If the limiter fails, the call is
+allowed and a warning logged, so a limiter that can't reach its store never blocks invitations.
+
+Count the limits where every process that serves the API can see them. A project made with
+`mariachi init --orgs` keeps them in its own database, with no Redis: `src/schema/organizations.ts`
+exports `rateLimitBucketsTable` (from `@mariachi/rate-limit/schema`), so the first migration creates
+`rate_limit_buckets`, and `src/app.ts` builds the limiter like this:
+
+```ts
+const limiter = createRateLimiter({
+  adapter: config.rateLimit?.adapter ?? (config.redis ? 'redis' : 'postgres'),
+  url: config.redis?.url,
+  db: database.db,
+  prefix: `${config.serviceName}:rate-limit`,
+});
+```
+
+With `REDIS_URL` set (and `ioredis` installed) the counts are kept in Redis. `RATE_LIMIT_ADAPTER`
+(`postgres`, `redis` or `memory`) chooses for itself; `memory` counts each process apart, so it suits
+one process only. See [http.md](./http.md#rate-limits) for the limiters.
 
 **Several identity providers.** A user's id is the key of their memberships, so two providers must
 not be able to issue the same one. Give each verifier a namespace before it reaches the API:

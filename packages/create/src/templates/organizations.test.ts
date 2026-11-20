@@ -15,7 +15,7 @@ describe('a project without --orgs', () => {
       const files = plain[auth];
       for (const file of ORG_FILES) expect(files[file], `${auth} ${file}`).toBeUndefined();
       const everything = Object.values(files).join('\n');
-      expect(everything).not.toMatch(/@mariachi\/organizations|x-organization-id|INVITATION_URL|AUTH_SERVICE_KEY/);
+      expect(everything).not.toMatch(/@mariachi\/organizations|x-organization-id|INVITATION_URL|AUTH_SERVICE_KEY|RATE_LIMIT_ADAPTER|rateLimitBucketsTable/);
       // Nothing an expression left behind
       expect(everything).not.toMatch(/\bundefined\b\n|\[object Object\]/);
     }
@@ -57,9 +57,30 @@ describe('a project with --orgs', () => {
   it('limits creating, inviting and accepting, and emails an invitation only when there is a page to send people to', () => {
     for (const auth of AUTHS) {
       const app = orgs[auth]['src/app.ts'] as string;
-      // In memory with only Postgres; in Redis, shared between processes, once there is one
-      expect(app).toContain("? createRateLimiter({ adapter: 'redis', url: config.redis.url");
-      expect(app).toContain(": createRateLimiter({ adapter: 'memory' }),");
+      // In the app's database, shared by every process; in Redis once there is one; RATE_LIMIT_ADAPTER overrides both
+      expect(app).toContain("const rateLimitAdapter = config.rateLimit?.adapter ?? (config.redis ? 'redis' : 'postgres');");
+      expect(app).toContain(
+        "createRateLimiter({ adapter: rateLimitAdapter, url: config.redis?.url, db: database.db, prefix: `${config.serviceName}:rate-limit` }),",
+      );
+      expect(app).toContain("throw new ConfigError('app/rate-limit-redis-url-required', 'RATE_LIMIT_ADAPTER=redis needs REDIS_URL');");
+      expect(app).toMatch(/^import \{ ConfigError, KEYS \} from '@mariachi\/core';$/m);
+      // The limiter is built once the database is connected, and before the organizations that use it
+      expect(app.indexOf('await database.connect();')).toBeLessThan(app.indexOf('createRateLimiter({'));
+      expect(app.indexOf('createRateLimiter({')).toBeLessThan(app.indexOf('setupOrganizations({'));
+      // Nothing left of the per-process counts, or of the warning that REDIS_URL is needed to share them
+      expect(app).not.toContain("createRateLimiter({ adapter: 'memory' })");
+      expect(app).not.toContain("setting: 'REDIS_URL'");
+      // The first migration creates the table the counts live in
+      expect(orgs[auth]['src/schema/organizations.ts']).toContain("export { rateLimitBucketsTable } from '@mariachi/rate-limit/schema';");
+      const env = orgs[auth]['.env.example'] as string;
+      expect(env).toMatch(/^# RATE_LIMIT_ADAPTER=postgres$/m);
+      expect(env).toContain('RATE_LIMIT_ADAPTER chooses for itself: postgres, redis (needs REDIS_URL) or\n# memory (each process counts apart: one process only).');
+      // The README and AGENTS.md say where the counts are, and how to move them
+      const readme = orgs[auth]['README.md'] as string;
+      expect(readme).toContain('kept in this app\'s database (the `rate_limit_buckets` table, created by the first migration)');
+      expect(readme).toContain('`RATE_LIMIT_ADAPTER` (`postgres`,');
+      expect(readme).not.toContain("this process's memory");
+      expect(orgs[auth]['AGENTS.md']).toContain('`RATE_LIMIT_ADAPTER` overrides the choice.');
       expect(app).toContain('mailer: options.mailer ?? (config.email ? createEmailAdapter({ email: config.email }) : undefined),');
       expect(app).toContain('invitationUrl: app.invitationUrl,');
       const wiring = orgs[auth]['src/organizations.ts'] as string;
