@@ -7,7 +7,8 @@ import { parseStandardWebhookSecrets, verifyStandardWebhook } from '../verify/st
 import { type StripeStyleOptions, verifyStripeWebhook } from '../verify/stripe';
 import { AuthController, type WebhookIdentity } from './auth-controller';
 
-type Secrets = string | string[];
+/** One signing secret, or several while one is being rotated. */
+export type Secrets = string | string[];
 
 /** The secret for one tenant. Return nothing for a tenant that has none, and the delivery is refused. */
 export type TenantSecretResolver = (tenantId: string, req: IncomingRequest) => Secrets | undefined | Promise<Secrets | undefined>;
@@ -33,10 +34,15 @@ export interface VerifiedWebhookAuthOptions {
   tenantFromPayload?: (payload: unknown) => string | undefined;
 }
 
-type Verified = VerifiedWebhook & { metadata?: Record<string, unknown> };
+/** What a subclass's `verify` returns: the delivery's signed id, and anything for `identity.metadata`. */
+export type Verified = VerifiedWebhook & { metadata?: Record<string, unknown> };
 
-/** A webhook authenticator built on one of the `@mariachi/webhooks/verify` checks. */
-abstract class VerifiedWebhookAuth extends AuthController {
+/**
+ * A webhook authenticator built on one of the `@mariachi/webhooks/verify` checks. Subclass it for a sender's own
+ * scheme: implement `verify(rawBody, headers, secret)`, throw on a bad signature, and return the signed delivery
+ * id. Secrets, rotation, tenants and the 401 come from here.
+ */
+export abstract class VerifiedWebhookAuth extends AuthController {
   /** The sender's name: dedup keys, logs and the delivery's span use it. */
   readonly provider: string;
 
