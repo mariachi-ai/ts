@@ -7,7 +7,8 @@ import { parseStandardWebhookSecrets, verifyStandardWebhook } from '../verify/st
 import { type StripeStyleOptions, verifyStripeWebhook } from '../verify/stripe';
 import { AuthController, type WebhookIdentity } from './auth-controller';
 
-type Secrets = string | string[];
+/** One signing secret, or several while one is being rotated. */
+export type Secrets = string | string[];
 
 /** The secret for one tenant. Return nothing for a tenant that has none, and the delivery is refused. */
 export type TenantSecretResolver = (tenantId: string, req: IncomingRequest) => Secrets | undefined | Promise<Secrets | undefined>;
@@ -33,11 +34,17 @@ export interface VerifiedWebhookAuthOptions {
   tenantFromPayload?: (payload: unknown) => string | undefined;
 }
 
-type Verified = VerifiedWebhook & { metadata?: Record<string, unknown> };
+/** What a subclass's `verify` returns: the delivery's signed id, and anything for `identity.metadata`. */
+export type Verified = VerifiedWebhook & { metadata?: Record<string, unknown> };
 
-/** A webhook authenticator built on one of the `@mariachi/webhooks/verify` checks. */
-abstract class VerifiedWebhookAuth extends AuthController {
-  protected readonly provider: string;
+/**
+ * A webhook authenticator built on one of the `@mariachi/webhooks/verify` checks. Subclass it for a sender's own
+ * scheme: implement `verify(rawBody, headers, secret)`, throw on a bad signature, and return the signed delivery
+ * id. Secrets, rotation, tenants and the 401 come from here.
+ */
+export abstract class VerifiedWebhookAuth extends AuthController {
+  /** The sender's name: dedup keys, logs and the delivery's span use it. */
+  readonly provider: string;
 
   protected constructor(
     private readonly base: VerifiedWebhookAuthOptions,
@@ -61,7 +68,11 @@ abstract class VerifiedWebhookAuth extends AuthController {
   }
 
   /** Throws `webhooks/invalid-signature`, or returns the delivery's dedup key and anything else worth keeping. */
-  protected abstract verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified;
+  /**
+   * May be async, for a scheme checked against a provider's published keys (a JWT body verified with its JWKS).
+   * Dedup keys come from signed material only.
+   */
+  protected abstract verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified | Promise<Verified>;
 
   async auth(req: IncomingRequest, ctx: RequestContext): Promise<WebhookIdentity | null> {
     if (!req.rawBody || req.rawBody.length === 0) {
@@ -81,7 +92,7 @@ abstract class VerifiedWebhookAuth extends AuthController {
       secret = this.base.secret;
     }
     try {
-      const { eventId, metadata } = this.verify(req.rawBody, req.headers, secret);
+      const { eventId, metadata } = await this.verify(req.rawBody, req.headers, secret);
       if (this.base.tenantFromPayload) {
         const fromPayload = this.base.tenantFromPayload(parseJson(req.rawBody));
         if (tenantId && fromPayload && fromPayload !== tenantId) {

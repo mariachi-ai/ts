@@ -15,6 +15,11 @@ export interface WebhookRouteOpts {
   ttl?: string;
   /** Store the payload in the webhook log. Default true. Disable for PII-heavy providers. */
   logPayload?: boolean;
+  /**
+   * The delivery's event type, read from what the handler returned, for its span
+   * (`mariachi.integration.event`): `(payload) => payload.type`. A name like `invoice.paid`, never an id.
+   */
+  eventType?: (payload: unknown) => string | undefined;
 }
 
 export type WebhookHandler = (

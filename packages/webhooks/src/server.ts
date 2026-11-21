@@ -1,4 +1,4 @@
-import type { Context, IdempotencyStore, Logger } from '@mariachi/core';
+import type { Context, IdempotencyStore, Logger, Span, TracerAdapter } from '@mariachi/core';
 import { AuthError, ConfigError, runOnce, runWithContext } from '@mariachi/core';
 import { FastifyServerAdapter, contextFromRequest, httpResponse } from '@mariachi/server';
 import type { ServerConfig, RequestContext, IncomingRequest, InjectOptions, InjectResponse } from '@mariachi/server';
@@ -22,6 +22,12 @@ export interface WebhookServerDeps {
   /** Dedup deliveries by provider event id (`identity.eventId`). */
   idempotency?: IdempotencyStore;
   logger?: Logger;
+  /**
+   * Gives each delivery a SERVER span named `<provider> webhook`, with `mariachi.integration` and, when the route
+   * says how to read it (`eventType`), `mariachi.integration.event`. Its status says whether the delivery was
+   * accepted. Nothing from the body, headers or URL is recorded.
+   */
+  tracer?: TracerAdapter;
 }
 
 const SENSITIVE_HEADER = /authorization|cookie|signature|secret|token|api-key|apikey|x-hub|svix-|stripe-/i;
@@ -103,6 +109,35 @@ export class WebhookServer {
     serverCtx: RequestContext,
     req: IncomingRequest,
   ): Promise<unknown> {
+    const provider = (controller.auth as { provider?: unknown }).provider;
+    const name = typeof provider === 'string' ? provider : route.controllerPrefix.replace(/^\/+|\/+$/g, '').split('/').pop() || 'webhook';
+    const span = this.deps.tracer?.startSpan(`${name} webhook`, { 'mariachi.integration': name }, { kind: 'server' });
+    try {
+      const result = await this.handleVerified(controller, route, serverCtx, req, span);
+      span?.setStatus('ok');
+      return result;
+    } catch (err) {
+      const code = (err as { code?: unknown })?.code;
+      span?.setAttribute('error.type', typeof code === 'string' ? code : 'webhooks/failed');
+      span?.setStatus('error', typeof code === 'string' ? code : undefined);
+      throw err;
+    } finally {
+      span?.end();
+    }
+  }
+
+  private async handleVerified(
+    controller: WebhookController,
+    route: WebhookRouteDefinition,
+    serverCtx: RequestContext,
+    req: IncomingRequest,
+    span: Span | undefined,
+  ): Promise<unknown> {
+    const answer = await controller.auth.handshake?.(req, serverCtx);
+    if (answer) {
+      span?.setAttribute('mariachi.integration.event', 'handshake');
+      return answer;
+    }
     const identity = await controller.auth.auth(req, serverCtx);
     if (!identity) throw new AuthError('webhooks/unauthorized', 'Webhook authentication failed');
 
@@ -113,7 +148,7 @@ export class WebhookServer {
     );
     const logger = ctx.logger;
 
-    const process = () => runWithContext(ctx, () => this.process(route, serverCtx, req, identity, ctx));
+    const process = () => runWithContext(ctx, () => this.process(route, serverCtx, req, identity, ctx, span));
 
     if (this.deps.idempotency && identity.eventId) {
       const outcome = await runOnce(this.deps.idempotency, `webhook:${identity.provider}:${identity.eventId}`, process);
@@ -132,6 +167,7 @@ export class WebhookServer {
     req: IncomingRequest,
     identity: WebhookContext['identity'],
     ctx: Context,
+    span?: Span,
   ): Promise<unknown> {
     const logStore = this.deps.logStore;
     const logId = logStore
@@ -157,6 +193,8 @@ export class WebhookServer {
     let payload: unknown;
     try {
       payload = await route.handler(webhookCtx, req.body, req.params, req.query);
+      const event = route.opts.eventType?.(payload);
+      if (event) span?.setAttribute('mariachi.integration.event', event);
     } catch (err) {
       await fail(err);
       throw err;
