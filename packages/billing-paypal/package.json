@@ -14,6 +14,7 @@
     "entry": [
       "createPayPal",
       "createPayPalBillingAdapter",
+      "payPalSignature",
       "payPalWebhookAuth",
       "normalizePayPalEvent"
     ]

@@ -16,9 +16,7 @@ const CERT_HOSTS: Readonly<Record<PayPalEnvironment, readonly string[]>> = {
 const CERT_PATH = /^\/v1\/notifications\/certs\/[A-Za-z0-9-]{1,100}$/;
 const MAX_CACHED_CERTS = 32;
 
-export interface PayPalWebhookAuthOptions {
-  /** `PAYPAL_WEBHOOK_ID`: the id of the app's webhook (two while moving to a new one). Every delivery is signed for it. */
-  webhookId: string | string[];
+export interface PayPalWebhookVerifierOptions {
   /** `PAYPAL_ENVIRONMENT`. Certificates are only fetched from that environment's PayPal API host. */
   environment: PayPalEnvironment;
   /**
@@ -26,43 +24,47 @@ export interface PayPalWebhookAuthOptions {
    * default: PayPal retries a delivery for up to 3 days and doesn't say whether a retry carries a new time.
    */
   toleranceSeconds?: number;
+}
+
+export interface PayPalWebhookAuthOptions extends PayPalWebhookVerifierOptions {
+  /** `PAYPAL_WEBHOOK_ID`: the id of the app's webhook (two while moving to a new one). Every delivery is signed for it. */
+  webhookId: string | string[];
   /** The tenant named in the delivery's body, when the app puts one there. */
   tenantFromPayload?: VerifiedWebhookAuthOptions['tenantFromPayload'];
 }
 
 export interface PayPalWebhookAuthDeps extends ProviderDeps {
-  /** For tests: answers the certificate download (`testing`'s `payPalCertificateFetch`). */
+  /** For tests: answers the certificate download (`testing`'s `payPalWebhookSigner().fetch`). */
   fetch?: typeof fetch;
   /** For tests: the wall clock, in ms. */
   clock?: () => number;
 }
 
+/** The `PAYPAL-*` headers PayPal signs a delivery with. */
+const SIGNATURE_HEADERS = ['paypal-transmission-id', 'paypal-transmission-time', 'paypal-transmission-sig', 'paypal-cert-url', 'paypal-auth-algo'] as const;
+
 /**
- * The authenticator for a `WebhookController` that receives PayPal. It checks the signature itself, without a
- * call to PayPal per delivery: `PAYPAL-TRANSMISSION-SIG` is the base64 SHA256withRSA signature of
- * `<transmission id>|<transmission time>|<webhook id>|<CRC32 of the raw body>`, checked with the certificate at
- * `PAYPAL-CERT-URL`. That URL must be `https://` on PayPal's API host for the environment, under
- * `/v1/notifications/certs/`; the certificate is downloaded (through `providerRequest`, span
- * `paypal webhookCerts.get`) the first time and cached until it expires.
- *
- * PayPal signs only the body's CRC32, not a cryptographic digest of it, so the delivery is deduplicated on the
- * signed transmission id (a captured delivery is accepted once), and `normalizePayPalEvent` re-reads what it
- * reports from the API before the app acts on it.
+ * PayPal's signature check, without a call to PayPal per delivery: `PAYPAL-TRANSMISSION-SIG` is the base64
+ * SHA256withRSA signature of `<transmission id>|<transmission time>|<webhook id>|<CRC32 of the raw body>`, checked
+ * with the certificate at `PAYPAL-CERT-URL`. That URL must be `https://` on PayPal's API host for the
+ * environment, under `/v1/notifications/certs/`, or it is refused before anything is fetched; the certificate is
+ * downloaded through `providerRequest` (span `paypal webhookCerts.get`) the first time and cached until it
+ * expires. Throws `webhooks/invalid-signature`; returns the signed transmission id.
  */
-export class PayPalWebhookAuth extends VerifiedWebhookAuth {
+export class PayPalWebhookVerifier {
   private readonly certs = new Map<string, { key: KeyObject; validTo: number }>();
   private readonly clock: () => number;
 
   constructor(
-    private readonly options: PayPalWebhookAuthOptions,
+    private readonly options: PayPalWebhookVerifierOptions,
     private readonly deps: PayPalWebhookAuthDeps = {},
   ) {
-    super({ secret: options.webhookId, provider: provider.id, tenantFromPayload: options.tenantFromPayload }, provider.id);
     if (!CERT_HOSTS[options.environment]) throw new AuthError('webhooks/invalid-secret', 'PayPal webhook: environment must be sandbox or live');
     this.clock = deps.clock ?? Date.now;
   }
 
-  protected async verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Promise<Verified> {
+  async verify(rawBody: Buffer | string, headers: WebhookHeaders, webhookId: string | string[]): Promise<{ transmissionId: string }> {
+    const body = typeof rawBody === 'string' ? Buffer.from(rawBody) : rawBody;
     const transmissionId = headerValue(headers, 'paypal-transmission-id');
     const transmissionTime = headerValue(headers, 'paypal-transmission-time');
     const signature = headerValue(headers, 'paypal-transmission-sig');
@@ -76,12 +78,12 @@ export class PayPalWebhookAuth extends VerifiedWebhookAuth {
     }
     const key = await this.certificateKey(this.checkedCertUrl(certUrl));
     const sig = Buffer.from(signature, 'base64');
-    const crc = crc32(rawBody);
-    const ids = (Array.isArray(secret) ? secret : [secret]).map((s) => s.trim()).filter(Boolean);
-    const ok = ids.some((webhookId) => verifySignature('sha256', Buffer.from(`${transmissionId}|${transmissionTime}|${webhookId}|${crc}`), key, sig));
+    const crc = crc32(body);
+    const ids = (Array.isArray(webhookId) ? webhookId : [webhookId]).map((s) => s?.trim()).filter(Boolean);
+    if (ids.length === 0) invalid('no webhook id configured');
+    const ok = ids.some((id) => verifySignature('sha256', Buffer.from(`${transmissionId}|${transmissionTime}|${id}|${crc}`), key, sig));
     if (!ok) invalid('signature does not match');
-    const body = parseBody(rawBody);
-    return { eventId: `transmission:${transmissionId}`, metadata: { eventId: body?.id, eventType: body?.event_type } };
+    return { transmissionId };
   }
 
   private checkedCertUrl(value: string): URL {
@@ -120,6 +122,51 @@ export class PayPalWebhookAuth extends VerifiedWebhookAuth {
     if (this.certs.size >= MAX_CACHED_CERTS) this.certs.delete(this.certs.keys().next().value as string);
     this.certs.set(url.href, { key: cert.publicKey, validTo });
     return cert.publicKey;
+  }
+}
+
+/**
+ * The authenticator for a `WebhookController` that receives PayPal's events as they are, into a job (the
+ * billing webhook handler, `createBillingWebhookHandler`, is the way that also keeps the billing mirror). It runs
+ * `PayPalWebhookVerifier`'s check. PayPal signs only the body's CRC32, not a cryptographic digest of it, so the
+ * delivery is deduplicated on the signed transmission id (a captured delivery is accepted once); read state
+ * again from PayPal's API before acting on it, as `normalizePayPalEvent` does.
+ */
+export class PayPalWebhookAuth extends VerifiedWebhookAuth {
+  private readonly verifier: PayPalWebhookVerifier;
+
+  constructor(options: PayPalWebhookAuthOptions, deps: PayPalWebhookAuthDeps = {}) {
+    super({ secret: options.webhookId, provider: provider.id, tenantFromPayload: options.tenantFromPayload }, provider.id);
+    this.verifier = new PayPalWebhookVerifier(options, deps);
+  }
+
+  protected async verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Promise<Verified> {
+    const { transmissionId } = await this.verifier.verify(rawBody, headers, secret);
+    const body = parseBody(rawBody);
+    return { eventId: `transmission:${transmissionId}`, metadata: { eventId: body?.id, eventType: body?.event_type } };
+  }
+}
+
+/**
+ * The delivery's `PAYPAL-*` headers as the one `signature` string `createBillingWebhookHandler`'s `handle` takes
+ * (the adapter's `parseWebhook` reads it back). Empty when the delivery has no signature, which `handle` refuses.
+ *
+ * ```ts
+ * await paypalWebhooks.handle(ctx, rawBody, payPalSignature(headers));
+ * ```
+ */
+export function payPalSignature(headers: WebhookHeaders): string {
+  if (!headerValue(headers, 'paypal-transmission-sig')) return '';
+  return JSON.stringify(Object.fromEntries(SIGNATURE_HEADERS.map((h) => [h, headerValue(headers, h) ?? ''])));
+}
+
+/** `payPalSignature`'s string back as headers; nothing for anything else. */
+export function signatureHeaders(signature: string): WebhookHeaders {
+  try {
+    const parsed = JSON.parse(signature) as Record<string, unknown>;
+    return Object.fromEntries(SIGNATURE_HEADERS.map((h) => [h, typeof parsed[h] === 'string' ? (parsed[h] as string) : undefined]));
+  } catch {
+    return {};
   }
 }
 

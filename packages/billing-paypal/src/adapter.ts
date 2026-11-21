@@ -1,5 +1,7 @@
 import type {
   BillingAdapter,
+  BillingEvent,
+  BillingStore,
   Charge,
   CheckoutSession,
   CreateChargeInput,
@@ -18,9 +20,12 @@ import type {
   SubscriptionChangePreview,
   UpdateSubscriptionInput,
 } from '@mariachi/billing';
-import { BillingError } from '@mariachi/core';
+import { BillingError, MariachiError } from '@mariachi/core';
 import { type PayPal, approvalUrl } from './client';
 import { PayPalError, notSupported, toBillingError } from './errors';
+import { normalizePayPalEvent } from './events';
+import { PayPalWebhookEvent } from './schemas';
+import { type PayPalWebhookAuthDeps, PayPalWebhookVerifier, signatureHeaders } from './webhooks';
 import { chargeFromOrder, localCustomer, planFromPayPal, refundFromPayPal, subscriptionFromPayPal, tenantOfCustomer } from './mappers';
 
 /** The reason PayPal requires on a cancel or a suspension the port asks for, which carries none. */
@@ -37,15 +42,30 @@ const REASONS = { cancel: 'Canceled by the merchant', pause: 'Paused by the merc
  *   `createCheckoutSession` make a subscription that waits for approval (its link is the checkout URL).
  * - **What PayPal can't do** fails with `billing/not-supported`: several prices on one subscription, trials set
  *   per subscription, plan changes without the subscriber's consent (`paypal.subscriptions.revise` gives the
- *   approval link), cancel at period end, previews, a portal, invoices, metered usage, a credit balance, lookup
- *   keys, and the Stripe-style webhook handler (use `payPalWebhookAuth` and `normalizePayPalEvent`).
+ *   approval link), cancel at period end, previews, a portal, invoices, metered usage, a credit balance and lookup
+ *   keys.
+ * - **Webhooks** are signed with a PayPal certificate across several headers: hand `createBillingWebhookHandler`
+ *   `payPalSignature(headers)` as the signature and the webhook id as the secret.
  *
  * The port's methods take no `ctx`, so these calls carry none (`null`): their spans have no parent.
  */
+export interface PayPalBillingAdapterOptions {
+  /** For the webhook check's certificate download: the container's tracer and metrics, or a test `fetch`. */
+  webhookDeps?: PayPalWebhookAuthDeps;
+  /** Refuse a delivery transmitted further than this from now, in seconds. Off by default (see `PayPalWebhookVerifier`). */
+  webhookToleranceSeconds?: number;
+}
+
 export class PayPalBillingAdapter implements BillingAdapter {
   readonly name = 'paypal';
+  private readonly verifier: PayPalWebhookVerifier;
 
-  constructor(readonly client: PayPal) {}
+  constructor(
+    readonly client: PayPal,
+    options: PayPalBillingAdapterOptions = {},
+  ) {
+    this.verifier = new PayPalWebhookVerifier({ environment: client.environment, toleranceSeconds: options.webhookToleranceSeconds }, options.webhookDeps);
+  }
 
   private async call<T>(operation: string, fn: () => Promise<T>): Promise<T> {
     try {
@@ -228,8 +248,36 @@ export class PayPalBillingAdapter implements BillingAdapter {
     throw notSupported("there is no customer credit balance: use the billing mirror's ledger (billing.grantCredits)");
   }
 
-  async parseWebhook(_rawBody: Buffer | string, _signature: string, _secret: string): Promise<ProviderEvent> {
-    throw notSupported('webhooks are signed with a certificate across several headers: receive them with payPalWebhookAuth and normalizePayPalEvent');
+  /**
+   * Checks a delivery (`signature` is `payPalSignature(headers)`, `secret` the webhook id) and reads the event.
+   * `object` is the event's resource; `livemode` is whether the client is live, as PayPal's events don't say.
+   */
+  async parseWebhook(rawBody: Buffer | string, signature: string, secret: string): Promise<ProviderEvent> {
+    try {
+      await this.verifier.verify(rawBody, signatureHeaders(signature), secret);
+    } catch (error) {
+      if (error instanceof MariachiError && error.code === 'webhooks/invalid-signature') {
+        throw new BillingError('billing/webhook-invalid-signature', 'PayPal webhook signature verification failed', { reason: error.message });
+      }
+      throw toBillingError(error, 'parseWebhook');
+    }
+    let json: unknown;
+    try {
+      json = JSON.parse(typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8'));
+    } catch {
+      json = undefined;
+    }
+    const parsed = PayPalWebhookEvent.safeParse(json);
+    if (!parsed.success) throw new BillingError('billing/invalid-input', 'The PayPal webhook body is not an event');
+    const event = parsed.data;
+    return { id: event.id, type: event.event_type, createdAt: new Date(event.create_time), object: event.resource, livemode: this.client.environment === 'live' };
+  }
+
+  /** The event as billing events, from PayPal's own state (read again from its API), mirrored into `store`. See `normalizePayPalEvent`. */
+  async normalizeWebhook(event: ProviderEvent, store?: BillingStore): Promise<BillingEvent[]> {
+    return this.call('normalizeWebhook', () =>
+      normalizePayPalEvent(null, { id: event.id, event_type: event.type, create_time: event.createdAt.toISOString(), resource: event.object }, { paypal: this.client, store }),
+    );
   }
 
   async isHealthy(): Promise<boolean> {
@@ -242,9 +290,9 @@ export class PayPalBillingAdapter implements BillingAdapter {
   }
 }
 
-/** The billing adapter on a PayPal client. */
-export function createPayPalBillingAdapter(client: PayPal): PayPalBillingAdapter {
-  return new PayPalBillingAdapter(client);
+/** The billing adapter on a PayPal client: `createPayPalBillingAdapter(paypal, { webhookDeps: { tracer, metrics } })`. */
+export function createPayPalBillingAdapter(client: PayPal, options?: PayPalBillingAdapterOptions): PayPalBillingAdapter {
+  return new PayPalBillingAdapter(client, options);
 }
 
 /** A PayPal subscription has one plan: the port's single price, or a one-item list. */

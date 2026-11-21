@@ -244,7 +244,7 @@ export function payPalEvent(eventType: string, resource: object, resourceType?: 
 }
 
 export interface PayPalWebhookSigner {
-  /** Pass as `payPalWebhookAuth(options, { fetch })`: it serves the signer's certificate at any PayPal certificate URL. */
+  /** Pass as the webhook deps' `fetch` (`createPayPalBillingAdapter(paypal, { webhookDeps: { fetch } })`, `payPalWebhookAuth(options, { fetch })`): it serves the signer's certificate. */
   fetch: typeof fetch;
   /** The URL the deliveries name in `PAYPAL-CERT-URL`. */
   certUrl: string;

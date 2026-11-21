@@ -190,7 +190,6 @@ describe('the billing adapter', () => {
       adapter.reportUsage(),
       adapter.getCreditBalance('paypal:t1'),
       adapter.adjustCreditBalance(),
-      adapter.parseWebhook('{}', 'sig', 'secret'),
     ];
     for (const attempt of expectations) await expect(attempt).rejects.toMatchObject({ code: 'billing/not-supported' });
   });

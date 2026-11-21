@@ -233,7 +233,7 @@
       "scheme": "rsa-sha256-certificate",
       "header": "PAYPAL-TRANSMISSION-SIG",
       "secretSetting": "webhookId",
-      "description": "PAYPAL-TRANSMISSION-SIG is the base64 RSA signature (PAYPAL-AUTH-ALGO: SHA256withRSA) of the string <PAYPAL-TRANSMISSION-ID>|<PAYPAL-TRANSMISSION-TIME>|<webhook id>|<CRC32 of the raw body, as an unsigned decimal>, made with the key of the X.509 certificate at PAYPAL-CERT-URL. The webhook id is not sent: it is the one the app's webhook was given. Fetch the certificate only from PayPal's API host for the environment (https, /v1/notifications/certs/<id>), and cache it. The body is covered only by its CRC32, so deduplicate on the signed transmission id and re-read state from the API before acting on money. PayPal retries a delivery that isn't answered 2xx, up to 25 times over 3 days."
+      "description": "PAYPAL-TRANSMISSION-SIG is the base64 RSA signature (PAYPAL-AUTH-ALGO: SHA256withRSA) of the string <PAYPAL-TRANSMISSION-ID>|<PAYPAL-TRANSMISSION-TIME>|<webhook id>|<CRC32 of the raw body, as an unsigned decimal>, made with the key of the X.509 certificate at PAYPAL-CERT-URL. The webhook id is not sent: it is the one the app's webhook was given. Fetch the certificate only from PayPal's API host for the environment (https, /v1/notifications/certs/<id>), and cache it. The body is covered only by its CRC32, so re-read the resource from the API before acting on money. PayPal retries a delivery that isn't answered 2xx, up to 25 times over 3 days."
     },
     "events": [
       { "type": "PAYMENT.CAPTURE.COMPLETED", "meaning": "A payment capture completes." },

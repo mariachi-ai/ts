@@ -25,8 +25,7 @@ What PayPal can't do fails with `billing/not-supported`, never silently: several
 subscription, a trial set per subscription (put it in the plan), `changePlan` and
 `previewPlanChange`, cancel at period end, `createPortal`, `listInvoices`, metered usage
 (`reportUsage` with a provider), the provider's credit balance (the local ledger works),
-`lookupKeys` (refer to plans by id), a checkout in `payment` mode, a stored payment method, and
-`createBillingWebhookHandler` (use the webhook route below).
+`lookupKeys` (refer to plans by id), a checkout in `payment` mode, and a stored payment method.
 
 ## Settings
 
@@ -51,7 +50,9 @@ import { settingsFromEnv } from '@mariachi/integrations';
 import { readEnv } from '@mariachi/config';
 
 const paypal = createPayPal(settingsFromEnv(settings, readEnv), { tracer, metrics });
-const billing = new DefaultBilling({ adapter: createPayPalBillingAdapter(paypal), store: new DrizzleBillingStore(db) }, instrumentation);
+const adapter = createPayPalBillingAdapter(paypal, { webhookDeps: { tracer, metrics } });
+const store = new DrizzleBillingStore(db);
+const billing = new DefaultBilling({ adapter, store }, instrumentation);
 ```
 
 The client signs in with the client credentials and keeps the access token until shortly before
@@ -137,26 +138,29 @@ const revision = await paypal.subscriptions.revise(ctx, { subscriptionId, planId
 
 ## Webhooks
 
+Through `@mariachi/billing`'s webhook handler, as Stripe's: it verifies, dedupes on the event id,
+mirrors into the store, runs your handlers and keeps each event for `replay`. PayPal signs a
+delivery across several `PAYPAL-*` headers, so pass them as one string with `payPalSignature`, and
+the webhook id as the secret:
+
 ```ts
-import { WebhookController } from '@mariachi/webhooks';
-import { PayPalWebhookBody, normalizePayPalEvent, payPalEventType, payPalWebhookAuth } from '@mariachi/billing-paypal';
+import { createBillingWebhookHandler } from '@mariachi/billing';
+import { payPalSignature } from '@mariachi/billing-paypal';
 
-export class PayPalWebhooks extends WebhookController {
-  readonly prefix = 'paypal';
-  readonly auth = payPalWebhookAuth({ webhookId: config.paypal.webhookId, environment: config.paypal.environment }, { tracer, metrics });
-  init() {
-    this.post('events', { mode: 'queue', jobName: 'paypal-event', eventType: payPalEventType },
-      async (_ctx, body) => PayPalWebhookBody.parse(body));
-  }
-}
+const paypalWebhooks = createBillingWebhookHandler({
+  adapter,
+  store,
+  secret: config.paypal.webhookId,                       // PAYPAL_WEBHOOK_ID
+  idempotency: new RedisIdempotencyStore(redis),
+  requireLivemode: config.env === 'production',          // livemode: the client's environment is live
+  on: { 'subscription.canceled': async (ctx, event) => entitlements.revoke(ctx, event.subscription) },
+}, instrumentation);
 
-// The job: mirror the change and act on the billing events
-const events = await normalizePayPalEvent(ctx, payload, { paypal, store });
-for (const event of events) if (event.type === 'subscription.canceled') await entitlements.revoke(ctx, event.subscription);
+const result = await paypalWebhooks.handle(ctx, rawBody, payPalSignature(headers));   // the raw bytes, not parsed JSON
 ```
 
-Subscribe the webhook to the events below in the Developer Dashboard. `normalizePayPalEvent`
-gives the billing port's events:
+Subscribe the webhook to the events below in the Developer Dashboard. The adapter's
+`normalizeWebhook` gives the billing port's events:
 
 | PayPal | Billing event |
 | --- | --- |
@@ -167,21 +171,39 @@ gives the billing port's events:
 | `BILLING.SUBSCRIPTION.PAYMENT.FAILED` | `subscription.synced`, status `past_due` (PayPal has no invoices) |
 | `BILLING.SUBSCRIPTION.CANCELLED`, `EXPIRED` | `subscription.synced` and `subscription.canceled` |
 
-**How a delivery is checked.** Locally, without a call to PayPal per delivery:
-`PAYPAL-TRANSMISSION-SIG` is the RSA-SHA256 signature of
+Charges are keyed by the order id, as `billing.charge` returns them, and the tenant comes from the
+order's or subscription's `custom_id`.
+
+**How a delivery is checked.** Locally, without a call to PayPal per delivery
+(`PayPalWebhookVerifier`): `PAYPAL-TRANSMISSION-SIG` is the RSA-SHA256 signature of
 `<transmission id>|<transmission time>|<webhook id>|<CRC32 of the raw body>`, verified with the
 certificate at `PAYPAL-CERT-URL`. That URL must be `https://` on PayPal's API host for the
 environment (`api.sandbox.paypal.com` or `api-m.sandbox.paypal.com` for sandbox, `api.paypal.com` or
 `api-m.paypal.com` for live) under `/v1/notifications/certs/`; anything else is refused before
 anything is fetched. The certificate is downloaded once (span `paypal webhookCerts.get`) and cached
-until it expires. Pass two webhook ids while moving to a new webhook, and `toleranceSeconds` to
-refuse old transmissions.
+until it expires. `webhookToleranceSeconds` refuses old transmissions (off by default: PayPal
+retries a delivery for up to 3 days).
 
-PayPal signs only a CRC32 of the body, which can be forged, so two things guard it: a delivery is
-deduplicated on its signed transmission id, and `normalizePayPalEvent` reads the capture, refund or
-subscription again from PayPal's API and reports that, not the body. Act on its events, not on the
-raw payload. PayPal retries a delivery that isn't answered 2xx, up to 25 times over 3 days, so key
-anything else the job does by the event's `id`.
+PayPal signs only a CRC32 of the body, which can be forged, so the body is never trusted on its
+own: `normalizeWebhook` reads the capture, refund or subscription the event names again from
+PayPal's API and mirrors and reports that.
+
+**To receive PayPal's events as they are** (into a job, without the billing handler), use the
+authenticator with `WebhookServer`. It dedupes on the signed transmission id; call
+`normalizePayPalEvent(ctx, payload, { paypal, store })` in the job for the same billing events.
+
+```ts
+import { PayPalWebhookBody, payPalEventType, payPalWebhookAuth } from '@mariachi/billing-paypal';
+
+export class PayPalWebhooks extends WebhookController {
+  readonly prefix = 'paypal';
+  readonly auth = payPalWebhookAuth({ webhookId: config.paypal.webhookId, environment: config.paypal.environment }, { tracer, metrics });
+  init() {
+    this.post('events', { mode: 'queue', jobName: 'paypal-event', eventType: payPalEventType },
+      async (_ctx, body) => PayPalWebhookBody.parse(body));
+  }
+}
+```
 
 ## Errors
 
@@ -206,6 +228,7 @@ paypal.approveOrder(orderId);                               // what the buyer do
 await checkout.captureOrder(ctx, orderId);
 
 const signer = payPalWebhookSigner();                       // its own key and certificate, made for the test
-const auth = payPalWebhookAuth({ webhookId: 'WH-1', environment: 'sandbox' }, { fetch: signer.fetch });
-const { rawBody, headers } = signer.sign(payPalEvent('BILLING.SUBSCRIPTION.ACTIVATED', subscription), { webhookId: 'WH-1' });
+const adapter = createPayPalBillingAdapter(paypal, { webhookDeps: { fetch: signer.fetch } });   // serves that certificate
+const { rawBody, headers } = signer.sign(payPalEvent('BILLING.SUBSCRIPTION.ACTIVATED', { id: subscriptionId }), { webhookId: 'WH-1' });
+await paypalWebhooks.handle(ctx, rawBody, payPalSignature(headers));
 ```

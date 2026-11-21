@@ -1,12 +1,14 @@
-import { MemoryBillingStore } from '@mariachi/billing';
+import { MemoryBillingStore, createBillingWebhookHandler } from '@mariachi/billing';
+import { InMemoryIdempotencyStore } from '@mariachi/core';
 import { createContext } from '@mariachi/core';
 import { assertProviderSpans } from '@mariachi/integrations/testing';
 import { TestTracer } from '@mariachi/testing';
 import { WebhookController, WebhookServer } from '@mariachi/webhooks';
 import { describe, expect, it } from 'vitest';
+import { createPayPalBillingAdapter } from './adapter';
 import { normalizePayPalEvent } from './events';
 import { fakePayPal, payPalEvent, payPalWebhookSigner } from './testing';
-import { PayPalWebhookBody, crc32, payPalEventType, payPalWebhookAuth } from './webhooks';
+import { PayPalWebhookBody, crc32, payPalEventType, payPalSignature, payPalWebhookAuth } from './webhooks';
 
 const logger = { info() {}, warn() {}, error() {}, debug() {}, child() { return logger; } };
 const ctx = createContext({ logger, tenantId: 't1' });
@@ -153,5 +155,41 @@ describe('normalizePayPalEvent', () => {
     paypal.subscriptions_.get(sub.id)!.billing_info = { failed_payments_count: 1 };
     const [synced] = await normalizePayPalEvent(ctx, payPalEvent('BILLING.SUBSCRIPTION.PAYMENT.FAILED', { id: sub.id, status: 'ACTIVE' }), { paypal });
     expect(synced).toMatchObject({ type: 'subscription.synced', subscription: { status: 'past_due' } });
+  });
+});
+
+describe('the billing webhook handler', () => {
+  it('verifies, mirrors, dedupes and replays PayPal deliveries through createBillingWebhookHandler', async () => {
+    const paypal = fakePayPal();
+    const plan = await paypal.plans.create(ctx, { productId: 'PROD-1', name: 'Pro', amount: 1_200, currency: 'usd', interval: 'month' });
+    const sub = await paypal.subscriptions.create(ctx, { planId: plan.id, customId: 'paypal:t1' });
+    paypal.approveSubscription(sub.id);
+    const signer = payPalWebhookSigner();
+    const store = new MemoryBillingStore();
+    const seen: string[] = [];
+    const handler = createBillingWebhookHandler(
+      {
+        adapter: createPayPalBillingAdapter(paypal, { webhookDeps: { fetch: signer.fetch } }),
+        secret: WEBHOOK_ID,
+        store,
+        idempotency: new InMemoryIdempotencyStore(),
+        on: { 'subscription.synced': async (c, e) => void seen.push(`${c.tenantId}:${e.subscription.status}`) },
+      },
+      { logger },
+    );
+    const event = payPalEvent('BILLING.SUBSCRIPTION.ACTIVATED', { id: sub.id, status: 'ACTIVE' });
+    const { rawBody, headers } = signer.sign(event, { webhookId: WEBHOOK_ID });
+
+    expect(await handler.handle(undefined, rawBody, payPalSignature(headers))).toMatchObject({ eventId: event.id, outcome: 'processed', events: ['subscription.synced'] });
+    expect(await store.findSubscription(sub.id)).toMatchObject({ status: 'active', tenantId: 't1' });
+    expect(seen).toEqual(['t1:active']);
+    // PayPal's retry of the same event, in a new transmission
+    const retry = signer.sign(event, { webhookId: WEBHOOK_ID });
+    expect((await handler.handle(undefined, retry.rawBody, payPalSignature(retry.headers))).outcome).toBe('duplicate');
+    expect((await handler.replay(undefined, event.id)).events).toEqual(['subscription.synced']);
+
+    const forged = payPalWebhookSigner().sign(event, { webhookId: WEBHOOK_ID });
+    await expect(handler.handle(undefined, forged.rawBody, payPalSignature({ ...forged.headers, 'paypal-cert-url': signer.certUrl }))).rejects.toMatchObject({ code: 'billing/webhook-invalid-signature' });
+    await expect(handler.handle(undefined, rawBody, payPalSignature({}))).rejects.toMatchObject({ code: 'billing/webhook-invalid-signature' });
   });
 });

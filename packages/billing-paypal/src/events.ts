@@ -28,8 +28,8 @@ const SUBSCRIPTION_EVENTS = new Set([
 ]);
 
 /**
- * A verified PayPal webhook event as the billing port's events, the ones `createBillingWebhookHandler` emits
- * for Stripe, mirrored into `store` when given:
+ * A verified PayPal webhook event as the billing port's events, mirrored into `store` when given. The adapter's
+ * `normalizeWebhook` runs it for `createBillingWebhookHandler`; call it yourself from a `WebhookServer` job:
  *
  * | PayPal | Billing event |
  * | --- | --- |
@@ -42,7 +42,7 @@ const SUBSCRIPTION_EVENTS = new Set([
  * Other event types give `[]`. Charges are keyed by the order id, as `createCharge` returns them. Safe to run
  * again for the same event: PayPal retries deliveries.
  */
-export async function normalizePayPalEvent(ctx: Context, event: PayPalWebhookEvent, options: NormalizePayPalEventOptions): Promise<BillingEvent[]> {
+export async function normalizePayPalEvent(ctx: Context | null, event: PayPalWebhookEvent, options: NormalizePayPalEventOptions): Promise<BillingEvent[]> {
   const { paypal, store } = options;
   const occurredAt = new Date(event.create_time);
   const base = { eventId: event.id, occurredAt, providerType: event.event_type };
@@ -102,7 +102,7 @@ export async function normalizePayPalEvent(ctx: Context, event: PayPalWebhookEve
  * The payment a capture belongs to, as PayPal has it now: its order (amount, refunds so far, the app's
  * `custom_id`), keyed by the order id; the capture alone when PayPal names no order.
  */
-async function chargeOf(ctx: Context, paypal: PayPal, captureId: string): Promise<Charge> {
+async function chargeOf(ctx: Context | null, paypal: PayPal, captureId: string): Promise<Charge> {
   const capture = await paypal.captures.get(ctx, captureId);
   const orderId = orderIdOfCapture(capture);
   return orderId ? chargeFromOrder(await paypal.orders.get(ctx, orderId)) : chargeFromCapture(capture);
