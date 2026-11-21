@@ -133,6 +133,11 @@ export class WebhookServer {
     req: IncomingRequest,
     span: Span | undefined,
   ): Promise<unknown> {
+    const answer = await controller.auth.handshake?.(req, serverCtx);
+    if (answer) {
+      span?.setAttribute('mariachi.integration.event', 'handshake');
+      return answer;
+    }
     const identity = await controller.auth.auth(req, serverCtx);
     if (!identity) throw new AuthError('webhooks/unauthorized', 'Webhook authentication failed');
 
