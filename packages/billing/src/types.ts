@@ -413,6 +413,12 @@ export interface BillingAdapter {
 
   /** Verifies the signature and parses the payload. Throws `billing/webhook-invalid-signature`. */
   parseWebhook(rawBody: Buffer | string, signature: string, secret: string): Promise<ProviderEvent>;
+  /**
+   * Turns a verified event into normalized billing events and mirrors it into `store`, versioned by
+   * the event's time. For a provider whose events aren't Stripe's: without it, the webhook handler
+   * reads Stripe's event types (`normalizeAndSync`). Returns an empty array for events it doesn't model.
+   */
+  normalizeWebhook?(event: ProviderEvent, store?: BillingStore): Promise<BillingEvent[]>;
 
   isHealthy(): Promise<boolean>;
 }
