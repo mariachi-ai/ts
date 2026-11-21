@@ -32,7 +32,8 @@ only point here.
 - [feature-flags.md](./feature-flags.md): tenant overrides, rollouts, caching
 - [storage.md](./storage.md): files on S3 and compatible services, local disk or memory; signed URLs, browser uploads
 - [search.md](./search.md): typed indexes, filters and facets in Postgres, Typesense or memory; tenant scoping, reindexing
-- [integrations.md](./integrations.md): wrapping a third-party API: validated functions, retries, per-tenant credentials, inbound webhooks
+- [integrations.md](./integrations.md): calling a third-party provider: callProvider and providerRequest, error categories, retries, webhook signatures, testing
+- [integration-contracts.md](./integration-contracts.md): the contract.json every provider package starts from: settings, operations, errors, webhooks, and the span each call emits
 - [testing.md](./testing.md): doubles, contract suites, integration tests
 - [runbook.md](./runbook.md): running, deploying and configuring an app; developing the framework itself
 - [design.md](./design.md): the design library: presets, markup contract, overriding at any granularity, tokens
