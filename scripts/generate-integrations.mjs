@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Writes each integration's src/generated.ts from its contract.json, and the contract's JSON Schema
+// Writes src/generated.ts from contract.json in every package that has one (each integration-*, and port adapters), and the contract's JSON Schema
 // (packages/integrations/contract.schema.json). `--check` writes nothing and fails when a file is out of date.
 // Needs `@mariachi/integrations` built (pnpm build).
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -16,9 +16,11 @@ if (!existsSync(codegen)) {
 const { generateModule, contractJsonSchema } = await import(codegen);
 
 const outputs = [[join(root, 'packages/integrations/contract.schema.json'), `${JSON.stringify(contractJsonSchema(), null, 2)}\n`]];
-for (const dir of readdirSync(join(root, 'packages')).filter((d) => d.startsWith('integration-')).sort()) {
+// Every integration-* package has a contract; a port's adapter package (auth-auth0, billing-paddle) has one too
+for (const dir of readdirSync(join(root, 'packages')).sort()) {
   const contract = join(root, 'packages', dir, 'contract.json');
   if (!existsSync(contract)) {
+    if (!dir.startsWith('integration-')) continue;
     console.error(`packages/${dir} has no contract.json`);
     process.exit(1);
   }
