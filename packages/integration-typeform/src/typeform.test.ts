@@ -8,7 +8,8 @@ import { createTypeform } from './client';
 import { TypeformError } from './errors';
 import { settings } from './generated';
 import { fakeTypeform, signedTypeformWebhook, typeformResponse } from './testing';
-import { receiveTypeformWebhook, verifyTypeformSignature } from './webhooks';
+import { WebhookController, WebhookServer } from '@mariachi/webhooks';
+import { TypeformWebhookBody, typeformEventType, typeformWebhookAuth } from './webhooks';
 
 const logger = { info() {}, warn() {}, error() {}, debug() {}, child() { return logger; } };
 const ctx = createContext({ logger });
@@ -74,20 +75,31 @@ describe('settings', () => {
 describe('webhooks', () => {
   const response = typeformResponse({ token: 'r1', hidden: { user_id: 'u1' }, answers: [{ field: { id: '1', type: 'email', ref: 'email' }, type: 'email', email: 'a@b.co' }] });
 
-  it('reads a signed delivery, with a SERVER span, and its answers by ref', async () => {
-    const tracer = new TestTracer();
-    const { rawBody, headers } = signedTypeformWebhook('f1', response, 'whsec-test');
-    const { event, payload } = await receiveTypeformWebhook(ctx, { rawBody, headers }, { webhookSecret: 'whsec-test' }, { tracer });
-    expect([event, payload.form_response.form_id, payload.form_response.hidden?.user_id]).toEqual(['form_response', 'f1', 'u1']);
-    expect(answersByRef(payload.form_response)).toEqual({ email: 'a@b.co' });
-    expect(tracer.spans.map((s) => [s.name, s.kind, s.attributes['mariachi.integration.event']])).toEqual([['typeform webhook', 'server', 'form_response']]);
-  });
+  class TypeformWebhooks extends WebhookController {
+    readonly prefix = 'typeform';
+    readonly auth = typeformWebhookAuth('whsec-test');
+    init() {
+      this.post('responses', { mode: 'direct', procedure: 'signups.fromTypeform', eventType: typeformEventType }, async (_ctx, body) => TypeformWebhookBody.parse(body));
+    }
+  }
 
-  it('refuses a delivery whose signature is wrong, or whose body changed', async () => {
+  it('receives a signed delivery through WebhookServer, with its span, and reads its answers by ref', async () => {
+    const received: unknown[] = [];
+    const tracer = new TestTracer();
+    const communication = { call: async (_ctx: unknown, _name: string, input: unknown) => { received.push(input); return { ok: true }; } } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger }, { communication, tracer }).registerController(new TypeformWebhooks());
     const { rawBody, headers } = signedTypeformWebhook('f1', response, 'whsec-test');
-    await expect(receiveTypeformWebhook(ctx, { rawBody, headers }, { webhookSecret: 'other' })).rejects.toMatchObject({ code: 'typeform/invalid-signature', statusCode: 401 });
-    expect(verifyTypeformSignature(`${rawBody} `, headers['typeform-signature'], 'whsec-test')).toBe(false);
-    expect(verifyTypeformSignature(rawBody, undefined, 'whsec-test')).toBe(false);
+    const ok = await server.inject({ method: 'POST', url: '/typeform/responses', headers: { 'content-type': 'application/json', ...headers }, payload: rawBody });
+    expect(ok.statusCode).toBe(200);
+    const body = received[0] as ReturnType<typeof TypeformWebhookBody.parse>;
+    expect([body.form_response.form_id, body.form_response.hidden?.user_id]).toEqual(['f1', 'u1']);
+    expect(answersByRef(body.form_response)).toEqual({ email: 'a@b.co' });
+    expect(tracer.spans.map((s) => [s.name, s.kind, s.attributes['mariachi.integration.event']])).toEqual([['typeform webhook', 'server', 'form_response']]);
+
+    const forged = signedTypeformWebhook('f1', response, 'someone-else');
+    expect((await server.inject({ method: 'POST', url: '/typeform/responses', headers: { 'content-type': 'application/json', ...forged.headers }, payload: forged.rawBody })).statusCode).toBe(401);
+    expect((await server.inject({ method: 'POST', url: '/typeform/responses', headers: { 'content-type': 'application/json', ...headers }, payload: `${rawBody} ` })).statusCode).toBe(401);
+    expect(received).toHaveLength(1);
   });
 });
 

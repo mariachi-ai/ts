@@ -2,8 +2,8 @@
  * `@mariachi/integration-typeform/testing`: a Typeform for an app's tests, held in memory, with the same shape as
  * `createTypeform`'s client; and a signed webhook to post to the app's endpoint.
  */
+import { createHmac } from 'node:crypto';
 import { NotFoundError } from '@mariachi/core';
-import { hmac } from '@mariachi/integrations';
 import type { Typeform } from './client';
 import type { Form, FormResponse, Webhook } from './schemas';
 
@@ -75,5 +75,5 @@ export function typeformResponse(overrides: Partial<FormResponse> = {}): FormRes
 /** The body and `Typeform-Signature` header Typeform would send for this response. */
 export function signedTypeformWebhook(formId: string, response: FormResponse, secret: string): { rawBody: string; headers: Record<string, string> } {
   const rawBody = JSON.stringify({ event_id: `ev_${response.token}`, event_type: 'form_response', form_response: { form_id: formId, ...response } });
-  return { rawBody, headers: { 'typeform-signature': `sha256=${hmac('sha256', secret, rawBody, 'base64')}` } };
+  return { rawBody, headers: { 'typeform-signature': `sha256=${createHmac('sha256', secret).update(rawBody).digest('base64')}` } };
 }

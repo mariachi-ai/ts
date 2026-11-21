@@ -1,206 +1,129 @@
-# Recipe: Add a Third-Party Integration
+# Recipe: add a provider
 
-This walks through adding a new integration (e.g. GitHub, Twilio) using the `@mariachi/integrations` pattern.
+How to add a third-party provider to Mariachi: one package, written from the provider's public
+docs, the same shape as every other. `@mariachi/integration-typeform` is the reference: read it
+before writing one.
 
----
+## 1. Adapter or integration?
 
-## Structure
+If Mariachi has a port for the job, the provider is an **adapter** of that port, in a package
+named for both: `auth-auth0`, `billing-paddle`. The ports: email, SMS and push
+(`@mariachi/notifications`), storage, billing, search, AI, auth, and key management. An app swaps
+the provider by configuration and its code doesn't change.
+
+Otherwise it's an **integration**: `@mariachi/integration-<provider>`, with the provider's own
+operations. A CRM, a calendar, a form tool, an analytics API.
+
+Either way the package has a contract, and every call goes through `callProvider`.
+
+## 2. Write the contract
+
+`contract.json` first, from the provider's public API reference and nothing else: never an SDK
+whose licence forbids it, never another product's code. The format is in
+[integration-contracts.md](../integration-contracts.md).
+
+- **Settings:** each with its `env` name (`<PROVIDER>_<WHAT>`), where to find it in the provider's
+  dashboard, and whether it's secret, required and safe in a browser. A per-environment check only
+  where the provider documents what tells live from test (Paddle's `pdl_live_apikey_`, Clerk's
+  `sk_live_`). Where test is another account or a sandbox, say so in `whereToFind`.
+- **Operations:** the provider's own (`contacts.create`), the ones an app needs, not all of them.
+  Each with its method, path and idempotency. Never one app's workflow.
+- **Errors:** the provider's codes an app would act on differently, mapped to a category.
+- **Webhooks:** the signature scheme, exactly, and the events.
+
+Then:
+
+```bash
+pnpm integrations:generate      # writes src/generated.ts
+```
+
+## 3. The package
 
 ```
-integrations/<name>/
-├── index.ts         # Integration functions (defineIntegrationFn)
-├── credentials.ts   # Zod-validated credential schema
-├── client.ts        # Raw API client (fetch calls)
-├── types.ts         # Input/output Zod schemas
-└── test.ts          # Dry-run test
+packages/integration-acme/
+  contract.json
+  package.json         category "providers", status "alpha", exports ".", "./testing" and "./contract.json"
+  README.md            settings, use, webhooks, testing
+  src/generated.ts     from the contract: never edit it
+  src/errors.ts        class AcmeError extends ProviderError
+  src/schemas.ts       Zod for what the app sends and reads; provider objects .passthrough()
+  src/client.ts        createAcme(config, deps)
+  src/webhooks.ts      acmeWebhookAuth(secret), AcmeWebhookBody, acmeEventType
+  src/testing.ts       fakeAcme(), signed deliveries
+  src/<helpers>.ts     small, pure helpers that make the provider easy to use correctly
+  src/acme.test.ts
 ```
 
----
-
-## 1. Define Credentials
-
-Every integration has a Zod schema for its credentials. Never hardcode secrets.
-
-**File:** `integrations/<name>/credentials.ts`
+### The client
 
 ```ts
-import { z } from 'zod';
+export function createAcme(config: AcmeConfig, deps: AcmeDeps = {}) {
+  const cfg = configSchema.parse(config);
+  const base = cfg.apiBaseUrl ?? provider.baseUrl;
 
-export const GitHubCredentials = z.object({
-  token: z.string().min(1),
-  webhookSecret: z.string().min(1),
-});
-
-export type GitHubCredentials = z.infer<typeof GitHubCredentials>;
-```
-
-Store actual values via `@mariachi/config` (env variables), not in code.
-
----
-
-## 2. Define Input/Output Types
-
-Use Zod schemas for all inputs and outputs.
-
-**File:** `integrations/<name>/types.ts`
-
-```ts
-import { z } from 'zod';
-
-export const CreateIssueInput = z.object({
-  owner: z.string().min(1),
-  repo: z.string().min(1),
-  title: z.string().min(1),
-  body: z.string().optional(),
-});
-
-export const CreateIssueOutput = z.object({
-  id: z.number(),
-  number: z.number(),
-  url: z.string(),
-});
-
-export type CreateIssueInput = z.infer<typeof CreateIssueInput>;
-export type CreateIssueOutput = z.infer<typeof CreateIssueOutput>;
-```
-
----
-
-## 3. Implement the Client
-
-The client is a thin wrapper around the external API.
-
-**File:** `integrations/<name>/client.ts`
-
-```ts
-import { IntegrationError } from '@mariachi/core';
-import type { GitHubCredentials } from './credentials';
-import type { CreateIssueInput, CreateIssueOutput } from './types';
-
-export async function createIssue(
-  credentials: GitHubCredentials,
-  input: CreateIssueInput,
-): Promise<CreateIssueOutput> {
-  const url = `https://api.github.com/repos/${input.owner}/${input.repo}/issues`;
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${credentials.token}`,
-      Accept: 'application/vnd.github+json',
-    },
-    body: JSON.stringify({ title: input.title, body: input.body }),
-  });
-
-  if (!res.ok) {
-    throw new IntegrationError('integrations/upstream-failed', `GitHub API error: ${res.status}`, { status: res.status, body: await res.text() });
+  function call<T>(ctx: Context, operation: AcmeOperation, request: …, schema: z.ZodType<T, z.ZodTypeDef, unknown>) {
+    return providerRequest(ctx, { integration: provider.id, operation, category: provider.category, server: new URL(base).host },
+      { ...request, url: `${base}${request.path}`, headers: { authorization: `Bearer ${cfg.apiKey}` } },
+      { schema, error: AcmeError, failure, deps });
   }
 
-  const data = (await res.json()) as { id: number; number: number; html_url: string };
-  return { id: data.id, number: data.number, url: data.html_url };
-}
-```
-
----
-
-## 4. Define the Integration Function
-
-Use `defineIntegrationFn` from `@mariachi/integrations`.
-
-**File:** `integrations/<name>/index.ts`
-
-```ts
-import { IntegrationError } from '@mariachi/core';
-import { defineIntegrationFn } from '@mariachi/integrations';
-import type { IntegrationContext } from '@mariachi/integrations';
-import { createIssue } from './client';
-import type { GitHubCredentials } from './credentials';
-import { CreateIssueInput, CreateIssueOutput } from './types';
-
-export interface GitHubIntegrationContext extends IntegrationContext {
-  credentials: GitHubCredentials;
-}
-
-export const githubCreateIssue = defineIntegrationFn<CreateIssueInput, CreateIssueOutput>({
-  name: 'github.createIssue',
-  input: CreateIssueInput,
-  output: CreateIssueOutput,
-  handler: async (input: CreateIssueInput, ctx: IntegrationContext): Promise<CreateIssueOutput> => {
-    const credentials = (ctx as GitHubIntegrationContext).credentials;
-    if (!credentials) {
-      throw new IntegrationError('integrations/missing-credential', 'GitHub credentials required');
-    }
-    return createIssue(credentials, input);
-  },
-  retry: { attempts: 3, backoff: 'exponential' },
-});
-```
-
-**Key fields:**
-- `name` — unique identifier, conventionally `<provider>.<action>`
-- `input` / `output` — Zod schemas for validation
-- `handler` — receives validated input and `IntegrationContext` (with credentials)
-- `retry` — optional retry config
-
----
-
-## 5. Register in the Registry (Optional)
-
-Register the integration so other code can find it and call it by name.
-
-```ts
-import { IntegrationRegistry } from '@mariachi/integrations';
-import { GitHubCredentials } from './credentials';
-import { githubCreateIssue } from './index';
-
-const registry = new IntegrationRegistry();
-registry.register({
-  name: 'github',
-  description: 'GitHub integration for issues and repositories',
-  credentialSchema: GitHubCredentials,
-  functions: ['github.createIssue'],
-  handlers: { createIssue: githubCreateIssue },   // every listed function needs one
-});
-
-await registry.call('github.createIssue', input, ctx);
-```
-
-`register` throws `integrations/missing-handler` if a listed function has no handler.
-
----
-
-## 6. Add a Test
-
-**File:** `integrations/<name>/test.ts`
-
-```ts
-import { CreateIssueInput } from './types';
-import { GitHubCredentials } from './credentials';
-
-export async function dryRun(
-  credentials: GitHubCredentials,
-  input: { owner: string; repo: string; title: string; body?: string },
-): Promise<{ ok: true; id: number; number: number; url: string }> {
-  GitHubCredentials.parse(credentials);
-  CreateIssueInput.parse(input);
   return {
-    ok: true,
-    id: 12345,
-    number: 1,
-    url: `https://github.com/${input.owner}/${input.repo}/issues/1`,
+    contacts: {
+      async create(ctx: Context, input: CreateContactInput) {
+        const i = parse(CreateContactInput, input);
+        return call(ctx, 'contacts.create', { method: 'POST', path: '/contacts', json: i, idempotencyKey: … }, Contact);
+      },
+    },
   };
 }
+export type Acme = ReturnType<typeof createAcme>;
 ```
 
----
+- **`ctx` first**, then one input object. Every operation is `async`, so a bad input is a
+  rejected promise, not a throw.
+- **Zod at both ends:** the input is parsed into a `ValidationError` before anything is sent; the
+  answer is checked by `providerRequest`.
+- **`failure(status, body)`** reads the provider's error code into `providerCode` and maps it with
+  `mappedFailure(errorMap, code)`. Never keep the provider's message: it can echo the input.
+- **Idempotency keys** on every create and charge the provider takes them for.
+- **Paging:** `list` returns one page; add an `all` async generator where an app usually wants
+  everything.
+- **No SDK** unless it carries real weight (signing, streaming). Then it's an optional peer loaded
+  with `loadOptionalPeer`.
 
-## Checklist
+### Webhooks
 
-- [ ] Credentials schema defined in `credentials.ts` (Zod)
-- [ ] Input/output types defined in `types.ts` (Zod)
-- [ ] Client function implemented in `client.ts`
-- [ ] Integration function defined with `defineIntegrationFn` in `index.ts`
-- [ ] Retry config set appropriately
-- [ ] Dry-run test in `test.ts`
-- [ ] Secrets stored via env/config, never hardcoded
+Through `WebhookServer` (see [add-webhook-endpoint.md](./add-webhook-endpoint.md)). The package
+exports the authenticator for the provider's scheme, built from `@mariachi/webhooks`
+(`HmacWebhookAuth`, `StandardWebhookAuth`, `StripeWebhookAuth`, or a `VerifiedWebhookAuth`
+subclass for a scheme of its own), the body's schema, and how to read its event type:
+
+```ts
+this.post('events', { mode: 'queue', jobName: 'acme-event', eventType: acmeEventType }, async (_ctx, body) => AcmeWebhookBody.parse(body));
+```
+
+### Helpers
+
+What the app would otherwise get wrong, as small pure functions: Typeform's `answersByRef` reads
+answers by field ref instead of position. Keep them about the provider's data, never about one
+app's workflow.
+
+### Testing
+
+- `scriptedFetch` from `@mariachi/integrations/testing` answers the client's requests: no test
+  calls the provider.
+- `assertProviderSpans(tracer.spans)` on every test that makes a call.
+- A webhook test posts a signed delivery to a `WebhookServer` with `inject`, and a forged one.
+- `src/testing.ts` exports a fake with the client's type, for the app's own tests, and a builder for
+  signed deliveries.
+
+## 4. Finish
+
+```bash
+pnpm integrations:generate --check
+pnpm build && pnpm typecheck && pnpm lint
+pnpm docs:catalog && pnpm docs:check
+pnpm changeset
+```
+
+A package that holds an end user's tokens also needs a credentials review.

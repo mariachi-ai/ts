@@ -1244,6 +1244,9 @@ importers:
       '@mariachi/integrations':
         specifier: workspace:*
         version: link:../integrations
+      '@mariachi/webhooks':
+        specifier: workspace:*
+        version: link:../webhooks
       zod:
         specifier: ^3.24
         version: 3.25.76

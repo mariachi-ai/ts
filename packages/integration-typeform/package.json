@@ -13,7 +13,7 @@
     "useWhen": "Reading Typeform responses, or receiving them as they're submitted",
     "entry": [
       "createTypeform",
-      "receiveTypeformWebhook",
+      "typeformWebhookAuth",
       "answersByRef"
     ]
   },
@@ -53,6 +53,7 @@
   "dependencies": {
     "@mariachi/core": "workspace:*",
     "@mariachi/integrations": "workspace:*",
+    "@mariachi/webhooks": "workspace:*",
     "zod": "^3.24"
   },
   "devDependencies": {

@@ -9,11 +9,11 @@ export type AnswerValue = string | number | boolean | string[] | null;
  */
 export function answersByRef(response: Pick<FormResponse, 'answers'>): Record<string, AnswerValue> {
   const out: Record<string, AnswerValue> = {};
-  for (const answer of response.answers) out[answer.field.ref] = valueOf(answer);
+  for (const answer of response.answers) out[answer.field.ref] = answerValue(answer);
   return out;
 }
 
-export function valueOf(answer: Answer): AnswerValue {
+export function answerValue(answer: Answer): AnswerValue {
   switch (answer.type) {
     case 'text':
       return answer.text ?? null;

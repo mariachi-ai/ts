@@ -1,45 +1,35 @@
-import type { Context, TracerAdapter } from '@mariachi/core';
-import { type RawBody, WebhookSignatureError, hmac, receiveProviderWebhook, safeEqual } from '@mariachi/integrations';
+import { HmacWebhookAuth } from '@mariachi/webhooks';
 import { provider } from './generated';
 import { FormResponseEvent } from './schemas';
 
-/** Whether `header` (`Typeform-Signature`) is the HMAC of the raw body with the webhook secret. */
-export function verifyTypeformSignature(rawBody: RawBody, header: string | undefined, secret: string): boolean {
-  if (!header?.startsWith('sha256=')) return false;
-  return safeEqual(header.slice('sha256='.length), hmac('sha256', secret, rawBody, 'base64'));
-}
-
-export interface TypeformWebhookRequest {
-  /** The body's bytes as they arrived. */
-  rawBody: RawBody;
-  headers: Record<string, string | string[] | undefined>;
+/**
+ * The authenticator for a `WebhookController` that receives Typeform: the `Typeform-Signature` header is
+ * `sha256=` and the base64 HMAC-SHA256 of the raw body, keyed with the webhook secret. Pass two secrets while
+ * rotating. A delivery that doesn't match is answered 401.
+ *
+ * ```ts
+ * class TypeformWebhooks extends WebhookController {
+ *   readonly prefix = 'typeform';
+ *   readonly auth = typeformWebhookAuth(config.typeform.webhookSecret);
+ *   init() {
+ *     this.post('responses', { mode: 'queue', jobName: 'typeform-response', eventType: typeformEventType },
+ *       async (_ctx, body) => TypeformWebhookBody.parse(body));
+ *   }
+ * }
+ * ```
+ */
+export function typeformWebhookAuth(secret: string | string[]): HmacWebhookAuth {
+  return new HmacWebhookAuth({ provider: provider.id, secret, header: 'typeform-signature', encoding: 'base64', prefix: 'sha256=' });
 }
 
 /**
- * Checks and reads one Typeform webhook, with its SERVER span. Throws `typeform/invalid-signature` (401) when the
- * signature doesn't match. Typeform retries a delivery that fails, so the same response can arrive twice: dedupe
- * by `payload.form_response.token`.
- *
- * ```ts
- * const { payload } = await receiveTypeformWebhook(ctx, { rawBody: ctx.request.rawBody, headers }, { webhookSecret });
- * const answers = answersByRef(payload.form_response);
- * ```
+ * What Typeform posts when a form is submitted. Typeform retries a delivery that fails, so the same response can
+ * arrive more than once: dedupe on `form_response.token` where it's stored.
  */
-export function receiveTypeformWebhook(ctx: Context, request: TypeformWebhookRequest, config: { webhookSecret: string }, deps: { tracer?: TracerAdapter } = {}) {
-  return receiveProviderWebhook(
-    ctx,
-    provider.id,
-    () => {
-      const header = headerOf(request.headers, 'typeform-signature');
-      if (!verifyTypeformSignature(request.rawBody, header, config.webhookSecret)) throw new WebhookSignatureError(provider.id);
-      const payload = FormResponseEvent.parse(JSON.parse(Buffer.from(typeof request.rawBody === 'string' ? request.rawBody : Buffer.from(request.rawBody)).toString()));
-      return { event: payload.event_type, payload };
-    },
-    deps,
-  );
-}
+export const TypeformWebhookBody = FormResponseEvent;
 
-function headerOf(headers: TypeformWebhookRequest['headers'], name: string): string | undefined {
-  const found = Object.entries(headers).find(([k]) => k.toLowerCase() === name)?.[1];
-  return Array.isArray(found) ? found[0] : found;
+/** The delivery's event type, for its span: `eventType: typeformEventType` on the route. */
+export function typeformEventType(payload: unknown): string | undefined {
+  const type = (payload as { event_type?: unknown } | null)?.event_type;
+  return typeof type === 'string' ? type : undefined;
 }
