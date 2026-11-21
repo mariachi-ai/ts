@@ -1,0 +1,192 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "okta",
+    "name": "Okta",
+    "category": "auth",
+    "server": "{yourOktaDomain}",
+    "docs": "https://developer.okta.com/docs/"
+  },
+  "settings": [
+    {
+      "key": "issuer",
+      "env": "OKTA_ISSUER",
+      "label": "Issuer",
+      "meaning": "The custom authorization server that issues the access tokens your API accepts, and the one sign-in goes through: https://{yourOktaDomain}/oauth2/{authorizationServerId}.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "Admin Console › Security › API › Authorization Servers: the server's issuer, https://{yourOktaDomain}/oauth2/{authorizationServerId}, so https://{yourOktaDomain}/oauth2/default for the default server. Never the org authorization server (https://{yourOktaDomain} alone): its access tokens are for Okta's own APIs, not yours. Okta has no test mode: use a separate org for test (an Integrator Free Plan org from developer.okta.com).",
+      "url": "https://developer.okta.com/docs/concepts/auth-servers/"
+    },
+    {
+      "key": "audience",
+      "env": "OKTA_AUDIENCE",
+      "label": "Audience",
+      "meaning": "The aud every access token must carry: the authorization server's Audience. Required for any server but the default one, whose audience is api://default.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Admin Console › Security › API › Authorization Servers › the server › Settings: its Audience. Leave it unset for the default server (api://default).",
+      "url": "https://developer.okta.com/docs/guides/customize-authz-server/main/"
+    },
+    {
+      "key": "clientId",
+      "env": "OKTA_CLIENT_ID",
+      "label": "Client ID",
+      "meaning": "The OIDC app users sign in through. Access tokens must have been issued to it (their cid claim).",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "Admin Console › Applications › Applications › your OIDC web app: its Client ID.",
+      "url": "https://developer.okta.com/docs/guides/sign-into-web-app-redirect/node-express/main/"
+    },
+    {
+      "key": "clientSecret",
+      "env": "OKTA_CLIENT_SECRET",
+      "label": "Client secret",
+      "meaning": "Authenticates the app's backend when it exchanges a sign-in code, refreshes or revokes tokens. Needed by the identity client, not to verify tokens.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "The same app's client secret (client authentication: Client secret).",
+      "url": "https://developer.okta.com/docs/guides/sign-into-web-app-redirect/node-express/main/"
+    },
+    {
+      "key": "apiToken",
+      "env": "OKTA_API_TOKEN",
+      "label": "API token",
+      "meaning": "Reads, creates and deletes users through the Management API (Authorization: SSWS <token>). It has the privileges of the admin who made it and expires after 30 days unused. Prefer a service app (OKTA_SERVICE_CLIENT_ID).",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Admin Console › Security › API › Tokens › Create token. It takes the privileges of the admin who creates it, so create it as a service account with only the user privileges the app needs.",
+      "url": "https://developer.okta.com/docs/guides/create-an-api-token/main/"
+    },
+    {
+      "key": "serviceClientId",
+      "env": "OKTA_SERVICE_CLIENT_ID",
+      "label": "Service app client ID",
+      "meaning": "An OAuth 2.0 service app for the Management API: client credentials with a private key, granted okta.users.read and okta.users.manage. Okta's recommended way to call its APIs; used instead of the API token when set.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "An API service app in Admin Console › Applications, with public key / private key client authentication, the okta.users.read and okta.users.manage scopes granted, and an admin role assigned to it. Turn off General Settings › Proof of possession › Require Demonstrating Proof of Possession (DPoP) header in token requests: DPoP isn't supported yet.",
+      "url": "https://developer.okta.com/docs/guides/implement-oauth-for-okta-serviceapp/main/"
+    },
+    {
+      "key": "servicePrivateKey",
+      "env": "OKTA_SERVICE_PRIVATE_KEY",
+      "label": "Service app private key",
+      "meaning": "Signs the service app's client assertions (private_key_jwt). A private JWK as JSON (with its kid), or a PKCS#8 PEM.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "The key pair added to the service app: the private key Okta shows once when it generates one, or yours whose public key you added.",
+      "url": "https://developer.okta.com/docs/guides/implement-oauth-for-okta-serviceapp/main/"
+    },
+    {
+      "key": "eventHookSecret",
+      "env": "OKTA_EVENT_HOOK_SECRET",
+      "label": "Event hook secret",
+      "meaning": "Checks that an Event Hook delivery came from Okta: Okta sends it, as you gave it, in the Authorization header of every request.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "A long random string of your own: give it as the authentication secret (field: Authorization) when you create the event hook.",
+      "url": "https://developer.okta.com/docs/concepts/event-hooks/"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "token.authorizationCode",
+      "purpose": "Exchanges a sign-in's authorization code and PKCE verifier for tokens, with the client secret.",
+      "method": "POST",
+      "path": "/oauth2/{authorizationServerId}/v1/token",
+      "idempotency": "none"
+    },
+    {
+      "name": "token.refresh",
+      "purpose": "Exchanges a refresh token for a new access token, and a new refresh token when rotation is on.",
+      "method": "POST",
+      "path": "/oauth2/{authorizationServerId}/v1/token",
+      "idempotency": "none"
+    },
+    {
+      "name": "token.revoke",
+      "purpose": "Revokes a refresh token, so it can't be used again.",
+      "method": "POST",
+      "path": "/oauth2/{authorizationServerId}/v1/revoke",
+      "idempotency": "natural"
+    },
+    {
+      "name": "token.clientCredentials",
+      "purpose": "Gets the service app's access token for the Management API from the org authorization server, authenticated with a private_key_jwt client assertion.",
+      "method": "POST",
+      "path": "/oauth2/v1/token",
+      "idempotency": "natural"
+    },
+    {
+      "name": "users.get",
+      "purpose": "Reads one user by id (or login).",
+      "method": "GET",
+      "path": "/api/v1/users/{id}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "users.search",
+      "purpose": "Finds users matching a search expression, such as profile.email eq \"ada@example.com\".",
+      "method": "GET",
+      "path": "/api/v1/users",
+      "idempotency": "natural"
+    },
+    {
+      "name": "users.create",
+      "purpose": "Creates a user, activated when it's given a password and staged otherwise.",
+      "method": "POST",
+      "path": "/api/v1/users",
+      "idempotency": "none"
+    },
+    {
+      "name": "users.delete",
+      "purpose": "Deactivates a user that isn't deactivated yet; deletes one that is. Called twice to delete an active user.",
+      "method": "DELETE",
+      "path": "/api/v1/users/{id}",
+      "idempotency": "natural"
+    }
+  ],
+  "errors": [
+    { "providerCode": "E0000001", "category": "invalid-request", "reason": "validation-failed" },
+    { "providerCode": "E0000004", "category": "unauthorized", "reason": "authentication-failed" },
+    { "providerCode": "E0000006", "category": "forbidden", "reason": "access-denied" },
+    { "providerCode": "E0000007", "category": "not-found", "reason": "not-found" },
+    { "providerCode": "E0000011", "category": "unauthorized", "reason": "invalid-token" },
+    { "providerCode": "E0000015", "category": "forbidden", "reason": "feature-not-enabled" },
+    { "providerCode": "E0000047", "category": "rate-limited", "reason": "rate-limited" },
+    { "providerCode": "invalid_grant", "category": "invalid-request", "reason": "invalid-grant" },
+    { "providerCode": "invalid_client", "category": "unauthorized", "reason": "invalid-client" },
+    { "providerCode": "invalid_scope", "category": "invalid-request", "reason": "invalid-scope" },
+    { "providerCode": "invalid_dpop_proof", "category": "unauthorized", "reason": "dpop-required" },
+    { "providerCode": "use_dpop_nonce", "category": "unauthorized", "reason": "dpop-required" }
+  ],
+  "webhooks": {
+    "signature": {
+      "scheme": "shared-secret",
+      "header": "Authorization",
+      "secretSetting": "eventHookSecret",
+      "description": "Okta Event Hooks sign nothing: every request carries the secret you gave when creating the hook, unchanged, as the Authorization header value. Compare it with the setting in constant time. When the hook is created or verified, Okta first sends one GET with the header x-okta-verification-challenge; answer it with 200 and the JSON {\"verification\": \"<that value>\"}. Deliveries are POSTs whose data.events holds one or more events; answer 200 or 204 within 3 seconds. Okta retries at most once, after a 5xx or timeout, and delivers at least once: dedupe on the delivery's eventId, or each event's uuid."
+    },
+    "events": [
+      { "type": "user.lifecycle.create", "meaning": "A user was created." },
+      { "type": "user.lifecycle.activate", "meaning": "A user was activated." },
+      { "type": "user.lifecycle.deactivate", "meaning": "A user was deactivated." },
+      { "type": "user.lifecycle.suspend", "meaning": "A user was suspended." },
+      { "type": "user.lifecycle.unsuspend", "meaning": "A user was unsuspended." },
+      { "type": "user.lifecycle.reactivate", "meaning": "A user was reactivated." },
+      { "type": "user.lifecycle.delete.initiated", "meaning": "A user's deletion began (the completed event isn't sent to hooks)." },
+      { "type": "user.account.update_profile", "meaning": "A user's profile was updated." },
+      { "type": "user.account.lock", "meaning": "A user's account was locked." },
+      { "type": "user.session.end", "meaning": "A user's session ended." },
+      { "type": "user.session.clear", "meaning": "All of a user's sessions were cleared." }
+    ]
+  }
+}
