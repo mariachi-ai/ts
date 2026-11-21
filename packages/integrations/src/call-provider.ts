@@ -77,9 +77,12 @@ const DEFAULT_ATTEMPTS = 3;
  *
  * A failure that isn't a `ProviderError` (a bug, a validation error) fails at once and isn't retried, except a
  * network failure (`fetch` throwing a `TypeError`), which is `unavailable`.
+ *
+ * `ctx` is `null` only where a port's interface carries no context (the auth port's `IdentityClient`): the call
+ * still has its span, without the tenant. Never build a context to pass here.
  */
 export async function callProvider<T>(
-  ctx: Context,
+  ctx: Context | null,
   call: ProviderCall,
   fn: (attempt: ProviderAttempt) => Promise<T>,
   deps: ProviderDeps = {},
@@ -116,7 +119,7 @@ export async function callProvider<T>(
   }
 }
 
-function baseAttributes(ctx: Context, call: ProviderCall, deps: ProviderDeps): Record<string, string> {
+function baseAttributes(ctx: Context | null, call: ProviderCall, deps: ProviderDeps): Record<string, string> {
   return {
     'mariachi.integration': call.integration,
     'mariachi.integration.operation': call.operation,
@@ -124,7 +127,7 @@ function baseAttributes(ctx: Context, call: ProviderCall, deps: ProviderDeps): R
     'server.address': call.server,
     ...(call.method ? { 'http.request.method': call.method.toUpperCase() } : {}),
     ...(call.connection ? { 'mariachi.integration.connection': call.connection } : {}),
-    ...(deps.tenantAttribute && ctx.tenantId ? { 'mariachi.tenant_id': ctx.tenantId } : {}),
+    ...(deps.tenantAttribute && ctx?.tenantId ? { 'mariachi.tenant_id': ctx.tenantId } : {}),
   };
 }
 

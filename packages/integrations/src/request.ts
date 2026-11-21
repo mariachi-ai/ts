@@ -47,7 +47,7 @@ export interface ProviderRequestOptions<T> {
  * HTTP and JSON.
  */
 export async function providerRequest<T>(
-  ctx: Context,
+  ctx: Context | null,
   call: Omit<ProviderCall, 'method'>,
   request: ProviderRequest,
   options: ProviderRequestOptions<T>,
