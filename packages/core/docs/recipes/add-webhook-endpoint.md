@@ -142,6 +142,11 @@ under that tenant's own secret. Provider packages ship ready-made
 controllers (`ClerkWebhookController`, `FusionAuthWebhookHandler`), and billing verifies Stripe's
 billing events itself.
 
+**A sender that checks the endpoint first** (Microsoft Graph posts `?validationToken=` and wants it
+echoed) is answered by the authenticator's `handshake(req)`: return an `httpResponse` for that check
+and nothing for an ordinary delivery. `WebhookServer` asks it before authenticating, and the check
+never reaches the route's handler. `entraWebhookAuth` from `@mariachi/auth-entra` does Graph's.
+
 ## 2. Route: `src/webhooks/github.controller.ts`
 
 ```ts

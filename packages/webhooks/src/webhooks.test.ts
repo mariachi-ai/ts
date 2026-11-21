@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { InMemoryIdempotencyStore, type Context } from '@mariachi/core';
-import type { IncomingRequest } from '@mariachi/server';
+import { httpResponse, type IncomingRequest } from '@mariachi/server';
 import { SignatureAuthController, WebhookController, WebhookServer, redactHeaders, type WebhookLogStore } from './index';
 
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child() { return silent; } };
@@ -231,5 +231,25 @@ describe('SignatureAuthController subclasses', () => {
       payload,
     });
     expect(res.statusCode).toBe(200);
+  });
+});
+
+describe('a handshake', () => {
+  it('answers the sender\'s endpoint check before authentication, and never reaches the handler', async () => {
+    class EchoAuth extends AcmeAuth {
+      handshake(req: IncomingRequest) {
+        const token = req.query.challenge;
+        return typeof token === 'string' ? httpResponse(200, token, { 'content-type': 'text/plain; charset=utf-8' }) : undefined;
+      }
+    }
+    const calls: unknown[] = [];
+    const communication = { call: async (_ctx: unknown, _name: string, input: unknown) => { calls.push(input); return { ok: true }; } } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new AcmeController(new EchoAuth()));
+    const check = await server.inject({ method: 'POST', url: '/acme/t42/events?challenge=abc%20123', headers: { 'content-type': 'text/plain' }, payload: '' });
+    expect([check.statusCode, check.headers['content-type'], check.body]).toEqual([200, 'text/plain; charset=utf-8', 'abc 123']);
+    // Without the check, a delivery is authenticated as usual
+    const unsigned = await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json' }, payload: '{}' });
+    expect(unsigned.statusCode).toBe(401);
+    expect(calls).toHaveLength(0);
   });
 });
