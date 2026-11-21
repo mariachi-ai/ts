@@ -31,8 +31,11 @@ export interface FailureInfo {
 }
 
 export interface ProviderRequestOptions<T> {
-  /** Checks the answer at the boundary: a provider that changed its response fails here, not deep in the app. */
-  schema: z.ZodType<T>;
+  /**
+   * Checks the answer at the boundary: a provider that changed its response fails here, not deep in the app.
+   * Its input type is the provider's raw JSON, so a schema with defaults or transforms fits.
+   */
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>;
   /** Reads the provider's error body. Without it, the HTTP status decides the category and reason. */
   failure?: (status: number, body: unknown) => FailureInfo | undefined;
   /** The integration's error class, so callers can `instanceof HubSpotError`. */
