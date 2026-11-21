@@ -1,0 +1,70 @@
+{
+  "name": "@mariachi/integration-crisp",
+  "version": "0.0.0",
+  "description": "Crisp live chat: the chat widget with a verified identity, people profiles and events, conversations, and web hooks.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/integration-crisp"
+  },
+  "mariachi": {
+    "category": "providers",
+    "status": "alpha",
+    "useWhen": "Live chat with Crisp: the widget on the app's pages for signed-in users, their profiles and events, and answering conversations",
+    "entry": [
+      "createCrisp",
+      "crispCsp",
+      "crispWebhookAuth",
+      "crispWebsiteHookAuth"
+    ]
+  },
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
+    "./crisp.js": "./browser/crisp.js",
+    "./contract.json": "./contract.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "browser",
+    "contract.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "biome lint src browser",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariachi/api-facade": "workspace:*",
+    "@mariachi/core": "workspace:*",
+    "@mariachi/integrations": "workspace:*",
+    "@mariachi/server": "workspace:*",
+    "@mariachi/webhooks": "workspace:*",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@mariachi/testing": "workspace:*",
+    "tsup": "^8",
+    "typescript": "^5.7",
+    "vitest": "^3"
+  }
+}
