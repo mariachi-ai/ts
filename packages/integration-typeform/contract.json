@@ -1,0 +1,106 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "typeform",
+    "name": "Typeform",
+    "category": "forms",
+    "server": "api.typeform.com",
+    "baseUrl": "https://api.typeform.com",
+    "docs": "https://www.typeform.com/developers/"
+  },
+  "settings": [
+    {
+      "key": "token",
+      "env": "TYPEFORM_TOKEN",
+      "label": "Personal access token",
+      "meaning": "Reads the account's forms and responses, and manages their webhooks.",
+      "secret": true,
+      "required": true,
+      "whereToFind": "Account › Personal tokens › Generate a new token, with the forms:read, responses:read, webhooks:read and webhooks:write scopes. Typeform has no test mode: use a separate form for test.",
+      "url": "https://admin.typeform.com/user/tokens"
+    },
+    {
+      "key": "webhookSecret",
+      "env": "TYPEFORM_WEBHOOK_SECRET",
+      "label": "Webhook secret",
+      "meaning": "Checks that a webhook came from Typeform. You choose it, and it's sent to Typeform when the webhook is made.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Any long random string of your own: webhooks.put sends it to Typeform.",
+      "url": "https://www.typeform.com/developers/webhooks/secure-your-webhooks/"
+    },
+    {
+      "key": "apiBaseUrl",
+      "env": "TYPEFORM_API_BASE_URL",
+      "label": "API address",
+      "meaning": "Where the account's data lives. Only for accounts in Typeform's EU data center.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "https://api.eu.typeform.com for an EU account; leave it unset otherwise.",
+      "url": "https://www.typeform.com/developers/get-started/responses-data-center/"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "forms.list",
+      "purpose": "Lists the account's forms, a page at a time, optionally matching a search.",
+      "method": "GET",
+      "path": "/forms",
+      "idempotency": "natural"
+    },
+    {
+      "name": "forms.get",
+      "purpose": "Reads one form: its fields, with each field's ref, and its hidden fields.",
+      "method": "GET",
+      "path": "/forms/{formId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "responses.list",
+      "purpose": "Lists a form's responses, newest first, a page at a time.",
+      "method": "GET",
+      "path": "/forms/{formId}/responses",
+      "idempotency": "natural"
+    },
+    {
+      "name": "webhooks.put",
+      "purpose": "Creates or updates the form's webhook with this tag, signed with the webhook secret.",
+      "method": "PUT",
+      "path": "/forms/{formId}/webhooks/{tag}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "webhooks.list",
+      "purpose": "Lists the form's webhooks.",
+      "method": "GET",
+      "path": "/forms/{formId}/webhooks",
+      "idempotency": "natural"
+    },
+    {
+      "name": "webhooks.delete",
+      "purpose": "Deletes the form's webhook with this tag.",
+      "method": "DELETE",
+      "path": "/forms/{formId}/webhooks/{tag}",
+      "idempotency": "natural"
+    }
+  ],
+  "errors": [],
+  "webhooks": {
+    "signature": {
+      "scheme": "hmac-sha256-base64",
+      "header": "Typeform-Signature",
+      "secretSetting": "webhookSecret",
+      "description": "The header is sha256= followed by the base64 HMAC-SHA256 of the raw request body, keyed with the webhook's secret."
+    },
+    "events": [
+      {
+        "type": "form_response",
+        "meaning": "Someone submitted the form."
+      }
+    ]
+  }
+}

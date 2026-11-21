@@ -11,6 +11,7 @@ export const CATEGORIES = {
   async: 'Events, jobs and realtime',
   security: 'Security and access',
   domain: 'Domain features',
+  providers: 'Third-party providers',
   design: 'Design',
   tooling: 'Tooling',
 };
