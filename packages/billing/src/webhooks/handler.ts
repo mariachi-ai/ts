@@ -55,6 +55,10 @@ export function createBillingWebhookHandler(config: BillingWebhookHandlerConfig,
   const idempotency = config.idempotency ?? new InMemoryIdempotencyStore();
   if (!config.secret) throw new BillingError('billing/config', 'Billing webhook handler requires a signing secret');
 
+  /** The adapter's own reading of its events when it has one (Paddle), else Stripe's. */
+  const normalize = (event: ProviderEvent): Promise<BillingEvent[]> =>
+    config.adapter.normalizeWebhook ? config.adapter.normalizeWebhook(event, config.store) : normalizeAndSync(event, config.store);
+
   async function dispatch(ctx: Context, event: BillingEvent): Promise<void> {
     const eventCtx: Context = { ...ctx, tenantId: event.tenantId ?? ctx.tenantId, identityType: 'webhook' };
     const typed = config.on?.[event.type] as ((c: Context, e: BillingEvent) => Promise<void>) | undefined;
@@ -90,7 +94,7 @@ export function createBillingWebhookHandler(config: BillingWebhookHandlerConfig,
         try {
           const result = await runOnce(idempotency, `billing:${config.adapter.name}:${id}`, async () => {
             await config.store?.recordWebhookEvent({ id, type, status: 'processing', payload: serializeProviderEvent(providerEvent) });
-            const events = await normalizeAndSync(providerEvent, config.store);
+            const events = await normalize(providerEvent);
             for (const event of events) {
               await dispatch(baseCtx, event);
               emitted.push(event.type);
@@ -131,7 +135,7 @@ export function createBillingWebhookHandler(config: BillingWebhookHandlerConfig,
       const emitted: BillingEvent['type'][] = [];
       try {
         await config.store.recordWebhookEvent({ id: stored.id, type: stored.type, status: 'processing' });
-        const events = await normalizeAndSync(providerEvent, config.store);
+        const events = await normalize(providerEvent);
         for (const event of events) {
           await dispatch(baseCtx, event);
           emitted.push(event.type);
