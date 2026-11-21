@@ -67,22 +67,11 @@ export abstract class VerifiedWebhookAuth extends AuthController {
     }
   }
 
-  /**
-   * Throws `webhooks/invalid-signature`, or returns the delivery's dedup key and anything else worth keeping.
-   * `method` is the request's, upper-case, for a scheme that treats a sender's endpoint check differently.
-   */
-  protected abstract verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets, method: string): Verified;
-
-  /**
-   * Whether a request with no body can be genuine. Only for a scheme that signs no body and a sender that makes
-   * such requests (an endpoint check by `GET`, answered by a `reply` route); the default refuses them.
-   */
-  protected acceptsEmptyBody(_method: string): boolean {
-    return false;
-  }
+  /** Throws `webhooks/invalid-signature`, or returns the delivery's dedup key and anything else worth keeping. */
+  protected abstract verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified;
 
   async auth(req: IncomingRequest, ctx: RequestContext): Promise<WebhookIdentity | null> {
-    if ((!req.rawBody || req.rawBody.length === 0) && !this.acceptsEmptyBody(req.method.toUpperCase())) {
+    if (!req.rawBody || req.rawBody.length === 0) {
       ctx.logger.warn({ provider: this.provider }, 'webhook has no raw body; rejecting');
       return null;
     }
@@ -99,10 +88,9 @@ export abstract class VerifiedWebhookAuth extends AuthController {
       secret = this.base.secret;
     }
     try {
-      const rawBody = req.rawBody ?? Buffer.alloc(0);
-      const { eventId, metadata } = this.verify(rawBody, req.headers, secret, req.method.toUpperCase());
+      const { eventId, metadata } = this.verify(req.rawBody, req.headers, secret);
       if (this.base.tenantFromPayload) {
-        const fromPayload = this.base.tenantFromPayload(parseJson(rawBody));
+        const fromPayload = this.base.tenantFromPayload(parseJson(req.rawBody));
         if (tenantId && fromPayload && fromPayload !== tenantId) {
           ctx.logger.warn({ provider: this.provider }, 'webhook body names a different tenant from the request; rejecting');
           return null;

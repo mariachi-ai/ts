@@ -50,6 +50,12 @@ named `<provider> webhook`, with `mariachi.integration` and, when the route sets
 `eventType: (payload) => payload.type`, `mariachi.integration.event`. Its status says whether the
 delivery was accepted. Nothing from the body, the headers or the URL is recorded.
 
+**A sender's endpoint check.** Some senders check an endpoint before they deliver to it: Microsoft
+Graph posts a `validationToken` to echo, Okta sends a `GET` with a challenge. The authenticator
+answers it in `handshake(req, ctx)`, which runs before `auth` and returns the response (or nothing,
+for an ordinary delivery). A sender that signs its check is verified there too. The check never
+reaches the route, a procedure or a job.
+
 ## 1. Verify the signature
 
 `@mariachi/webhooks` ships the common schemes, so there's usually no class to write:
@@ -165,11 +171,6 @@ export class GitHubWebhookController extends WebhookController {
 
 The handler's return value becomes the job payload (or the procedure input in `direct` mode). Set
 `logPayload: false` on routes whose bodies carry personal data.
-
-A third mode, `reply`, answers with the handler's return value and dispatches nothing. It's for a
-sender that checks the endpoint is yours before it sends anything, such as Okta's one-time
-verification `GET` (see `@mariachi/auth-okta`). The route is still authenticated: an authenticator
-whose scheme signs no body overrides `acceptsEmptyBody` to let that `GET` through.
 
 ## 3. Job: `src/jobs/github-push.job.ts`
 

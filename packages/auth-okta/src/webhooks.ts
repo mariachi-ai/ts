@@ -1,7 +1,8 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { AuthEventType, AuthWebhookEvent } from '@mariachi/auth';
 import { AuthError } from '@mariachi/core';
-import { VerifiedWebhookAuth, type VerifiedWebhookAuthOptions, type Verified, type Secrets, type WebhookHeaders, headerValue } from '@mariachi/webhooks';
+import { type HttpResponse, type IncomingRequest, httpResponse } from '@mariachi/server';
+import { type Secrets, type Verified, VerifiedWebhookAuth, type VerifiedWebhookAuthOptions, type WebhookHeaders, headerValue } from '@mariachi/webhooks';
 import { provider } from './generated';
 import { type LogEvent, type LogEventObject, OktaEventHookDelivery } from './schemas';
 
@@ -9,35 +10,34 @@ export const OKTA_VERIFICATION_HEADER = 'x-okta-verification-challenge';
 
 /**
  * Okta Event Hooks' scheme. Okta signs nothing: every request carries, as its `Authorization` header, the secret
- * given when the hook was created, which is compared here in constant time (pass two while rotating). The
- * one-time verification `GET` Okta sends when the hook is created or verified has no body: it's let through too
- * when it carries the secret and the challenge, which `oktaVerification` echoes back.
+ * given when the hook was created, which is compared here in constant time (pass two while rotating).
+ *
+ * When the hook is created or verified, Okta first sends one `GET` with `x-okta-verification-challenge`.
+ * `handshake` answers it, `200 { "verification": "<the challenge>" }`, when it carries the secret; one that
+ * doesn't is refused by `auth`. The check never reaches the route. Register a `GET` on the hook's path so it
+ * arrives (see `oktaWebhookAuth`).
  *
  * A static secret proves the sender but not that a request is new: dedupe deliveries on `eventId` (the
  * `WebhookServer` does with an idempotency store) and events on their `uuid`.
  */
 export class OktaEventHookAuth extends VerifiedWebhookAuth {
-  constructor(options: VerifiedWebhookAuthOptions) {
+  constructor(private readonly options: VerifiedWebhookAuthOptions) {
     super(options, provider.id);
   }
 
-  protected override acceptsEmptyBody(method: string): boolean {
-    return method === 'GET';
+  async handshake(req: IncomingRequest): Promise<HttpResponse | undefined> {
+    if (req.method.toUpperCase() !== 'GET') return undefined;
+    const challenge = headerValue(req.headers, OKTA_VERIFICATION_HEADER);
+    if (!challenge) return undefined;
+    const secret = await this.secretFor(req);
+    if (!secret || !matches(headerValue(req.headers, 'authorization'), secret)) return undefined;
+    return httpResponse(200, { verification: challenge });
   }
 
-  protected verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets, method: string): Verified {
+  protected verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified {
     const given = headerValue(headers, 'authorization');
-    const secrets = (Array.isArray(secret) ? secret : [secret]).filter((s) => typeof s === 'string' && s.trim() !== '');
     if (!given) return invalid('the Authorization header is missing');
-    const offered = digest(given);
-    // Every secret is compared, so the time taken says nothing about which one matched.
-    const ok = secrets.map((s) => timingSafeEqual(offered, digest(s))).includes(true);
-    if (!ok) return invalid('the Authorization header does not match the event hook secret');
-    if (method === 'GET') {
-      const challenge = headerValue(headers, OKTA_VERIFICATION_HEADER);
-      if (!challenge) return invalid(`a GET without ${OKTA_VERIFICATION_HEADER}`);
-      return { metadata: { verification: challenge } };
-    }
+    if (!matches(given, secret)) return invalid('the Authorization header does not match the event hook secret');
     let eventId: unknown;
     try {
       eventId = (JSON.parse(rawBody.toString('utf8')) as { eventId?: unknown } | null)?.eventId;
@@ -47,36 +47,36 @@ export class OktaEventHookAuth extends VerifiedWebhookAuth {
     // Okta's delivery id, so a retried delivery is processed once; else the body's digest.
     return { eventId: typeof eventId === 'string' && eventId ? eventId : `body:${createHash('sha256').update(rawBody).digest('hex')}` };
   }
+
+  /** The secret the request must carry: the shared one, or its tenant's. */
+  private async secretFor(req: IncomingRequest): Promise<Secrets | undefined> {
+    const { secret, tenantFromRequest } = this.options;
+    if (typeof secret !== 'function') return secret;
+    const tenantId = tenantFromRequest?.(req);
+    return tenantId ? secret(tenantId, req) : undefined;
+  }
 }
 
 /**
  * The authenticator for a `WebhookController` that receives Okta Event Hooks. `secret` is `OKTA_EVENT_HOOK_SECRET`
- * (or two while rotating).
+ * (or two while rotating). Register the hook's path for `GET` too: that's how Okta's verification request
+ * arrives, and the authenticator answers it before the route.
  *
  * ```ts
  * class OktaWebhooks extends WebhookController {
  *   readonly prefix = 'okta';
  *   readonly auth = oktaWebhookAuth(config.okta.eventHookSecret);
  *   init() {
- *     this.get('events', { mode: 'reply' }, async (ctx) => oktaVerification(ctx));
- *     this.post('events', { mode: 'queue', jobName: 'okta-events', eventType: oktaEventType },
- *       async (_ctx, body) => OktaEventHookBody.parse(body));
+ *     const route = { mode: 'queue', jobName: 'okta-events', eventType: oktaEventType } as const;
+ *     const handler = async (_ctx: unknown, body: unknown) => OktaEventHookBody.parse(body);
+ *     this.get('events', route, handler);    // Okta's verification: answered by the authenticator
+ *     this.post('events', route, handler);
  *   }
  * }
  * ```
  */
-export function oktaWebhookAuth(secret: string | string[], options: Omit<VerifiedWebhookAuthOptions, 'secret'> = {}): OktaEventHookAuth {
+export function oktaWebhookAuth(secret: Secrets, options: Omit<VerifiedWebhookAuthOptions, 'secret'> = {}): OktaEventHookAuth {
   return new OktaEventHookAuth({ ...options, secret });
-}
-
-/**
- * The answer to Okta's one-time verification request, `{ verification: <the challenge> }`, for a `reply` route
- * on `GET`. Only an authenticated request has a challenge to echo.
- */
-export function oktaVerification(ctx: { identity: { metadata?: Record<string, unknown> } }): { verification: string } {
-  const verification = ctx.identity.metadata?.verification;
-  if (typeof verification !== 'string') throw new AuthError('auth/webhook-invalid-payload', `Okta verification request without ${OKTA_VERIFICATION_HEADER}`);
-  return { verification };
 }
 
 /** What Okta posts to an Event Hook: one or more System Log events in `data.events`. */
@@ -142,6 +142,16 @@ export function oktaAuthEvents(body: OktaEventHookDelivery): AuthWebhookEvent[] 
 /** The user an event is about: its `User` target (an admin's change), else its actor when that's a user (their own sign-out). */
 function userOf(event: LogEvent): LogEventObject | undefined {
   return event.target?.find((t) => t.type === 'User') ?? (event.actor?.type === 'User' ? event.actor : undefined);
+}
+
+/** Whether the `Authorization` value is one of the secrets. Every secret is compared, so the time taken says nothing about which one matched. */
+function matches(given: string | undefined, secret: Secrets): boolean {
+  if (!given) return false;
+  const offered = digest(given);
+  return (Array.isArray(secret) ? secret : [secret])
+    .filter((s) => typeof s === 'string' && s.trim() !== '')
+    .map((s) => timingSafeEqual(offered, digest(s)))
+    .includes(true);
 }
 
 function digest(value: string): Buffer {

@@ -6,7 +6,7 @@ Okta as the auth port's provider, for Workforce Identity and Customer Identity a
 - `createOktaIdentityClient`: an `IdentityClient` for Okta's hosted sign-in (PKCE), refresh, sign-out,
   and users through the Management API;
 - `oktaWebhookAuth`: Okta Event Hooks through `WebhookServer`, including the one-time verification
-  request, and `oktaAuthEvents` to read them as the auth port's events.
+  request (answered in its `handshake`), and `oktaAuthEvents` to read them as the auth port's events.
 
 `@mariachi/auth-oidc` verifies any OIDC issuer, Okta's included. Use this package when the app also
 signs users in through Okta, manages its users, or receives its events.
@@ -102,19 +102,21 @@ code exchanges, refreshes and creates aren't, so nothing is done twice.
 
 Okta signs nothing: every request carries the secret you gave the hook as its `Authorization`
 header. Before the first delivery, Okta sends one `GET` with `x-okta-verification-challenge`, which
-must be echoed back. Both go to the same route:
+must be echoed back. The authenticator does that in its `handshake`, before any route, and only when
+the request carries the secret. Register the path for `GET` as well as `POST`, so the check arrives:
 
 ```ts
 import { WebhookController } from '@mariachi/webhooks';
-import { OktaEventHookBody, oktaEventType, oktaVerification, oktaWebhookAuth } from '@mariachi/auth-okta';
+import { OktaEventHookBody, oktaAuthEvents, oktaEventType, oktaWebhookAuth } from '@mariachi/auth-okta';
 
 export class OktaWebhooks extends WebhookController {
   readonly prefix = 'okta';
   readonly auth = oktaWebhookAuth(config.okta.eventHookSecret);
   init() {
-    this.get('events', { mode: 'reply' }, async (ctx) => oktaVerification(ctx));     // { verification: '…' }
-    this.post('events', { mode: 'queue', jobName: 'okta-events', eventType: oktaEventType },
-      async (_ctx, body) => OktaEventHookBody.parse(body));
+    const route = { mode: 'queue', jobName: 'okta-events', eventType: oktaEventType } as const;
+    const handler = async (_ctx: unknown, body: unknown) => OktaEventHookBody.parse(body);
+    this.get('events', route, handler);     // Okta's verification: answered { verification: '…' } by the authenticator
+    this.post('events', route, handler);
   }
 }
 

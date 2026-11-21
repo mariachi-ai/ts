@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { AuthError, InMemoryIdempotencyStore, type Context } from '@mariachi/core';
-import type { IncomingRequest } from '@mariachi/server';
-import { SignatureAuthController, VerifiedWebhookAuth, WebhookController, WebhookServer, redactHeaders, type Verified, type WebhookLogStore } from './index';
+import { InMemoryIdempotencyStore, type Context } from '@mariachi/core';
+import { type IncomingRequest, httpResponse } from '@mariachi/server';
+import { SignatureAuthController, WebhookController, WebhookServer, redactHeaders, type WebhookLogStore } from './index';
 
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child() { return silent; } };
 const SECRET = 'whsec';
@@ -198,6 +198,30 @@ describe('webhooks', () => {
     expect(spans[1]!.attributes['error.type']).toBe('webhooks/unauthorized');
   });
 
+  it("answers a sender's endpoint check before authenticating, and never hands it to the route", async () => {
+    let handled = 0;
+    class GraphLikeAuth extends AcmeAuth {
+      handshake(req: IncomingRequest) {
+        const token = req.query.validationToken;
+        return typeof token === 'string' ? httpResponse(200, token, { 'content-type': 'text/plain' }) : undefined;
+      }
+    }
+    class CheckedController extends AcmeController {
+      init() {
+        this.post(':tenant/events', { mode: 'direct', procedure: 'acme.event' }, async (_ctx, body) => {
+          handled += 1;
+          return body;
+        });
+      }
+    }
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new CheckedController(new GraphLikeAuth()));
+    const check = await server.inject({ method: 'POST', url: '/acme/t42/events?validationToken=abc%20123' });
+    expect([check.statusCode, check.body]).toEqual([200, 'abc 123']);
+    expect((await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json' }, payload: '{}' })).statusCode).toBe(401);
+    expect(handled).toBe(0);
+  });
+
   it('redactHeaders masks credentials and signatures', () => {
     expect(redactHeaders({ 'stripe-signature': 'x', cookie: 'y', 'x-custom': 'z' }, ['x-custom'])).toEqual({
       'stripe-signature': '[redacted]',
@@ -231,42 +255,5 @@ describe('SignatureAuthController subclasses', () => {
       payload,
     });
     expect(res.statusCode).toBe(200);
-  });
-});
-
-describe('VerifiedWebhookAuth subclasses', () => {
-  /** A sender that proves itself with a static header and checks the endpoint first with a GET that has no body. */
-  class HeaderSecretAuth extends VerifiedWebhookAuth {
-    constructor(secret: string) {
-      super({ secret, provider: 'header-secret' }, 'header-secret');
-    }
-    protected override acceptsEmptyBody(method: string) {
-      return method === 'GET';
-    }
-    protected verify(_raw: Buffer, headers: Record<string, string | string[] | undefined>, secret: string | string[], method: string): Verified {
-      if (headers['x-secret'] !== secret) throw new AuthError('webhooks/invalid-signature', 'header-secret webhook: wrong secret');
-      return { metadata: method === 'GET' ? { challenge: headers['x-challenge'] } : {} };
-    }
-  }
-
-  class ChallengeController extends WebhookController {
-    readonly prefix = 'hooks';
-    readonly auth = new HeaderSecretAuth('s3cret');
-    init() {
-      this.get('events', { mode: 'reply' }, async (ctx) => ({ echo: ctx.identity.metadata?.challenge }));
-      this.post('events', { mode: 'direct', procedure: 'hooks.event' }, async (_ctx, body) => body);
-    }
-  }
-
-  it('answers a reply route with what its handler returned, dispatching nothing, and refuses an empty body unless the subclass allows it', async () => {
-    const calls: unknown[] = [];
-    const communication = { call: async (_c: unknown, _n: string, input: unknown) => calls.push(input) } as never;
-    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new ChallengeController());
-    const ok = await server.inject({ method: 'GET', url: '/hooks/events', headers: { 'x-secret': 's3cret', 'x-challenge': 'abc' } });
-    expect([ok.statusCode, ok.json()]).toEqual([200, { echo: 'abc' }]);
-    expect((await server.inject({ method: 'GET', url: '/hooks/events', headers: { 'x-secret': 'wrong', 'x-challenge': 'abc' } })).statusCode).toBe(401);
-    expect(calls).toEqual([]);
-    expect((await server.inject({ method: 'POST', url: '/hooks/events', headers: { 'x-secret': 's3cret', 'content-type': 'application/json' }, payload: '{"a":1}' })).statusCode).toBe(200);
-    expect(calls).toEqual([{ a: 1 }]);
   });
 });

@@ -46,8 +46,7 @@ export function redactHeaders(headers: IncomingRequest['headers'], extra: string
 /**
  * Receives third-party webhooks: verifies them via the controller's `AuthController`, logs each
  * delivery (with secrets redacted), deduplicates by event id, then either calls a procedure
- * (`direct`, responds 200), enqueues a job (`queue`, responds 202), or answers with what the
- * handler returned (`reply`).
+ * (`direct`, responds 200) or enqueues a job (`queue`, responds 202).
  */
 export class WebhookServer {
   private readonly server: FastifyServerAdapter;
@@ -134,6 +133,11 @@ export class WebhookServer {
     req: IncomingRequest,
     span: Span | undefined,
   ): Promise<unknown> {
+    const answer = await controller.auth.handshake?.(req, serverCtx);
+    if (answer) {
+      span?.setAttribute('mariachi.integration.event', 'handshake');
+      return answer;
+    }
     const identity = await controller.auth.auth(req, serverCtx);
     if (!identity) throw new AuthError('webhooks/unauthorized', 'Webhook authentication failed');
 
@@ -197,10 +201,6 @@ export class WebhookServer {
     }
 
     try {
-      if (route.opts.mode === 'reply') {
-        if (logStore && logId) await logStore.update(logId, { status: 'processed', response: null });
-        return payload ?? null;
-      }
       if (route.opts.mode === 'direct') {
         const result = await (this.deps.communication!.call as (c: Context, n: string, i: unknown) => Promise<unknown>)(
           ctx,

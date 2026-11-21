@@ -12,7 +12,6 @@ export {
   normalizeOktaEventType,
   oktaAuthEvents,
   oktaEventType,
-  oktaVerification,
   oktaWebhookAuth,
 } from './webhooks';
 export { oktaServer, type OktaServer } from './server';

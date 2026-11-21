@@ -8,7 +8,7 @@ import { settings } from './generated';
 import { createOktaAuth, createOktaIdentityClient } from './index';
 import { OktaAuthProvider } from './provider';
 import { fakeOktaIdentity, oktaEventHookRequest, oktaLogEvent, oktaVerificationRequest } from './testing';
-import { OktaEventHookBody, oktaAuthEvents, oktaEventType, oktaVerification, oktaWebhookAuth } from './webhooks';
+import { OktaEventHookBody, oktaAuthEvents, oktaEventType, oktaWebhookAuth } from './webhooks';
 
 const logger = { info() {}, warn() {}, error() {}, debug() {}, child() { return logger; } };
 const ISSUER = 'https://acme.okta.test/oauth2/default';
@@ -231,8 +231,10 @@ describe('Event Hooks', () => {
     readonly prefix = 'okta';
     readonly auth = oktaWebhookAuth('hook-secret');
     init() {
-      this.get('events', { mode: 'reply' }, async (c) => oktaVerification(c));
-      this.post('events', { mode: 'direct', procedure: 'okta.events', eventType: oktaEventType }, async (_c, body) => OktaEventHookBody.parse(body));
+      const route = { mode: 'direct', procedure: 'okta.events', eventType: oktaEventType } as const;
+      const handler = async (_c: unknown, body: unknown) => OktaEventHookBody.parse(body);
+      this.get('events', route, handler);
+      this.post('events', route, handler);
     }
   }
 
@@ -243,11 +245,18 @@ describe('Event Hooks', () => {
     return { received, tracer, server: new WebhookServer({ name: 'webhooks', logger }, { communication, tracer }).registerController(new OktaWebhooks()) };
   }
 
-  it("answers Okta's one-time verification with its challenge, only when the secret matches", async () => {
-    const { server: s, received } = server();
+  it("answers Okta's one-time verification with its challenge, only when the secret matches, and never reaches the route", async () => {
+    const { server: s, received, tracer } = server();
     const { headers, challenge } = oktaVerificationRequest('hook-secret');
     const ok = await s.inject({ method: 'GET', url: '/okta/events', headers });
     expect([ok.statusCode, ok.json()]).toEqual([200, { verification: challenge }]);
+    expect(tracer.spans.map((sp) => [sp.name, sp.attributes['mariachi.integration.event']])).toEqual([['okta webhook', 'handshake']]);
+    const rotating = new WebhookServer({ name: 'webhooks', logger }, { communication: { call: async () => ({}) } as never }).registerController(
+      new (class extends OktaWebhooks {
+        override readonly auth = oktaWebhookAuth(['new-secret', 'hook-secret']);
+      })(),
+    );
+    expect((await rotating.inject({ method: 'GET', url: '/okta/events', headers })).json()).toEqual({ verification: challenge });
     expect((await s.inject({ method: 'GET', url: '/okta/events', headers: oktaVerificationRequest('guess').headers })).statusCode).toBe(401);
     expect((await s.inject({ method: 'GET', url: '/okta/events', headers: { authorization: 'hook-secret' } })).statusCode).toBe(401);
     expect(received).toEqual([]);
