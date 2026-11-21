@@ -86,6 +86,8 @@ export {
 
 export {
   type Span,
+  type SpanKind,
+  type SpanOptions,
   type TracerAdapter,
   type MetricsAdapter,
   type Instrumentable,

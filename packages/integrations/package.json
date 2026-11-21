@@ -1,7 +1,7 @@
 {
   "name": "@mariachi/integrations",
   "version": "0.1.1",
-  "description": "Third-party API integrations: validated functions with retries, per-tenant encrypted credentials, a callable registry and webhook signature checks.",
+  "description": "Third-party providers, one way: every call through callProvider (one span, metrics, retries on rate limits), typed errors by category, webhook signature checks, a callable registry and per-tenant credentials.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mariachi-ai/ts.git",
@@ -12,6 +12,10 @@
     "status": "beta",
     "useWhen": "Wrapping an external API",
     "entry": [
+      "callProvider",
+      "providerRequest",
+      "ProviderError",
+      "receiveProviderWebhook",
       "defineIntegrationFn",
       "IntegrationRegistry",
       "resolveTenantCredential"
@@ -23,6 +27,11 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
     }
   },
   "main": "./dist/index.cjs",
@@ -50,8 +59,18 @@
     "zod": "^3.24"
   },
   "devDependencies": {
+    "@mariachi/testing": "workspace:*",
+    "@opentelemetry/api": "^1",
     "typescript": "^5.7",
     "tsup": "^8",
     "vitest": "^3"
+  },
+  "peerDependencies": {
+    "@opentelemetry/api": "^1"
+  },
+  "peerDependenciesMeta": {
+    "@opentelemetry/api": {
+      "optional": true
+    }
   }
 }

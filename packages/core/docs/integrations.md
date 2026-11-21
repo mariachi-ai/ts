@@ -1,8 +1,77 @@
 # Integrations
 
-How to wrap a third-party API in Mariachi: validated functions with retries, credentials resolved
-per tenant, a registry you can call by name, and verified inbound webhooks. `integrations/slack/`
-is the reference implementation.
+How Mariachi calls a third-party provider. There is one way: every call goes through
+`callProvider`, which gives it one span, its metrics and its retries, and fails with an error whose
+category says what to do. Inbound webhooks are checked over the raw body and get a span of their own.
+
+## Calling a provider
+
+`providerRequest` makes one HTTP call through `callProvider`. An integration's operations are
+built from it:
+
+```ts
+import { providerRequest, ProviderError } from '@mariachi/integrations';
+import { z } from 'zod';
+
+export class AcmeError extends ProviderError {}
+
+const Contact = z.object({ id: z.string(), email: z.string() });
+
+export function createContact(ctx: Context, input: { email: string }, deps: AcmeDeps) {
+  return providerRequest(ctx, { integration: 'acme', operation: 'contacts.create', category: 'crm', server: 'api.acme.com' }, {
+    method: 'POST',
+    url: 'https://api.acme.com/v1/contacts',
+    headers: { authorization: `Bearer ${deps.apiKey}` },
+    json: input,
+    idempotencyKey: { header: 'Idempotency-Key', value: deps.idempotencyKey },
+  }, { schema: Contact, error: AcmeError, deps });
+}
+```
+
+- **The span:** one CLIENT span named `<integration> <operation>` (`acme contacts.create`). It
+  carries only the attributes in `PROVIDER_SPAN_ATTRIBUTES`: the integration, the operation, its
+  category, the host, the method, the status, the error's type and category, and the attempts.
+  Never a URL, a body, a key, an amount, an address or a provider's id. `deps.tracer` comes from the
+  container; without one, spans go through `@opentelemetry/api` when it's installed.
+- **Metrics:** `mariachi.integration.calls` and `mariachi.integration.duration` (ms), labelled with
+  the integration, operation, category and outcome, when `deps.metrics` is given.
+- **Errors:** a failed answer becomes the integration's `ProviderError` subclass, with the code
+  `<integration>/<reason>` and one of seven categories: `unauthorized`, `forbidden`, `not-found`,
+  `invalid-request`, `conflict`, `rate-limited`, `unavailable`. The HTTP status decides the category
+  unless `failure(status, body)` reads the provider's own code; that code goes in `providerCode` and
+  the span's `error.type`, never the provider's message.
+- **Retries:** only `rate-limited` and `unavailable` (and a provider that can't be reached), three
+  attempts by default, waiting as long as `Retry-After` asks. Each retry is an event on the span.
+  Give an idempotency key wherever the provider takes one, so a retried create happens once.
+- **The answer** is checked against `schema`. A provider that changed its response fails with
+  `<integration>/invalid-response` at the boundary.
+
+For a provider that isn't HTTP and JSON, wrap the call in `callProvider(ctx, call, fn, deps)`
+directly and report the status with `attempt.setStatusCode`.
+
+## Receiving a provider's webhooks
+
+`receiveProviderWebhook(ctx, integration, verifyAndParse, deps)` makes a SERVER span named
+`<integration> webhook` with the event's type, and an error span when the check fails. The checks:
+
+- `verifyStandardWebhook` for Standard Webhooks (Svix): Clerk, Stytch, Supabase's auth hooks.
+- `parseSignatureHeader`, `hmac`, `safeEqual` and `withinTolerance` for the rest: `t=…,v1=…`
+  (Stripe, Calendly, Mailchimp, WorkOS), `ts=…;h1=…` (Paddle), and plain HMACs of the body.
+
+A failed check throws `WebhookSignatureError` (`<integration>/invalid-signature`, 401). Always pass
+the raw bytes of the body.
+
+## Testing an integration
+
+`@mariachi/integrations/testing` has `scriptedFetch(...responses)`, a `fetch` that answers from a
+script and records each request, so no test calls a provider; and `assertProviderSpans(spans)`,
+which fails on any span attribute outside the table. Use it with `@mariachi/testing`'s
+`TestTracer`.
+
+## Functions, the registry and credentials
+
+The older pieces, below, still work: validated functions with retries, credentials resolved per
+tenant, and a registry you can call by name. `integrations/slack/` uses them.
 
 ## Define a function
 
