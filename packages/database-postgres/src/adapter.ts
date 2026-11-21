@@ -18,6 +18,7 @@ export class PostgresAdapter implements DatabaseAdapter {
       idle_timeout: 20,
       connect_timeout: 10,
       ssl,
+      prepare: this.config.prepare ?? true,
       onnotice: () => {},
       connection: {
         application_name: this.config.applicationName ?? 'mariachi',

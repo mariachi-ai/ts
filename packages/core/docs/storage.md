@@ -1,7 +1,8 @@
 # Storage
 
-`@mariachi/storage` stores files on S3 (and S3-compatible services such as R2, MinIO or Spaces),
-on local disk or in memory, behind one `StorageClient` interface.
+`@mariachi/storage` stores files on S3 (and S3-compatible services such as R2, MinIO, Spaces or
+Supabase Storage), on local disk or in memory, behind one `StorageClient` interface. For Supabase,
+see [recipes/use-supabase.md](./recipes/use-supabase.md).
 
 ## Wire it
 

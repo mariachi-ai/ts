@@ -50,6 +50,7 @@ only point here.
 - [add-webhook-endpoint.md](./recipes/add-webhook-endpoint.md): receive deliveries, verify the signature, acknowledge fast, process in a job
 - [add-integration.md](./recipes/add-integration.md): a third-party integration with `@mariachi/integrations`, file by file
 - [wiring-and-bootstrap.md](./recipes/wiring-and-bootstrap.md): the composition root, step by step
+- [use-supabase.md](./recipes/use-supabase.md): an app whose database, auth and files live in Supabase: each port wired to the project, connection strings, RLS, what stays in the browser
 - [add-design-component.md](./recipes/add-design-component.md): a new component in `@mariachi/design`, readable by every preset
 - [add-design-preset.md](./recipes/add-design-preset.md): a new built-in preset in `@mariachi/design`
 

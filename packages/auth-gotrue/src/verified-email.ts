@@ -4,8 +4,8 @@ export interface GoTrueVerifiedEmailConfig {
   /** GoTrue's base URL as this server reaches it, path prefix included (e.g. `http://127.0.0.1:9999`, `https://<project>.supabase.co/auth/v1`). */
   url: string;
   /**
-   * A key that may read users through GoTrue's admin API (a service-role key). A secret: it never
-   * goes to a browser. Without it only a token that carries `email_verified` itself can be answered.
+   * A key that may read users through GoTrue's admin API: Supabase's secret key (`sb_secret_…`, or the
+   * legacy `service_role` key), or a self-hosted GoTrue's service-role JWT. A secret: it never goes to a browser. Without it only a token that carries `email_verified` itself can be answered.
    */
   serviceKey?: string;
   /**
@@ -37,6 +37,15 @@ export interface GoTrueVerifiedEmailConfig {
 /** What this reads of a request's context: the verified token's claims, where the API layer puts them. */
 export interface VerifiedEmailContext {
   identity?: { claims?: Record<string, unknown> } | null;
+}
+
+/**
+ * The headers that carry an admin key. A JWT (a legacy `service_role` key, or the one a self-hosted GoTrue's
+ * admin role signs) goes on `apikey` and as the bearer token. Supabase's `sb_secret_…` keys aren't JWTs and go on
+ * `apikey` only: on `Authorization` the platform reads them as a JWT and refuses the request.
+ */
+function keyHeaders(key: string): Record<string, string> {
+  return key.startsWith('eyJ') ? { apikey: key, authorization: `Bearer ${key}` } : { apikey: key };
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -77,7 +86,7 @@ export function goTrueVerifiedEmail(config: GoTrueVerifiedEmailConfig): (ctx: ob
   const read = async (path: string, what: string, serviceKey: string): Promise<Response> => {
     try {
       return await request(`${base}${path}`, {
-        headers: { accept: 'application/json', authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
+        headers: { accept: 'application/json', ...keyHeaders(serviceKey) },
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (error) {
