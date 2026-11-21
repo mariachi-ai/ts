@@ -98,7 +98,8 @@ In Salesforce:
   on one without an account, and a contact that has an account keeps it. A contact with no account
   is private to its owner in Salesforce, so pass `company` where you can.
 - **`createDeal`** makes an Opportunity. `StageName` is `stage` (the stage's API name), or else the
-  org's first active open stage, read once from `OpportunityStage` and kept. `CloseDate` is
+  org's first active open stage, read once from `OpportunityStage` and kept: its `ApiName`, or its
+  `MasterLabel` where the org's `OpportunityStage` has no `ApiName` field. `CloseDate` is
   `properties.CloseDate`, or else 30 days from today (UTC): set the real one when you know it.
   `companyId` is its Account; `contactId` becomes its primary contact (an OpportunityContactRole),
   made in the same all-or-none call. `currency` sets `CurrencyIsoCode`, only for an org with

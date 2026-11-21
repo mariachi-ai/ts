@@ -191,6 +191,18 @@ describe('the same three in every CRM', () => {
     expect(fetch.requests[3]!.json).toMatchObject({ Name: 'Renewal', StageName: 'Discovery', CloseDate: '2027-01-31' });
   });
 
+  it("names the default stage by MasterLabel where the org's OpportunityStage has no ApiName", async () => {
+    const fetch = scriptedFetch(
+      token,
+      { status: 400, json: [{ errorCode: 'INVALID_FIELD', message: "No such column 'ApiName' on entity 'OpportunityStage'." }] },
+      page([{ attributes: { type: 'OpportunityStage' }, MasterLabel: 'Prospecting' }]),
+      { status: 201, json: { id: DEAL, success: true, errors: [] } },
+    );
+    await createSalesforce(config, { fetch }).createDeal(ctx, { name: 'Deal' });
+    expect(fetch.requests[2]!.url.searchParams.get('q')).toBe('SELECT MasterLabel FROM OpportunityStage WHERE IsActive = true AND IsClosed = false ORDER BY SortOrder ASC LIMIT 1');
+    expect(fetch.requests[3]!.json).toMatchObject({ StageName: 'Prospecting' });
+  });
+
   it('fails a composite call with the subrequest that failed, on its span, after Salesforce rolled it back', async () => {
     const failed = {
       json: {
@@ -202,7 +214,9 @@ describe('the same three in every CRM', () => {
     };
     const tracer = new TestTracer();
     const err = await createSalesforce(config, { fetch: scriptedFetch(token, failed), tracer }).createDeal(ctx, { name: 'Deal', stage: 'Prospecting', contactId: CONTACT }).catch((e) => e);
-    expect([err.code, err.category, err.providerCode, err.metadata.referenceId]).toEqual(['salesforce/invalid-reference', 'invalid-request', 'INVALID_CROSS_REFERENCE_KEY', 'role']);
+    expect([err.code, err.category, err.providerCode, err.status]).toEqual(['salesforce/invalid-reference', 'invalid-request', 'INVALID_CROSS_REFERENCE_KEY', 200]);
+    expect(err.message).toBe('salesforce composite.execute failed: subrequest role answered 400');
+    expect(err.message).not.toContain('cross reference id');
     expect(tracer.spans[1]!.name).toBe('salesforce composite.execute');
     expect(tracer.spans[1]!.attributes['error.type']).toBe('INVALID_CROSS_REFERENCE_KEY');
     assertProviderSpans(tracer.spans);

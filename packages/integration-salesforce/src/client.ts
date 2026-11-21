@@ -1,5 +1,5 @@
 import { ConfigError, type Context, ValidationError, fromZodError } from '@mariachi/core';
-import { type FailureInfo, type HttpMethod, type ProviderDeps, categoryForStatus, mappedFailure, providerRequest } from '@mariachi/integrations';
+import { type ErrorCategory, type FailureInfo, type HttpMethod, type ProviderDeps, categoryForStatus, mappedFailure, providerRequest } from '@mariachi/integrations';
 import { z } from 'zod';
 import { SalesforceError } from './errors';
 import { type SalesforceConfig, type SalesforceOperation, configSchema, errorMap, provider } from './generated';
@@ -69,12 +69,12 @@ export function createSalesforce(config: SalesforceConfig, deps: SalesforceDeps 
   const api = `/services/data/${apiVersion(cfg.apiVersion)}`;
   const server = new URL(instance).host;
 
-  function send<T>(ctx: Context, operation: SalesforceOperation, request: Request, schema: z.ZodType<T, z.ZodTypeDef, unknown>, headers: Record<string, string>): Promise<T> {
+  function send<T>(ctx: Context, operation: SalesforceOperation, request: Request, schema: z.ZodType<T, z.ZodTypeDef, unknown>, headers: Record<string, string>, failureInBody?: BodyFailure): Promise<T> {
     return providerRequest(
       ctx,
       { integration: provider.id, operation, category: provider.category, server },
       { method: request.method, url: `${instance}${request.path}`, query: request.query, json: request.json, headers },
-      { schema, error: SalesforceError, failure, deps },
+      { schema, error: SalesforceError, failure, failureInBody, deps },
     );
   }
 
@@ -97,15 +97,15 @@ export function createSalesforce(config: SalesforceConfig, deps: SalesforceDeps 
     return token;
   }
 
-  async function call<T>(ctx: Context, operation: SalesforceOperation, request: Request, schema: z.ZodType<T, z.ZodTypeDef, unknown>): Promise<T> {
+  async function call<T>(ctx: Context, operation: SalesforceOperation, request: Request, schema: z.ZodType<T, z.ZodTypeDef, unknown>, failureInBody?: BodyFailure): Promise<T> {
     const current = accessToken(ctx);
     const bearer = await current;
     try {
-      return await send(ctx, operation, request, schema, { authorization: `Bearer ${bearer}` });
+      return await send(ctx, operation, request, schema, { authorization: `Bearer ${bearer}` }, failureInBody);
     } catch (error) {
       if (!(error instanceof SalesforceError) || error.status !== 401) throw error;
       if (token === current) token = undefined;
-      return send(ctx, operation, request, schema, { authorization: `Bearer ${await accessToken(ctx)}` });
+      return send(ctx, operation, request, schema, { authorization: `Bearer ${await accessToken(ctx)}` }, failureInBody);
     }
   }
 
@@ -187,16 +187,23 @@ export function createSalesforce(config: SalesforceConfig, deps: SalesforceDeps 
   async function composite(ctx: Context, requests: CompositeRequest[]): Promise<CompositeSubresponse[]> {
     const rs = parse(CompositeInput, requests);
     const compositeRequest = rs.map((r) => ({ method: r.method, url: `${api}/${r.path}`, referenceId: r.referenceId, ...(r.body ? { body: r.body } : {}) }));
-    return call(ctx, 'composite.execute', { method: 'POST', path: `${api}/composite`, json: { allOrNone: true, compositeRequest } }, CompositeResponse.transform(throwIfFailed));
+    return call(ctx, 'composite.execute', { method: 'POST', path: `${api}/composite`, json: { allOrNone: true, compositeRequest } }, CompositeResponse, compositeFailure).then((r) => r.compositeResponse);
   }
 
-  // The org's first open stage, read once: an opportunity can't be made without a stage.
+  // The org's first open stage, read once: an opportunity can't be made without a stage. By its ApiName, or by
+  // its MasterLabel where the org's OpportunityStage has no ApiName field.
   let firstStage: Promise<string> | undefined;
   function defaultStage(ctx: Context): Promise<string> {
     firstStage ??= soqlOps
       .query(ctx, soql`SELECT ApiName FROM OpportunityStage WHERE IsActive = true AND IsClosed = false ORDER BY SortOrder ASC LIMIT 1`)
-      .then((page) => {
-        const name = page.records[0]?.ApiName;
+      .then((page) => page.records[0]?.ApiName)
+      .catch((error) => {
+        if (!(error instanceof SalesforceError) || error.providerCode !== 'INVALID_FIELD') throw error;
+        return soqlOps
+          .query(ctx, soql`SELECT MasterLabel FROM OpportunityStage WHERE IsActive = true AND IsClosed = false ORDER BY SortOrder ASC LIMIT 1`)
+          .then((page) => page.records[0]?.MasterLabel);
+      })
+      .then((name) => {
         if (typeof name !== 'string') throw new SalesforceError('salesforce/no-open-stage', 'The org has no active open opportunity stage: pass stage', { category: 'invalid-request' });
         return name;
       })
@@ -312,23 +319,23 @@ function errorCodeOf(body: unknown): string | undefined {
   return typeof errorCode === 'string' ? errorCode : typeof error === 'string' ? error : undefined;
 }
 
+type BodyFailure = (body: unknown) => (FailureInfo & { category: ErrorCategory }) | undefined;
+
 /**
- * A composite call answers 200 even when a subrequest failed (and everything was rolled back): this turns that
- * into the failed subrequest's error, on the call's span. Subrequests that didn't run say PROCESSING_HALTED; the one
- * that failed is the one that doesn't.
+ * A composite call answers 200 even when a subrequest failed (and everything was rolled back): this reads the
+ * failed subrequest's error from the body, so the call fails with it, on its span. Subrequests that didn't run say
+ * PROCESSING_HALTED; the one that failed is the one that doesn't.
  */
-function throwIfFailed(response: z.output<typeof CompositeResponse>): CompositeSubresponse[] {
-  const failed = response.compositeResponse.filter((r) => r.httpStatusCode >= 400);
-  if (failed.length === 0) return response.compositeResponse;
-  const cause = failed.find((r) => errorCodeOf(r.body) !== 'PROCESSING_HALTED') ?? failed[0]!;
+function compositeFailure(body: unknown): (FailureInfo & { category: ErrorCategory }) | undefined {
+  const parsed = CompositeResponse.safeParse(body);
+  if (!parsed.success) return undefined;
+  const failed = parsed.data.compositeResponse.filter((r) => r.httpStatusCode >= 400);
+  const cause = failed.find((r) => errorCodeOf(r.body) !== 'PROCESSING_HALTED') ?? failed[0];
+  if (!cause) return undefined;
   const providerCode = errorCodeOf(cause.body);
   const mapped = mappedFailure(errorMap, providerCode);
   const category = mapped?.category ?? categoryForStatus(cause.httpStatusCode);
-  throw new SalesforceError(`salesforce/${mapped?.reason ?? category}`, `salesforce composite.execute failed: subrequest ${cause.referenceId} answered ${cause.httpStatusCode}`, {
-    category,
-    providerCode,
-    details: { referenceId: cause.referenceId, subrequestStatus: cause.httpStatusCode },
-  });
+  return { category, reason: mapped?.reason ?? category, providerCode, message: `salesforce composite.execute failed: subrequest ${cause.referenceId} answered ${cause.httpStatusCode}` };
 }
 
 function idOf(response: CompositeSubresponse | undefined): string {
