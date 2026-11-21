@@ -94,6 +94,16 @@ describe('callProvider', () => {
 describe('providerRequest', () => {
   const Widget = z.object({ id: z.string() });
 
+  it("doesn't retry a create without an idempotency key after an outage, only after a rate limit", async () => {
+    const outage = scriptedFetch({ status: 503 });
+    await expect(providerRequest(ctx, call, { method: 'POST', url: 'https://api.acme.test/v1/widgets', json: {} }, { schema: Widget, deps: { fetch: outage, ...noWait } })).rejects.toMatchObject({ category: 'unavailable' });
+    expect(outage.requests).toHaveLength(1);
+    const limited = scriptedFetch({ status: 429, headers: { 'retry-after': '0' } }, { status: 201, json: { id: 'w2' } });
+    expect(await providerRequest(ctx, call, { method: 'POST', url: 'https://api.acme.test/v1/widgets', json: {} }, { schema: Widget, deps: { fetch: limited, ...noWait } })).toEqual({ id: 'w2' });
+    const read = scriptedFetch({ status: 503 }, { json: { id: 'w3' } });
+    expect(await providerRequest(ctx, call, { method: 'GET', url: 'https://api.acme.test/v1/widgets/w3' }, { schema: Widget, deps: { fetch: read, ...noWait } })).toEqual({ id: 'w3' });
+  });
+
   it('sends JSON, the query and the idempotency key on every attempt, and checks the answer', async () => {
     const fetch = scriptedFetch({ status: 503 }, { status: 201, json: { id: 'w1' } });
     const out = await providerRequest(ctx, call, {
@@ -122,6 +132,21 @@ describe('providerRequest', () => {
     }).catch((e) => e);
     expect(err).toBeInstanceOf(AcmeError);
     expect([err.code, err.category, err.providerCode, err.status]).toEqual(['acme/card-declined', 'invalid-request', 'card_declined', 400]);
+  });
+
+  it('fails a 2xx answer that carries a failure inside, before the schema, retrying only what the category allows', async () => {
+    const fetch = scriptedFetch({ json: { results: [{ ok: false, code: 'DUPLICATE_VALUE' }] } });
+    const err = await providerRequest(ctx, call, { method: 'POST', url: 'https://api.acme.test/v1/batch' }, {
+      schema: Widget,
+      error: AcmeError,
+      failureInBody: (body) => {
+        const failed = (body as { results: Array<{ ok: boolean; code: string }> }).results.find((r) => !r.ok);
+        return failed ? { category: 'conflict', reason: 'duplicate', providerCode: failed.code } : undefined;
+      },
+      deps: { fetch },
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(AcmeError);
+    expect([err.code, err.category, err.providerCode, err.status, fetch.requests.length]).toEqual(['acme/duplicate', 'conflict', 'DUPLICATE_VALUE', 200, 1]);
   });
 
   it('fails an answer in the wrong shape at the boundary', async () => {
