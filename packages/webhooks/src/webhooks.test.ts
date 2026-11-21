@@ -160,6 +160,34 @@ describe('webhooks', () => {
     expect(res.json<{ error: { code: string } }>().error.code).toBe('webhooks/unauthenticated-tenant');
   });
 
+  it('gives each delivery a SERVER span: the provider, the event type the route reads, and whether it was accepted', async () => {
+    const spans: Array<{ name: string; kind?: string; attributes: Record<string, unknown>; status?: string; ended: boolean }> = [];
+    const tracer = {
+      startSpan(name: string, attributes: Record<string, string | number | boolean> = {}, options: { kind?: string } = {}) {
+        const span = { name, kind: options.kind, attributes: { ...attributes } as Record<string, unknown>, status: undefined as string | undefined, ended: false };
+        spans.push(span);
+        return { setAttribute: (k: string, v: unknown) => void (span.attributes[k] = v), setStatus: (st: 'ok' | 'error') => void (span.status = st), end: () => void (span.ended = true) };
+      },
+      withSpan: async <T>(_n: string, fn: (s: never) => Promise<T>) => fn({} as never),
+    };
+    class TypedController extends AcmeController {
+      init() {
+        this.post(':tenant/events', { mode: 'direct', procedure: 'acme.event', eventType: (p) => (p as { type?: string }).type }, async (_ctx, body) => body);
+      }
+    }
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication, tracer }).registerController(new TypedController());
+    const payload = '{"type":"invoice.paid","tenant":"t42"}';
+    const sig = createHmac('sha256', SECRET).update(payload).digest('hex');
+    expect((await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json', 'x-acme-signature': sig }, payload })).statusCode).toBe(200);
+    expect((await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json', 'x-acme-signature': 'nope' }, payload })).statusCode).toBe(401);
+    expect(spans.map((s) => [s.name, s.kind, s.attributes['mariachi.integration'], s.attributes['mariachi.integration.event'], s.status, s.ended])).toEqual([
+      ['acme webhook', 'server', 'acme', 'invoice.paid', 'ok', true],
+      ['acme webhook', 'server', 'acme', undefined, 'error', true],
+    ]);
+    expect(spans[1]!.attributes['error.type']).toBe('webhooks/unauthorized');
+  });
+
   it('redactHeaders masks credentials and signatures', () => {
     expect(redactHeaders({ 'stripe-signature': 'x', cookie: 'y', 'x-custom': 'z' }, ['x-custom'])).toEqual({
       'stripe-signature': '[redacted]',

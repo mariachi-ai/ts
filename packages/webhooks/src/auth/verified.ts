@@ -37,7 +37,8 @@ type Verified = VerifiedWebhook & { metadata?: Record<string, unknown> };
 
 /** A webhook authenticator built on one of the `@mariachi/webhooks/verify` checks. */
 abstract class VerifiedWebhookAuth extends AuthController {
-  protected readonly provider: string;
+  /** The sender's name: dedup keys, logs and the delivery's span use it. */
+  readonly provider: string;
 
   protected constructor(
     private readonly base: VerifiedWebhookAuthOptions,
