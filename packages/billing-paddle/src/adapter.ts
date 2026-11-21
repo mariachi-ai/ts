@@ -95,7 +95,7 @@ function decimal(quantity: number): string {
  * - **Subscriptions** are made by a completed checkout, never directly, and **charges** are against a subscription:
  *   `createSubscription` and `createCharge` fail with `billing/not-supported`.
  * - **Idempotency keys**: Paddle takes none. A customer is unique by email, so a repeated create finds the first;
- *   a refund is never retried; usage events are counted once by their key.
+ *   a create or refund is retried only when rate-limited; usage events are counted once by their key.
  * - **Credit** is Paddle's to give (adjustments, prorations): `getCreditBalance` reads it, `adjustCreditBalance`
  *   fails with `billing/not-supported`. The app's own ledger (`grantCredits`) works as with any provider.
  * - **Usage** goes to Paddle's usage events (early access): `metricName` is the meter's action.
@@ -282,7 +282,7 @@ export class PaddleBillingAdapter implements BillingAdapter {
   /**
    * Refunds a transaction (`chargeId` is its `txn_` id): all of it without `amount`, else `amount` (tax included)
    * taken from its line items in order. Most live refunds are `pending` until Paddle approves them;
-   * `charge.refunded` comes by webhook when it does. Made once, never retried: Paddle takes no idempotency key and
+   * `charge.refunded` comes by webhook when it does. Retried only when rate-limited: Paddle takes no idempotency key and
    * refuses another refund while one is pending.
    */
   async refund(chargeId: string, options: { amount?: number; reason?: string } = {}): Promise<Refund> {

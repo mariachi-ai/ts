@@ -108,8 +108,9 @@ approval). Show prices with `Paddle.PricePreview()`, which localizes them for th
 
 **Idempotency keys.** Paddle takes none, so they aren't sent. A customer is unique by email: a
 repeated `ensureCustomer` finds the tenant's own customer, and one with the same email that belongs
-to another tenant is refused with `billing/invalid-input`, never shared. A refund is made once and
-never retried (Paddle also refuses a second refund while one is pending). Usage events are
+to another tenant is refused with `billing/invalid-input`, never shared. Creates and refunds are
+retried only when Paddle rate-limited them, never after an outage (Paddle also refuses a second
+refund while one is pending). Usage events are
 deduplicated by Paddle on their key and time. Updates set whole states, so a repeat changes nothing.
 
 **The tenant** is written to `custom_data.tenantId` on the customer and each checkout's transaction;

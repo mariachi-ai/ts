@@ -105,7 +105,7 @@
     { "name": "transactions.list", "purpose": "Lists a customer's transactions (Paddle's invoices and payments), 30 a page.", "method": "GET", "path": "/transactions", "idempotency": "natural" },
     { "name": "transactions.get", "purpose": "Reads a transaction, optionally with the totals of its adjustments.", "method": "GET", "path": "/transactions/{transactionId}", "idempotency": "natural" },
     { "name": "transactions.invoice", "purpose": "A link to the transaction's invoice PDF, for billed or completed transactions. The link expires after an hour.", "method": "GET", "path": "/transactions/{transactionId}/invoice", "idempotency": "natural" },
-    { "name": "adjustments.create", "purpose": "Refunds all of a completed transaction or some of its items. Most live refunds wait for Paddle's approval. No idempotency key, so it is never retried.", "method": "POST", "path": "/adjustments", "idempotency": "none" },
+    { "name": "adjustments.create", "purpose": "Refunds all of a completed transaction or some of its items. Most live refunds wait for Paddle's approval. No idempotency key, so it is retried only when rate-limited.", "method": "POST", "path": "/adjustments", "idempotency": "none" },
     { "name": "usageEvents.create", "purpose": "Records metered usage (early access). Paddle counts each event once per customer and action by its event_key and occurred_at, so a resend with both unchanged is safe.", "method": "POST", "path": "/usage-events", "idempotency": "natural" },
     { "name": "eventTypes.list", "purpose": "Lists the event types: an authenticated call that changes nothing, for a health check.", "method": "GET", "path": "/event-types", "idempotency": "natural" }
   ],

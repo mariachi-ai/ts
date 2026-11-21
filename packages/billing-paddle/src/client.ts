@@ -130,16 +130,14 @@ export function createPaddle(config: PaddleConfig, deps: PaddleDeps = {}) {
     operation: PaddleOperation,
     request: Omit<ProviderRequest, 'url' | 'headers'> & { path: string },
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
-    options: { retry?: boolean } = {},
   ): Promise<T> {
     const { path, ...rest } = request;
     return providerRequest(
       ctx,
       { integration: provider.id, operation, category: provider.category, server },
       { ...rest, url: `${base}${path}`, headers: { authorization: `Bearer ${cfg.apiKey}`, 'paddle-version': '1' } },
-      // A call Paddle can't deduplicate (it takes no idempotency key) that moves money is made once: a retry after
-      // a timeout could refund twice.
-      { schema, error: PaddleError, failure, deps: options.retry === false ? { ...deps, retry: { ...deps.retry, attempts: 1 } } : deps },
+      // Paddle takes no idempotency key, so providerRequest retries a POST or PATCH only when it was rate-limited
+      { schema, error: PaddleError, failure, deps },
     );
   }
 
@@ -265,12 +263,12 @@ export function createPaddle(config: PaddleConfig, deps: PaddleDeps = {}) {
   const adjustments = {
     /**
      * A refund of the whole transaction (`type: 'full'`) or of some of its line items (`partial`, with `items`).
-     * Most live refunds start `pending_approval`. Made once, never retried: Paddle takes no idempotency key.
+     * Most live refunds start `pending_approval`. Paddle takes no idempotency key, so it's retried only when rate-limited.
      */
     async create(ctx: Context | null, input: CreateAdjustmentInput) {
       const json = parse(CreateAdjustmentInput, input);
       if (json.type === 'partial' && !json.items) throw fromZodError({ issues: [{ path: ['items'], message: 'a partial refund lists its items', code: 'custom' }] }, 'Invalid Paddle input');
-      return call(ctx, 'adjustments.create', { method: 'POST', path: '/adjustments', json }, one(PaddleAdjustment), { retry: false });
+      return call(ctx, 'adjustments.create', { method: 'POST', path: '/adjustments', json }, one(PaddleAdjustment));
     },
   };
 

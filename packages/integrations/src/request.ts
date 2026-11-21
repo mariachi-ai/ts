@@ -17,7 +17,8 @@ export interface ProviderRequest {
   form?: Record<string, string | number | boolean | undefined>;
   /**
    * Sent on every attempt of this call, so the provider does it once however often it's retried. Give it
-   * wherever the provider accepts one: a create, a charge, a send.
+   * wherever the provider accepts one: a create, a charge, a send. Without one, a POST or PATCH is retried only
+   * when the provider rate-limited it (it did nothing), never after an outage, which may come after it acted.
    */
   idempotencyKey?: { header: string; value: string };
 }
@@ -38,6 +39,12 @@ export interface ProviderRequestOptions<T> {
   schema: z.ZodType<T, z.ZodTypeDef, unknown>;
   /** Reads the provider's error body. Without it, the HTTP status decides the category and reason. */
   failure?: (status: number, body: unknown) => FailureInfo | undefined;
+  /**
+   * For a provider that answers 2xx with a failure inside (a batch or composite call, a GraphQL `errors` array):
+   * return what failed, and the call fails as if the provider had answered with an error, before `schema` runs.
+   * `category` is required here, since the status says nothing.
+   */
+  failureInBody?: (body: unknown) => (FailureInfo & { category: ErrorCategory }) | undefined;
   /** The integration's error class, so callers can `instanceof HubSpotError`. */
   error?: new (code: string, message: string, options: ProviderErrorOptions) => ProviderError;
   deps?: ProviderDeps & { fetch?: typeof fetch };
@@ -75,6 +82,14 @@ export async function providerRequest<T>(
           retryAfterMs: parseRetryAfter(response.headers.get('retry-after')),
         });
       }
+      const inBody = options.failureInBody?.(body);
+      if (inBody) {
+        throw new ErrorClass(`${call.integration}/${inBody.reason ?? inBody.category}`, inBody.message ?? `${call.integration} ${call.operation} failed`, {
+          category: inBody.category,
+          providerCode: inBody.providerCode,
+          status: response.status,
+        });
+      }
       const parsed = options.schema.safeParse(body);
       if (!parsed.success) {
         throw new ErrorClass(`${call.integration}/invalid-response`, `${call.integration} ${call.operation} answered in an unexpected shape`, {
@@ -85,7 +100,11 @@ export async function providerRequest<T>(
       }
       return parsed.data;
     },
-    { ...options.deps, retry: { attempts: 3, ...options.deps?.retry } },
+    {
+      ...options.deps,
+      // A create without an idempotency key could run twice if it were retried after an outage
+      retry: { attempts: 3, unsafe: (request.method === 'POST' || request.method === 'PATCH') && !request.idempotencyKey, ...options.deps?.retry },
+    },
   );
 }
 

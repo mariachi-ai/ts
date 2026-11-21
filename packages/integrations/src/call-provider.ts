@@ -27,7 +27,17 @@ export interface ProviderDeps {
   tracer?: TracerAdapter;
   /** From the container in a Mariachi app. Without one, no metrics are recorded. */
   metrics?: MetricsAdapter;
-  retry?: { attempts?: number; baseDelayMs?: number; maxDelayMs?: number };
+  retry?: {
+    attempts?: number;
+    baseDelayMs?: number;
+    maxDelayMs?: number;
+    /**
+     * The call isn't safe to repeat (a create with no idempotency key): only `rate-limited` is retried, since the
+     * provider refused it before doing anything. An outage or a dropped connection may come after the provider
+     * acted, so those fail at once. `providerRequest` sets this for a POST or PATCH without an idempotency key.
+     */
+    unsafe?: boolean;
+  };
   /** Record `mariachi.tenant_id` (the app's own tenant id) on spans. Off by default. */
   tenantAttribute?: boolean;
   /** For tests: wait this long between attempts. */
@@ -105,7 +115,7 @@ export async function callProvider<T>(
         return result;
       } catch (raw) {
         const error = asProviderError(raw, call);
-        const retryable = error instanceof ProviderError && RETRIED_CATEGORIES.has(error.category);
+        const retryable = error instanceof ProviderError && (deps.retry?.unsafe ? error.category === 'rate-limited' : RETRIED_CATEGORIES.has(error.category));
         if (!retryable || attempt >= maxAttempts) throw error;
         const code = error.status ?? status;
         span?.addEvent?.('retry', { 'mariachi.integration.attempts': attempt, ...(code ? { 'http.response.status_code': code } : {}) });

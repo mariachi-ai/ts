@@ -224,7 +224,7 @@ export const operations = {
     idempotency: 'natural',
   },
   'adjustments.create': {
-    purpose: "Refunds all of a completed transaction or some of its items. Most live refunds wait for Paddle's approval. No idempotency key, so it is never retried.",
+    purpose: "Refunds all of a completed transaction or some of its items. Most live refunds wait for Paddle's approval. No idempotency key, so it is retried only when rate-limited.",
     method: 'POST',
     path: '/adjustments',
     idempotency: 'none',
