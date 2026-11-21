@@ -68,6 +68,7 @@ createOidcAuth({ issuer: 'https://id.acme.com/realms/app', audience: 'app-api',
 createOidcAuth({ issuer: `https://login.microsoftonline.com/${tenantId}/v2.0`, audience: clientId, tenantClaim: 'tid', userIdClaim: 'oid' });
 
 // Amazon Cognito access tokens have no `aud`: say so, and check what they have instead.
+// (Or use @mariachi/auth-cognito, which checks all of this and signs users in too.)
 createOidcAuth({
   issuer: `https://cognito-idp.${region}.amazonaws.com/${userPoolId}`,
   audience: null,

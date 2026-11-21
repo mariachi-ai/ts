@@ -2,7 +2,7 @@
 
 Authentication and authorization: JWT and OAuth (PKCE), sessions, API keys with scopes and
 rotation, database-backed RBAC with caching, brute-force protection, and a dispatcher for identity
-provider webhooks. Provider packages (`@mariachi/auth-clerk`, `@mariachi/auth-fusionauth`,
+provider webhooks. Provider packages (`@mariachi/auth-clerk`, `@mariachi/auth-cognito`, `@mariachi/auth-fusionauth`,
 `@mariachi/auth-gotrue`, `@mariachi/auth-workos`, and `@mariachi/auth-oidc` for any other OpenID
 Connect provider) implement its contracts.
 
