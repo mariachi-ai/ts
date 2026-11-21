@@ -1,7 +1,7 @@
 import type { Context } from '@mariachi/core';
 import type { z } from 'zod';
 import { type ProviderCall, type ProviderDeps, callProvider } from './call-provider';
-import { type ErrorCategory, ProviderError, type ProviderErrorOptions, categoryForStatus, parseRetryAfter } from './provider-error';
+import { type ErrorCategory, ProviderError, type ProviderErrorOptions, categoryForStatus, parseRateLimitReset, parseRetryAfter } from './provider-error';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -79,7 +79,7 @@ export async function providerRequest<T>(
           category,
           providerCode: info.providerCode,
           status: response.status,
-          retryAfterMs: parseRetryAfter(response.headers.get('retry-after')),
+          retryAfterMs: parseRetryAfter(response.headers.get('retry-after')) ?? parseRateLimitReset(response.headers.get('x-ratelimit-reset')),
         });
       }
       const inBody = options.failureInBody?.(body);
