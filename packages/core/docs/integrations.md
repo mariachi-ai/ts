@@ -1,8 +1,73 @@
 # Integrations
 
-How to wrap a third-party API in Mariachi: validated functions with retries, credentials resolved
-per tenant, a registry you can call by name, and verified inbound webhooks. `integrations/slack/`
-is the reference implementation.
+How Mariachi calls a third-party provider. There is one way: every call goes through
+`callProvider`, which gives it one span, its metrics and its retries, and fails with an error whose
+category says what to do. Inbound webhooks go through `WebhookServer`, like every webhook.
+
+## Calling a provider
+
+`providerRequest` makes one HTTP call through `callProvider`. An integration's operations are
+built from it:
+
+```ts
+import { providerRequest, ProviderError } from '@mariachi/integrations';
+import { z } from 'zod';
+
+export class AcmeError extends ProviderError {}
+
+const Contact = z.object({ id: z.string(), email: z.string() });
+
+export function createContact(ctx: Context, input: { email: string }, deps: AcmeDeps) {
+  return providerRequest(ctx, { integration: 'acme', operation: 'contacts.create', category: 'crm', server: 'api.acme.com' }, {
+    method: 'POST',
+    url: 'https://api.acme.com/v1/contacts',
+    headers: { authorization: `Bearer ${deps.apiKey}` },
+    json: input,
+    idempotencyKey: { header: 'Idempotency-Key', value: deps.idempotencyKey },
+  }, { schema: Contact, error: AcmeError, deps });
+}
+```
+
+- **The span:** one CLIENT span named `<integration> <operation>` (`acme contacts.create`). It
+  carries only the attributes in `PROVIDER_SPAN_ATTRIBUTES`: the integration, the operation, its
+  category, the host, the method, the status, the error's type and category, and the attempts.
+  Never a URL, a body, a key, an amount, an address or a provider's id. `deps.tracer` comes from the
+  container; without one, spans go through `@opentelemetry/api` when it's installed.
+- **Metrics:** `mariachi.integration.calls` and `mariachi.integration.duration` (ms), labelled with
+  the integration, operation, category and outcome, when `deps.metrics` is given.
+- **Errors:** a failed answer becomes the integration's `ProviderError` subclass, with the code
+  `<integration>/<reason>` and one of seven categories: `unauthorized`, `forbidden`, `not-found`,
+  `invalid-request`, `conflict`, `rate-limited`, `unavailable`. The HTTP status decides the category
+  unless `failure(status, body)` reads the provider's own code; that code goes in `providerCode` and
+  the span's `error.type`, never the provider's message.
+- **Retries:** only `rate-limited` and `unavailable` (and a provider that can't be reached), three
+  attempts by default, waiting as long as `Retry-After` asks. Each retry is an event on the span.
+  Give an idempotency key wherever the provider takes one, so a retried create happens once.
+- **The answer** is checked against `schema`. A provider that changed its response fails with
+  `<integration>/invalid-response` at the boundary.
+
+For a provider that isn't HTTP and JSON, wrap the call in `callProvider(ctx, call, fn, deps)`
+directly and report the status with `attempt.setStatusCode`.
+
+## Receiving a provider's webhooks
+
+Through `@mariachi/webhooks`' `WebhookServer`, as every webhook is
+([recipes/add-webhook-endpoint.md](./recipes/add-webhook-endpoint.md)): it checks the signature over
+the raw body, dedupes, logs with secrets redacted, and hands the delivery to a job. An integration
+package exports the authenticator for its provider's scheme (`typeformWebhookAuth(secret)`) and the
+Zod schema of its payloads, so a controller is a few lines.
+
+## Testing an integration
+
+`@mariachi/integrations/testing` has `scriptedFetch(...responses)`, a `fetch` that answers from a
+script and records each request, so no test calls a provider; and `assertProviderSpans(spans)`,
+which fails on any span attribute outside the table. Use it with `@mariachi/testing`'s
+`TestTracer`.
+
+## Functions, the registry and credentials
+
+The older pieces, below, still work: validated functions with retries, credentials resolved per
+tenant, and a registry you can call by name. `integrations/slack/` uses them.
 
 ## Define a function
 
