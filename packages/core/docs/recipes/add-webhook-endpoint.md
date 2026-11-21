@@ -50,6 +50,12 @@ named `<provider> webhook`, with `mariachi.integration` and, when the route sets
 `eventType: (payload) => payload.type`, `mariachi.integration.event`. Its status says whether the
 delivery was accepted. Nothing from the body, the headers or the URL is recorded.
 
+**A sender's endpoint check.** Some senders check an endpoint before they deliver to it: Microsoft
+Graph posts a `validationToken` to echo, Okta sends a `GET` with a challenge. The authenticator
+answers it in `handshake(req, ctx)`, which runs before `auth` and returns the response (or nothing,
+for an ordinary delivery). A sender that signs its check is verified there too. The check never
+reaches the route, a procedure or a job.
+
 ## 1. Verify the signature
 
 `@mariachi/webhooks` ships the common schemes, so there's usually no class to write:
@@ -141,11 +147,6 @@ or from the request only when you also implement `tenantSigningSecrets(tenantId)
 under that tenant's own secret. Provider packages ship ready-made
 controllers (`ClerkWebhookController`, `FusionAuthWebhookHandler`), and billing verifies Stripe's
 billing events itself.
-
-**A sender that checks the endpoint first** (Microsoft Graph posts `?validationToken=` and wants it
-echoed) is answered by the authenticator's `handshake(req)`: return an `httpResponse` for that check
-and nothing for an ordinary delivery. `WebhookServer` asks it before authenticating, and the check
-never reaches the route's handler. `entraWebhookAuth` from `@mariachi/auth-entra` does Graph's.
 
 ## 2. Route: `src/webhooks/github.controller.ts`
 

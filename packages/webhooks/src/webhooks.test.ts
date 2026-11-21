@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { InMemoryIdempotencyStore, type Context } from '@mariachi/core';
-import { httpResponse, type IncomingRequest } from '@mariachi/server';
+import { type IncomingRequest, httpResponse } from '@mariachi/server';
 import { SignatureAuthController, WebhookController, WebhookServer, redactHeaders, type WebhookLogStore } from './index';
 
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child() { return silent; } };
@@ -198,6 +198,30 @@ describe('webhooks', () => {
     expect(spans[1]!.attributes['error.type']).toBe('webhooks/unauthorized');
   });
 
+  it("answers a sender's endpoint check before authenticating, and never hands it to the route", async () => {
+    let handled = 0;
+    class GraphLikeAuth extends AcmeAuth {
+      handshake(req: IncomingRequest) {
+        const token = req.query.validationToken;
+        return typeof token === 'string' ? httpResponse(200, token, { 'content-type': 'text/plain' }) : undefined;
+      }
+    }
+    class CheckedController extends AcmeController {
+      init() {
+        this.post(':tenant/events', { mode: 'direct', procedure: 'acme.event' }, async (_ctx, body) => {
+          handled += 1;
+          return body;
+        });
+      }
+    }
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new CheckedController(new GraphLikeAuth()));
+    const check = await server.inject({ method: 'POST', url: '/acme/t42/events?validationToken=abc%20123' });
+    expect([check.statusCode, check.body]).toEqual([200, 'abc 123']);
+    expect((await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json' }, payload: '{}' })).statusCode).toBe(401);
+    expect(handled).toBe(0);
+  });
+
   it('redactHeaders masks credentials and signatures', () => {
     expect(redactHeaders({ 'stripe-signature': 'x', cookie: 'y', 'x-custom': 'z' }, ['x-custom'])).toEqual({
       'stripe-signature': '[redacted]',
@@ -231,25 +255,5 @@ describe('SignatureAuthController subclasses', () => {
       payload,
     });
     expect(res.statusCode).toBe(200);
-  });
-});
-
-describe('a handshake', () => {
-  it('answers the sender\'s endpoint check before authentication, and never reaches the handler', async () => {
-    class EchoAuth extends AcmeAuth {
-      handshake(req: IncomingRequest) {
-        const token = req.query.challenge;
-        return typeof token === 'string' ? httpResponse(200, token, { 'content-type': 'text/plain; charset=utf-8' }) : undefined;
-      }
-    }
-    const calls: unknown[] = [];
-    const communication = { call: async (_ctx: unknown, _name: string, input: unknown) => { calls.push(input); return { ok: true }; } } as never;
-    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new AcmeController(new EchoAuth()));
-    const check = await server.inject({ method: 'POST', url: '/acme/t42/events?challenge=abc%20123', headers: { 'content-type': 'text/plain' }, payload: '' });
-    expect([check.statusCode, check.headers['content-type'], check.body]).toEqual([200, 'text/plain; charset=utf-8', 'abc 123']);
-    // Without the check, a delivery is authenticated as usual
-    const unsigned = await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json' }, payload: '{}' });
-    expect(unsigned.statusCode).toBe(401);
-    expect(calls).toHaveLength(0);
   });
 });

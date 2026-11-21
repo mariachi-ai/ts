@@ -29,7 +29,7 @@ export class EntraWebhookAuth extends AuthController {
     this.secrets = values.map(digest);
   }
 
-  handshake(req: IncomingRequest): HttpResponse | undefined {
+  handshake(req: IncomingRequest, _ctx?: RequestContext): HttpResponse | undefined {
     const token = req.query.validationToken;
     if (typeof token !== 'string' || !token || (req.rawBody && req.rawBody.length > 0)) return undefined;
     // Graph never sends markup; refusing it keeps the echo from being a reflection point.

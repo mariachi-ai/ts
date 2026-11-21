@@ -133,7 +133,7 @@ export class WebhookServer {
     req: IncomingRequest,
     span: Span | undefined,
   ): Promise<unknown> {
-    const answer = controller.auth.handshake?.(req);
+    const answer = await controller.auth.handshake?.(req, serverCtx);
     if (answer) {
       span?.setAttribute('mariachi.integration.event', 'handshake');
       return answer;
