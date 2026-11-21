@@ -1,0 +1,101 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "tawk-to",
+    "name": "Tawk.to",
+    "category": "support",
+    "server": "embed.tawk.to",
+    "docs": "https://developer.tawk.to/"
+  },
+  "settings": [
+    {
+      "key": "propertyId",
+      "env": "TAWKTO_PROPERTY_ID",
+      "label": "Property ID",
+      "meaning": "The property (the site) the chat widget belongs to.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "Administration › Overview: the Property ID, below the property image. Tawk.to has no test mode: use a separate property for test.",
+      "url": "https://help.tawk.to/article/where-can-i-find-the-property-and-widget-id"
+    },
+    {
+      "key": "widgetId",
+      "env": "TAWKTO_WIDGET_ID",
+      "label": "Widget ID",
+      "meaning": "Which of the property's chat widgets the pages show.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "Administration › Chat Widget: the Widget ID under Widget Status (the last part of the Direct Chat Link).",
+      "url": "https://help.tawk.to/article/where-can-i-find-the-property-and-widget-id"
+    },
+    {
+      "key": "apiKey",
+      "env": "TAWKTO_API_KEY",
+      "label": "JavaScript API key",
+      "meaning": "Signs the signed-in user's id, so the widget knows who is chatting and nobody can claim to be someone else (Secure Mode).",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Administration › Overview › JavaScript API: turn on Secure Mode and copy the key beside it. Each property has its own.",
+      "url": "https://help.tawk.to/article/how-to-generate-a-hash-for-javascript-api"
+    },
+    {
+      "key": "webhookSecret",
+      "env": "TAWKTO_WEBHOOK_SECRET",
+      "label": "Webhook secret key",
+      "meaning": "Checks that a webhook came from Tawk.to.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "In the dashboard's Administration section, under Webhooks: create a webhook with the app's URL and its events, then copy its secret key. Each webhook has its own.",
+      "url": "https://developer.tawk.to/webhooks/"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "visitor.login",
+      "purpose": "Signs the visitor in, in the browser: Tawk_API.login with the app's user id and the hex HMAC-SHA256 of that id keyed with the JavaScript API key, plus name, email and custom attributes. Restores the user's earlier conversations. Tawk.to has no server API for visitors or contacts.",
+      "idempotency": "natural"
+    },
+    {
+      "name": "visitor.logout",
+      "purpose": "Signs the visitor out, in the browser: Tawk_API.logout.",
+      "idempotency": "natural"
+    },
+    {
+      "name": "events.add",
+      "purpose": "Records a custom event on the visitor's chat, in the browser: Tawk_API.addEvent(name, metadata). The name is letters, digits and dashes. Tawk.to has no server API for events.",
+      "idempotency": "none"
+    }
+  ],
+  "errors": [],
+  "webhooks": {
+    "signature": {
+      "scheme": "hmac-sha1-hex",
+      "header": "X-Tawk-Signature",
+      "secretSetting": "webhookSecret",
+      "description": "The header is the hex HMAC-SHA1 of the raw request body, keyed with the webhook's secret key, with no prefix and no timestamp. X-Hook-Event-Id names the event and stays the same across retries, but isn't signed."
+    },
+    "events": [
+      {
+        "type": "chat:start",
+        "meaning": "The first message of a chat was sent, by the visitor or an agent."
+      },
+      {
+        "type": "chat:end",
+        "meaning": "A chat ended."
+      },
+      {
+        "type": "chat:transcript_created",
+        "meaning": "A chat ended, and its full transcript is in the body."
+      },
+      {
+        "type": "ticket:create",
+        "meaning": "A ticket was created."
+      }
+    ]
+  }
+}

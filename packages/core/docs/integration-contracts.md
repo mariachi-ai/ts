@@ -18,7 +18,7 @@ The JSON Schema is `@mariachi/integrations/contract.schema.json`. Point `$schema
 | `credentials` | `{ "kind": "app" }` for one set of settings for the whole app; `user` when each end user connects their own account (`oauth`: `authorizeUrl`, `tokenUrl`, `scopes`, `pkce`, `refresh`); `app-or-user` for either |
 | `operations[]` | `name` (`resource.action`: `contacts.create`), `purpose`, `method`, `path` (a template under `baseUrl`), and `idempotency`: `{ "header": "Idempotency-Key" }`, `"natural"` (a read, or a put of the same thing) or `"none"` |
 | `errors[]` | The provider's codes: `providerCode`, the shared `category`, and the `reason` that ends the integration's code (`card-declined` makes `stripe/card-declined`) |
-| `webhooks` | `signature` (`scheme`: `standard-webhooks`, `hmac-sha256-hex`, `hmac-sha256-base64`, `hmac-sha256-timestamped`, `jwt`, `rsa-sha256-certificate`, `basic-auth`, `shared-secret` or `none`; `header`, `secretSetting`, and a `description` exact enough to implement) and `events[]` (`type`, `meaning`) |
+| `webhooks` | `signature` (`scheme`: `standard-webhooks`, `hmac-sha256-hex`, `hmac-sha256-base64`, `hmac-sha256-timestamped`, `hmac-sha1-hex`, `jwt`, `rsa-sha256-certificate`, `basic-auth`, `shared-secret` or `none`; `header`, `secretSetting`, and a `description` exact enough to implement) and `events[]` (`type`, `meaning`) |
 
 ### Settings and environments
 

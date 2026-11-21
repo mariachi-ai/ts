@@ -378,6 +378,7 @@
                     "hmac-sha256-hex",
                     "hmac-sha256-base64",
                     "hmac-sha256-timestamped",
+                    "hmac-sha1-hex",
                     "jwt",
                     "rsa-sha256-certificate",
                     "basic-auth",
