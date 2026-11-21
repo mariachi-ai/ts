@@ -3,7 +3,7 @@ import { TestMetrics, TestTracer } from '@mariachi/testing';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { callProvider } from './call-provider';
-import { ProviderError, categoryForStatus, parseRetryAfter } from './provider-error';
+import { ProviderError, categoryForStatus, parseRateLimitReset, parseRetryAfter } from './provider-error';
 import { providerRequest } from './request';
 import { assertProviderSpans, scriptedFetch } from './testing';
 
@@ -162,6 +162,10 @@ describe('errors', () => {
     expect(parseRetryAfter(new Date(10_000).toUTCString(), 4_000)).toBe(6000);
     expect(parseRetryAfter('9999')).toBe(300_000);
     expect(parseRetryAfter('soon')).toBeUndefined();
+    expect(parseRateLimitReset('12')).toBe(12_000);
+    expect(parseRateLimitReset('1700000030', 1_700_000_000_000)).toBe(30_000);
+    expect(parseRateLimitReset('99999')).toBe(300_000);
+    expect(parseRateLimitReset(undefined)).toBeUndefined();
   });
 });
 
