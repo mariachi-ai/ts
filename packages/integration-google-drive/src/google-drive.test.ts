@@ -158,6 +158,15 @@ describe('files', () => {
     assertProviderSpans(tracer.spans);
   });
 
+  it("doesn't retry a daily or sharing limit, which lasts hours", async () => {
+    const limit = (reason: string): ScriptedResponse => ({ status: 403, json: { error: { code: 403, errors: [{ domain: 'usageLimits', reason }] } } });
+    const fetch = scriptedFetch(limit('dailyLimitExceeded'), limit('sharingRateLimitExceeded'));
+    const drive = user(fetch);
+    await expect(drive.files.get(ctx, { fileId: 'a' })).rejects.toMatchObject({ code: 'google-drive/daily-limit', category: 'forbidden', providerCode: 'dailyLimitExceeded' });
+    await expect(drive.permissions.create(ctx, { fileId: 'a', type: 'anyone', role: 'reader' })).rejects.toMatchObject({ code: 'google-drive/sharing-limit', category: 'forbidden' });
+    expect(fetch.requests).toHaveLength(2);
+  });
+
   it('pages through every file by nextPageToken', async () => {
     const fetch = scriptedFetch({ json: { files: [file('a'), file('b')], nextPageToken: 'n' } }, { json: { files: [file('c')] } });
     const ids: string[] = [];

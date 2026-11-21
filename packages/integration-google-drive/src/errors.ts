@@ -1,4 +1,4 @@
-import { type FailureInfo, ProviderError, categoryForStatus, mappedFailure, parseRetryAfter } from '@mariachi/integrations';
+import { type FailureInfo, ProviderError, categoryForStatus, mappedFailure, parseRateLimitReset, parseRetryAfter } from '@mariachi/integrations';
 import { errorMap, provider } from './generated';
 
 /**
@@ -43,6 +43,6 @@ export async function failedResponse(response: Response, operation: string): Pro
     category,
     providerCode: info.providerCode,
     status: response.status,
-    retryAfterMs: parseRetryAfter(response.headers.get('retry-after')),
+    retryAfterMs: parseRetryAfter(response.headers.get('retry-after')) ?? parseRateLimitReset(response.headers.get('x-ratelimit-reset')),
   });
 }

@@ -214,12 +214,12 @@ export const errorMap: Readonly<Record<string, { category: 'unauthorized' | 'for
     reason: 'rate-limited',
   },
   sharingRateLimitExceeded: {
-    category: 'rate-limited',
-    reason: 'sharing-rate-limited',
+    category: 'forbidden',
+    reason: 'sharing-limit',
   },
   dailyLimitExceeded: {
-    category: 'rate-limited',
-    reason: 'daily-limit-exceeded',
+    category: 'forbidden',
+    reason: 'daily-limit',
   },
   authError: {
     category: 'unauthorized',

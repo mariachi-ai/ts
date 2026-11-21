@@ -189,8 +189,8 @@
   "errors": [
     { "providerCode": "rateLimitExceeded", "category": "rate-limited", "reason": "rate-limited" },
     { "providerCode": "userRateLimitExceeded", "category": "rate-limited", "reason": "rate-limited" },
-    { "providerCode": "sharingRateLimitExceeded", "category": "rate-limited", "reason": "sharing-rate-limited" },
-    { "providerCode": "dailyLimitExceeded", "category": "rate-limited", "reason": "daily-limit-exceeded" },
+    { "providerCode": "sharingRateLimitExceeded", "category": "forbidden", "reason": "sharing-limit" },
+    { "providerCode": "dailyLimitExceeded", "category": "forbidden", "reason": "daily-limit" },
     { "providerCode": "authError", "category": "unauthorized", "reason": "unauthorized" },
     { "providerCode": "notFound", "category": "not-found", "reason": "not-found" },
     { "providerCode": "insufficientFilePermissions", "category": "forbidden", "reason": "insufficient-permissions" },
