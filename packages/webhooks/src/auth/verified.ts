@@ -35,8 +35,13 @@ export interface VerifiedWebhookAuthOptions {
 
 type Verified = VerifiedWebhook & { metadata?: Record<string, unknown> };
 
-/** A webhook authenticator built on one of the `@mariachi/webhooks/verify` checks. */
-abstract class VerifiedWebhookAuth extends AuthController {
+/**
+ * A webhook authenticator built on one check of the delivery. The ready-made ones below cover the common
+ * schemes; a provider package subclasses it for a scheme of its own, implementing `verify` (which may be
+ * async, for a scheme checked against published keys). The base class reads the secret, the tenant and the
+ * dedup key the same way for every scheme.
+ */
+export abstract class VerifiedWebhookAuth extends AuthController {
   /** The sender's name: dedup keys, logs and the delivery's span use it. */
   readonly provider: string;
 
@@ -61,8 +66,12 @@ abstract class VerifiedWebhookAuth extends AuthController {
     }
   }
 
-  /** Throws `webhooks/invalid-signature`, or returns the delivery's dedup key and anything else worth keeping. */
-  protected abstract verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified;
+  /**
+   * Throws `webhooks/invalid-signature`, or returns the delivery's dedup key (from signed material only) and
+   * anything else worth keeping. `secret` is what verifies the delivery: a shared secret, or, for a scheme
+   * signed with the provider's published keys, whatever names those keys.
+   */
+  protected abstract verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Verified | Promise<Verified>;
 
   async auth(req: IncomingRequest, ctx: RequestContext): Promise<WebhookIdentity | null> {
     if (!req.rawBody || req.rawBody.length === 0) {
@@ -82,7 +91,7 @@ abstract class VerifiedWebhookAuth extends AuthController {
       secret = this.base.secret;
     }
     try {
-      const { eventId, metadata } = this.verify(req.rawBody, req.headers, secret);
+      const { eventId, metadata } = await this.verify(req.rawBody, req.headers, secret);
       if (this.base.tenantFromPayload) {
         const fromPayload = this.base.tenantFromPayload(parseJson(req.rawBody));
         if (tenantId && fromPayload && fromPayload !== tenantId) {
