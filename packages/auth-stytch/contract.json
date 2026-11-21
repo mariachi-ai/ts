@@ -1,0 +1,221 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "stytch",
+    "name": "Stytch",
+    "category": "auth",
+    "server": "api.stytch.com",
+    "baseUrl": "https://api.stytch.com",
+    "docs": "https://stytch.com/docs/api-reference/consumer/api"
+  },
+  "settings": [
+    {
+      "key": "projectId",
+      "env": "STYTCH_PROJECT_ID",
+      "label": "Project ID",
+      "meaning": "Names the Stytch environment: the user name of every API call, the audience of its session JWTs and part of their issuer. A live project id calls https://api.stytch.com; any other calls https://test.stytch.com.",
+      "secret": false,
+      "required": true,
+      "whereToFind": "Dashboard › Project ID & API keys, for the environment (Test or Live). Each environment has its own project id, secret and public token.",
+      "url": "https://stytch.com/docs/resources/workspace-management/api-keys",
+      "public": true,
+      "environments": {
+        "test": {
+          "notStartsWith": ["project-live-"],
+          "because": "This is a Live project id (project-live-…): use the Test environment's project id. The prefix is how Stytch's own SDKs tell Live from Test."
+        },
+        "production": {
+          "startsWith": ["project-live-"],
+          "because": "Production needs the Live environment's project id, which starts with project-live-. The prefix is how Stytch's own SDKs tell Live from Test."
+        }
+      }
+    },
+    {
+      "key": "secret",
+      "env": "STYTCH_SECRET",
+      "label": "Secret",
+      "meaning": "The password of every API call (HTTP Basic, with the project id). Server-side only.",
+      "secret": true,
+      "required": true,
+      "whereToFind": "Dashboard › Project ID & API keys › Secrets, for the same environment as the project id.",
+      "url": "https://stytch.com/docs/resources/workspace-management/api-keys"
+    },
+    {
+      "key": "publicToken",
+      "env": "STYTCH_PUBLIC_TOKEN",
+      "label": "Public token",
+      "meaning": "Stytch's frontend SDKs authenticate with it, and the OAuth start URL carries it. Safe in a browser.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Dashboard › Project ID & API keys › Public tokens, for the same environment as the project id.",
+      "url": "https://stytch.com/docs/resources/workspace-management/api-keys"
+    },
+    {
+      "key": "webhookSecret",
+      "env": "STYTCH_WEBHOOK_SECRET",
+      "label": "Webhook signing secret",
+      "meaning": "Checks that a webhook came from Stytch. Stytch sends its webhooks through Svix, signed with the endpoint's secret (whsec_…).",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Dashboard › Webhooks › the endpoint › Signing Secret.",
+      "url": "https://stytch.com/docs/resources/workspace-management/webhooks"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "sessions.jwks",
+      "purpose": "Reads the keys that sign the project's session JWTs, to check them locally. Keys rotate about every six months; both are served for a month. Needs no credentials.",
+      "method": "GET",
+      "path": "/v1/sessions/jwks/{projectId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "sessions.authenticate",
+      "purpose": "Checks a session token or session JWT with Stytch, so a revoked session fails at once; returns the session, the user and a fresh session JWT.",
+      "method": "POST",
+      "path": "/v1/sessions/authenticate",
+      "idempotency": "natural"
+    },
+    {
+      "name": "sessions.revoke",
+      "purpose": "Ends a session, by its id or token. Its JWTs still pass a local check until they expire (five minutes).",
+      "method": "POST",
+      "path": "/v1/sessions/revoke",
+      "idempotency": "natural"
+    },
+    {
+      "name": "passwords.authenticate",
+      "purpose": "Signs a user in with their email and password, starting a session.",
+      "method": "POST",
+      "path": "/v1/passwords/authenticate",
+      "idempotency": "none"
+    },
+    {
+      "name": "passwords.create",
+      "purpose": "Creates a user with an email and password.",
+      "method": "POST",
+      "path": "/v1/passwords",
+      "idempotency": "none"
+    },
+    {
+      "name": "passwords.resetStart",
+      "purpose": "Emails the user a link to reset their password; the link carries the token for passwords.reset.",
+      "method": "POST",
+      "path": "/v1/passwords/email/reset/start",
+      "idempotency": "none"
+    },
+    {
+      "name": "passwords.reset",
+      "purpose": "Sets a new password with the token from the reset email.",
+      "method": "POST",
+      "path": "/v1/passwords/email/reset",
+      "idempotency": "none"
+    },
+    {
+      "name": "otps.emailLoginOrCreate",
+      "purpose": "Emails a one-time passcode, creating the user when the address is new.",
+      "method": "POST",
+      "path": "/v1/otps/email/login_or_create",
+      "idempotency": "none"
+    },
+    {
+      "name": "otps.authenticate",
+      "purpose": "Signs a user in with the passcode, by the email's id (email_id), starting a session.",
+      "method": "POST",
+      "path": "/v1/otps/authenticate",
+      "idempotency": "none"
+    },
+    {
+      "name": "oauth.start",
+      "purpose": "Where the browser is sent to sign in with Google or GitHub (a redirect, never called by the server). Query: public_token, login_redirect_url, signup_redirect_url, code_challenge, provider_login_hint.",
+      "method": "GET",
+      "path": "/v1/public/oauth/{provider}/start",
+      "idempotency": "natural"
+    },
+    {
+      "name": "oauth.authenticate",
+      "purpose": "Exchanges the token Stytch put on the redirect, with the PKCE verifier, for a session.",
+      "method": "POST",
+      "path": "/v1/oauth/authenticate",
+      "idempotency": "none"
+    },
+    {
+      "name": "users.get",
+      "purpose": "Reads one user.",
+      "method": "GET",
+      "path": "/v1/users/{userId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "users.search",
+      "purpose": "Finds users by a query, such as an exact email address.",
+      "method": "POST",
+      "path": "/v1/users/search",
+      "idempotency": "natural"
+    },
+    {
+      "name": "users.create",
+      "purpose": "Creates a user with an email and no password.",
+      "method": "POST",
+      "path": "/v1/users",
+      "idempotency": "none"
+    },
+    {
+      "name": "users.update",
+      "purpose": "Changes a user's name, metadata or external id.",
+      "method": "PUT",
+      "path": "/v1/users/{userId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "users.delete",
+      "purpose": "Deletes a user.",
+      "method": "DELETE",
+      "path": "/v1/users/{userId}",
+      "idempotency": "natural"
+    }
+  ],
+  "errors": [
+    { "providerCode": "unauthorized_credentials", "category": "unauthorized", "reason": "unauthorized-credentials" },
+    { "providerCode": "unauthorized_project_id_live", "category": "unauthorized", "reason": "wrong-environment" },
+    { "providerCode": "unauthorized_project_id_test", "category": "unauthorized", "reason": "wrong-environment" },
+    { "providerCode": "wrong_stack_live", "category": "invalid-request", "reason": "wrong-environment" },
+    { "providerCode": "wrong_stack_test", "category": "invalid-request", "reason": "wrong-environment" },
+    { "providerCode": "reset_password", "category": "invalid-request", "reason": "password-reset-required" },
+    { "providerCode": "weak_password", "category": "invalid-request", "reason": "weak-password" },
+    { "providerCode": "breached_password", "category": "invalid-request", "reason": "weak-password" },
+    { "providerCode": "duplicate_email", "category": "conflict", "reason": "duplicate-email" },
+    { "providerCode": "invalid_email", "category": "invalid-request", "reason": "invalid-email" },
+    { "providerCode": "unable_to_auth_otp_code", "category": "invalid-request", "reason": "invalid-code" },
+    { "providerCode": "otp_code_not_found", "category": "invalid-request", "reason": "invalid-code" },
+    { "providerCode": "unable_to_auth_password_reset_token", "category": "invalid-request", "reason": "invalid-reset-token" },
+    { "providerCode": "oauth_token_not_found", "category": "invalid-request", "reason": "invalid-oauth-token" },
+    { "providerCode": "pkce_mismatch", "category": "invalid-request", "reason": "pkce-mismatch" },
+    { "providerCode": "oauth_unverified_email", "category": "invalid-request", "reason": "unverified-email" },
+    { "providerCode": "user_not_found", "category": "not-found", "reason": "user-not-found" },
+    { "providerCode": "email_not_found", "category": "not-found", "reason": "email-not-found" },
+    { "providerCode": "session_not_found", "category": "not-found", "reason": "session-not-found" },
+    { "providerCode": "user_lock_limit_reached", "category": "forbidden", "reason": "user-locked" },
+    { "providerCode": "too_many_requests", "category": "rate-limited", "reason": "rate-limited" }
+  ],
+  "webhooks": {
+    "signature": {
+      "scheme": "standard-webhooks",
+      "header": "svix-signature",
+      "secretSetting": "webhookSecret",
+      "description": "Sent through Svix. svix-signature is a space-separated list of v1,<base64 HMAC-SHA256 of \"<svix-id>.<svix-timestamp>.<raw body>\">, keyed with the base64 after whsec_ in the endpoint's secret. svix-timestamp is Unix seconds; refuse one more than five minutes from now. The body has no type field: the event type is source.object_type.action, lowercased (direct.user.create)."
+    },
+    "events": [
+      { "type": "direct.user.create", "meaning": "A user was created through the API or an SDK (a sign-up)." },
+      { "type": "direct.user.update", "meaning": "A user was changed through the API or an SDK." },
+      { "type": "direct.user.delete", "meaning": "A user was deleted through the API or an SDK. The body has the user's id, not the user." },
+      { "type": "dashboard.user.create", "meaning": "A user was created in the Dashboard." },
+      { "type": "dashboard.user.update", "meaning": "A user was changed in the Dashboard." },
+      { "type": "dashboard.user.delete", "meaning": "A user was deleted in the Dashboard." }
+    ]
+  }
+}
