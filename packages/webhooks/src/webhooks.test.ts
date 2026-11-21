@@ -166,7 +166,17 @@ describe('webhooks', () => {
       startSpan(name: string, attributes: Record<string, string | number | boolean> = {}, options: { kind?: string } = {}) {
         const span = { name, kind: options.kind, attributes: { ...attributes } as Record<string, unknown>, status: undefined as string | undefined, ended: false };
         spans.push(span);
-        return { setAttribute: (k: string, v: unknown) => void (span.attributes[k] = v), setStatus: (st: 'ok' | 'error') => void (span.status = st), end: () => void (span.ended = true) };
+        return {
+          setAttribute: (k: string, v: unknown) => {
+            span.attributes[k] = v;
+          },
+          setStatus: (st: 'ok' | 'error') => {
+            span.status = st;
+          },
+          end: () => {
+            span.ended = true;
+          },
+        };
       },
       withSpan: async <T>(_n: string, fn: (s: never) => Promise<T>) => fn({} as never),
     };
