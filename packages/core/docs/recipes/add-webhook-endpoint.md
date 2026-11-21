@@ -45,6 +45,17 @@ For an app's own endpoint, `WebhookServer` is the one that does everything a web
 place: raw-body verification, dedup that survives a restart, a log with secrets redacted, and the
 hand-off to a job or a procedure, on a port of its own.
 
+**Its span.** Give `WebhookServer` the container's `tracer` and each delivery gets a SERVER span
+named `<provider> webhook`, with `mariachi.integration` and, when the route sets
+`eventType: (payload) => payload.type`, `mariachi.integration.event`. Its status says whether the
+delivery was accepted. Nothing from the body, the headers or the URL is recorded.
+
+**A sender's endpoint check.** Some senders check an endpoint before they deliver to it: Microsoft
+Graph posts a `validationToken` to echo, Okta sends a `GET` with a challenge. The authenticator
+answers it in `handshake(req, ctx)`, which runs before `auth` and returns the response (or nothing,
+for an ordinary delivery). A sender that signs its check is verified there too. The check never
+reaches the route, a procedure or a job.
+
 ## 1. Verify the signature
 
 `@mariachi/webhooks` ships the common schemes, so there's usually no class to write:

@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { InMemoryIdempotencyStore, type Context } from '@mariachi/core';
-import type { IncomingRequest } from '@mariachi/server';
+import { type IncomingRequest, httpResponse } from '@mariachi/server';
 import { SignatureAuthController, WebhookController, WebhookServer, redactHeaders, type WebhookLogStore } from './index';
 
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child() { return silent; } };
@@ -158,6 +158,68 @@ describe('webhooks', () => {
     });
     expect(res.statusCode).toBeGreaterThanOrEqual(500);
     expect(res.json<{ error: { code: string } }>().error.code).toBe('webhooks/unauthenticated-tenant');
+  });
+
+  it('gives each delivery a SERVER span: the provider, the event type the route reads, and whether it was accepted', async () => {
+    const spans: Array<{ name: string; kind?: string; attributes: Record<string, unknown>; status?: string; ended: boolean }> = [];
+    const tracer = {
+      startSpan(name: string, attributes: Record<string, string | number | boolean> = {}, options: { kind?: string } = {}) {
+        const span = { name, kind: options.kind, attributes: { ...attributes } as Record<string, unknown>, status: undefined as string | undefined, ended: false };
+        spans.push(span);
+        return {
+          setAttribute: (k: string, v: unknown) => {
+            span.attributes[k] = v;
+          },
+          setStatus: (st: 'ok' | 'error') => {
+            span.status = st;
+          },
+          end: () => {
+            span.ended = true;
+          },
+        };
+      },
+      withSpan: async <T>(_n: string, fn: (s: never) => Promise<T>) => fn({} as never),
+    };
+    class TypedController extends AcmeController {
+      init() {
+        this.post(':tenant/events', { mode: 'direct', procedure: 'acme.event', eventType: (p) => (p as { type?: string }).type }, async (_ctx, body) => body);
+      }
+    }
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication, tracer }).registerController(new TypedController());
+    const payload = '{"type":"invoice.paid","tenant":"t42"}';
+    const sig = createHmac('sha256', SECRET).update(payload).digest('hex');
+    expect((await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json', 'x-acme-signature': sig }, payload })).statusCode).toBe(200);
+    expect((await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json', 'x-acme-signature': 'nope' }, payload })).statusCode).toBe(401);
+    expect(spans.map((s) => [s.name, s.kind, s.attributes['mariachi.integration'], s.attributes['mariachi.integration.event'], s.status, s.ended])).toEqual([
+      ['acme webhook', 'server', 'acme', 'invoice.paid', 'ok', true],
+      ['acme webhook', 'server', 'acme', undefined, 'error', true],
+    ]);
+    expect(spans[1]!.attributes['error.type']).toBe('webhooks/unauthorized');
+  });
+
+  it("answers a sender's endpoint check before authenticating, and never hands it to the route", async () => {
+    let handled = 0;
+    class GraphLikeAuth extends AcmeAuth {
+      handshake(req: IncomingRequest) {
+        const token = req.query.validationToken;
+        return typeof token === 'string' ? httpResponse(200, token, { 'content-type': 'text/plain' }) : undefined;
+      }
+    }
+    class CheckedController extends AcmeController {
+      init() {
+        this.post(':tenant/events', { mode: 'direct', procedure: 'acme.event' }, async (_ctx, body) => {
+          handled += 1;
+          return body;
+        });
+      }
+    }
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new CheckedController(new GraphLikeAuth()));
+    const check = await server.inject({ method: 'POST', url: '/acme/t42/events?validationToken=abc%20123' });
+    expect([check.statusCode, check.body]).toEqual([200, 'abc 123']);
+    expect((await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json' }, payload: '{}' })).statusCode).toBe(401);
+    expect(handled).toBe(0);
   });
 
   it('redactHeaders masks credentials and signatures', () => {
