@@ -1,0 +1,167 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "firebase",
+    "name": "Firebase Authentication",
+    "category": "auth",
+    "server": "identitytoolkit.googleapis.com",
+    "baseUrl": "https://identitytoolkit.googleapis.com/v1",
+    "docs": "https://firebase.google.com/docs/reference/rest/auth"
+  },
+  "settings": [
+    {
+      "key": "apiKey",
+      "env": "FIREBASE_API_KEY",
+      "label": "Web API key",
+      "meaning": "Identifies the Firebase project to the Identity Toolkit API, for sign-in, token refresh and password resets. Not a secret: Firebase says it's OK to include in code.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "Firebase console › Settings › General › Your apps › your web app › Config: apiKey. Test and production are separate Firebase projects, each with its own key; the keys look alike, so nothing tells one from the other.",
+      "url": "https://firebase.google.com/docs/projects/api-keys"
+    },
+    {
+      "key": "authDomain",
+      "env": "FIREBASE_AUTH_DOMAIN",
+      "label": "Auth domain",
+      "meaning": "The domain the browser's Firebase SDK signs in through (Google and GitHub sign-in). The server doesn't call it; it's here so the app can hand the browser its config.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Firebase console › Settings › General › Your apps › your web app › Config: authDomain, usually <projectId>.firebaseapp.com.",
+      "url": "https://firebase.google.com/docs/web/setup"
+    },
+    {
+      "key": "projectId",
+      "env": "FIREBASE_PROJECT_ID",
+      "label": "Project ID",
+      "meaning": "The Firebase project whose ID tokens the app accepts: every token's aud must be it, and its iss https://securetoken.google.com/<projectId>.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "Firebase console › Settings › General: Project ID. Use a separate Firebase project for test.",
+      "url": "https://firebase.google.com/docs/projects/learn-more#project-id"
+    },
+    {
+      "key": "serviceAccountJson",
+      "env": "FIREBASE_SERVICE_ACCOUNT_JSON",
+      "label": "Service account key",
+      "meaning": "The project's service account key file, as JSON. It signs the requests that manage users (look up, create, delete, set a password, revoke sessions) and the revocation check. Leave it unset if the app only verifies tokens and signs users in.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Firebase console › Settings › Service accounts › Generate new private key. The whole downloaded file is the value. It must belong to the same project as the project ID.",
+      "url": "https://firebase.google.com/docs/admin/setup#initialize-sdk-non-google"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "keys.get",
+      "purpose": "Reads the public keys Firebase signs ID tokens with (RS256), at https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com, kept for the Cache-Control max-age of the answer.",
+      "method": "GET",
+      "idempotency": "natural"
+    },
+    {
+      "name": "accounts.signInWithPassword",
+      "purpose": "Signs a user in with email and password, with the web API key: an ID token, a refresh token, or an MFA challenge.",
+      "method": "POST",
+      "path": "/accounts:signInWithPassword",
+      "idempotency": "none"
+    },
+    {
+      "name": "accounts.signUp",
+      "purpose": "Creates an email and password user, with the web API key (self sign-up; the email is unverified).",
+      "method": "POST",
+      "path": "/accounts:signUp",
+      "idempotency": "none"
+    },
+    {
+      "name": "accounts.sendOobCode",
+      "purpose": "Has Firebase email a password reset (PASSWORD_RESET) or a sign-in link (EMAIL_SIGNIN), with the web API key.",
+      "method": "POST",
+      "path": "/accounts:sendOobCode",
+      "idempotency": "none"
+    },
+    {
+      "name": "accounts.resetPassword",
+      "purpose": "Sets a new password with the oobCode from a password reset email, with the web API key.",
+      "method": "POST",
+      "path": "/accounts:resetPassword",
+      "idempotency": "none"
+    },
+    {
+      "name": "accounts.signInWithEmailLink",
+      "purpose": "Signs a user in with the email and the oobCode from a sign-in link, creating the user when none has the email, with the web API key.",
+      "method": "POST",
+      "path": "/accounts:signInWithEmailLink",
+      "idempotency": "none"
+    },
+    {
+      "name": "token.refresh",
+      "purpose": "Exchanges a refresh token for a new ID token, at https://securetoken.googleapis.com/v1/token, with the web API key.",
+      "method": "POST",
+      "idempotency": "natural"
+    },
+    {
+      "name": "serviceAccount.token",
+      "purpose": "Exchanges a JWT signed with the service account's key (RS256, scope https://www.googleapis.com/auth/identitytoolkit) for a Google OAuth access token, at https://oauth2.googleapis.com/token. The token is reused until shortly before it expires.",
+      "method": "POST",
+      "idempotency": "natural"
+    },
+    {
+      "name": "projects.accounts.lookup",
+      "purpose": "Reads users by id or by email, with the service account.",
+      "method": "POST",
+      "path": "/projects/{projectId}/accounts:lookup",
+      "idempotency": "natural"
+    },
+    {
+      "name": "projects.accounts.signUp",
+      "purpose": "Creates a user, with the service account: the email can be marked verified.",
+      "method": "POST",
+      "path": "/projects/{projectId}/accounts",
+      "idempotency": "none"
+    },
+    {
+      "name": "projects.accounts.update",
+      "purpose": "Sets a user's password, or revokes every refresh token issued to them before now (validSince), with the service account.",
+      "method": "POST",
+      "path": "/projects/{projectId}/accounts:update",
+      "idempotency": "natural"
+    },
+    {
+      "name": "projects.accounts.delete",
+      "purpose": "Deletes a user, with the service account.",
+      "method": "POST",
+      "path": "/projects/{projectId}/accounts:delete",
+      "idempotency": "natural"
+    },
+    {
+      "name": "projects.accounts.sendOobCode",
+      "purpose": "Makes a password reset or sign-in link without emailing it (returnOobLink), so the app sends it, with the service account.",
+      "method": "POST",
+      "path": "/projects/{projectId}/accounts:sendOobCode",
+      "idempotency": "none"
+    }
+  ],
+  "errors": [
+    { "providerCode": "EMAIL_NOT_FOUND", "category": "not-found", "reason": "email-not-found" },
+    { "providerCode": "INVALID_PASSWORD", "category": "invalid-request", "reason": "invalid-password" },
+    { "providerCode": "INVALID_LOGIN_CREDENTIALS", "category": "invalid-request", "reason": "invalid-login-credentials" },
+    { "providerCode": "USER_DISABLED", "category": "forbidden", "reason": "user-disabled" },
+    { "providerCode": "USER_NOT_FOUND", "category": "not-found", "reason": "user-not-found" },
+    { "providerCode": "TOO_MANY_ATTEMPTS_TRY_LATER", "category": "rate-limited", "reason": "too-many-attempts" },
+    { "providerCode": "EMAIL_EXISTS", "category": "conflict", "reason": "email-exists" },
+    { "providerCode": "OPERATION_NOT_ALLOWED", "category": "forbidden", "reason": "operation-not-allowed" },
+    { "providerCode": "INVALID_OOB_CODE", "category": "invalid-request", "reason": "invalid-oob-code" },
+    { "providerCode": "EXPIRED_OOB_CODE", "category": "invalid-request", "reason": "expired-oob-code" },
+    { "providerCode": "TOKEN_EXPIRED", "category": "invalid-request", "reason": "token-expired" },
+    { "providerCode": "INVALID_REFRESH_TOKEN", "category": "invalid-request", "reason": "invalid-refresh-token" },
+    { "providerCode": "INVALID_ID_TOKEN", "category": "invalid-request", "reason": "invalid-id-token" },
+    { "providerCode": "invalid_grant", "category": "unauthorized", "reason": "service-account-refused" },
+    { "providerCode": "invalid_client", "category": "unauthorized", "reason": "service-account-invalid" },
+    { "providerCode": "disabled_client", "category": "unauthorized", "reason": "service-account-disabled" }
+  ]
+}

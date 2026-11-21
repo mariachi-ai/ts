@@ -1,0 +1,65 @@
+{
+  "name": "@mariachi/auth-firebase",
+  "version": "0.0.0",
+  "description": "Firebase Authentication: ID tokens verified against Google's published keys, and an IdentityClient for headless sign-in and user management over its REST APIs, without the Admin SDK.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/auth-firebase"
+  },
+  "mariachi": {
+    "category": "security",
+    "status": "alpha",
+    "useWhen": "Using Firebase Authentication as the identity provider",
+    "entry": [
+      "createFirebaseAuth",
+      "createFirebaseIdentityClient",
+      "firebaseWebConfig"
+    ]
+  },
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
+    "./contract.json": "./contract.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "contract.json",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "biome lint src",
+    "test:unit": "vitest run --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariachi/auth": "workspace:*",
+    "@mariachi/core": "workspace:*",
+    "@mariachi/integrations": "workspace:*",
+    "jose": "^6",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@mariachi/testing": "workspace:*",
+    "tsup": "^8",
+    "typescript": "^5.7",
+    "vitest": "^3"
+  }
+}
