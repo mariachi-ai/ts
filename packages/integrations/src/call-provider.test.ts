@@ -94,6 +94,16 @@ describe('callProvider', () => {
 describe('providerRequest', () => {
   const Widget = z.object({ id: z.string() });
 
+  it("doesn't retry a create without an idempotency key after an outage, only after a rate limit", async () => {
+    const outage = scriptedFetch({ status: 503 });
+    await expect(providerRequest(ctx, call, { method: 'POST', url: 'https://api.acme.test/v1/widgets', json: {} }, { schema: Widget, deps: { fetch: outage, ...noWait } })).rejects.toMatchObject({ category: 'unavailable' });
+    expect(outage.requests).toHaveLength(1);
+    const limited = scriptedFetch({ status: 429, headers: { 'retry-after': '0' } }, { status: 201, json: { id: 'w2' } });
+    expect(await providerRequest(ctx, call, { method: 'POST', url: 'https://api.acme.test/v1/widgets', json: {} }, { schema: Widget, deps: { fetch: limited, ...noWait } })).toEqual({ id: 'w2' });
+    const read = scriptedFetch({ status: 503 }, { json: { id: 'w3' } });
+    expect(await providerRequest(ctx, call, { method: 'GET', url: 'https://api.acme.test/v1/widgets/w3' }, { schema: Widget, deps: { fetch: read, ...noWait } })).toEqual({ id: 'w3' });
+  });
+
   it('sends JSON, the query and the idempotency key on every attempt, and checks the answer', async () => {
     const fetch = scriptedFetch({ status: 503 }, { status: 201, json: { id: 'w1' } });
     const out = await providerRequest(ctx, call, {

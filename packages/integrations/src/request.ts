@@ -17,7 +17,8 @@ export interface ProviderRequest {
   form?: Record<string, string | number | boolean | undefined>;
   /**
    * Sent on every attempt of this call, so the provider does it once however often it's retried. Give it
-   * wherever the provider accepts one: a create, a charge, a send.
+   * wherever the provider accepts one: a create, a charge, a send. Without one, a POST or PATCH is retried only
+   * when the provider rate-limited it (it did nothing), never after an outage, which may come after it acted.
    */
   idempotencyKey?: { header: string; value: string };
 }
@@ -99,7 +100,11 @@ export async function providerRequest<T>(
       }
       return parsed.data;
     },
-    { ...options.deps, retry: { attempts: 3, ...options.deps?.retry } },
+    {
+      ...options.deps,
+      // A create without an idempotency key could run twice if it were retried after an outage
+      retry: { attempts: 3, unsafe: (request.method === 'POST' || request.method === 'PATCH') && !request.idempotencyKey, ...options.deps?.retry },
+    },
   );
 }
 
