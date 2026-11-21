@@ -43,6 +43,8 @@ export function createContact(ctx: Context, input: { email: string }, deps: Acme
 - **Retries:** only `rate-limited` and `unavailable` (and a provider that can't be reached), three
   attempts by default, waiting as long as `Retry-After` asks. Each retry is an event on the span.
   Give an idempotency key wherever the provider takes one, so a retried create happens once.
+- **A failure inside a 2xx answer** (a batch, a composite call, GraphQL's `errors`) is read by
+  `failureInBody(body)`, which names its category; the call then fails as any other.
 - **The answer** is checked against `schema`. A provider that changed its response fails with
   `<integration>/invalid-response` at the boundary.
 
