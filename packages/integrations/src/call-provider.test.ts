@@ -124,6 +124,21 @@ describe('providerRequest', () => {
     expect([err.code, err.category, err.providerCode, err.status]).toEqual(['acme/card-declined', 'invalid-request', 'card_declined', 400]);
   });
 
+  it('fails a 2xx answer that carries a failure inside, before the schema, retrying only what the category allows', async () => {
+    const fetch = scriptedFetch({ json: { results: [{ ok: false, code: 'DUPLICATE_VALUE' }] } });
+    const err = await providerRequest(ctx, call, { method: 'POST', url: 'https://api.acme.test/v1/batch' }, {
+      schema: Widget,
+      error: AcmeError,
+      failureInBody: (body) => {
+        const failed = (body as { results: Array<{ ok: boolean; code: string }> }).results.find((r) => !r.ok);
+        return failed ? { category: 'conflict', reason: 'duplicate', providerCode: failed.code } : undefined;
+      },
+      deps: { fetch },
+    }).catch((e) => e);
+    expect(err).toBeInstanceOf(AcmeError);
+    expect([err.code, err.category, err.providerCode, err.status, fetch.requests.length]).toEqual(['acme/duplicate', 'conflict', 'DUPLICATE_VALUE', 200, 1]);
+  });
+
   it('fails an answer in the wrong shape at the boundary', async () => {
     const fetch = scriptedFetch({ json: { nope: true } }, { json: { nope: true } }, { json: { nope: true } });
     await expect(providerRequest(ctx, call, { method: 'GET', url: 'https://api.acme.test/v1/w' }, { schema: Widget, deps: { fetch, ...noWait } })).rejects.toMatchObject({ code: 'acme/invalid-response' });

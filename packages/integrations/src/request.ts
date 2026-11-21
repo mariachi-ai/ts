@@ -38,6 +38,12 @@ export interface ProviderRequestOptions<T> {
   schema: z.ZodType<T, z.ZodTypeDef, unknown>;
   /** Reads the provider's error body. Without it, the HTTP status decides the category and reason. */
   failure?: (status: number, body: unknown) => FailureInfo | undefined;
+  /**
+   * For a provider that answers 2xx with a failure inside (a batch or composite call, a GraphQL `errors` array):
+   * return what failed, and the call fails as if the provider had answered with an error, before `schema` runs.
+   * `category` is required here, since the status says nothing.
+   */
+  failureInBody?: (body: unknown) => (FailureInfo & { category: ErrorCategory }) | undefined;
   /** The integration's error class, so callers can `instanceof HubSpotError`. */
   error?: new (code: string, message: string, options: ProviderErrorOptions) => ProviderError;
   deps?: ProviderDeps & { fetch?: typeof fetch };
@@ -73,6 +79,14 @@ export async function providerRequest<T>(
           providerCode: info.providerCode,
           status: response.status,
           retryAfterMs: parseRetryAfter(response.headers.get('retry-after')),
+        });
+      }
+      const inBody = options.failureInBody?.(body);
+      if (inBody) {
+        throw new ErrorClass(`${call.integration}/${inBody.reason ?? inBody.category}`, inBody.message ?? `${call.integration} ${call.operation} failed`, {
+          category: inBody.category,
+          providerCode: inBody.providerCode,
+          status: response.status,
         });
       }
       const parsed = options.schema.safeParse(body);
