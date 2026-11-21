@@ -1,7 +1,7 @@
 {
   "name": "@mariachi/integrations",
   "version": "0.1.1",
-  "description": "Third-party providers, one way: every call through callProvider (one span, metrics, retries on rate limits), typed errors by category, webhook signature checks, a callable registry and per-tenant credentials.",
+  "description": "Third-party providers, one way: every call through callProvider (one span, metrics, retries on rate limits), typed errors by category, contracts, a callable registry and per-tenant credentials.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mariachi-ai/ts.git",
@@ -17,7 +17,6 @@
       "ProviderError",
       "checkSetting",
       "settingsFromEnv",
-      "receiveProviderWebhook",
       "defineIntegrationFn",
       "IntegrationRegistry",
       "resolveTenantCredential"

@@ -2,7 +2,7 @@
 
 How Mariachi calls a third-party provider. There is one way: every call goes through
 `callProvider`, which gives it one span, its metrics and its retries, and fails with an error whose
-category says what to do. Inbound webhooks are checked over the raw body and get a span of their own.
+category says what to do. Inbound webhooks go through `WebhookServer`, like every webhook.
 
 ## Calling a provider
 
@@ -51,15 +51,11 @@ directly and report the status with `attempt.setStatusCode`.
 
 ## Receiving a provider's webhooks
 
-`receiveProviderWebhook(ctx, integration, verifyAndParse, deps)` makes a SERVER span named
-`<integration> webhook` with the event's type, and an error span when the check fails. The checks:
-
-- `verifyStandardWebhook` for Standard Webhooks (Svix): Clerk, Stytch, Supabase's auth hooks.
-- `parseSignatureHeader`, `hmac`, `safeEqual` and `withinTolerance` for the rest: `t=…,v1=…`
-  (Stripe, Calendly, Mailchimp, WorkOS), `ts=…;h1=…` (Paddle), and plain HMACs of the body.
-
-A failed check throws `WebhookSignatureError` (`<integration>/invalid-signature`, 401). Always pass
-the raw bytes of the body.
+Through `@mariachi/webhooks`' `WebhookServer`, as every webhook is
+([recipes/add-webhook-endpoint.md](./recipes/add-webhook-endpoint.md)): it checks the signature over
+the raw body, dedupes, logs with secrets redacted, and hands the delivery to a job. An integration
+package exports the authenticator for its provider's scheme (`typeformWebhookAuth(secret)`) and the
+Zod schema of its payloads, so a controller is a few lines.
 
 ## Testing an integration
 

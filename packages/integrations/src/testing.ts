@@ -5,6 +5,7 @@
 import { IntegrationError } from '@mariachi/core';
 import { PROVIDER_SPAN_ATTRIBUTES } from './call-provider';
 
+// `mariachi.integration.event` is the inbound webhook span's (WebhookServer's)
 const ALLOWED = new Set<string>([...PROVIDER_SPAN_ATTRIBUTES, 'mariachi.integration.event']);
 
 /** A span as `@mariachi/testing`'s `TestTracer` records it. */
