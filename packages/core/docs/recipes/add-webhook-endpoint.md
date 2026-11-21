@@ -54,7 +54,8 @@ delivery was accepted. Nothing from the body, the headers or the URL is recorded
 Graph posts a `validationToken` to echo, Okta sends a `GET` with a challenge. The authenticator
 answers it in `handshake(req, ctx)`, which runs before `auth` and returns the response (or nothing,
 for an ordinary delivery). A sender that signs its check is verified there too. The check never
-reaches the route, a procedure or a job.
+reaches the route, a procedure or a job. A `HEAD` to a route's address (Intercom's check) is answered with an empty
+200, before anything else.
 
 ## 1. Verify the signature
 

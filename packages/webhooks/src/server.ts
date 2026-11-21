@@ -69,8 +69,15 @@ export class WebhookServer {
   private build(): void {
     if (this.built) return;
     this.built = true;
+    // A sender checking that an address answers (Intercom asks with HEAD) gets an empty 200: nothing is read,
+    // authenticated or dispatched, and nothing about the endpoint beyond its existence is told
+    const heads = new Set<string>();
     for (const controller of this.controllers) {
       for (const route of controller.routes()) {
+        if (route.method !== 'GET' && !heads.has(route.path)) {
+          heads.add(route.path);
+          this.server.register([{ method: 'HEAD', path: route.path, handler: async () => httpResponse(200, '') }]);
+        }
         if (route.opts.mode === 'direct' && !this.deps.communication) {
           throw new ConfigError('webhooks/missing-dependency', `Route ${route.path} needs deps.communication`);
         }
