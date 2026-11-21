@@ -16,13 +16,14 @@
     "test:integration": "turbo run test:integration --concurrency=1 --filter='!./apps/*' --filter='!./examples/*'",
     "lint": "turbo run lint --filter='!./apps/*' --filter='!./examples/*' && pnpm run lint:conventions",
     "lint:conventions": "node scripts/lint-conventions.mjs",
-    "docs:check": "node scripts/check-docs-links.mjs && node scripts/generate-catalog.mjs --check && node scripts/generate-design-catalog.mjs --check && node scripts/generate-llms.mjs --check",
+    "docs:check": "node scripts/check-docs-links.mjs && node scripts/generate-catalog.mjs --check && node scripts/generate-design-catalog.mjs --check && node scripts/generate-llms.mjs --check && node scripts/generate-integrations.mjs --check",
     "docs:catalog": "node scripts/generate-catalog.mjs && node scripts/generate-design-catalog.mjs && node scripts/generate-llms.mjs",
     "clean": "turbo run clean",
     "typecheck": "turbo run typecheck --filter='!./apps/*' --filter='!./examples/*'",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "release": "pnpm build && changeset publish"
+    "release": "pnpm build && changeset publish",
+    "integrations:generate": "node scripts/generate-integrations.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",

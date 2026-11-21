@@ -9,6 +9,18 @@ export {
   type ErrorCategory,
   type ProviderErrorOptions,
 } from './provider-error';
+export {
+  ContractSchema,
+  parseContract,
+  checkSetting,
+  settingsFromEnv,
+  mappedFailure,
+  type Contract,
+  type ContractSetting,
+  type ContractOperation,
+  type ContractEnvironment,
+  type SettingDescriptor,
+} from './contract';
 export { defineIntegrationFn, defineWebhookHandler } from './define';
 export { IntegrationRegistry } from './registry';
 export { resolveTenantCredential, type SecretReader, type FieldDecryptor } from './credentials';
