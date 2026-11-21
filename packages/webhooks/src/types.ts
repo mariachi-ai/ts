@@ -6,7 +6,12 @@ export interface WebhookContext extends RequestContext {
 }
 
 export interface WebhookRouteOpts {
-  mode: 'direct' | 'queue';
+  /**
+   * `queue`: the handler's result is enqueued as a job (`jobName`), answered 202. `direct`: it's the
+   * input of a procedure (`procedure`), answered 200. `reply`: it's the answer itself, with nothing
+   * dispatched, for a sender's check that the endpoint is theirs (Okta's verification challenge).
+   */
+  mode: 'direct' | 'queue' | 'reply';
   /** Procedure name for `@mariachi/communication`. Required when mode is 'direct'. */
   procedure?: string;
   /** Job name for `@mariachi/jobs`. Required when mode is 'queue'. */

@@ -1,8 +1,8 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
-import { InMemoryIdempotencyStore, type Context } from '@mariachi/core';
+import { AuthError, InMemoryIdempotencyStore, type Context } from '@mariachi/core';
 import type { IncomingRequest } from '@mariachi/server';
-import { SignatureAuthController, WebhookController, WebhookServer, redactHeaders, type WebhookLogStore } from './index';
+import { SignatureAuthController, VerifiedWebhookAuth, WebhookController, WebhookServer, redactHeaders, type Verified, type WebhookLogStore } from './index';
 
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child() { return silent; } };
 const SECRET = 'whsec';
@@ -231,5 +231,42 @@ describe('SignatureAuthController subclasses', () => {
       payload,
     });
     expect(res.statusCode).toBe(200);
+  });
+});
+
+describe('VerifiedWebhookAuth subclasses', () => {
+  /** A sender that proves itself with a static header and checks the endpoint first with a GET that has no body. */
+  class HeaderSecretAuth extends VerifiedWebhookAuth {
+    constructor(secret: string) {
+      super({ secret, provider: 'header-secret' }, 'header-secret');
+    }
+    protected override acceptsEmptyBody(method: string) {
+      return method === 'GET';
+    }
+    protected verify(_raw: Buffer, headers: Record<string, string | string[] | undefined>, secret: string | string[], method: string): Verified {
+      if (headers['x-secret'] !== secret) throw new AuthError('webhooks/invalid-signature', 'header-secret webhook: wrong secret');
+      return { metadata: method === 'GET' ? { challenge: headers['x-challenge'] } : {} };
+    }
+  }
+
+  class ChallengeController extends WebhookController {
+    readonly prefix = 'hooks';
+    readonly auth = new HeaderSecretAuth('s3cret');
+    init() {
+      this.get('events', { mode: 'reply' }, async (ctx) => ({ echo: ctx.identity.metadata?.challenge }));
+      this.post('events', { mode: 'direct', procedure: 'hooks.event' }, async (_ctx, body) => body);
+    }
+  }
+
+  it('answers a reply route with what its handler returned, dispatching nothing, and refuses an empty body unless the subclass allows it', async () => {
+    const calls: unknown[] = [];
+    const communication = { call: async (_c: unknown, _n: string, input: unknown) => calls.push(input) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new ChallengeController());
+    const ok = await server.inject({ method: 'GET', url: '/hooks/events', headers: { 'x-secret': 's3cret', 'x-challenge': 'abc' } });
+    expect([ok.statusCode, ok.json()]).toEqual([200, { echo: 'abc' }]);
+    expect((await server.inject({ method: 'GET', url: '/hooks/events', headers: { 'x-secret': 'wrong', 'x-challenge': 'abc' } })).statusCode).toBe(401);
+    expect(calls).toEqual([]);
+    expect((await server.inject({ method: 'POST', url: '/hooks/events', headers: { 'x-secret': 's3cret', 'content-type': 'application/json' }, payload: '{"a":1}' })).statusCode).toBe(200);
+    expect(calls).toEqual([{ a: 1 }]);
   });
 });
