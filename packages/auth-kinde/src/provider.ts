@@ -153,9 +153,10 @@ export class KindeAuthProvider implements AuthProvider {
   /**
    * A handler for `createAuthWebhookDispatcher`, verifying deliveries against this business's keys. Kinde signs
    * webhooks with its keys rather than a shared secret, so `config.secret` is not used and may be omitted.
-   * With `WebhookServer`, use `kindeWebhookAuth` instead.
+   * `toleranceSeconds` is how far a delivery's `timestamp` may be from now (default 300). With `WebhookServer`,
+   * use `kindeWebhookAuth` instead.
    */
-  createWebhookHandler(_config?: { secret?: string }): KindeWebhookHandler {
-    return new KindeWebhookHandler({ issuerUrl: this.issuer, jwks: this.jwks });
+  createWebhookHandler(config: { secret?: string; toleranceSeconds?: number } = {}): KindeWebhookHandler {
+    return new KindeWebhookHandler({ issuerUrl: this.issuer, jwks: this.jwks, toleranceSeconds: config.toleranceSeconds });
   }
 }

@@ -1,7 +1,7 @@
 import { createRemoteJWKSet, decodeJwt, type JWTVerifyGetKey, jwtVerify } from 'jose';
 import { AuthError } from '@mariachi/core';
 import type { AuthWebhookEvent, AuthWebhookHandler } from '@mariachi/auth';
-import { VerifiedWebhookAuth, type WebhookHeaders, headerValue } from '@mariachi/webhooks';
+import { type Secrets, type Verified, VerifiedWebhookAuth, type WebhookHeaders, headerValue } from '@mariachi/webhooks';
 import { z } from 'zod';
 import { provider } from './generated';
 import { KindeWebhookPayload } from './schemas';
@@ -80,7 +80,7 @@ export class KindeWebhookAuth extends VerifiedWebhookAuth {
     super({ secret: issuerOf(options.issuerUrl) }, provider.id);
   }
 
-  protected async verify(rawBody: Buffer, headers: WebhookHeaders, secret: string | string[]) {
+  protected async verify(rawBody: Buffer, headers: WebhookHeaders, secret: Secrets): Promise<Verified> {
     const payload = await verifyDelivery(rawBody, [secret].flat()[0] ?? '', this.options);
     // `webhook-id` names the delivery, but nothing signs it: kept for the logs, never deduplicated on.
     return { eventId: payload.event_id, metadata: { type: payload.type, deliveryId: headerValue(headers, 'webhook-id') } };

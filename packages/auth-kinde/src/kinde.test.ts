@@ -225,6 +225,14 @@ describe('webhooks', () => {
     expect(received).toHaveLength(0);
   });
 
+  it('takes a wider timestamp window when told to', async () => {
+    const handler = new KindeAuthProvider({ issuerUrl: ISSUER }, keys.jwks).createWebhookHandler({ toleranceSeconds: 3600 });
+    const retried = await signedKindeWebhook(keys, { type: 'user.updated', timestamp: new Date(Date.now() - 30 * 60_000).toISOString(), data });
+    expect((await handler.verify(retried.rawBody, retried.headers)).type).toBe('user.updated');
+    const tooOld = await signedKindeWebhook(keys, { type: 'user.updated', timestamp: new Date(Date.now() - 2 * 3600_000).toISOString(), data });
+    await expect(handler.verify(tooOld.rawBody, tooOld.headers)).rejects.toMatchObject({ code: 'auth/webhook-verification-failed' });
+  });
+
   it('normalizes events for createAuthWebhookDispatcher', async () => {
     const handler = new KindeAuthProvider({ issuerUrl: ISSUER }, keys.jwks).createWebhookHandler();
     const signedIn = await signedKindeWebhook(keys, { type: 'user.authenticated', event_id: 'event_2', event_timestamp: '2026-11-21T10:00:00.000Z', data });

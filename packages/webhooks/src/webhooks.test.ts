@@ -1,7 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { InMemoryIdempotencyStore, type Context } from '@mariachi/core';
-import type { IncomingRequest } from '@mariachi/server';
+import { type IncomingRequest, httpResponse } from '@mariachi/server';
 import { SignatureAuthController, WebhookController, WebhookServer, redactHeaders, type WebhookLogStore } from './index';
 
 const silent = { info() {}, warn() {}, error() {}, debug() {}, child() { return silent; } };
@@ -196,6 +196,30 @@ describe('webhooks', () => {
       ['acme webhook', 'server', 'acme', undefined, 'error', true],
     ]);
     expect(spans[1]!.attributes['error.type']).toBe('webhooks/unauthorized');
+  });
+
+  it("answers a sender's endpoint check before authenticating, and never hands it to the route", async () => {
+    let handled = 0;
+    class GraphLikeAuth extends AcmeAuth {
+      handshake(req: IncomingRequest) {
+        const token = req.query.validationToken;
+        return typeof token === 'string' ? httpResponse(200, token, { 'content-type': 'text/plain' }) : undefined;
+      }
+    }
+    class CheckedController extends AcmeController {
+      init() {
+        this.post(':tenant/events', { mode: 'direct', procedure: 'acme.event' }, async (_ctx, body) => {
+          handled += 1;
+          return body;
+        });
+      }
+    }
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new CheckedController(new GraphLikeAuth()));
+    const check = await server.inject({ method: 'POST', url: '/acme/t42/events?validationToken=abc%20123' });
+    expect([check.statusCode, check.body]).toEqual([200, 'abc 123']);
+    expect((await server.inject({ method: 'POST', url: '/acme/t42/events', headers: { 'content-type': 'application/json' }, payload: '{}' })).statusCode).toBe(401);
+    expect(handled).toBe(0);
   });
 
   it('redactHeaders masks credentials and signatures', () => {

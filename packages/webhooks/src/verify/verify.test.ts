@@ -163,6 +163,25 @@ describe('verifyStripeWebhook', () => {
 });
 
 describe('webhook authenticators on WebhookServer', () => {
+  it('a scheme of its own: a subclass whose check is async, deduplicated on what it returns', async () => {
+    class AsyncAuth extends VerifiedWebhookAuth {
+      constructor(options: VerifiedWebhookAuthOptions) {
+        super(options, 'async');
+      }
+      protected async verify(raw: Buffer, headers: WebhookHeaders, secret: string | string[]) {
+        await new Promise((resolve) => setTimeout(resolve, 1));
+        const ok = [secret].flat().some((s) => headers['x-async-signature'] === hex(s, raw));
+        if (!ok) return verifyHmacSignature(raw, undefined, secret, { provider: 'async' });
+        return { eventId: (JSON.parse(raw.toString('utf8')) as { id: string }).id, metadata: { checked: true } };
+      }
+    }
+    const { calls, post } = serverFor('async', new AsyncAuth({ secret: 'k' }));
+    expect((await post({ 'x-async-signature': hex('k', body) })).statusCode).toBeLessThan(300);
+    expect((await post({ 'x-async-signature': hex('k', body) })).json()).toMatchObject({ duplicate: true });
+    expect((await post({ 'x-async-signature': hex('other', body) })).statusCode).toBe(401);
+    expect(calls).toHaveLength(1);
+  });
+
   function serverFor(prefix: string, auth: AuthController) {
     const calls: Array<{ ctx: Context; input: unknown }> = [];
     class Controller extends WebhookController {
@@ -266,25 +285,6 @@ describe('webhook authenticators on WebhookServer', () => {
     expect((await post({ ...headers, 'x-acme-delivery': 'a-2' })).json()).toMatchObject({ duplicate: true });
     expect(calls).toHaveLength(1);
     expect((await post({ 'x-acme-delivery': 'a-3' })).statusCode).toBe(401);
-  });
-
-  it('a scheme of its own: a subclass whose check is async, deduplicated on what it returns', async () => {
-    class AsyncAuth extends VerifiedWebhookAuth {
-      constructor(options: VerifiedWebhookAuthOptions) {
-        super(options, 'async');
-      }
-      protected async verify(raw: Buffer, headers: WebhookHeaders, secret: string | string[]) {
-        await new Promise((resolve) => setTimeout(resolve, 1));
-        const ok = [secret].flat().some((s) => headers['x-async-signature'] === hex(s, raw));
-        if (!ok) return verifyHmacSignature(raw, undefined, secret, { provider: 'async' });
-        return { eventId: (JSON.parse(raw.toString('utf8')) as { id: string }).id, metadata: { checked: true } };
-      }
-    }
-    const { calls, post } = serverFor('async', new AsyncAuth({ secret: 'k' }));
-    expect((await post({ 'x-async-signature': hex('k', body) })).statusCode).toBeLessThan(300);
-    expect((await post({ 'x-async-signature': hex('k', body) })).json()).toMatchObject({ duplicate: true });
-    expect((await post({ 'x-async-signature': hex('other', body) })).statusCode).toBe(401);
-    expect(calls).toHaveLength(1);
   });
 
   it('refuses to be built without a secret', () => {

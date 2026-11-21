@@ -114,9 +114,18 @@ export class KindeWebhooks extends WebhookController {
 const event = kindeAuthEvent(payload);   // type 'user.created', 'user.updated', 'user.deleted', 'organization.*'; 'user.authenticated' is 'session.created'
 ```
 
+| `kindeWebhookAuth` option | Default | What it does |
+| --- | --- | --- |
+| `issuerUrl` | required | The Kinde domain whose keys must have signed the delivery |
+| `toleranceSeconds` | `300` (`KINDE_WEBHOOK_TOLERANCE_SECONDS`) | How far the payload's `timestamp` may be from now, either way, before the delivery is refused as stale |
+| `jwks` | the domain's JWKS | A key set in its place, for tests |
+
+Kinde's docs don't say whether a retried delivery carries a new `timestamp` or the first attempt's.
+If retries show up in your logs refused as stale, raise `toleranceSeconds` to cover Kinde's retry
+schedule (up to 36 hours); deduplication on `event_id` still stops a replay from being processed twice.
+
 `KindeWebhookBody` decodes the JWT the authenticator already verified, so use it only behind
-`kindeWebhookAuth`. Kinde retries a delivery it got no 200 for, for up to 36 hours: if your logs show
-retries refused as stale, raise `toleranceSeconds`. For `createAuthWebhookDispatcher`,
+`kindeWebhookAuth`. For `createAuthWebhookDispatcher`,
 `createKindeAuth(…).createWebhookHandler()` makes the same checks and needs no secret.
 
 ## Test
