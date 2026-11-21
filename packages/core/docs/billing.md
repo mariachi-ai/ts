@@ -272,3 +272,11 @@ mirrored customer). Normalized event types: `customer.synced`, `customer.deleted
 `billing/insufficient-credits`, `billing/webhook-not-replayable` and `billing/webhook-not-found`.
 Stripe errors are mapped by `mapStripeError`, and card declines keep Stripe's decline code in the
 metadata.
+
+## Other providers
+
+The adapter is the only part that knows the provider. `@mariachi/billing-paypal` puts PayPal behind
+the same port (`createPayPalBillingAdapter`): buyers approve orders and subscriptions on PayPal, and
+what PayPal can't do (a stored customer's card, cancel at period end, invoices, metered usage) fails
+with `billing/not-supported`. Its webhooks go through `WebhookServer`, not
+`createBillingWebhookHandler`; see its README.

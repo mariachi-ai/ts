@@ -1,0 +1,6 @@
+---
+"@mariachi/billing-paypal": minor
+"@mariachi/integrations": minor
+---
+
+New: `@mariachi/billing-paypal`, PayPal behind the billing port. `createPayPalBillingAdapter` lets `DefaultBilling` take one-time payments as orders the buyer approves and the server captures, subscriptions on billing plans with an approval link, refunds, plans and pause/resume/cancel; what PayPal can't do fails with `billing/not-supported`. `createPayPal` has PayPal's own operations (`ctx` first, OAuth token cached, `PayPal-Request-Id` on every create, capture and refund), `payPalWebhookAuth` checks deliveries locally against PayPal's certificate, `normalizePayPalEvent` turns them into billing events from PayPal's own state, and `testing` has a fake and a delivery signer. Built from its `contract.json`. Contracts gain the `rsa-sha256-certificate` webhook scheme.
