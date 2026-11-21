@@ -16,6 +16,14 @@ operations. A CRM, a calendar, a form tool, an analytics API.
 
 Either way the package has a contract, and every call goes through `callProvider`.
 
+**An adapter speaks its port's language.** Its methods fail with the port's own errors (an auth
+adapter throws the `AuthError` codes `@mariachi/auth` documents, such as `auth/invalid-grant`),
+with the category and the provider's code in the error's metadata, so an app's error handling
+doesn't change with the provider. The provider's `ProviderError` still names the failure on its
+span. Where the port's interface has no `ctx` (the auth port's `IdentityClient`), pass `null` to
+`callProvider`; never build a context. A port method the provider can't do fails with the port's
+"not supported" error (`auth/not-supported`), never silently.
+
 ## 2. Write the contract
 
 `contract.json` first, from the provider's public API reference and nothing else: never an SDK
@@ -96,7 +104,8 @@ export type Acme = ReturnType<typeof createAcme>;
 Through `WebhookServer` (see [add-webhook-endpoint.md](./add-webhook-endpoint.md)). The package
 exports the authenticator for the provider's scheme, built from `@mariachi/webhooks`
 (`HmacWebhookAuth`, `StandardWebhookAuth`, `StripeWebhookAuth`, or a `VerifiedWebhookAuth`
-subclass for a scheme of its own), the body's schema, and how to read its event type:
+subclass for a scheme of its own: implement `verify(rawBody, headers, secret)`, throw on a bad
+signature, return the signed delivery id), the body's schema, and how to read its event type:
 
 ```ts
 this.post('events', { mode: 'queue', jobName: 'acme-event', eventType: acmeEventType }, async (_ctx, body) => AcmeWebhookBody.parse(body));
