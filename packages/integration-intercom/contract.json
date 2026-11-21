@@ -1,0 +1,217 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "intercom",
+    "name": "Intercom",
+    "category": "support",
+    "server": "api.intercom.io",
+    "baseUrl": "https://api.intercom.io",
+    "docs": "https://developers.intercom.com/docs/references/rest-api/api.intercom.io"
+  },
+  "settings": [
+    {
+      "key": "accessToken",
+      "env": "INTERCOM_ACCESS_TOKEN",
+      "label": "Access token",
+      "meaning": "Calls Intercom's REST API as the app: contacts, companies, events, conversations and notes.",
+      "secret": true,
+      "required": true,
+      "whereToFind": "Developer Hub › your app › Configure › Authentication: Access token. Intercom has no test mode: use a separate development workspace, with its own app, for test.",
+      "url": "https://developers.intercom.com/docs/build-an-integration/learn-more/authentication"
+    },
+    {
+      "key": "appId",
+      "env": "INTERCOM_APP_ID",
+      "label": "Workspace ID",
+      "meaning": "The workspace the Messenger opens: its app_id. Intercom calls it both the workspace ID and the app ID.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "The part of the Intercom address after /apps/ (app.intercom.com/a/apps/<workspace ID>/…), or app_id in Settings › Channels › Messenger › Install.",
+      "url": "https://developers.intercom.com/installing-intercom/web/installation"
+    },
+    {
+      "key": "region",
+      "env": "INTERCOM_REGION",
+      "label": "Data region",
+      "meaning": "Where the workspace's data is hosted: us (the default), eu or au. It picks the REST API's address and the Messenger's api_base.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "The workspace's Intercom address: app.intercom.com is us, app.eu.intercom.com is eu, app.au.intercom.com is au.",
+      "url": "https://developers.intercom.com/docs/build-an-integration/learn-more/rest-apis"
+    },
+    {
+      "key": "messengerSecret",
+      "env": "INTERCOM_MESSENGER_SECRET",
+      "label": "Messenger API secret",
+      "meaning": "Signs the JWT that tells the Messenger who the signed-in user is (Messenger security), so nobody can open another user's conversations.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Settings › Workspace › Security › Messenger: the JWT setup's secret key. Test and production workspaces have different keys.",
+      "url": "https://www.intercom.com/help/en/articles/10589769-authenticating-users-in-the-messenger-with-json-web-tokens-jwts"
+    },
+    {
+      "key": "clientSecret",
+      "env": "INTERCOM_CLIENT_SECRET",
+      "label": "Client secret",
+      "meaning": "Checks that a webhook came from Intercom: each notification is signed with the app's client secret.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Developer Hub › your app › Configure › Basic information: Client secret.",
+      "url": "https://developers.intercom.com/docs/references/webhooks/webhook-models"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "contacts.create",
+      "purpose": "Creates a user (or a lead), with the app's own id as external_id.",
+      "method": "POST",
+      "path": "/contacts",
+      "idempotency": "none"
+    },
+    {
+      "name": "contacts.update",
+      "purpose": "Updates a contact's email, name, custom attributes and the rest.",
+      "method": "PUT",
+      "path": "/contacts/{contactId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "contacts.get",
+      "purpose": "Reads one contact by Intercom's id.",
+      "method": "GET",
+      "path": "/contacts/{contactId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "contacts.findByExternalId",
+      "purpose": "Reads one user by the app's own id (users only, not leads).",
+      "method": "GET",
+      "path": "/contacts/find_by_external_id/{externalId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "contacts.search",
+      "purpose": "Finds contacts by their attributes (email, external_id, role…), a page at a time. New contacts can take a few minutes to appear.",
+      "method": "POST",
+      "path": "/contacts/search",
+      "idempotency": "natural"
+    },
+    {
+      "name": "contacts.attachCompany",
+      "purpose": "Attaches a company to a contact.",
+      "method": "POST",
+      "path": "/contacts/{contactId}/companies",
+      "idempotency": "natural"
+    },
+    {
+      "name": "companies.createOrUpdate",
+      "purpose": "Creates the company with this company_id (the app's own id), or updates it when it exists.",
+      "method": "POST",
+      "path": "/companies",
+      "idempotency": "natural"
+    },
+    {
+      "name": "events.create",
+      "purpose": "Records that a user did something (a data event). Intercom ignores a repeat with the same user, name and created_at.",
+      "method": "POST",
+      "path": "/events",
+      "idempotency": "natural"
+    },
+    {
+      "name": "conversations.list",
+      "purpose": "Lists conversations, a page at a time.",
+      "method": "GET",
+      "path": "/conversations",
+      "idempotency": "natural"
+    },
+    {
+      "name": "conversations.search",
+      "purpose": "Finds conversations by their attributes (contact_ids, state, updated_at…), a page at a time.",
+      "method": "POST",
+      "path": "/conversations/search",
+      "idempotency": "natural"
+    },
+    {
+      "name": "conversations.get",
+      "purpose": "Reads one conversation, with its parts.",
+      "method": "GET",
+      "path": "/conversations/{conversationId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "conversations.reply",
+      "purpose": "Replies to a conversation as an admin: a comment the user sees, or a note only teammates see.",
+      "method": "POST",
+      "path": "/conversations/{conversationId}/reply",
+      "idempotency": "none"
+    },
+    {
+      "name": "conversations.close",
+      "purpose": "Closes a conversation as an admin, optionally with a last message.",
+      "method": "POST",
+      "path": "/conversations/{conversationId}/parts",
+      "idempotency": "none"
+    },
+    {
+      "name": "notes.create",
+      "purpose": "Adds a note to a contact, which only teammates see.",
+      "method": "POST",
+      "path": "/contacts/{contactId}/notes",
+      "idempotency": "none"
+    }
+  ],
+  "errors": [
+    { "providerCode": "unauthorized", "category": "unauthorized", "reason": "unauthorized" },
+    { "providerCode": "token_not_found", "category": "unauthorized", "reason": "unauthorized" },
+    { "providerCode": "missing_authorization", "category": "unauthorized", "reason": "unauthorized" },
+    { "providerCode": "token_unauthorized", "category": "forbidden", "reason": "forbidden" },
+    { "providerCode": "action_forbidden", "category": "forbidden", "reason": "forbidden" },
+    { "providerCode": "forbidden", "category": "forbidden", "reason": "forbidden" },
+    { "providerCode": "token_suspended", "category": "forbidden", "reason": "workspace-suspended" },
+    { "providerCode": "api_plan_restricted", "category": "forbidden", "reason": "plan-restricted" },
+    { "providerCode": "not_found", "category": "not-found", "reason": "not-found" },
+    { "providerCode": "admin_not_found", "category": "invalid-request", "reason": "admin-not-found" },
+    { "providerCode": "conflict", "category": "conflict", "reason": "conflict" },
+    { "providerCode": "resource_conflict", "category": "conflict", "reason": "conflict" },
+    { "providerCode": "not_restorable", "category": "conflict", "reason": "contact-blocked" },
+    { "providerCode": "parameter_invalid", "category": "invalid-request", "reason": "invalid-parameter" },
+    { "providerCode": "parameter_not_found", "category": "invalid-request", "reason": "missing-parameter" },
+    { "providerCode": "parameter_missing", "category": "invalid-request", "reason": "missing-parameter" },
+    { "providerCode": "missing_parameter", "category": "invalid-request", "reason": "missing-parameter" },
+    { "providerCode": "intercom_version_invalid", "category": "invalid-request", "reason": "version-invalid" },
+    { "providerCode": "rate_limit_exceeded", "category": "rate-limited", "reason": "rate-limited" },
+    { "providerCode": "too_many_requests", "category": "rate-limited", "reason": "rate-limited" },
+    { "providerCode": "server_error", "category": "unavailable", "reason": "unavailable" },
+    { "providerCode": "service_unavailable", "category": "unavailable", "reason": "unavailable" },
+    { "providerCode": "request_timeout", "category": "unavailable", "reason": "unavailable" }
+  ],
+  "webhooks": {
+    "signature": {
+      "scheme": "hmac-sha1-hex",
+      "header": "X-Hub-Signature",
+      "secretSetting": "clientSecret",
+      "description": "The header is sha1= followed by the lowercase hex HMAC-SHA1 of the raw request body, keyed with the app's client secret. A retried notification keeps its id (notif_…) but its body changes (delivery_attempts), so dedupe on the body's id."
+    },
+    "events": [
+      { "type": "ping", "meaning": "Intercom checking the endpoint: sent on demand and from time to time, always subscribed." },
+      { "type": "conversation.user.created", "meaning": "A user or lead started a conversation." },
+      { "type": "conversation.user.replied", "meaning": "A visitor, lead or user replied in a conversation." },
+      { "type": "conversation.admin.replied", "meaning": "A teammate replied in a conversation." },
+      { "type": "conversation.admin.noted", "meaning": "A teammate added a note to a conversation." },
+      { "type": "conversation.admin.assigned", "meaning": "A conversation was assigned to a teammate." },
+      { "type": "conversation.admin.closed", "meaning": "A teammate closed a conversation." },
+      { "type": "conversation.admin.opened", "meaning": "A teammate reopened a conversation." },
+      { "type": "contact.user.created", "meaning": "A user was created." },
+      { "type": "contact.user.updated", "meaning": "A user was updated." },
+      { "type": "contact.lead.created", "meaning": "A lead was created." },
+      { "type": "contact.deleted", "meaning": "A contact was deleted." },
+      { "type": "contact.merged", "meaning": "Two contacts were merged: data.item is the one that remains, with merged_from naming the other." },
+      { "type": "company.created", "meaning": "A company was created." }
+    ]
+  }
+}
