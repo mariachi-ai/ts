@@ -1,6 +1,6 @@
 # Auth and Provider Packages
 
-How `@mariachi/auth`, `@mariachi/auth-clerk`, `@mariachi/auth-fusionauth`, `@mariachi/auth-gotrue` and `@mariachi/auth-workos` work together for authentication and multi-tenant identity.
+How `@mariachi/auth`, `@mariachi/auth-auth0`, `@mariachi/auth-clerk`, `@mariachi/auth-fusionauth`, `@mariachi/auth-gotrue` and `@mariachi/auth-workos` work together for authentication and multi-tenant identity.
 
 ## Contract, not tight coupling
 
@@ -100,6 +100,7 @@ it), so the mark comes with it.
 | Package | Role |
 |--------|------|
 | **`@mariachi/auth`** | Defines `ResolvedIdentity`, `AuthenticationAdapter`, `AuthProvider`, `AuthWebhookHandler`; provides `createAuth` (JWT, API key), `createAuthMiddleware`, `createAuthWebhookDispatcher`, RBAC. No dependency on any specific IdP. |
+| **`@mariachi/auth-auth0`** | Implements `AuthProvider` for Auth0 on `@mariachi/auth-oidc`'s verifier: issuer `https://<domain>/`, keys from `/.well-known/jwks.json`, RS256, and the API identifier as audience (or the client ID, for ID tokens); `org_id` → `tenantId`, `permissions` and `scope` → scopes, roles from a namespaced claim (`rolesClaim`). Implements `IdentityClient` (`createAuth0IdentityClient()`) on Universal Login, the Authentication API (password-realm and passwordless OTP grants, refresh-token revocation) and the Management API (a cached `client_credentials` token); Auth0's own pages reset passwords and verify addresses, so those methods are `auth/not-supported`. `Auth0WebhookController` receives event streams (a bearer token). Every call goes through `providerRequest`. See its [README](../../auth-auth0/README.md). |
 | **`@mariachi/auth-clerk`** | Implements `AuthProvider`: verifies Clerk JWTs, maps `org_id` → `tenantId`, `org_role` → scopes; provides `createClerkAuth()`, `createClerkMiddleware(provider)`, Clerk webhook handler and controller. |
 | **`@mariachi/auth-fusionauth`** | Implements `AuthProvider`: verifies FusionAuth JWTs via JWKS, maps `applicationId` → `tenantId`, `roles` → scopes; provides `createFusionAuthAuth()`, `FusionAuthWebhookHandler` (sync verify with HMAC or PEM). Implements `IdentityClient` (`createFusionAuthIdentityClient()`) on the Login, OAuth, User and passwordless APIs, with `fusionAuthEmailVouched()` deciding `emailVerified`. |
 | **`@mariachi/auth-gotrue`** | Implements `AuthProvider` for GoTrue (Supabase Auth, hosted or your own): verifies access tokens against GoTrue's JWKS (ES256 by default, never HMAC) with issuer and audience (`authenticated`), maps `sub` → `userId`, `session_id` → `sessionId`, the org claim → `tenantId`, `role`/`roles`/`org_role` → `roles` and `scopes`, and keeps the whole payload (`aal`, `amr`, `act`, `is_anonymous`, …) in `claims`; a short JWKS cache (60 s) so a rotated-out key stops verifying. Provides `createGoTrueAuth()` and `GoTrueWebhookHandler` for GoTrue's HTTP hooks (Standard Webhooks: `webhook-id`, `webhook-timestamp`, `webhook-signature`, secret `v1,whsec_…`), normalized to `AUTH_EVENT_TYPES`. Set `GOTRUE_JWT_ISSUER` on GoTrue: it omits `iss` otherwise. An app that reaches GoTrue on an internal address (a sidecar, say: `http://127.0.0.1:9999`) passes `discoverIssuer: true` to read the issuer from GoTrue's `/.well-known/openid-configuration`, re-read with the JWKS. `goTrueVerifiedEmail({ url, serviceKey })` says whether the signed-in user's email address is verified without taking the user's word for it: a top-level `email_verified` claim when a hook of yours adds one, otherwise the user's record (`email_confirmed_at`, read with a service-role key), and never `user_metadata`, which a user can rewrite. A GoTrue that confirms sign-ups without sending mail is answered unverified; `requireClaim` takes only the claim, and `issuer` keeps another provider's tokens out of it. |
@@ -122,6 +123,7 @@ it; `mariachi dev` starts it and `mariachi doctor` checks it ([cli.md](./cli.md#
 ```ts
 import { createWorkOSIdentityClient } from '@mariachi/auth-workos';
 // or: import { createFusionAuthIdentityClient } from '@mariachi/auth-fusionauth';
+// or: import { createAuth0IdentityClient } from '@mariachi/auth-auth0';
 
 const identity = createWorkOSIdentityClient({ apiKey, clientId });
 
@@ -148,14 +150,17 @@ await identity.signOut({ sessionId: tokens.sessionId, refreshToken });
 
 ## Webhooks
 
-- **Auth webhook flow** — `createAuthWebhookDispatcher` (from `@mariachi/auth`) takes any `AuthWebhookHandler`. Clerk, FusionAuth, GoTrue and WorkOS each provide a handler via `provider.createWebhookHandler({ secret })`. The dispatcher verifies the webhook (using the handler), normalizes the event to `AuthWebhookEvent`, and calls communication procedures (e.g. `auth.user.created`). Same flow for every provider; only the verification and event parsing are provider-specific.
+- **Auth webhook flow** — `createAuthWebhookDispatcher` (from `@mariachi/auth`) takes any `AuthWebhookHandler`. Auth0, Clerk, FusionAuth, GoTrue and WorkOS each provide a handler via `provider.createWebhookHandler({ secret })`. The dispatcher verifies the webhook (using the handler), normalizes the event to `AuthWebhookEvent`, and calls communication procedures (e.g. `auth.user.created`). Same flow for every provider; only the verification and event parsing are provider-specific.
 
 Every provider's handler follows two rules. The event id that dedup uses is one the signature
 covers, never a header a replay could change. And the tenant an event runs in comes from the signed
-body. An event whose tenant is in the reserved personal-tenant namespace is refused by the dispatcher.
+body. An event whose tenant is in the reserved personal-tenant namespace is refused by the dispatcher. Auth0's event
+streams sign nothing: the bearer token is the only check and vouches for the whole delivery, so
+keep it as secret as a signing key.
 
 | Provider | Signature | Event id | Tenant |
 | --- | --- | --- | --- |
+| Auth0 | None: `Authorization: Bearer <token>` with the event stream's token | The body's `id` (`evt_…`) | None (user events) |
 | Clerk | Svix: HMAC over id, timestamp and body | `svix-id` (signed) | The body's organization, for organization events |
 | FusionAuth | A signed JWT holding the body's sha256 | The body's event id, else a digest of the body | The body's `tenantId` |
 | GoTrue | Standard Webhooks: HMAC over id, timestamp and body | `webhook-id` (signed) | The org claim in the body's claims |
