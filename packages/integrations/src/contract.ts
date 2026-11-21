@@ -95,7 +95,7 @@ export const WebhooksSchema = z
   .object({
     signature: z
       .object({
-        scheme: z.enum(['standard-webhooks', 'hmac-sha256-hex', 'hmac-sha256-base64', 'hmac-sha256-timestamped', 'hmac-sha1-hex', 'jwt', 'rsa-sha256-certificate', 'basic-auth', 'shared-secret', 'none']),
+        scheme: z.enum(['standard-webhooks', 'hmac-sha1-hex', 'hmac-sha256-hex', 'hmac-sha256-base64', 'hmac-sha256-timestamped', 'jwt', 'rsa-sha256-certificate', 'basic-auth', 'shared-secret', 'none']),
         /** The header the signature arrives in. */
         header: z.string().min(1).optional(),
         /** The setting that holds the secret: its `key`. */
