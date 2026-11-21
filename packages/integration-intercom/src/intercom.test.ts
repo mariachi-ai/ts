@@ -268,6 +268,13 @@ describe('webhooks', () => {
     expect((await post({ ...tampered, rawBody: tampered.rawBody.replace('"77"', '"78"') })).statusCode).toBe(401);
     expect(received).toHaveLength(1);
   });
+
+  it('answers the HEAD request Intercom checks the endpoint with', async () => {
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger }, { communication }).registerController(new IntercomWebhooks());
+    const head = await server.inject({ method: 'HEAD', url: '/intercom/notifications' });
+    expect([head.statusCode, head.body]).toEqual([200, '']);
+  });
 });
 
 describe('the fake', () => {

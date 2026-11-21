@@ -154,9 +154,7 @@ Intercom retries a notification it got no 200 for within five seconds, with the 
 new `delivery_attempts`; the authenticator deduplicates on that `id` (give the `WebhookServer` an
 `idempotency` store). Intercom doesn't keep notifications in order: compare `created_at`.
 
-Intercom checks the endpoint with a `HEAD` request when its address is saved. `WebhookServer`
-answers 404 to `HEAD`, so answer it in front of the webhook server (a proxy or load balancer rule)
-until it does.
+Intercom checks the endpoint with a `HEAD` request when its address is saved; `WebhookServer` answers it with an empty 200.
 
 ## Test
 
