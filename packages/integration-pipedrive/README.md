@@ -38,7 +38,7 @@ for await (const deal of pipedrive.deals.all(ctx, { personId: 7 })) { /* ... */ 
 
 Every operation takes `ctx` first and makes one span (`pipedrive persons.search`). A failure is a
 `PipedriveError` with a category: only `rate-limited` and `unavailable` are retried, and the client
-already did.
+already did (a create or change only after a rate limit: see [Errors](#errors)).
 
 | Resource | Operations | API |
 | --- | --- | --- |
@@ -88,7 +88,7 @@ In Pipedrive:
 
 | Helper | Does |
 | --- | --- |
-| `upsertContactByEmail` | A contact is a **person**. Finds them by an exact search of the email field (`persons/search` with `fields=email&exact_match=true`, not case-sensitive) and changes what's given, or adds them. `company` is an **organization**, found by its exact name or added. A new person is named `firstName lastName` (or by the email address); an existing one's name changes only when both are given, since Pipedrive keeps one name. A new phone becomes the primary one and the others stay. Pipedrive has no unique email: two upserts of the same new address at the same moment can both add a person. |
+| `upsertContactByEmail` | A contact is a **person**. Finds them by an exact search of the email field (`persons/search` with `fields=email&exact_match=true`, not case-sensitive) and changes what's given, or adds them. `company` is an **organization**, found by its exact name or added. A new person is named `firstName lastName` (or by the email address). Pipedrive keeps one name field, not a first and a last name, so an existing person's name changes only when both `firstName` and `lastName` are given; one alone leaves it as it is. (HubSpot and Salesforce keep the two apart and update whichever is given.) A new phone becomes the primary one and the others stay. Pipedrive has no unique email: two upserts of the same new address at the same moment can both add a person. |
 | `createDeal` | `name` is the deal's title and `amount` its value. `stage` is a stage's id, or its name, looked up in every pipeline with `stages.list` (not case-sensitive); a name two pipelines share fails with `pipedrive/ambiguous-stage`, so pass the id. Without a stage the deal goes to the default pipeline's first stage. `contactId` is a person, `companyId` an organization. |
 | `addNote` | A **note** on the person, deal and organization given (at least one). `body` is HTML. |
 
@@ -113,8 +113,9 @@ Pipedrive's rate limits are per token, in 2-second windows and a daily budget. A
 `x-ratelimit-*` headers but no `Retry-After`, so the client waits with its own backoff. A token that
 keeps going after 429s gets a 403 page from Pipedrive's CDN: slow down rather than retry.
 
-Pipedrive takes no idempotency key, so a create (`persons.create`, `deals.create`, `notes.create`)
-that's retried after a server error can, rarely, be done twice.
+Pipedrive takes no idempotency key, so a create or a change (a POST or PATCH) is retried only after a
+rate limit, which Pipedrive refused before doing anything; after a server error or a lost connection
+it fails at once, since Pipedrive may have done it. A GET, or a DELETE, is retried after either.
 
 ## Receive changes as they happen
 
@@ -154,8 +155,8 @@ type is `<entity>.<action>`: `person.create`, `deal.change`, `note.delete`.
 A delivery that fails (not 2xx, or slower than 10 seconds) is tried three more times, after 3, 30 and
 150 seconds, with `meta.attempt` counting up. Deliveries are deduplicated on `meta.id`, the event's
 id. Nothing in a delivery is signed, so that id comes from the body: whoever has the Basic
-credentials could send anything anyway. Pipedrive's docs don't say `meta.id` stays the same across
-retries, so make the job safe to run twice too. After three days with no successful delivery,
+credentials could send anything anyway. Pipedrive doesn't document `meta.id` as stable across
+retries, so a retry may arrive with a new one: make the job safe to run twice too. After three days with no successful delivery,
 Pipedrive deletes the webhook.
 
 To move to a new password, pass both while the webhooks are remade: `password: [old, next]`.

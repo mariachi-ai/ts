@@ -109,6 +109,15 @@ describe('the client', () => {
     assertProviderSpans(tracer.spans);
   });
 
+  it('retries a create after a rate limit, never after an outage', async () => {
+    const limited = scriptedFetch({ status: 429 }, ok({ id: 1, title: 'x' }));
+    await createPipedrive(config, { fetch: limited, ...noWait }).deals.create(ctx, { title: 'x' });
+    expect(limited.requests).toHaveLength(2);
+    const down = scriptedFetch({ status: 503 }, ok({ id: 1, title: 'x' }));
+    await expect(createPipedrive(config, { fetch: down, ...noWait }).deals.create(ctx, { title: 'x' })).rejects.toMatchObject({ category: 'unavailable' });
+    expect(down.requests).toHaveLength(1);
+  });
+
   it("names the failures Pipedrive documents by status, and doesn't retry them", async () => {
     const at = async (status: number) => createPipedrive(config, { fetch: scriptedFetch({ status, json: { success: false, error: 'x' } }), ...noWait }).deals.get(ctx, 1).catch((e) => e);
     expect([(await at(402)).code, (await at(402)).category]).toEqual(['pipedrive/account-not-open', 'forbidden']);

@@ -368,7 +368,7 @@ const IdLike = z.union([z.string(), z.number()]);
 /** A webhook v2 delivery's `meta`: what happened, to what, and the event's id. */
 export const WebhookMeta = z
   .object({
-    /** The event's id: the same id for each retry is what deduplication relies on. */
+    /** The event's id, which deliveries are deduplicated on. Pipedrive doesn't document it as stable across retries. */
     id: z.string(),
     /** `create`, `change` or `delete`. */
     action: z.string(),
