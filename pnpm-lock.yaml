@@ -481,6 +481,40 @@ importers:
         specifier: ^3
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.11)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
 
+  packages/auth-descope:
+    dependencies:
+      '@mariachi/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@mariachi/core':
+        specifier: workspace:*
+        version: link:../core
+      '@mariachi/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+      '@mariachi/webhooks':
+        specifier: workspace:*
+        version: link:../webhooks
+      jose:
+        specifier: ^6
+        version: 6.2.1
+      zod:
+        specifier: ^3.24
+        version: 3.25.76
+    devDependencies:
+      '@mariachi/testing':
+        specifier: workspace:*
+        version: link:../testing
+      tsup:
+        specifier: ^8
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
+      typescript:
+        specifier: ^5.7
+        version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.11)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
+
   packages/auth-fusionauth:
     dependencies:
       '@mariachi/auth':
@@ -515,6 +549,40 @@ importers:
         specifier: ^6
         version: 6.2.1
     devDependencies:
+      tsup:
+        specifier: ^8
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
+      typescript:
+        specifier: ^5.7
+        version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.11)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
+
+  packages/auth-kinde:
+    dependencies:
+      '@mariachi/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@mariachi/core':
+        specifier: workspace:*
+        version: link:../core
+      '@mariachi/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+      '@mariachi/webhooks':
+        specifier: workspace:*
+        version: link:../webhooks
+      jose:
+        specifier: ^6
+        version: 6.2.1
+      zod:
+        specifier: ^3.24
+        version: 3.25.76
+    devDependencies:
+      '@mariachi/testing':
+        specifier: workspace:*
+        version: link:../testing
       tsup:
         specifier: ^8
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
