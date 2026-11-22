@@ -109,10 +109,9 @@ GoTrue and mailbox in the `--auth gotrue` project, and its page that accepts an 
 
 ### Integrations and webhooks
 
-- An OAuth connection store: a token set per tenant or per user, with refresh. Then GitHub and Google
-  integrations.
-- The integrations workspace is private, has only Slack, and has a dry-run in place of tests. Handlers
-  take `(input, ctx)`, against the `ctx`-first rule. `credentialSchema` is required and unused.
+- **Third-party integrations: [`plans/integrations.md`](plans/integrations.md)** (approved, not
+  started). One package per provider, a contract readable without the code, and one span per provider
+  call. It covers the OAuth connection store and replaces the private `integrations/` workspace.
 - One way to receive webhooks. There are five (`WebhookServer`, the facade's signature strategy, the
   auth dispatcher, the billing handler, `defineWebhookHandler`).
 - An outbound webhooks package: endpoint registry, signing, a retry job, a delivery log.
