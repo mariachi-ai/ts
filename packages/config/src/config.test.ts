@@ -181,6 +181,16 @@ describe('loadConfig', () => {
     expect(() => loadConfig({}, { env: { STORAGE_ENDPOINT: 'not a url' } })).toThrow(ConfigError);
   });
 
+  it('refuses a cleartext storage endpoint in production, unless it is this machine', () => {
+    const prod = (endpoint: string) => () => loadConfig({}, { env: { ENV: 'production', STORAGE_ENDPOINT: endpoint } });
+    expect(prod('http://minio.internal:9000')).toThrow(expect.objectContaining({ code: 'config/insecure-storage-endpoint' }));
+    expect(prod('https://acc.r2.example')).not.toThrow();
+    expect(prod('http://localhost:9000')).not.toThrow();
+    expect(prod('http://127.0.0.1:9000')).not.toThrow();
+    // Outside production a compose service name over http is fine
+    expect(() => loadConfig({}, { env: { ENV: 'development', STORAGE_ENDPOINT: 'http://minio:9000' } })).not.toThrow();
+  });
+
   describe('secrets in the loaded config', () => {
     const secrets = {
       DATABASE_URL: 'postgres://app:db-pass-0123456789@db.internal:5432/app',

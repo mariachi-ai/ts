@@ -12,4 +12,7 @@ Storage works on any S3-compatible service from settings alone.
 - With an `endpoint` set, the S3 adapter uses path-style addressing unless `forcePathStyle: false` says
   otherwise.
 - `publicPrefix` (say `public`) limits `publicUrl` to keys under it, throwing `storage/not-public` for
-  the rest, and makes `publicBaseUrl` required. Unset, `publicUrl` behaves as before.
+  the rest, and makes `publicBaseUrl` required. Unset, `publicUrl` behaves as before. It limits which
+  links get built; the bucket or CDN policy is what must expose only that prefix.
+- In production, an `http://` `STORAGE_ENDPOINT` other than localhost is refused
+  (`config/insecure-storage-endpoint`).

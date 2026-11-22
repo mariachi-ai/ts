@@ -17,7 +17,8 @@ const storage = new DefaultStorage({ client, requireTenant: true }, instrumentat
 Or from settings alone: `createStorage(storageConfig(config.storage))` reads `STORAGE_ADAPTER`,
 `STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`,
 `STORAGE_SECRET_ACCESS_KEY` and the rest, so any S3-compatible store works without code. An
-endpoint turns on path-style addressing.
+endpoint turns on path-style addressing. In production `STORAGE_ENDPOINT` must be `https` (http is
+allowed for localhost only), since the keys are sent to it.
 
 | Option | Adapters | Meaning |
 | --- | --- | --- |
@@ -25,7 +26,7 @@ endpoint turns on path-style addressing.
 | `bucket`, `region`, `endpoint`, `forcePathStyle`, `credentials` | s3 | `endpoint` for MinIO, R2 and other S3-compatible services; it defaults `forcePathStyle` to true. |
 | `useAcl`, `defaultAcl` | s3 | Send per-object ACLs. Off by default: most buckets enforce bucket-owner ownership. |
 | `publicBaseUrl` | s3, local | Base of `publicUrl` (a CDN, say). For local, the path where signed URLs are served. |
-| `publicPrefix` | s3, local | Only keys under this prefix (say `public`) get a `publicUrl`; others throw `storage/not-public`. Requires `publicBaseUrl`. |
+| `publicPrefix` | s3, local | Only keys under this prefix (say `public`) get a `publicUrl`; others throw `storage/not-public`. Requires `publicBaseUrl`. It only limits which links get built: the bucket or CDN policy is what makes objects public, and it must expose this prefix alone. |
 | `signingSecret` | local | HMAC secret for local signed URLs. Required for `signedUrl` and `signedUploadUrl`. |
 
 ## Keys

@@ -54,6 +54,21 @@ function parse<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, value: unknown, w
 
 let warnedNoEnvironment = false;
 
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** In production the storage keys travel to the endpoint, so it must be https unless it is this machine. */
+function refuseCleartextStorageEndpoint(config: AppConfig): void {
+  const endpoint = config.storage?.endpoint;
+  if (config.env !== 'production' || !endpoint) return;
+  const url = new URL(endpoint);
+  if (url.protocol === 'http:' && !LOOPBACK.has(url.hostname)) {
+    throw new ConfigError(
+      'config/insecure-storage-endpoint',
+      'STORAGE_ENDPOINT must be https in production (http is allowed for localhost only)',
+    );
+  }
+}
+
 /**
  * Loads config from env (+ optional .env) merged with `overrides`, validates it, and caches it
  * so later `useConfig()` calls return the same object.
@@ -73,6 +88,7 @@ export function loadConfig(overrides?: AppConfigInput, options: LoadConfigOption
   }
   const merged = deepMerge(fromEnv as Record<string, unknown>, (overrides ?? {}) as Record<string, unknown>);
   const config = parse(AppConfigSchema, merged, 'configuration');
+  refuseCleartextStorageEndpoint(config);
 
   const read = options.env ? (k: string) => options.env?.[k] : readEnv;
   for (const [name, section] of sections) {

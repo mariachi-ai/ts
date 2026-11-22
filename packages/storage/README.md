@@ -31,7 +31,7 @@ Guide: [storage.md](../core/docs/storage.md)
 | `forcePathStyle` | | s3 | Path-style addressing |
 | `useAcl`, `defaultAcl` | | s3 | Per-object ACLs, off by default |
 | `publicBaseUrl` | `STORAGE_PUBLIC_BASE_URL` | s3, local | CDN base, or where local signed URLs are served |
-| `publicPrefix` | `STORAGE_PUBLIC_PREFIX` | s3, local | Only keys under it get a `publicUrl` (`storage/not-public`); needs `publicBaseUrl` |
+| `publicPrefix` | `STORAGE_PUBLIC_PREFIX` | s3, local | Only keys under it get a `publicUrl` (`storage/not-public`); needs `publicBaseUrl`. It limits which links get built; the bucket or CDN policy must expose only this prefix |
 | `signingSecret` | `STORAGE_SIGNING_SECRET` | local | Required for local signed URLs |
 
 `DefaultStorage` also takes `requireTenant` (refuse `tenantKey` without `ctx.tenantId`). Errors are
