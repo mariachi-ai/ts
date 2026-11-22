@@ -180,7 +180,11 @@ describe('the same three in every CRM', () => {
     await createPipedrive(config, { fetch: byId }).createDeal(ctx, { name: 'x', stage: '4' });
     expect(byId.requests[0]!.json).toEqual({ title: 'x', stage_id: 4 });
     const shared = scriptedFetch(ok([{ id: 1, name: 'Won', pipeline_id: 1 }, { id: 9, name: 'won', pipeline_id: 2 }], { next_cursor: null }));
-    await expect(createPipedrive(config, { fetch: shared }).createDeal(ctx, { name: 'x', stage: 'Won' })).rejects.toMatchObject({ code: 'pipedrive/ambiguous-stage' });
+    const err = await createPipedrive(config, { fetch: shared }).createDeal(ctx, { name: 'x', stage: 'Won' }).catch((e) => e);
+    expect(err).toMatchObject({ code: 'pipedrive/ambiguous-stage' });
+    // Pipedrive's ids never ride on the error, where they'd reach logs
+    expect(err.details).toBeUndefined();
+    expect(JSON.stringify({ ...err, message: err.message })).not.toMatch(/pipelineIds|\[1,2\]/);
   });
 
   it('addNote adds a v1 note to the person, deal and organization given', async () => {

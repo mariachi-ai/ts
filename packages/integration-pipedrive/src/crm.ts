@@ -55,10 +55,8 @@ export function crmHelpers(api: CrmOperations) {
     for await (const s of api.stages.all(ctx)) if (!s.is_deleted && s.name.trim().toLowerCase() === wanted) matches.push(s);
     if (matches.length === 0) throw new PipedriveError('pipedrive/unknown-stage', 'No Pipedrive stage has that name', { category: 'invalid-request' });
     if (matches.length > 1) {
-      throw new PipedriveError('pipedrive/ambiguous-stage', 'More than one Pipedrive pipeline has a stage with that name: pass the stage id', {
-        category: 'invalid-request',
-        details: { pipelineIds: matches.map((m) => m.pipeline_id) },
-      });
+      // No ids on it: the message says what to do, and ids must not reach logs
+      throw new PipedriveError('pipedrive/ambiguous-stage', 'More than one Pipedrive pipeline has a stage with that name: pass the stage id', { category: 'invalid-request' });
     }
     return { stageId: matches[0]!.id, pipelineId: matches[0]!.pipeline_id };
   }

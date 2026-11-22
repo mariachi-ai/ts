@@ -109,9 +109,11 @@ status means, the error says so:
 | 429 | `pipedrive/rate-limited`, retried | `rate-limited` |
 | 501 | `pipedrive/not-implemented` | `invalid-request` |
 
-Pipedrive's rate limits are per token, in 2-second windows and a daily budget. A 429 carries
-`x-ratelimit-*` headers but no `Retry-After`, so the client waits with its own backoff. A token that
-keeps going after 429s gets a 403 page from Pipedrive's CDN: slow down rather than retry.
+Pipedrive's rate limits are per token, in 2-second windows and a daily budget. A 429 carries no
+`Retry-After`, but its `x-ratelimit-reset` says how many seconds until the window resets, and the
+client waits that long before retrying (failing at once, with `retryAfterMs` on the error, when that's
+longer than `retry.maxDelayMs`). A token that keeps going after 429s gets a 403 page from Pipedrive's
+CDN: slow down rather than retry.
 
 Pipedrive takes no idempotency key, so a create or a change (a POST or PATCH) is retried only after a
 rate limit, which Pipedrive refused before doing anything; after a server error or a lost connection
