@@ -53,9 +53,12 @@ const OAuth = z
     authorizeUrl: z.string().url(),
     tokenUrl: z.string().url(),
     scopes: z.array(z.string().min(1)).min(1),
+    /** Whether the provider takes PKCE (S256). Mariachi sends it unless this is `false`. */
     pkce: z.boolean().optional(),
     /** Whether the provider hands out refresh tokens. */
     refresh: z.boolean(),
+    /** The provider's token revocation endpoint (RFC 7009), when it has one: disconnecting calls it. */
+    revokeUrl: z.string().url().optional(),
   })
   .strict();
 
@@ -148,6 +151,8 @@ export const ContractSchema = z
 export type Contract = z.infer<typeof ContractSchema>;
 export type ContractSetting = z.infer<typeof SettingSchema>;
 export type ContractOperation = z.infer<typeof OperationSchema>;
+/** How an end user's account is connected: the contract's `credentials.oauth`. */
+export type ContractOAuth = z.infer<typeof OAuth>;
 export type ContractEnvironment = 'test' | 'production';
 
 /** Reads a contract, failing with every problem it has. */

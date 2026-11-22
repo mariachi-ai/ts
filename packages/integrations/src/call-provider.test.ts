@@ -39,6 +39,14 @@ describe('callProvider', () => {
     ]);
   });
 
+  it('records the connection id when an end user’s connection was used, and nothing about it otherwise', async () => {
+    const tracer = new TestTracer();
+    await callProvider(ctx, { ...call, connection: '7f1c0f0e-6a3b-4e8e-9d1c-2b5a4f3e1d00' }, async () => 1, { tracer });
+    await callProvider(ctx, call, async () => 1, { tracer });
+    expect(tracer.spans.map((s) => s.attributes['mariachi.integration.connection'])).toEqual(['7f1c0f0e-6a3b-4e8e-9d1c-2b5a4f3e1d00', undefined]);
+    assertProviderSpans(tracer.spans);
+  });
+
   it('records the tenant only when the app turns it on', async () => {
     const tracer = new TestTracer();
     await callProvider(ctx, call, async () => 1, { tracer });

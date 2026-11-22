@@ -39,6 +39,12 @@ describe('the contract', () => {
     expect(() => parseContract({ ...contract, settings: [{ ...contract.settings[0], public: true }] })).toThrow(/never public/);
   });
 
+  it('reads per-user OAuth, with the revoke endpoint when the provider has one', () => {
+    const oauth = { authorizeUrl: 'https://auth.acme.test/authorize', tokenUrl: 'https://auth.acme.test/token', scopes: ['contacts.read'], refresh: true, revokeUrl: 'https://auth.acme.test/revoke' };
+    expect(parseContract({ ...contract, credentials: { kind: 'user', oauth } }).credentials).toEqual({ kind: 'user', oauth });
+    expect(() => parseContract({ ...contract, credentials: { kind: 'user', oauth: { ...oauth, revokeUrl: 'not a url' } } })).toThrow(/revokeUrl/);
+  });
+
   it("checks a setting's value per environment", () => {
     const [key] = parseContract(contract).settings;
     expect(checkSetting(key!, 'test', 'live_abc')).toBe("That's a live key: the test environment takes test keys");

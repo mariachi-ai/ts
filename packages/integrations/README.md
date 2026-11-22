@@ -1,13 +1,13 @@
 # @mariachi/integrations
 
 Building blocks for third-party integrations: functions with validated input and output and
-retries, per-tenant credentials (optionally encrypted), a registry that can call functions by name,
-and webhook signature checks. `integrations/slack/` in this repository is the reference
+retries, per-tenant credentials (optionally encrypted), end users' OAuth connections (encrypted,
+refreshed and revoked), a registry that can call functions by name, and webhook signature checks. `integrations/slack/` in this repository is the reference
 implementation.
 
 **Status: beta.** Covered by unit tests. The API can change before 1.0.
 
-Guide: [integrations.md](../core/docs/integrations.md), recipe: [add-integration.md](../core/docs/recipes/add-integration.md)
+Guide: [integrations.md](../core/docs/integrations.md), [connections.md](../core/docs/connections.md), recipe: [add-integration.md](../core/docs/recipes/add-integration.md)
 
 ## Public API
 
@@ -18,6 +18,12 @@ Guide: [integrations.md](../core/docs/integrations.md), recipe: [add-integration
 | `IntegrationRegistry` | `register` (every listed function needs a handler), `get`, `getAll`, `call(name, input, ctx)` |
 | `resolveTenantCredential(ctx, key, secrets, decryptor?, options?)` | Tenant secret, then global unless `fallbackToGlobal: false`; decrypted when a decryptor is given |
 | `verifySlackSignature`, `assertSlackSignature` | Slack `v0` signatures with a five-minute replay window |
+| `Connections` | End users' OAuth connections: `authorize`, `complete`, `list`, `revoke`, and `resolve(ctx, { provider, connectionId? })` for a fresh access token. A `CredentialResolver` |
+| `oauthProvider({ provider, credentials }, settings)` | A provider users connect to, from its contract and the client id, secret and redirect URI |
+| `CredentialResolver` | `resolve(ctx, request)` → `{ accessToken, connectionId? }`, and `invalidate?`: what a per-user client takes as `deps.credentials` |
+| `MemoryConnectionStore`, `DrizzleConnectionStore` (`/postgres`) | Where connections are kept: tokens as `@mariachi/encryption` ciphertext |
+| `integrationConnectionsTable`, `integrationAuthorizationsTable` (`/schema`) | The two tables to add to your schema and migrate |
+| `registerConnectionProcedures`, `ConnectionsController` (`/http`) | `GET /connections`, `POST /connections/:provider/authorize`, `POST /connections/:provider/callback`, `DELETE /connections/:id` |
 | `callProvider(ctx, call, fn, deps?)` | Runs one call to a provider: one CLIENT span named `<integration> <operation>`, the calls and duration metrics, and retries (below) |
 | `providerRequest(ctx, call, request, options)` | One HTTP call through `callProvider`: JSON or form body, query, idempotency key, the answer checked with Zod, a failed answer turned into the integration's error |
 | `ProviderError`, `ERROR_CATEGORIES`, `categoryForStatus`, `parseRetryAfter`, `parseRateLimitReset` | The error every provider call fails with: a code `<integration>/<reason>`, one of seven categories, the provider's own code in `providerCode` (never its message), `status` and `retryAfterMs` |
@@ -54,4 +60,6 @@ is read from the environment directly. `retry` is `{ attempts, backoff: 'exponen
 Errors are `IntegrationError`: `integrations/invalid-input`, `integrations/invalid-output`,
 `integrations/missing-credential`, `integrations/call-failed`, `integrations/invalid-signature`,
 `integrations/missing-handler`, `integrations/duplicate`, `integrations/unknown-function` and
-`integrations/ambiguous-function`.
+`integrations/ambiguous-function`. A connection fails with `ConnectionError`:
+`integrations/connection-not-found`, `integrations/reconnect-required`, `integrations/invalid-state`,
+`integrations/provider-not-found` and `integrations/user-required`.
