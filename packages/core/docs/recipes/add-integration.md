@@ -136,7 +136,20 @@ app's workflow.
   connection id, and check the connection id is on the span.
 - A webhook test posts a signed delivery to a `WebhookServer` with `inject`, and a forged one.
 - `src/testing.ts` exports a fake with the client's type, for the app's own tests, and a builder for
-  signed deliveries.
+  signed deliveries. The fake fails the way the client does: the same error class, codes and
+  categories, and the same refusals (a missing setting, a missing secret).
+- Every operation takes `ctx` and one input object checked with Zod, so a bad id fails as
+  `validation/invalid-input` before anything is sent.
+- A provider object that carries a secret back (a webhook's signing secret) has it stripped in its
+  schema, so it never reaches app code.
+- These `scriptedFetch` tests are the bar for a provider package. What only real HTTP shows (how
+  headers go on the wire, real statuses, waits and deadlines) is tested once, in
+  `@mariachi/integrations` (`request.integration.test.ts`), against a stand-in on a local port.
+
+### Publishing
+
+A provider package is published like every `@mariachi/*` package: no `"private": true`, and
+`"publishConfig": { "access": "public" }`. Its `mariachi.status` is `alpha` until apps use it.
 
 ## 4. Finish
 

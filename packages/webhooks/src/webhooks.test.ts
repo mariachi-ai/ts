@@ -238,6 +238,22 @@ describe('webhooks', () => {
     expect([head.statusCode, head.body, handled]).toEqual([200, '', 0]);
   });
 
+  it('starts with a GET declared before a POST on the same path (a verification GET, then deliveries), HEAD answered once', async () => {
+    class VerifyThenDeliver extends AcmeController {
+      init() {
+        this.get(':tenant/events', { mode: 'direct', procedure: 'acme.verify' }, async (_ctx, body) => body);
+        this.post(':tenant/events', { mode: 'direct', procedure: 'acme.event' }, async (_ctx, body) => body);
+        this.post(':tenant/other', { mode: 'direct', procedure: 'acme.event' }, async (_ctx, body) => body);
+      }
+    }
+    const communication = { call: async () => ({ ok: true }) } as never;
+    const server = new WebhookServer({ name: 'webhooks', logger: silent }, { communication }).registerController(new VerifyThenDeliver());
+    await expect(server.ready()).resolves.toBeUndefined();
+    expect((await server.inject({ method: 'HEAD', url: '/acme/t42/events' })).statusCode).not.toBe(404);
+    expect((await server.inject({ method: 'HEAD', url: '/acme/t42/other' })).statusCode).toBe(200);
+    await server.close();
+  });
+
   it('redactHeaders masks credentials and signatures', () => {
     expect(redactHeaders({ 'stripe-signature': 'x', cookie: 'y', 'x-custom': 'z' }, ['x-custom'])).toEqual({
       'stripe-signature': '[redacted]',

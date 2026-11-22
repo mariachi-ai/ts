@@ -13,6 +13,7 @@ const call = { integration: 'acme', operation: 'widgets.create', category: 'crm'
 const noWait = { sleep: async () => {} };
 
 class AcmeError extends ProviderError {}
+const Widget = z.object({ id: z.string() });
 
 describe('callProvider', () => {
   it('makes one CLIENT span named after the operation, with only the allowed attributes', async () => {
@@ -100,7 +101,6 @@ describe('callProvider', () => {
 });
 
 describe('providerRequest', () => {
-  const Widget = z.object({ id: z.string() });
 
   it("doesn't retry a create without an idempotency key after an outage, only after a rate limit", async () => {
     const outage = scriptedFetch({ status: 503 });
@@ -157,9 +157,98 @@ describe('providerRequest', () => {
     expect([err.code, err.category, err.providerCode, err.status, fetch.requests.length]).toEqual(['acme/duplicate', 'conflict', 'DUPLICATE_VALUE', 200, 1]);
   });
 
-  it('fails an answer in the wrong shape at the boundary', async () => {
-    const fetch = scriptedFetch({ json: { nope: true } }, { json: { nope: true } }, { json: { nope: true } });
+  it('fails an answer in the wrong shape at the boundary, once: it would fail the same way again', async () => {
+    const fetch = scriptedFetch({ json: { nope: true } });
     await expect(providerRequest(ctx, call, { method: 'GET', url: 'https://api.acme.test/v1/w' }, { schema: Widget, deps: { fetch, ...noWait } })).rejects.toMatchObject({ code: 'acme/invalid-response' });
+    expect(fetch.requests).toHaveLength(1);
+  });
+
+  it("lets a caller's Accept and Content-Type replace the defaults, whatever their case", async () => {
+    const fetch = scriptedFetch({ json: { id: 'w1', name: 'x' } });
+    await providerRequest(
+      ctx,
+      call,
+      { method: 'POST', url: 'https://api.acme.test/v1/w', headers: { Accept: 'application/vnd.api+json', 'Content-Type': 'application/vnd.api+json' }, json: {}, idempotencyKey: { header: 'Idempotency-Key', value: 'k1' } },
+      { schema: Widget, deps: { fetch, ...noWait } },
+    );
+    expect(fetch.requests[0]!.headers).toMatchObject({ accept: 'application/vnd.api+json', 'content-type': 'application/vnd.api+json', 'idempotency-key': 'k1' });
+  });
+
+  it('waits for X-RateLimit-Reset only after a rate limit: a provider that sends it on every answer does not stall an outage', async () => {
+    const waits: number[] = [];
+    const sleep = async (ms: number) => { waits.push(ms); };
+    // GitHub sends the reset time (an epoch, maybe an hour away) on every answer, a 503 included
+    const reset = { 'x-ratelimit-reset': String(Math.floor(Date.now() / 1000) + 3600) };
+    const fetch = scriptedFetch({ status: 503, headers: reset }, { json: { id: 'w1', name: 'x' } });
+    await providerRequest(ctx, call, { method: 'GET', url: 'https://api.acme.test/v1/w' }, { schema: Widget, deps: { fetch, sleep } });
+    expect(waits).toHaveLength(1);
+    expect(waits[0]).toBeLessThan(10_000);
+    // A 429 with a short reset is waited for
+    const limited = scriptedFetch({ status: 429, headers: { 'x-ratelimit-reset': '3' } }, { json: { id: 'w1', name: 'x' } });
+    await providerRequest(ctx, call, { method: 'GET', url: 'https://api.acme.test/v1/w' }, { schema: Widget, deps: { fetch: limited, sleep } });
+    expect(waits.at(-1)).toBe(3000);
+  });
+});
+
+describe('callProvider: how long it waits', () => {
+  it('fails at once when the provider asks to wait longer than the app allows, telling the app when to try again', async () => {
+    const tracer = new TestTracer();
+    const waits: number[] = [];
+    const fetch = scriptedFetch({ status: 429, headers: { 'retry-after': '120' } });
+    const err = await providerRequest(ctx, call, { method: 'GET', url: 'https://api.acme.test/v1/w' }, { schema: Widget, deps: { fetch, tracer, sleep: async (ms) => { waits.push(ms); } } }).catch((e) => e);
+    expect(err).toMatchObject({ code: 'acme/rate-limited', retryAfterMs: 120_000 });
+    expect(waits).toEqual([]);
+    expect(fetch.requests).toHaveLength(1);
+    expect(tracer.spans[0]!.attributes['mariachi.integration.attempts']).toBe(1);
+    // An app that allows longer waits gets the retry
+    const patient = scriptedFetch({ status: 429, headers: { 'retry-after': '120' } }, { json: { id: 'w1', name: 'x' } });
+    await providerRequest(ctx, call, { method: 'GET', url: 'https://api.acme.test/v1/w' }, { schema: Widget, deps: { fetch: patient, retry: { maxDelayMs: 300_000 }, sleep: async (ms) => { waits.push(ms); } } });
+    expect(waits).toEqual([120_000]);
+  });
+
+  it("never waits past the caller's deadline: the last failure is thrown when it fires", async () => {
+    const controller = new AbortController();
+    let n = 0;
+    const started = Date.now();
+    const failing = callProvider(
+      ctx,
+      call,
+      async () => {
+        n += 1;
+        throw new AcmeError('acme/unavailable', 'down', { category: 'unavailable', status: 503, retryAfterMs: 5_000 });
+      },
+      { signal: controller.signal },
+    );
+    setTimeout(() => controller.abort(), 20);
+    await expect(failing).rejects.toMatchObject({ code: 'acme/unavailable' });
+    expect(n).toBe(1);
+    expect(Date.now() - started).toBeLessThan(2_000);
+    // Already past the deadline: no retry at all
+    n = 0;
+    await expect(callProvider(ctx, call, async () => { n += 1; throw new AcmeError('acme/unavailable', 'down', { category: 'unavailable' }); }, { signal: AbortSignal.abort() })).rejects.toMatchObject({ code: 'acme/unavailable' });
+    expect(n).toBe(1);
+  });
+});
+
+describe('callProvider without a tracer', () => {
+  it("makes its CLIENT span through @opentelemetry/api's global provider", async () => {
+    const otel = await import('@opentelemetry/api');
+    const started: Array<{ name: string; kind?: number; attributes?: Record<string, unknown> }> = [];
+    const inner = new otel.ProxyTracerProvider().getTracer('x');
+    const recording = {
+      startSpan: (name: string, options?: import('@opentelemetry/api').SpanOptions) => {
+        started.push({ name, kind: options?.kind, attributes: options?.attributes });
+        return inner.startSpan(name, options);
+      },
+      startActiveSpan: inner.startActiveSpan.bind(inner),
+    } as unknown as import('@opentelemetry/api').Tracer;
+    otel.trace.setGlobalTracerProvider({ getTracer: () => recording });
+    try {
+      await callProvider(ctx, call, async () => 'ok');
+      expect(started).toEqual([{ name: 'acme widgets.create', kind: otel.SpanKind.CLIENT, attributes: expect.objectContaining({ 'mariachi.integration': 'acme', 'server.address': 'api.acme.test' }) }]);
+    } finally {
+      otel.trace.disable();
+    }
   });
 });
 
