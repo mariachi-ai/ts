@@ -1,0 +1,180 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "cal-com",
+    "name": "Cal.com",
+    "category": "scheduling",
+    "server": "api.cal.com",
+    "baseUrl": "https://api.cal.com/v2",
+    "docs": "https://cal.com/docs/api-reference/v2"
+  },
+  "settings": [
+    {
+      "key": "apiKey",
+      "env": "CALCOM_API_KEY",
+      "label": "API key",
+      "meaning": "Acts as the Cal.com user who made it: reads their event types and availability, and makes and manages their bookings and webhooks.",
+      "secret": true,
+      "required": true,
+      "whereToFind": "Settings › Developer › API keys › New. Cal.com's docs describe test keys starting cal_ and live keys starting cal_live_, but the dashboard makes no test keys, so the prefix tells nothing and no check is made: use a separate Cal.com account for test.",
+      "url": "https://app.cal.com/settings/developer/api-keys"
+    },
+    {
+      "key": "webhookSecret",
+      "env": "CALCOM_WEBHOOK_SECRET",
+      "label": "Webhook secret",
+      "meaning": "Checks that a webhook came from Cal.com. You choose it, and it's given to Cal.com when the webhook is made.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Any long random string of your own: webhooks.create sends it to Cal.com. For a webhook made in Settings › Developer › Webhooks, the secret entered there.",
+      "url": "https://cal.com/docs/developing/guides/automation/webhooks"
+    },
+    {
+      "key": "apiBaseUrl",
+      "env": "CALCOM_API_BASE_URL",
+      "label": "API address",
+      "meaning": "Where API v2 is served. Only for a self-hosted Cal.com.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Your instance's API v2 address, the one that stands for https://api.cal.com/v2; leave it unset for Cal.com's own cloud.",
+      "url": "https://cal.com/docs/api-reference/v2/introduction"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "me.get",
+      "purpose": "Reads the user the API key belongs to: their username (for booking links), email and time zone.",
+      "method": "GET",
+      "path": "/me",
+      "idempotency": "natural"
+    },
+    {
+      "name": "eventTypes.list",
+      "purpose": "Lists the user's event types, or another user's public ones by username (cal-api-version 2026-06-12).",
+      "method": "GET",
+      "path": "/event-types",
+      "idempotency": "natural"
+    },
+    {
+      "name": "eventTypes.get",
+      "purpose": "Reads one event type by its id: its slug, length, booking fields and booking page URL (cal-api-version 2026-06-12).",
+      "method": "GET",
+      "path": "/event-types/{eventTypeId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "slots.list",
+      "purpose": "Lists an event type's free slots between two times, by date, in a time zone (cal-api-version 2024-09-04, format=range).",
+      "method": "GET",
+      "path": "/slots",
+      "idempotency": "natural"
+    },
+    {
+      "name": "bookings.create",
+      "purpose": "Books an event type at a start time in UTC for an attendee. Cal.com takes no idempotency key, so it is never retried after an outage (cal-api-version 2026-02-25).",
+      "method": "POST",
+      "path": "/bookings",
+      "idempotency": "none"
+    },
+    {
+      "name": "bookings.get",
+      "purpose": "Reads one booking by its uid (cal-api-version 2026-02-25).",
+      "method": "GET",
+      "path": "/bookings/{bookingUid}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "bookings.list",
+      "purpose": "Lists the user's bookings, a page at a time by cursor, filtered by status, attendee, event type and time (cal-api-version 2026-05-01).",
+      "method": "GET",
+      "path": "/bookings",
+      "idempotency": "natural"
+    },
+    {
+      "name": "bookings.cancel",
+      "purpose": "Cancels a booking, optionally with a reason (cal-api-version 2026-02-25).",
+      "method": "POST",
+      "path": "/bookings/{bookingUid}/cancel",
+      "idempotency": "none"
+    },
+    {
+      "name": "bookings.reschedule",
+      "purpose": "Moves a booking to a new start time: Cal.com makes a new booking and cancels the old one (cal-api-version 2026-02-25).",
+      "method": "POST",
+      "path": "/bookings/{bookingUid}/reschedule",
+      "idempotency": "none"
+    },
+    {
+      "name": "bookings.confirm",
+      "purpose": "Accepts a booking of an event type that requires confirmation (cal-api-version 2026-02-25).",
+      "method": "POST",
+      "path": "/bookings/{bookingUid}/confirm",
+      "idempotency": "none"
+    },
+    {
+      "name": "bookings.decline",
+      "purpose": "Declines a booking of an event type that requires confirmation, optionally with a reason (cal-api-version 2026-02-25).",
+      "method": "POST",
+      "path": "/bookings/{bookingUid}/decline",
+      "idempotency": "none"
+    },
+    {
+      "name": "webhooks.create",
+      "purpose": "Makes a webhook for the user's bookings, signed with the webhook secret.",
+      "method": "POST",
+      "path": "/webhooks",
+      "idempotency": "none"
+    },
+    {
+      "name": "webhooks.list",
+      "purpose": "Lists the user's webhooks.",
+      "method": "GET",
+      "path": "/webhooks",
+      "idempotency": "natural"
+    },
+    {
+      "name": "webhooks.delete",
+      "purpose": "Deletes one of the user's webhooks by its id.",
+      "method": "DELETE",
+      "path": "/webhooks/{webhookId}",
+      "idempotency": "natural"
+    }
+  ],
+  "errors": [],
+  "webhooks": {
+    "signature": {
+      "scheme": "hmac-sha256-hex",
+      "header": "X-Cal-Signature-256",
+      "secretSetting": "webhookSecret",
+      "description": "The header is the hex HMAC-SHA256 of the raw request body, keyed with the webhook's secret, with no prefix. A webhook made without a secret sends the text no-secret-provided instead: refuse it. No delivery id is signed."
+    },
+    "events": [
+      { "type": "BOOKING_CREATED", "meaning": "A booking was made, or a booking that needed confirmation was accepted." },
+      { "type": "BOOKING_REQUESTED", "meaning": "A booking was made that waits for the host to confirm it." },
+      { "type": "BOOKING_RESCHEDULED", "meaning": "A booking moved: payload.uid is the new booking, payload.rescheduleUid the old one." },
+      { "type": "BOOKING_CANCELLED", "meaning": "A booking was cancelled." },
+      { "type": "BOOKING_REJECTED", "meaning": "The host declined a booking that needed confirmation." },
+      { "type": "BOOKING_PAYMENT_INITIATED", "meaning": "The booker started paying for a paid event type." },
+      { "type": "BOOKING_PAID", "meaning": "A paid booking was paid for." },
+      { "type": "BOOKING_NO_SHOW_UPDATED", "meaning": "A host or attendee was marked absent, or no longer absent." },
+      { "type": "BOOKING_LOCATION_UPDATED", "meaning": "A booking's location changed; payload.previousLocation holds the old one." },
+      { "type": "BOOKING_TITLE_UPDATED", "meaning": "A booking's title changed in the organizer's calendar and was synced." },
+      { "type": "BOOKING_REASSIGNED", "meaning": "A round-robin booking moved to another host." },
+      { "type": "BOOKING_SEAT_ACCEPTED", "meaning": "The host accepted a seat on a seated booking that needs confirmation." },
+      { "type": "BOOKING_SEAT_REJECTED", "meaning": "The host rejected a seat on a seated booking that needs confirmation." },
+      { "type": "MEETING_STARTED", "meaning": "A booking's start time came. Its body is flat: the booking's fields sit beside triggerEvent, with no payload." },
+      { "type": "MEETING_ENDED", "meaning": "A booking's end time came. Its body is flat: the booking's fields sit beside triggerEvent, with no payload." },
+      { "type": "RECORDING_READY", "meaning": "A Cal Video recording of a booking can be downloaded." },
+      { "type": "RECORDING_TRANSCRIPTION_GENERATED", "meaning": "A Cal Video recording's transcript can be downloaded." },
+      { "type": "INSTANT_MEETING", "meaning": "An instant meeting was requested." },
+      { "type": "INSTANT_MEETING_ACCEPTED", "meaning": "A host accepted an instant meeting." },
+      { "type": "OOO_CREATED", "meaning": "The user added an out-of-office entry." },
+      { "type": "FORM_SUBMITTED", "meaning": "Someone submitted one of the user's routing forms." },
+      { "type": "FORM_SUBMITTED_NO_EVENT", "meaning": "A routing form was submitted and no booking followed within 15 minutes." }
+    ]
+  }
+}
