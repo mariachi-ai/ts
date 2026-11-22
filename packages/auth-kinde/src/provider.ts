@@ -13,11 +13,18 @@ export interface KindeAuthConfig {
    */
   clientId?: string | string[];
   /**
-   * The `aud` an access token must carry: your API's audience, as registered in Kinde (Settings › APIs) and
-   * requested at sign-in (`audience`). Set it: Kinde puts only the audiences a sign-in asked for in `aud`, so
-   * without it a token meant for another API of the same business is accepted.
+   * The `aud` an access token must carry (`KINDE_AUDIENCE`): your API's audience, as registered in Kinde
+   * (Settings › APIs) and requested at sign-in (`audience`). Required: Kinde puts only the audiences a sign-in
+   * asked for in `aud`, so without it a token meant for another API of the same business, or an ID token, would
+   * be accepted. Pass `null` only to turn the check off deliberately; `validate` is then required, to check what
+   * the tokens carry instead.
    */
-  audience?: string | string[];
+  audience: string | string[] | null;
+  /**
+   * A last check on a verified access token's payload: throw to refuse it. Required with `audience: null`, for
+   * whatever stands in for the audience check (an `azp` allow-list is already `clientId`).
+   */
+  validate?: (claims: KindeAccessClaims) => void | Promise<void>;
   /** Where the keys are. Default `<issuerUrl>/.well-known/jwks`. */
   jwksUrl?: string;
   /** How long fetched keys are trusted, in ms. Default 10 minutes. */
@@ -72,8 +79,8 @@ function strings(value: unknown): string[] {
  * - `permissions` → `scopes`; `roles` (when the token includes them: each role's `key`) → `roles`;
  * - the whole verified payload (`feature_flags`, `scp`, `azp`, …) → `claims`.
  *
- * Kinde access tokens carry no session id, so `sessionId` is unset. The issuer is checked exactly; `aud` when
- * `audience` is set (do set it); `azp` when `clientId` is.
+ * Kinde access tokens carry no session id, so `sessionId` is unset. The issuer is checked exactly; `aud` against
+ * `audience`, which is required (an ID token's `aud` is not your API, so it is refused); `azp` when `clientId` is.
  */
 export class KindeAuthProvider implements AuthProvider {
   readonly name = 'kinde';
@@ -88,6 +95,12 @@ export class KindeAuthProvider implements AuthProvider {
     jwks?: JWTVerifyGetKey,
   ) {
     if (!config.issuerUrl) throw new AuthError('auth/invalid-config', 'Kinde: `issuerUrl` is required');
+    if (config.audience === undefined || (Array.isArray(config.audience) ? config.audience.length === 0 : config.audience === '')) {
+      throw new AuthError('auth/invalid-config', 'Kinde: `audience` is required (KINDE_AUDIENCE, your API\'s audience; pass null only with a `validate` that checks the tokens instead)');
+    }
+    if (config.audience === null && !config.validate) {
+      throw new AuthError('auth/invalid-config', 'Kinde: `audience: null` needs a `validate` function, or any token Kinde signs for the business would be accepted');
+    }
     this.issuer = kindeIssuer(config.issuerUrl);
     this.clientIds = config.clientId === undefined ? undefined : [config.clientId].flat().filter(Boolean);
     this.jwks =
@@ -100,8 +113,16 @@ export class KindeAuthProvider implements AuthProvider {
 
   /** Verifies an access token and resolves who it is for. */
   async verify(token: string): Promise<ResolvedIdentity> {
-    const claims = await this.verified(token, this.config.audience);
-    return this.toIdentity(claims as KindeAccessClaims);
+    const claims = (await this.verified(token, this.config.audience ?? undefined)) as KindeAccessClaims;
+    if (this.config.validate) {
+      try {
+        await this.config.validate(claims);
+      } catch (error) {
+        if (error instanceof AuthError) throw error;
+        throw new AuthError('auth/invalid-token', `Kinde token refused: ${(error as Error).message}`);
+      }
+    }
+    return this.toIdentity(claims);
   }
 
   /**

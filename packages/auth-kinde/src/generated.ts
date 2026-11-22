@@ -37,6 +37,17 @@ export const settings: readonly SettingDescriptor[] = [
     public: true,
   },
   {
+    key: 'audience',
+    env: 'KINDE_AUDIENCE',
+    label: 'API audience',
+    meaning: "Your API's audience: the aud an access token must carry for verify to accept it, and the audience the hosted sign-in asks tokens for. Required to verify tokens, or a token Kinde issued for another API of the business, or an ID token, would pass.",
+    secret: false,
+    required: false,
+    whereToFind: 'Settings › APIs › your API › Details: Audience, such as https://api.example.com. Enable the API for the back-end application under its APIs tab. A non-production environment has its own APIs.',
+    url: 'https://docs.kinde.com/developer-tools/your-apis/register-manage-apis/',
+    public: true,
+  },
+  {
     key: 'clientSecret',
     env: 'KINDE_CLIENT_SECRET',
     label: 'Client secret',
@@ -72,6 +83,7 @@ export const settings: readonly SettingDescriptor[] = [
 export const configSchema = z.object({
   issuerUrl: z.string().min(1),
   clientId: z.string().min(1),
+  audience: z.string().min(1).optional(),
   clientSecret: z.string().min(1),
   m2mClientId: z.string().min(1).optional(),
   m2mClientSecret: z.string().min(1).optional(),
@@ -82,6 +94,7 @@ export type KindeConfig = z.infer<typeof configSchema>;
 export const envNames = {
   issuerUrl: 'KINDE_ISSUER_URL',
   clientId: 'KINDE_CLIENT_ID',
+  audience: 'KINDE_AUDIENCE',
   clientSecret: 'KINDE_CLIENT_SECRET',
   m2mClientId: 'KINDE_M2M_CLIENT_ID',
   m2mClientSecret: 'KINDE_M2M_CLIENT_SECRET',

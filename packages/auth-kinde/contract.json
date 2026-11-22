@@ -31,6 +31,17 @@
       "url": "https://docs.kinde.com/developer-tools/about/using-kinde-without-an-sdk/"
     },
     {
+      "key": "audience",
+      "env": "KINDE_AUDIENCE",
+      "label": "API audience",
+      "meaning": "Your API's audience: the aud an access token must carry for verify to accept it, and the audience the hosted sign-in asks tokens for. Required to verify tokens, or a token Kinde issued for another API of the business, or an ID token, would pass.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Settings › APIs › your API › Details: Audience, such as https://api.example.com. Enable the API for the back-end application under its APIs tab. A non-production environment has its own APIs.",
+      "url": "https://docs.kinde.com/developer-tools/your-apis/register-manage-apis/"
+    },
+    {
       "key": "clientSecret",
       "env": "KINDE_CLIENT_SECRET",
       "label": "Client secret",

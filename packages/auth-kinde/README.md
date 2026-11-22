@@ -14,6 +14,7 @@ contract is in [contract.json](./contract.json). Guide:
 | --- | --- | --- |
 | `KINDE_ISSUER_URL` | The Kinde domain, `https://<subdomain>.kinde.com` or a custom domain (public) | Settings › Applications › your back-end app › View details: Domain |
 | `KINDE_CLIENT_ID` | The back-end application's client id (public) | The same page: Client ID |
+| `KINDE_AUDIENCE` | Your API's audience, which access tokens must carry (public; required to verify tokens) | Settings › APIs › your API › Details: Audience |
 | `KINDE_CLIENT_SECRET` | Its secret (secret) | The same page: Client secret |
 | `KINDE_M2M_CLIENT_ID` | A machine-to-machine app for the Management API (optional) | Settings › Applications › Add application › Machine to machine; authorize it for the Kinde Management API with `read:users`, `read:user_identities`, `create:users`, `delete:users` |
 | `KINDE_M2M_CLIENT_SECRET` | Its secret (secret, optional) | That app's View details |
@@ -34,17 +35,20 @@ import { readEnv } from '@mariachi/config';
 const kinde = settingsFromEnv<KindeConfig>(settings, readEnv);
 
 // Every request: verify the access token
-const auth = createKindeAuth({ issuerUrl: kinde.issuerUrl, clientId: kinde.clientId, audience: 'https://api.example.com' });
+const auth = createKindeAuth({ issuerUrl: kinde.issuerUrl, clientId: kinde.clientId, audience: kinde.audience! });
 api.withAuthStrategy('session', bearerStrategy(auth));
 
 // Sign-in, refresh, sign-out and users: once, with the container's tracer and metrics
-const identity = createKindeIdentityClient({ ...kinde, audience: 'https://api.example.com', connectionIds: { google: 'conn_…' } }, { tracer, metrics });
+const identity = createKindeIdentityClient({ ...kinde, connectionIds: { google: 'conn_…' } }, { tracer, metrics });
 ```
 
 **Verifying.** `verify(token)` checks the signature against `<issuerUrl>/.well-known/jwks` (RS256),
-`iss`, `exp`, and `azp` against `clientId`. Set `audience` to your API's audience (registered under
-Settings › APIs, and asked for at sign-in): Kinde puts only the audiences a sign-in asked for in
-`aud`, so without it a token for another API of the same business passes.
+`iss`, `exp`, `aud` against `audience`, and `azp` against `clientId`. `audience` is required: your
+API's audience (`KINDE_AUDIENCE`, registered under Settings › APIs, and asked for at sign-in). Kinde
+puts only the audiences a sign-in asked for in `aud`, so without the check a token for another API of
+the same business, or an ID token, would pass; the provider refuses to start without it. To turn the
+check off deliberately, pass `audience: null` with a `validate(claims)` that throws to refuse a token
+(as `@mariachi/auth-oidc` does).
 
 | `ResolvedIdentity` | From |
 | --- | --- |
@@ -134,8 +138,8 @@ schedule (up to 36 hours); deduplication on `event_id` still stops a replay from
 import { fakeKindeIdentity, kindeTestKeys, signedKindeWebhook } from '@mariachi/auth-kinde/testing';
 
 const keys = await kindeTestKeys('https://example.kinde.com');
-const auth = new KindeAuthProvider({ issuerUrl: 'https://example.kinde.com' }, keys.jwks);
-const token = await keys.accessToken({ sub: 'kp_1', org_code: 'org_1', permissions: ['invoices:read'] });
+const auth = new KindeAuthProvider({ issuerUrl: 'https://example.kinde.com', audience: 'https://api.example.com' }, keys.jwks);
+const token = await keys.accessToken({ sub: 'kp_1', aud: ['https://api.example.com'], org_code: 'org_1', permissions: ['invoices:read'] });
 
 const webhooks = kindeWebhookAuth({ issuerUrl: 'https://example.kinde.com', jwks: keys.jwks });
 const { rawBody, headers } = await signedKindeWebhook(keys, { type: 'user.created', data: { user } });   // post it to the controller

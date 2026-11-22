@@ -17,7 +17,6 @@
       "kindeWebhookAuth"
     ]
   },
-  "private": true,
   "type": "module",
   "exports": {
     ".": {
@@ -40,6 +39,9 @@
     "contract.json",
     "README.md"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

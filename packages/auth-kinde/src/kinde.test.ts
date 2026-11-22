@@ -43,14 +43,43 @@ describe('KindeAuthProvider', () => {
     await expect(auth.verify(await other.accessToken(good))).rejects.toEqual(refused);
   });
 
+  it("refuses a token for another API of the business, one with no audience, and an ID token", async () => {
+    const auth = new KindeAuthProvider({ issuerUrl: ISSUER, clientId: 'app-client', audience: 'https://api.acme.test' }, keys.jwks);
+    const refused = expect.objectContaining({ code: 'auth/invalid-token' });
+    await expect(auth.verify(await keys.accessToken({ sub: 'kp_1', azp: 'app-client', aud: ['https://billing.acme.test'] }))).rejects.toEqual(refused);
+    await expect(auth.verify(await keys.accessToken({ sub: 'kp_1', azp: 'app-client' }))).rejects.toEqual(refused);
+    const idToken = await keys.sign({ iss: ISSUER, sub: 'kp_1', azp: 'app-client', aud: ['app-client'], email: 'ada@acme.test', exp: Math.floor(Date.now() / 1000) + 60 });
+    await expect(auth.verify(idToken)).rejects.toEqual(refused);
+  });
+
+  it('needs an audience, and a validate to turn the audience check off', async () => {
+    const invalid = expect.objectContaining({ code: 'auth/invalid-config' });
+    expect(() => new KindeAuthProvider({ issuerUrl: ISSUER } as never, keys.jwks)).toThrow(invalid);
+    expect(() => new KindeAuthProvider({ issuerUrl: ISSUER, audience: '' }, keys.jwks)).toThrow(invalid);
+    expect(() => new KindeAuthProvider({ issuerUrl: ISSUER, audience: [] }, keys.jwks)).toThrow(invalid);
+    expect(() => new KindeAuthProvider({ issuerUrl: ISSUER, audience: null }, keys.jwks)).toThrow(invalid);
+    const auth = new KindeAuthProvider(
+      {
+        issuerUrl: ISSUER,
+        audience: null,
+        validate: (claims) => {
+          if (claims.azp !== 'm2m-client') throw new Error('not the machine client');
+        },
+      },
+      keys.jwks,
+    );
+    expect((await auth.verify(await keys.accessToken({ sub: 'kp_1', azp: 'm2m-client' }))).userId).toBe('kp_1');
+    await expect(auth.verify(await keys.accessToken({ sub: 'kp_1', azp: 'app-client' }))).rejects.toMatchObject({ code: 'auth/invalid-token' });
+  });
+
   it('verifies an ID token for its claims', async () => {
-    const auth = new KindeAuthProvider({ issuerUrl: ISSUER, clientId: 'app-client' }, keys.jwks);
+    const auth = new KindeAuthProvider({ issuerUrl: ISSUER, clientId: 'app-client', audience: 'https://api.acme.test' }, keys.jwks);
     const idToken = await keys.sign({ iss: ISSUER, sub: 'kp_1', azp: 'app-client', aud: [ISSUER], email: 'ada@acme.test', exp: Math.floor(Date.now() / 1000) + 60 });
     expect(await auth.verifyIdToken(idToken)).toMatchObject({ sub: 'kp_1', email: 'ada@acme.test' });
   });
 
   it('refuses an issuer that is not https', () => {
-    expect(() => new KindeAuthProvider({ issuerUrl: 'http://acme.kinde.com' })).toThrow(expect.objectContaining({ code: 'auth/invalid-config' }));
+    expect(() => new KindeAuthProvider({ issuerUrl: 'http://acme.kinde.com', audience: 'https://api.acme.test' })).toThrow(expect.objectContaining({ code: 'auth/invalid-config' }));
   });
 });
 
@@ -177,8 +206,8 @@ describe('KindeIdentityClient', () => {
 
 describe('settings', () => {
   it('reads from the environment by name, and says where to find each', () => {
-    const env: Record<string, string> = { KINDE_ISSUER_URL: ISSUER, KINDE_CLIENT_ID: 'c', KINDE_CLIENT_SECRET: 's' };
-    expect(settingsFromEnv(settings, (n) => env[n])).toEqual({ issuerUrl: ISSUER, clientId: 'c', clientSecret: 's' });
+    const env: Record<string, string> = { KINDE_ISSUER_URL: ISSUER, KINDE_CLIENT_ID: 'c', KINDE_AUDIENCE: 'https://api.acme.test', KINDE_CLIENT_SECRET: 's' };
+    expect(settingsFromEnv(settings, (n) => env[n])).toEqual({ issuerUrl: ISSUER, clientId: 'c', audience: 'https://api.acme.test', clientSecret: 's' });
     expect(settings.every((s) => s.whereToFind)).toBe(true);
     expect(settings.every((s) => !s.environments)).toBe(true);
     expect(checkSetting(settings[0]!, 'test', ISSUER)).toBeNull();
@@ -226,7 +255,7 @@ describe('webhooks', () => {
   });
 
   it('takes a wider timestamp window when told to', async () => {
-    const handler = new KindeAuthProvider({ issuerUrl: ISSUER }, keys.jwks).createWebhookHandler({ toleranceSeconds: 3600 });
+    const handler = new KindeAuthProvider({ issuerUrl: ISSUER, audience: 'https://api.acme.test' }, keys.jwks).createWebhookHandler({ toleranceSeconds: 3600 });
     const retried = await signedKindeWebhook(keys, { type: 'user.updated', timestamp: new Date(Date.now() - 30 * 60_000).toISOString(), data });
     expect((await handler.verify(retried.rawBody, retried.headers)).type).toBe('user.updated');
     const tooOld = await signedKindeWebhook(keys, { type: 'user.updated', timestamp: new Date(Date.now() - 2 * 3600_000).toISOString(), data });
@@ -234,7 +263,7 @@ describe('webhooks', () => {
   });
 
   it('normalizes events for createAuthWebhookDispatcher', async () => {
-    const handler = new KindeAuthProvider({ issuerUrl: ISSUER }, keys.jwks).createWebhookHandler();
+    const handler = new KindeAuthProvider({ issuerUrl: ISSUER, audience: 'https://api.acme.test' }, keys.jwks).createWebhookHandler();
     const signedIn = await signedKindeWebhook(keys, { type: 'user.authenticated', event_id: 'event_2', event_timestamp: '2026-11-21T10:00:00.000Z', data });
     expect(await handler.verify(signedIn.rawBody, signedIn.headers)).toMatchObject({ id: 'event_2', type: 'session.created', provider: 'kinde', data, timestamp: Date.parse('2026-11-21T10:00:00.000Z') });
     const deleted = await signedKindeWebhook(keys, { type: 'user.deleted', data });
