@@ -1,0 +1,77 @@
+{
+  "name": "@mariachi/auth-cognito",
+  "version": "0.0.0",
+  "description": "Amazon Cognito user pools: ID and access token verification through the pool's JWKS, and an IdentityClient for managed login, password sign-in and users.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/auth-cognito"
+  },
+  "mariachi": {
+    "category": "security",
+    "status": "alpha",
+    "useWhen": "Using an Amazon Cognito user pool as the identity provider",
+    "entry": [
+      "createCognitoAuth",
+      "createCognitoIdentityClient",
+      "cognitoSecretHash"
+    ]
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
+    "./contract.json": "./contract.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "contract.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "biome lint src",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariachi/auth": "workspace:*",
+    "@mariachi/core": "workspace:*",
+    "@mariachi/integrations": "workspace:*",
+    "jose": "^6",
+    "zod": "^3.24"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-cognito-identity-provider": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "~3.1169.0",
+    "@mariachi/testing": "workspace:*",
+    "tsup": "^8",
+    "typescript": "^5.7",
+    "vitest": "^3"
+  }
+}
