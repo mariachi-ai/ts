@@ -72,7 +72,8 @@ await revenuecat.customers.delete(ctx, user.id);
 All are REST API v2. Every operation takes `ctx` first and makes one span
 (`revenuecat customers.get`). A failure is a `RevenueCatError` with a category and RevenueCat's
 error `type` as `providerCode`: only `rate-limited` and `unavailable` (including `store_error`) are
-retried, honouring `Retry-After`, and the client already did. A customer RevenueCat doesn't know is
+retried, honouring `Retry-After`, and the client already did. Granting and revoking are POSTs, but
+repeating one is harmless, so they're retried like a read. A customer RevenueCat doesn't know is
 `revenuecat/not-found`.
 
 ### Things to get right

@@ -51,6 +51,8 @@ export function createRevenueCat(config: RevenueCatConfig, deps: RevenueCatDeps 
     operation: RevenuecatOperation,
     request: Omit<ProviderRequest, 'url' | 'headers'> & { path: string; expand?: string[] },
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+    /** A POST that's harmless to repeat: retried after an outage too, not only after a rate limit. */
+    safeToRetry = false,
   ): Promise<T> {
     const { path, expand, ...rest } = request;
     // An array query parameter is the key repeated (`expand=a&expand=b`), OpenAPI's default for RevenueCat's spec.
@@ -59,7 +61,7 @@ export function createRevenueCat(config: RevenueCatConfig, deps: RevenueCatDeps 
       ctx,
       { integration: provider.id, operation, category: provider.category, server },
       { ...rest, url: `${base}${project}${path}${expandQuery}`, headers: { authorization: `Bearer ${cfg.secretKey}` } },
-      { schema, error: RevenueCatError, failure, deps },
+      { schema, error: RevenueCatError, failure, deps: safeToRetry ? { ...deps, retry: { ...deps.retry, unsafe: false } } : deps },
     );
   }
 
@@ -112,6 +114,7 @@ export function createRevenueCat(config: RevenueCatConfig, deps: RevenueCatDeps 
         'customers.grantEntitlement',
         { method: 'POST', path: `${customer(i.customerId)}/actions/grant_entitlement`, json: { entitlement_id: i.entitlementId, expires_at: i.expiresAt } },
         Customer,
+        true,
       );
     },
     /** Ends every promotional grant of the entitlement at once. Access the customer bought in a store stays. */
@@ -122,6 +125,7 @@ export function createRevenueCat(config: RevenueCatConfig, deps: RevenueCatDeps 
         'customers.revokeGrantedEntitlement',
         { method: 'POST', path: `${customer(i.customerId)}/actions/revoke_granted_entitlement`, json: { entitlement_id: i.entitlementId } },
         Customer,
+        true,
       );
     },
   };
