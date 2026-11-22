@@ -1,17 +1,20 @@
-import type { MetricsAdapter, Span, TracerAdapter } from '@mariachi/core';
+import type { MetricsAdapter, Span, SpanKind, SpanOptions, TracerAdapter } from '@mariachi/core';
 
 export interface RecordedSpan {
   name: string;
   attributes: Record<string, string | number | boolean>;
   status?: { status: 'ok' | 'error'; message?: string };
+  /** `internal` unless the span was started with another kind. */
+  kind: SpanKind;
+  events: Array<{ name: string; attributes: Record<string, string | number | boolean> }>;
   ended: boolean;
 }
 
 export class TestTracer implements TracerAdapter {
   readonly spans: RecordedSpan[] = [];
 
-  startSpan(name: string, attributes: Record<string, string | number | boolean> = {}): Span {
-    const record: RecordedSpan = { name, attributes: { ...attributes }, ended: false };
+  startSpan(name: string, attributes: Record<string, string | number | boolean> = {}, options: SpanOptions = {}): Span {
+    const record: RecordedSpan = { name, attributes: { ...attributes }, kind: options.kind ?? 'internal', events: [], ended: false };
     this.spans.push(record);
     return {
       setAttribute: (k, v) => {
@@ -19,6 +22,9 @@ export class TestTracer implements TracerAdapter {
       },
       setStatus: (status, message) => {
         record.status = { status, message };
+      },
+      addEvent: (eventName, eventAttributes = {}) => {
+        record.events.push({ name: eventName, attributes: { ...eventAttributes } });
       },
       end: () => {
         record.ended = true;

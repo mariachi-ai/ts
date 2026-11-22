@@ -6,11 +6,23 @@ export interface Span {
   setAttribute(key: string, value: string | number | boolean): void;
   setStatus(status: 'ok' | 'error', message?: string): void;
   recordException?(error: Error): void;
+  /** A point in the span's life, such as one retry of a call. Optional: adapters that can't record it skip it. */
+  addEvent?(name: string, attributes?: Record<string, string | number | boolean>): void;
   end(): void;
 }
 
+/**
+ * What a span stands for, as OpenTelemetry names it. `client` is a call out to another service (every call to
+ * a third-party provider); `server` is a request coming in (an inbound webhook). Spans default to `internal`.
+ */
+export type SpanKind = 'internal' | 'server' | 'client' | 'producer' | 'consumer';
+
+export interface SpanOptions {
+  kind?: SpanKind;
+}
+
 export interface TracerAdapter {
-  startSpan(name: string, attributes?: Record<string, string | number | boolean>): Span;
+  startSpan(name: string, attributes?: Record<string, string | number | boolean>, options?: SpanOptions): Span;
   withSpan<T>(name: string, fn: (span: Span) => Promise<T>): Promise<T>;
 }
 

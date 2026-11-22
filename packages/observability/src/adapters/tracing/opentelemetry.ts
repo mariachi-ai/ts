@@ -1,5 +1,6 @@
 import type { Span as OTELSpan, Tracer } from '@opentelemetry/api';
 import { loadOptionalPeer } from '@mariachi/core';
+import type { SpanKind, SpanOptions } from '@mariachi/core';
 import type { Span, TracerAdapter } from '../../types';
 
 type OtelApi = typeof import('@opentelemetry/api');
@@ -15,10 +16,28 @@ function wrapSpan(api: OtelApi, otelSpan: OTELSpan): Span {
     recordException(error) {
       otelSpan.recordException(error);
     },
+    addEvent(name, attributes) {
+      otelSpan.addEvent(name, attributes);
+    },
     end() {
       otelSpan.end();
     },
   };
+}
+
+function otelKind(api: OtelApi, kind: SpanKind | undefined) {
+  switch (kind) {
+    case 'server':
+      return api.SpanKind.SERVER;
+    case 'client':
+      return api.SpanKind.CLIENT;
+    case 'producer':
+      return api.SpanKind.PRODUCER;
+    case 'consumer':
+      return api.SpanKind.CONSUMER;
+    default:
+      return api.SpanKind.INTERNAL;
+  }
 }
 
 /**
@@ -34,8 +53,8 @@ export class OpenTelemetryTracerAdapter implements TracerAdapter {
     this.tracer = this.api.trace.getTracer(serviceName);
   }
 
-  startSpan(name: string, attributes?: Record<string, string | number | boolean>): Span {
-    return wrapSpan(this.api, this.tracer.startSpan(name, { attributes }));
+  startSpan(name: string, attributes?: Record<string, string | number | boolean>, options?: SpanOptions): Span {
+    return wrapSpan(this.api, this.tracer.startSpan(name, { attributes, kind: otelKind(this.api, options?.kind) }));
   }
 
   /** Runs `fn` inside an active span, so nested spans become children. */
