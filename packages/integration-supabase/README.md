@@ -58,9 +58,10 @@ for await (const u of supabase.admin.users.all(ctx)) { /* ... */ }
 
 Every operation takes `ctx` first and makes one span (`supabase functions.invoke`). A failure is a
 `SupabaseError` with a category, and with Auth's own code in `providerCode` (`supabase/email-exists`
-from `email_exists`). Only `rate-limited` and `unavailable` are retried. `functions.invoke` tries
-once unless you pass `safeToRetry: true`, because a function that failed may already have done its
-work.
+from `email_exists`). Only `rate-limited` and `unavailable` are retried, and creating or inviting a
+user only on `rate-limited`, since an outage may come after the user was made. `functions.invoke`
+tries once unless you pass `safeToRetry: true`, because a function that failed may already have
+done its work.
 
 A function called with the secret key must check that key itself: set `verify_jwt = false` and use
 `withSupabase({ auth: 'secret' })` in it. Supabase's own JWT check doesn't understand the new keys.

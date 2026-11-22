@@ -45,9 +45,11 @@ export function createSupabase(config: SupabaseConfig, deps: SupabaseDeps = {}) 
     operation: SupabaseOperation,
     request: Omit<ProviderRequest, 'url'> & { path: string },
     schema: z.ZodType<T, z.ZodTypeDef, unknown>,
-    options: { authFailure?: boolean; attempts?: number } = {},
+    options: { authFailure?: boolean; attempts?: number; safeToRetry?: boolean } = {},
   ): Promise<T> {
     const { path, ...rest } = request;
+    // providerRequest treats a POST without an idempotency key as unsafe to repeat; the caller can say it's safe
+    const retry = { ...deps.retry, ...(options.attempts ? { attempts: options.attempts } : {}), ...(options.safeToRetry ? { unsafe: false } : {}) };
     return providerRequest(
       ctx,
       { integration: provider.id, operation, category: provider.category, server },
@@ -56,7 +58,7 @@ export function createSupabase(config: SupabaseConfig, deps: SupabaseDeps = {}) 
         schema,
         error: SupabaseError,
         failure: options.authFailure ? authFailure : undefined,
-        deps: options.attempts ? { ...deps, retry: { ...deps.retry, attempts: options.attempts } } : deps,
+        deps: options.attempts || options.safeToRetry ? { ...deps, retry } : deps,
       },
     );
   }
@@ -83,6 +85,7 @@ export function createSupabase(config: SupabaseConfig, deps: SupabaseDeps = {}) 
       }
       return call(ctx, 'functions.invoke', { method: 'POST', path: `/functions/v1/${segment(i.name)}`, headers, json: i.body ?? {} }, schema, {
         attempts: i.safeToRetry ? undefined : 1,
+        safeToRetry: i.safeToRetry,
       });
     },
   };
