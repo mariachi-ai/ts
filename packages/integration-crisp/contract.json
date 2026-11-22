@@ -1,0 +1,202 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "crisp",
+    "name": "Crisp",
+    "category": "support",
+    "server": "api.crisp.chat",
+    "baseUrl": "https://api.crisp.chat/v1",
+    "docs": "https://docs.crisp.chat/references/rest-api/v1/"
+  },
+  "settings": [
+    {
+      "key": "websiteId",
+      "env": "CRISP_WEBSITE_ID",
+      "label": "Website ID",
+      "meaning": "Which Crisp website the chat widget opens and the REST operations act on. It's in every page that shows the widget.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "Settings › Workspace Settings › Setup & Integrations: the Website ID in the chatbox code. Crisp has no test mode: use a separate website (workspace) for test.",
+      "url": "https://help.crisp.chat/en/article/how-to-find-the-website-id-1ylqx1s/"
+    },
+    {
+      "key": "tokenIdentifier",
+      "env": "CRISP_TOKEN_IDENTIFIER",
+      "label": "API token identifier",
+      "meaning": "The first half of the REST API token, sent with the key as Basic authentication. Only the REST operations need it.",
+      "secret": false,
+      "required": false,
+      "whereToFind": "Settings › Workspace Settings › Advanced configuration › API Token › Generate Token (an owner only; shown once). For a Marketplace plugin's token instead, set CRISP_TOKEN_TIER=plugin.",
+      "url": "https://docs.crisp.chat/guides/rest-api/authentication/website-token/"
+    },
+    {
+      "key": "tokenKey",
+      "env": "CRISP_TOKEN_KEY",
+      "label": "API token key",
+      "meaning": "The secret half of the REST API token.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Shown once, beside the identifier, when the API token is generated.",
+      "url": "https://docs.crisp.chat/guides/rest-api/authentication/website-token/"
+    },
+    {
+      "key": "tokenTier",
+      "env": "CRISP_TOKEN_TIER",
+      "label": "API token kind",
+      "meaning": "website (the default) for a token generated in the workspace's settings; plugin for a Marketplace plugin's token. Sent as the X-Crisp-Tier header.",
+      "secret": false,
+      "required": false,
+      "whereToFind": "website, unless the token came from a plugin at marketplace.crisp.chat (Tokens › Production, installed on the website).",
+      "url": "https://docs.crisp.chat/guides/rest-api/authentication/plugin-token/"
+    },
+    {
+      "key": "identitySecret",
+      "env": "CRISP_IDENTITY_SECRET",
+      "label": "Identity verification secret",
+      "meaning": "Signs the signed-in user's email for the chat widget, so a visitor can't claim to be someone else, and derives each user's session token. Only chatIdentity needs it.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Settings › Workspace Settings › Advanced configuration › Identity Verification: turn on \"Verify user emails with cryptographic signatures\" and copy the secret key (an owner only; from the Mini plan).",
+      "url": "https://docs.crisp.chat/guides/chatbox-sdks/web-sdk/identity-verification/"
+    },
+    {
+      "key": "webhookSecret",
+      "env": "CRISP_WEBHOOK_SECRET",
+      "label": "Web hook secret",
+      "meaning": "Checks that a web hook came from Crisp. For a plugin's web hooks, the signing secret Crisp shows; for a website's own web hooks (which Crisp doesn't sign), a random key of your own in the hook's URL.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Plugin hooks: marketplace.crisp.chat › your plugin › Web Hooks: the signing secret shown when the hook is made. Website hooks: any long random string, added to the hook's URL as ?key=… (Settings › Advanced configuration › Web Hooks).",
+      "url": "https://docs.crisp.chat/guides/web-hooks/quickstart/"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "people.create",
+      "purpose": "Adds a people profile: its email (unique on the website) and nickname.",
+      "method": "POST",
+      "path": "/website/{websiteId}/people/profile",
+      "idempotency": "none"
+    },
+    {
+      "name": "people.get",
+      "purpose": "Reads a people profile by its people_id or by its email.",
+      "method": "GET",
+      "path": "/website/{websiteId}/people/profile/{peopleId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "people.update",
+      "purpose": "Updates the fields given on a people profile, keeping the rest.",
+      "method": "PATCH",
+      "path": "/website/{websiteId}/people/profile/{peopleId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "people.updateData",
+      "purpose": "Merges custom data keys (strings, numbers, booleans) into a people profile's data.",
+      "method": "PATCH",
+      "path": "/website/{websiteId}/people/data/{peopleId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "people.addEvent",
+      "purpose": "Stacks an event on a people profile's timeline: its text, optional data and color.",
+      "method": "POST",
+      "path": "/website/{websiteId}/people/events/{peopleId}",
+      "idempotency": "none"
+    },
+    {
+      "name": "conversations.list",
+      "purpose": "Lists the website's conversations, a page at a time, optionally only unread, resolved or unresolved, or matching a search.",
+      "method": "GET",
+      "path": "/website/{websiteId}/conversations/{pageNumber}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "conversations.get",
+      "purpose": "Reads one conversation: its state, people_id, whether the visitor's email is verified, and its last message.",
+      "method": "GET",
+      "path": "/website/{websiteId}/conversation/{sessionId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "conversations.sendMessage",
+      "purpose": "Sends a text message, or a private note, in a conversation as an operator.",
+      "method": "POST",
+      "path": "/website/{websiteId}/conversation/{sessionId}/message",
+      "idempotency": "none"
+    },
+    {
+      "name": "conversations.setState",
+      "purpose": "Changes a conversation's state: pending, unresolved or resolved.",
+      "method": "PATCH",
+      "path": "/website/{websiteId}/conversation/{sessionId}/state",
+      "idempotency": "natural"
+    },
+    {
+      "name": "conversations.getMeta",
+      "purpose": "Reads a conversation's metas: the visitor's nickname, email, phone, data and segments, and the subject.",
+      "method": "GET",
+      "path": "/website/{websiteId}/conversation/{sessionId}/meta",
+      "idempotency": "natural"
+    },
+    {
+      "name": "conversations.updateMeta",
+      "purpose": "Updates the given metas of a conversation: nickname, email, phone, subject, data or segments.",
+      "method": "PATCH",
+      "path": "/website/{websiteId}/conversation/{sessionId}/meta",
+      "idempotency": "natural"
+    }
+  ],
+  "errors": [
+    {
+      "providerCode": "invalid_session",
+      "category": "unauthorized",
+      "reason": "invalid-token"
+    },
+    {
+      "providerCode": "authenticated_route",
+      "category": "unauthorized",
+      "reason": "invalid-token"
+    },
+    {
+      "providerCode": "ip_not_whitelisted",
+      "category": "forbidden",
+      "reason": "ip-not-allowed"
+    },
+    {
+      "providerCode": "invalid_data",
+      "category": "invalid-request",
+      "reason": "invalid-data"
+    }
+  ],
+  "webhooks": {
+    "signature": {
+      "scheme": "hmac-sha256-timestamped",
+      "header": "X-Crisp-Signature",
+      "secretSetting": "webhookSecret",
+      "description": "Plugin hooks only: X-Crisp-Signature is the hex HMAC-SHA256, keyed with the hook's signing secret, of the string [timestamp;body], where timestamp is the X-Crisp-Request-Timestamp header exactly as sent and body is the JSON body as a string (JSON.stringify of the parsed body), with the brackets and semicolon included. Website hooks (set up in the website's settings) aren't signed: Crisp advises a key of your own as a ?key= URL parameter, compared on arrival."
+    },
+    "events": [
+      { "type": "message:send", "meaning": "A visitor sent a message." },
+      { "type": "message:received", "meaning": "An operator (or the API) sent a message to a visitor." },
+      { "type": "message:updated", "meaning": "A message was edited." },
+      { "type": "message:removed", "meaning": "A message was removed." },
+      { "type": "session:set_email", "meaning": "A conversation's email was set, by the visitor or an operator." },
+      { "type": "session:set_nickname", "meaning": "A conversation's nickname was set." },
+      { "type": "session:set_data", "meaning": "A conversation's custom data was set." },
+      { "type": "session:set_segments", "meaning": "A conversation's segments were set." },
+      { "type": "session:set_state", "meaning": "A conversation's state changed (pending, unresolved, resolved)." },
+      { "type": "session:removed", "meaning": "A conversation was removed." },
+      { "type": "people:profile:created", "meaning": "A people profile was created." },
+      { "type": "people:profile:updated", "meaning": "A people profile was updated." },
+      { "type": "people:profile:removed", "meaning": "A people profile was removed." },
+      { "type": "people:bind:session", "meaning": "A conversation was linked to a people profile." }
+    ]
+  }
+}
