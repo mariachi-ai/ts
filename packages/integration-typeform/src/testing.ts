@@ -3,8 +3,8 @@
  * `createTypeform`'s client; and a signed webhook to post to the app's endpoint.
  */
 import { createHmac } from 'node:crypto';
-import { NotFoundError } from '@mariachi/core';
 import type { Typeform } from './client';
+import { TypeformError } from './errors';
 import type { Form, FormResponse, Webhook } from './schemas';
 
 export interface FakeTypeform extends Typeform {
@@ -13,14 +13,18 @@ export interface FakeTypeform extends Typeform {
   webhooks_: Map<string, Webhook>;
 }
 
-/** An in-memory Typeform: add forms and responses, then hand it to the code under test in place of the client. */
-export function fakeTypeform(seed: { forms?: Form[]; responses?: Record<string, FormResponse[]> } = {}): FakeTypeform {
+/**
+ * An in-memory Typeform: add forms and responses, then hand it to the code under test in place of the client. It
+ * fails the way the client does (`TypeformError`, the same codes and categories), so code that handles one handles
+ * the other. Give `webhookSecret` as the app's config does: without it, `webhooks.put` refuses, as the client does.
+ */
+export function fakeTypeform(seed: { forms?: Form[]; responses?: Record<string, FormResponse[]>; webhookSecret?: string } = {}): FakeTypeform {
   const forms_ = new Map((seed.forms ?? []).map((f) => [f.id, f]));
   const responses_ = new Map(Object.entries(seed.responses ?? {}));
   const webhooks_ = new Map<string, Webhook>();
   const formOf = (id: string) => {
     const form = forms_.get(id);
-    if (!form) throw new NotFoundError('typeform form', id);
+    if (!form) throw new TypeformError('typeform/not-found', 'typeform forms.get failed (404)', { category: 'not-found', status: 404 });
     return form;
   };
   const newestFirst = (id: string) => [...(responses_.get(id) ?? [])].sort((a, b) => b.submitted_at.localeCompare(a.submitted_at));
@@ -33,8 +37,8 @@ export function fakeTypeform(seed: { forms?: Form[]; responses?: Record<string, 
         const items = [...forms_.values()].filter((f) => !input.search || f.title.toLowerCase().includes(input.search.toLowerCase()));
         return { total_items: items.length, page_count: 1, items };
       },
-      async get(_ctx, formId) {
-        return formOf(formId);
+      async get(_ctx, input) {
+        return formOf(input.formId);
       },
     },
     responses: {
@@ -51,16 +55,17 @@ export function fakeTypeform(seed: { forms?: Form[]; responses?: Record<string, 
     },
     webhooks: {
       async put(_ctx, input) {
+        if (!seed.webhookSecret) throw new TypeformError('typeform/no-webhook-secret', 'Set the webhook secret (TYPEFORM_WEBHOOK_SECRET) before making a webhook', { category: 'invalid-request' });
         formOf(input.formId);
         const hook: Webhook = { id: `wh_${input.tag}`, form_id: input.formId, tag: input.tag, url: input.url, enabled: input.enabled ?? true };
         webhooks_.set(`${input.formId}/${input.tag}`, hook);
         return hook;
       },
-      async list(_ctx, formId) {
-        return [...webhooks_.values()].filter((w) => w.form_id === formId);
+      async list(_ctx, input) {
+        return [...webhooks_.values()].filter((w) => w.form_id === input.formId);
       },
-      async delete(_ctx, formId, tag) {
-        webhooks_.delete(`${formId}/${tag}`);
+      async delete(_ctx, input) {
+        webhooks_.delete(`${input.formId}/${input.tag}`);
       },
     },
   };
