@@ -1,7 +1,7 @@
 import type { Context } from '@mariachi/core';
 import type { z } from 'zod';
 import { type ProviderCall, type ProviderDeps, callProvider } from './call-provider';
-import { type ErrorCategory, ProviderError, type ProviderErrorOptions, categoryForStatus, parseRetryAfter } from './provider-error';
+import { type ErrorCategory, ProviderError, type ProviderErrorOptions, categoryForStatus, parseRateLimitReset, parseRetryAfter } from './provider-error';
 
 export type HttpMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
 
@@ -17,7 +17,8 @@ export interface ProviderRequest {
   form?: Record<string, string | number | boolean | undefined>;
   /**
    * Sent on every attempt of this call, so the provider does it once however often it's retried. Give it
-   * wherever the provider accepts one: a create, a charge, a send.
+   * wherever the provider accepts one: a create, a charge, a send. Without one, a POST or PATCH is retried only
+   * when the provider rate-limited it (it did nothing), never after an outage, which may come after it acted.
    */
   idempotencyKey?: { header: string; value: string };
 }
@@ -27,6 +28,10 @@ export interface FailureInfo {
   reason?: string;
   category?: ErrorCategory;
   providerCode?: string;
+  /**
+   * The error's message, in the integration's own words. Never the provider's message: it can carry the data the
+   * plan keeps out of spans and logs, and a 4xx error's message reaches the app's API clients.
+   */
   message?: string;
 }
 
@@ -67,7 +72,7 @@ export async function providerRequest<T>(
     ctx,
     { ...call, method: request.method },
     async (attempt) => {
-      const response = await doFetch(urlWith(request.url, request.query), init(request));
+      const response = await doFetch(urlWith(request.url, request.query), { ...init(request), ...(options.deps?.signal ? { signal: options.deps.signal } : {}) });
       attempt.setStatusCode(response.status);
       const body = await readBody(response);
       if (!response.ok) {
@@ -78,7 +83,8 @@ export async function providerRequest<T>(
           category,
           providerCode: info.providerCode,
           status: response.status,
-          retryAfterMs: parseRetryAfter(response.headers.get('retry-after')),
+          // X-RateLimit-Reset is sent on every answer by some providers (GitHub): only a rate limit waits for it
+          retryAfterMs: parseRetryAfter(response.headers.get('retry-after')) ?? (category === 'rate-limited' ? parseRateLimitReset(response.headers.get('x-ratelimit-reset')) : undefined),
         });
       }
       const inBody = options.failureInBody?.(body);
@@ -99,7 +105,11 @@ export async function providerRequest<T>(
       }
       return parsed.data;
     },
-    { ...options.deps, retry: { attempts: 3, ...options.deps?.retry } },
+    {
+      ...options.deps,
+      // A create without an idempotency key could run twice if it were retried after an outage
+      retry: { attempts: 3, unsafe: (request.method === 'POST' || request.method === 'PATCH') && !request.idempotencyKey, ...options.deps?.retry },
+    },
   );
 }
 
@@ -111,14 +121,16 @@ function urlWith(url: string, query: ProviderRequest['query']): string {
 }
 
 function init(request: ProviderRequest): RequestInit {
-  const headers: Record<string, string> = { accept: 'application/json', ...request.headers };
-  if (request.idempotencyKey) headers[request.idempotencyKey.header] = request.idempotencyKey.value;
+  // Header names are case-insensitive: a caller's `Accept` or `Content-Type` replaces the default, never joins it
+  const headers = new Headers(request.headers);
+  if (!headers.has('accept')) headers.set('accept', 'application/json');
+  if (request.idempotencyKey) headers.set(request.idempotencyKey.header, request.idempotencyKey.value);
   let body: string | undefined;
   if (request.json !== undefined) {
-    headers['content-type'] ??= 'application/json';
+    if (!headers.has('content-type')) headers.set('content-type', 'application/json');
     body = JSON.stringify(request.json);
   } else if (request.form) {
-    headers['content-type'] ??= 'application/x-www-form-urlencoded';
+    if (!headers.has('content-type')) headers.set('content-type', 'application/x-www-form-urlencoded');
     const form = new URLSearchParams();
     for (const [k, v] of Object.entries(request.form)) if (v !== undefined) form.set(k, String(v));
     body = form.toString();

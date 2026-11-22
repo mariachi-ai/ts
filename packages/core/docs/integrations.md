@@ -41,8 +41,10 @@ export function createContact(ctx: Context, input: { email: string }, deps: Acme
   unless `failure(status, body)` reads the provider's own code; that code goes in `providerCode` and
   the span's `error.type`, never the provider's message.
 - **Retries:** only `rate-limited` and `unavailable` (and a provider that can't be reached), three
-  attempts by default, waiting as long as `Retry-After` asks. Each retry is an event on the span.
-  Give an idempotency key wherever the provider takes one, so a retried create happens once.
+  attempts by default, waiting as long as `Retry-After` asks (or `X-RateLimit-Reset`, for providers that send that instead). Each retry is an event on the span.
+  Give an idempotency key wherever the provider takes one, so a retried create happens once. A POST or
+  PATCH without one is retried only after a rate limit, never after an outage (the provider may have
+  acted before it failed).
 - **A failure inside a 2xx answer** (a batch, a composite call, GraphQL's `errors`) is read by
   `failureInBody(body)`, which names its category; the call then fails as any other.
 - **The answer** is checked against `schema`. A provider that changed its response fails with
