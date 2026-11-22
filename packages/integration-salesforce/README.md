@@ -49,7 +49,8 @@ Every operation takes `ctx` first and makes one span (`salesforce contacts.creat
 API name, custom ones included (`Plan__c`). A failure is a `SalesforceError`: `providerCode` is
 Salesforce's `errorCode` (`DUPLICATES_DETECTED`), the code says what it means
 (`salesforce/duplicates-detected`), and only `rate-limited` (`REQUEST_LIMIT_EXCEEDED`) and
-`unavailable` (`UNABLE_TO_LOCK_ROW`, 5xx) are retried, which the client already did. Salesforce's
+`unavailable` (`UNABLE_TO_LOCK_ROW`, 5xx) are retried, which the client already did; a write (a
+POST or PATCH) only after a rate limit, since an outage may come after Salesforce acted. Salesforce's
 message is never kept: it can echo the record.
 
 | Object | Operations | Create needs |
