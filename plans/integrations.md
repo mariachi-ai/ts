@@ -51,7 +51,7 @@ packages/integration-hubspot/
   src/webhooks.ts        signature check over the raw body and typed events, where the provider sends any
   src/testing.ts         a fake client for an app's tests
   src/*.test.ts          unit tests
-  src/*.integration.test.ts   HTTP-level tests against a local stand-in for the provider
+  src/*.integration.test.ts   only where the package has infrastructure behaviour of its own (a store, a server)
 ```
 
 - **Entry point:** `create<Provider>(config, deps?)` returns a typed client. In a Mariachi app,
@@ -72,6 +72,12 @@ packages/integration-hubspot/
   streaming, pagination), as an optional peer dependency loaded lazily.
 - **Tests never use live accounts in CI.** A one-off check against each provider's sandbox is done by
   hand, with accounts the maintainer creates.
+- **The test bar (decided 2026-11-22):** each provider package is tested through `scriptedFetch`, with
+  `assertProviderSpans` on every call. What only real HTTP shows (headers on the wire, real statuses,
+  waits and deadlines) is tested once, in `@mariachi/integrations`, against a stand-in on a local port.
+  A package's fake fails the way its client does.
+- **Published (decided 2026-11-22):** every provider package is published like any `@mariachi/*`
+  package, with `mariachi.status` `alpha` until apps use it.
 
 ### The contract
 
