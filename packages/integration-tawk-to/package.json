@@ -1,0 +1,70 @@
+{
+  "name": "@mariachi/integration-tawk-to",
+  "version": "0.0.0",
+  "description": "Tawk.to live chat: the widget on an app's pages with the signed-in user signed in to it (Secure Mode), custom events from the page, and signed webhooks for chats and tickets.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/integration-tawk-to"
+  },
+  "mariachi": {
+    "category": "providers",
+    "status": "alpha",
+    "useWhen": "Adding Tawk.to's live chat to an app's pages, or receiving its chat and ticket webhooks",
+    "entry": [
+      "createTawkTo",
+      "tawkToCsp",
+      "tawkToWebhookAuth"
+    ]
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
+    "./tawk-to.js": "./browser/tawk-to.js",
+    "./contract.json": "./contract.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "browser",
+    "contract.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "biome lint src browser",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariachi/api-facade": "workspace:*",
+    "@mariachi/core": "workspace:*",
+    "@mariachi/integrations": "workspace:*",
+    "@mariachi/webhooks": "workspace:*",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@mariachi/testing": "workspace:*",
+    "tsup": "^8",
+    "typescript": "^5.7",
+    "vitest": "^3"
+  }
+}
