@@ -1,7 +1,8 @@
 import { createHash, createPublicKey, type KeyObject } from 'node:crypto';
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { createRemoteJWKSet, customFetch, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import { AuthError } from '@mariachi/core';
 import type { AuthWebhookHandler, AuthWebhookEvent } from '@mariachi/auth';
+import { type FusionAuthDeps, jwksFetch } from '../provider-fetch';
 
 const SIGNATURE_HEADER = 'x-fusionauth-signature-jwt';
 
@@ -53,7 +54,11 @@ export class FusionAuthWebhookHandler implements AuthWebhookHandler {
   private readonly key: Uint8Array | KeyObject | JWTVerifyGetKey;
   private readonly algorithms: string[];
 
-  constructor(private readonly config: FusionAuthWebhookHandlerConfig) {
+  constructor(
+    private readonly config: FusionAuthWebhookHandlerConfig,
+    /** The tracer and metrics for the key fetches (`fusionauth jwks.get`), when the signature is checked against the server's keys. */
+    deps: FusionAuthDeps = {},
+  ) {
     if (config.webhookSigningPublicKeyPem) {
       this.key = createPublicKey(config.webhookSigningPublicKeyPem);
       this.algorithms = ['RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512', 'PS256', 'PS384', 'PS512'];
@@ -62,7 +67,7 @@ export class FusionAuthWebhookHandler implements AuthWebhookHandler {
       this.algorithms = ['HS256', 'HS384', 'HS512'];
     } else {
       const base = config.serverUrl.replace(/\/$/, '');
-      this.key = createRemoteJWKSet(new URL('/.well-known/jwks.json', base));
+      this.key = createRemoteJWKSet(new URL('/.well-known/jwks.json', base), { [customFetch]: jwksFetch(deps) });
       this.algorithms = ['RS256', 'RS384', 'RS512', 'ES256', 'ES384', 'ES512', 'PS256', 'PS384', 'PS512'];
     }
   }

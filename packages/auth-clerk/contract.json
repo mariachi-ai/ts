@@ -1,0 +1,167 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "clerk",
+    "name": "Clerk",
+    "category": "auth",
+    "server": "api.clerk.com",
+    "docs": "https://clerk.com/docs/reference/backend-api"
+  },
+  "settings": [
+    {
+      "key": "secretKey",
+      "env": "CLERK_SECRET_KEY",
+      "label": "Secret key",
+      "meaning": "Authenticates the backend to Clerk's Backend API, which serves the instance's signing keys.",
+      "secret": true,
+      "required": true,
+      "whereToFind": "Dashboard › Configure › API keys › Secret keys. The development instance has its own keys.",
+      "url": "https://clerk.com/docs/deployments/clerk-environment-variables",
+      "environments": {
+        "test": {
+          "startsWith": [
+            "sk_test_"
+          ],
+          "because": "A development instance's secret key starts with sk_test_"
+        },
+        "production": {
+          "startsWith": [
+            "sk_live_"
+          ],
+          "because": "A production instance's secret key starts with sk_live_"
+        }
+      }
+    },
+    {
+      "key": "publishableKey",
+      "env": "CLERK_PUBLISHABLE_KEY",
+      "label": "Publishable key",
+      "meaning": "Names the instance, for the frontend and the SDK.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Dashboard › Configure › API keys › Publishable key.",
+      "url": "https://clerk.com/docs/deployments/clerk-environment-variables",
+      "environments": {
+        "test": {
+          "startsWith": [
+            "pk_test_"
+          ],
+          "because": "A development instance's publishable key starts with pk_test_"
+        },
+        "production": {
+          "startsWith": [
+            "pk_live_"
+          ],
+          "because": "A production instance's publishable key starts with pk_live_"
+        }
+      }
+    },
+    {
+      "key": "jwtKey",
+      "env": "CLERK_JWT_KEY",
+      "label": "JWT public key",
+      "meaning": "The instance's public key as PEM, to verify session tokens with no call to Clerk at all. Without it, the keys are read from the Backend API.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Dashboard › Configure › API keys › Show JWT public key › PEM public key.",
+      "url": "https://clerk.com/docs/backend-requests/manual-jwt"
+    },
+    {
+      "key": "webhookSigningSecret",
+      "env": "CLERK_WEBHOOK_SIGNING_SECRET",
+      "label": "Webhook signing secret",
+      "meaning": "Checks that a webhook came from Clerk (through Svix).",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Dashboard › Configure › Webhooks › the endpoint › Signing Secret (whsec_…).",
+      "url": "https://clerk.com/docs/webhooks/sync-data"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "jwks.get",
+      "purpose": "Reads the instance's signing keys from the Backend API, without CLERK_JWT_KEY: when none are cached, every five minutes, and when a token names a key not yet seen (at most once every five seconds).",
+      "method": "GET",
+      "path": "/v1/jwks",
+      "idempotency": "natural"
+    }
+  ],
+  "errors": [
+    {
+      "providerCode": "clerk_key_invalid",
+      "category": "unauthorized",
+      "reason": "key-invalid"
+    }
+  ],
+  "webhooks": {
+    "signature": {
+      "scheme": "standard-webhooks",
+      "header": "svix-signature",
+      "secretSetting": "webhookSigningSecret",
+      "description": "Svix, which Standard Webhooks follows: svix-id, svix-timestamp (Unix seconds) and svix-signature headers; the signature is v1,<base64 HMAC-SHA256 of '<id>.<timestamp>.<raw body>'> keyed with the base64 after whsec_. Several may be space-separated; one match is enough. Refuse a timestamp more than five minutes away."
+    },
+    "events": [
+      {
+        "type": "user.created",
+        "meaning": "A user signed up or was created."
+      },
+      {
+        "type": "user.updated",
+        "meaning": "A user was changed."
+      },
+      {
+        "type": "user.deleted",
+        "meaning": "A user was deleted."
+      },
+      {
+        "type": "session.created",
+        "meaning": "A user signed in."
+      },
+      {
+        "type": "session.ended",
+        "meaning": "A session ended (the user signed out)."
+      },
+      {
+        "type": "session.removed",
+        "meaning": "A session was removed."
+      },
+      {
+        "type": "session.revoked",
+        "meaning": "A session was revoked."
+      },
+      {
+        "type": "organization.created",
+        "meaning": "An organization was created."
+      },
+      {
+        "type": "organization.updated",
+        "meaning": "An organization was changed."
+      },
+      {
+        "type": "organization.deleted",
+        "meaning": "An organization was deleted."
+      },
+      {
+        "type": "organizationMembership.created",
+        "meaning": "A user joined an organization."
+      },
+      {
+        "type": "organizationMembership.updated",
+        "meaning": "A membership was changed (its role, say)."
+      },
+      {
+        "type": "organizationMembership.deleted",
+        "meaning": "A user left an organization."
+      },
+      {
+        "type": "email.created",
+        "meaning": "Clerk would send an email, and lets the app send it instead."
+      }
+    ]
+  }
+}

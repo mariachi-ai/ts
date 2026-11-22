@@ -1,4 +1,6 @@
 import { AuthError, ConfigError } from '@mariachi/core';
+import { ProviderError } from '@mariachi/integrations';
+import { type GoTrueDeps, fetchThrough } from './provider-fetch';
 
 export interface GoTrueVerifiedEmailConfig {
   /** GoTrue's base URL as this server reaches it, path prefix included (e.g. `http://127.0.0.1:9999`, `https://<project>.supabase.co/auth/v1`). */
@@ -66,22 +68,30 @@ const text = (v: unknown): string | undefined => (typeof v === 'string' && v ? v
  *
  * What it can't know: an address confirmed while GoTrue was auto-confirming stays confirmed in the
  * record after the setting is turned off.
+ *
+ * Each read is one `callProvider` call (`gotrue settings.get`, `gotrue users.get`), retried when GoTrue is rate
+ * limiting or briefly down, within `timeoutMs`. `deps` is the container's tracer and metrics.
  */
-export function goTrueVerifiedEmail(config: GoTrueVerifiedEmailConfig): (ctx: object) => Promise<{ email?: string; verified?: boolean }> {
+export function goTrueVerifiedEmail(config: GoTrueVerifiedEmailConfig, deps: GoTrueDeps = {}): (ctx: object) => Promise<{ email?: string; verified?: boolean }> {
   if (!config.url) throw new AuthError('auth/invalid-config', 'GoTrue: `url` is required');
   const base = config.url.replace(/\/+$/, '');
   const request = config.fetch ?? fetch;
   const timeoutMs = config.timeoutMs ?? 5_000;
   const settingsCacheMs = config.settingsCacheMs ?? 60_000;
 
-  const read = async (path: string, what: string, serviceKey: string): Promise<Response> => {
+  /** GoTrue's answer, `answer` only when it's a success. Only a GoTrue that didn't answer at all is an error here. */
+  const read = async (operation: 'settings.get' | 'users.get', path: string, what: string, serviceKey: string): Promise<{ status: number; answer?: Response }> => {
     try {
-      return await request(`${base}${path}`, {
-        headers: { accept: 'application/json', authorization: `Bearer ${serviceKey}`, apikey: serviceKey },
-        signal: AbortSignal.timeout(timeoutMs),
-      });
+      const answer = await fetchThrough(
+        operation,
+        `${base}${path}`,
+        { headers: { accept: 'application/json', authorization: `Bearer ${serviceKey}`, apikey: serviceKey }, signal: AbortSignal.timeout(timeoutMs) },
+        { ...deps, fetch: deps.fetch ?? request },
+      );
+      return { status: answer.status, answer };
     } catch (error) {
-      throw new AuthError('auth/user-lookup-failed', `GoTrue: ${what} could not be read: ${(error as Error).message}`);
+      if (error instanceof ProviderError && error.status !== undefined) return { status: error.status };
+      throw new AuthError('auth/user-lookup-failed', `GoTrue: ${what} could not be read: ${(error as Error).message}`, error instanceof ProviderError ? { category: error.category } : undefined);
     }
   };
 
@@ -89,8 +99,8 @@ export function goTrueVerifiedEmail(config: GoTrueVerifiedEmailConfig): (ctx: ob
   /** Whether GoTrue confirms sign-ups without sending mail. Remembered for a while; a failure is not. */
   const autoconfirms = async (serviceKey: string): Promise<boolean> => {
     if (settings && Date.now() < settings.until) return settings.autoconfirm;
-    const res = await read('/settings', 'its settings', serviceKey);
-    const body = res.ok ? ((await res.json().catch(() => null)) as { mailer_autoconfirm?: unknown } | null) : null;
+    const res = await read('settings.get', '/settings', 'its settings', serviceKey);
+    const body = res.answer ? ((await res.answer.json().catch(() => null)) as { mailer_autoconfirm?: unknown } | null) : null;
     if (typeof body?.mailer_autoconfirm !== 'boolean') {
       throw new AuthError('auth/user-lookup-failed', `GoTrue: its settings did not say whether sign-ups are confirmed by mail (answered ${res.status})`);
     }
@@ -125,10 +135,10 @@ export function goTrueVerifiedEmail(config: GoTrueVerifiedEmailConfig): (ctx: ob
     // A confirmation GoTrue gave without sending mail says nothing about who owns the address
     if (!config.trustAutoconfirm && (await autoconfirms(serviceKey))) return { email, verified: false };
 
-    const res = await read(`/admin/users/${subject}`, "the user's record", serviceKey);
+    const res = await read('users.get', `/admin/users/${subject}`, "the user's record", serviceKey);
     if (res.status === 404) return { email, verified: false };
-    if (!res.ok) throw new AuthError('auth/user-lookup-failed', `GoTrue: reading the user's record answered ${res.status}`);
-    const user = (await res.json().catch(() => null)) as { id?: unknown; email?: unknown; email_confirmed_at?: unknown } | null;
+    if (!res.answer) throw new AuthError('auth/user-lookup-failed', `GoTrue: reading the user's record answered ${res.status}`, { status: res.status });
+    const user = (await res.answer.json().catch(() => null)) as { id?: unknown; email?: unknown; email_confirmed_at?: unknown } | null;
     if (!user || user.id !== subject) throw new AuthError('auth/user-lookup-failed', "GoTrue: the user's record did not come back as expected");
     return { email: text(user.email), verified: text(user.email_confirmed_at) !== undefined };
   };

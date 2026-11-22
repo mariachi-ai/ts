@@ -1,6 +1,8 @@
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { createRemoteJWKSet, customFetch, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import { AuthError } from '@mariachi/core';
+import { ProviderError } from '@mariachi/integrations';
 import type { AuthProvider, AuthWebhookHandler, ResolvedIdentity } from '@mariachi/auth';
+import { type OidcDeps, fetchThrough, jwksFetch } from './provider-fetch';
 import type { AsymmetricAlgorithm, ClaimSource, OidcClaims, OidcConfig } from './types';
 
 const HMAC = /^HS/i;
@@ -63,6 +65,10 @@ function sources<T>(value: ClaimSource<T> | Array<ClaimSource<T>> | undefined, f
  *
  * The signature, `iss`, `aud`, `exp` and `nbf` are checked on every call; only asymmetric
  * algorithms are accepted.
+ *
+ * The discovery document and the keys are fetched through `callProvider`: one CLIENT span each
+ * (`oidc discovery.get`, `oidc jwks.get`), with retries of rate limits and outages. Checking a
+ * token against keys in hand calls nothing. `verify` has no context, so the spans have no tenant.
  */
 export class OidcAuthProvider implements AuthProvider {
   readonly name = 'oidc';
@@ -76,6 +82,8 @@ export class OidcAuthProvider implements AuthProvider {
     private readonly config: OidcConfig,
     /** A key set to use in place of the provider's published one (tests). */
     private readonly jwks?: JWTVerifyGetKey,
+    /** The tracer and metrics for the calls to the issuer. Without them, spans go through `@opentelemetry/api` when it's installed. */
+    private readonly deps: OidcDeps = {},
   ) {
     if (!config.issuer) throw new AuthError('auth/invalid-config', 'OIDC: `issuer` is required');
     requireSecureUrl(config.issuer, '`issuer`', 'auth/invalid-config');
@@ -116,7 +124,9 @@ export class OidcAuthProvider implements AuthProvider {
       claims = result.payload as OidcClaims;
       header = result.protectedHeader;
     } catch (error) {
-      throw new AuthError('auth/invalid-token', `OIDC token verification failed: ${(error as Error).message}`);
+      // A key fetch that failed keeps its status and category; the token itself was never checked
+      const provider = error instanceof ProviderError ? { status: error.status, category: error.category } : undefined;
+      throw new AuthError('auth/invalid-token', `OIDC token verification failed: ${(error as Error).message}`, provider);
     }
     // Everything below runs on a token whose signature, issuer, audience and times already hold.
     if (this.config.tokenType === 'access' && !looksLikeAccessToken(header, claims)) {
@@ -155,7 +165,11 @@ export class OidcAuthProvider implements AuthProvider {
           known.expiresAt = Date.now() + this.maxAgeMs;
           return known.get;
         }
-        const get = createRemoteJWKSet(new URL(url), { cacheMaxAge: this.maxAgeMs, cooldownDuration: this.config.jwksCooldownMs ?? 5_000 });
+        const get = createRemoteJWKSet(new URL(url), {
+          cacheMaxAge: this.maxAgeMs,
+          cooldownDuration: this.config.jwksCooldownMs ?? 5_000,
+          [customFetch]: jwksFetch(this.deps),
+        });
         this.keys = { get, url, expiresAt: Date.now() + this.maxAgeMs };
         return get;
       })
@@ -174,12 +188,13 @@ export class OidcAuthProvider implements AuthProvider {
     const url = this.config.discoveryUrl ?? `${this.config.issuer.replace(/\/+$/, '')}/.well-known/openid-configuration`;
     let document: { issuer?: unknown; jwks_uri?: unknown } | null;
     try {
-      const res = await fetch(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(5_000) });
-      if (!res.ok) throw new AuthError('auth/invalid-token', `OIDC discovery failed: ${url} answered ${res.status}`);
+      const res = await fetchThrough('discovery.get', url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(5_000) }, this.deps);
       document = (await res.json()) as { issuer?: unknown; jwks_uri?: unknown } | null;
     } catch (error) {
-      if (error instanceof AuthError) throw error;
-      throw new AuthError('auth/invalid-token', `OIDC discovery failed: ${(error as Error).message}`);
+      if (error instanceof ProviderError && error.status !== undefined) {
+        throw new AuthError('auth/invalid-token', `OIDC discovery failed: ${url} answered ${error.status}`, { status: error.status, category: error.category });
+      }
+      throw new AuthError('auth/invalid-token', `OIDC discovery failed: ${(error as Error).message}`, error instanceof ProviderError ? { category: error.category } : undefined);
     }
     // The document must be the configured issuer's own, or its keys could be anyone's.
     if (document?.issuer !== this.config.issuer) {

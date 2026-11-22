@@ -1,5 +1,6 @@
 import { decodeJwt } from 'jose';
 import { AuthError } from '@mariachi/core';
+import { type ProviderAttempt, ProviderError, callProvider, categoryForStatus } from '@mariachi/integrations';
 import type {
   AuthorizationUrlInput,
   CodeExchangeInput,
@@ -16,6 +17,8 @@ import type {
   SignOutInput,
   TokenSet,
 } from '@mariachi/auth';
+import { type WorkosOperation, provider } from './generated';
+import type { WorkOSDeps } from './provider-fetch';
 import type { WorkOSIdentityClientConfig } from './types';
 
 type WorkOSSdk = typeof import('@workos-inc/node');
@@ -41,8 +44,46 @@ interface SdkError {
   status?: number;
   code?: string;
   message?: string;
+  error?: string;
+  retryAfter?: number | null;
   pendingAuthenticationToken?: string;
   rawData?: { user?: Record<string, unknown>; error?: string; code?: string; email?: string; [key: string]: unknown };
+}
+
+/** A failed SDK call as `callProvider` sees it. The SDK's own exception stays inside, for the pending sign-ins it carries. */
+class WorkOSCallError extends ProviderError {
+  declare readonly sdkError: unknown;
+}
+
+/**
+ * The SDK's exception as a `ProviderError`: its HTTP status, the category it means, WorkOS's code (`invalid_credentials`,
+ * `email_verification_required`) and `Retry-After`. A dropped connection (a `TypeError`) and anything without a
+ * status pass through: `callProvider` makes the first `unavailable`, and fails on the rest at once.
+ */
+function sdkFailure(error: unknown, attempt: ProviderAttempt): unknown {
+  const e = error as SdkError | undefined;
+  if (typeof e?.status !== 'number') return error;
+  attempt.setStatusCode(e.status);
+  const category = e.name === 'RateLimitExceededException' ? 'rate-limited' : categoryForStatus(e.status);
+  const raw = e.code ?? e.rawData?.code ?? e.rawData?.error ?? e.error;
+  const failure = new WorkOSCallError(`${provider.id}/${category}`, `WorkOS answered ${e.status}`, {
+    category,
+    status: e.status,
+    providerCode: typeof raw === 'string' && /^[a-z][a-z0-9_]*$/.test(raw) ? raw : undefined,
+    retryAfterMs: typeof e.retryAfter === 'number' && e.retryAfter >= 0 ? Math.min(300_000, e.retryAfter * 1000) : undefined,
+  });
+  Object.defineProperty(failure, 'sdkError', { value: error, enumerable: false });
+  return failure;
+}
+
+/** The SDK's own exception behind a failed call, or the failure itself when there's none (WorkOS couldn't be reached). */
+function sdkError(error: unknown): SdkError | undefined {
+  return (error instanceof WorkOSCallError ? error.sdkError : error) as SdkError | undefined;
+}
+
+/** The category of a failed call, for the `AuthError`'s metadata. */
+function categoryOf(error: unknown): { category?: string } {
+  return error instanceof ProviderError ? { category: error.category } : {};
 }
 
 /** Ids in a pending sign-in's raw data the app needs to finish it, camel-cased. */
@@ -99,6 +140,11 @@ function tokens(res: { accessToken: string; refreshToken: string }): TokenSet {
  * `IdentityClient` on the WorkOS User Management API, for a headless sign-in (the app's own
  * pages). Every call is server-side with the environment's API key. `@workos-inc/node` is an
  * optional peer, loaded on first use.
+ *
+ * Every SDK call goes through `callProvider`: one CLIENT span (`workos authenticate.password`,
+ * `workos users.get`), metrics, and the retries, which the SDK's own are turned off for. A POST
+ * is retried only when WorkOS rate limited it. The port's methods carry no context, so the spans
+ * have no tenant.
  */
 export class WorkOSIdentityClient implements IdentityClient {
   readonly provider = 'workos';
@@ -110,6 +156,8 @@ export class WorkOSIdentityClient implements IdentityClient {
     private readonly config: WorkOSIdentityClientConfig,
     /** An SDK client to use instead of loading one (tests). */
     client?: WorkOSClient,
+    /** The tracer and metrics for the calls, from the container. Without them, spans go through `@opentelemetry/api` when it's installed. */
+    private readonly deps: WorkOSDeps = {},
   ) {
     if (!config.apiKey) throw new AuthError('auth/invalid-config', 'WorkOS: `apiKey` is required');
     if (!config.clientId) throw new AuthError('auth/invalid-config', 'WorkOS: `clientId` is required');
@@ -122,6 +170,8 @@ export class WorkOSIdentityClient implements IdentityClient {
       ({ WorkOS }) =>
         new WorkOS(this.config.apiKey, {
           clientId: this.config.clientId,
+          // callProvider retries, so each call is one span with its attempts
+          maxRetries: 0,
           ...(this.config.apiHostname ? { apiHostname: this.config.apiHostname } : {}),
         }),
       () => {
@@ -135,9 +185,26 @@ export class WorkOSIdentityClient implements IdentityClient {
     return this.sdk;
   }
 
+  /** One SDK call through `callProvider`. `unsafe`: not to be repeated after an outage (a POST that creates or spends something). */
+  private async call<T>(operation: WorkosOperation, method: 'GET' | 'POST' | 'PUT' | 'DELETE', fn: (w: WorkOSClient) => Promise<T>, unsafe = method === 'POST'): Promise<T> {
+    const w = await this.client();
+    return callProvider(
+      null,
+      { integration: provider.id, operation, category: provider.category, server: this.host, method },
+      async (attempt) => {
+        try {
+          return await fn(w);
+        } catch (error) {
+          throw sdkFailure(error, attempt);
+        }
+      },
+      { ...this.deps, retry: { unsafe, ...this.deps.retry } },
+    );
+  }
+
   /** Turns the SDK's exceptions into a pending sign-in or an `AuthError`. */
   private failure(error: unknown, refused: 'auth/invalid-credentials' | 'auth/invalid-grant'): SignInResult {
-    const e = error as SdkError;
+    const e = sdkError(error);
     if (e?.name === 'AuthenticationException') {
       const code = e.code ?? e.rawData?.code ?? e.rawData?.error ?? '';
       const reason = PENDING[code];
@@ -164,8 +231,8 @@ export class WorkOSIdentityClient implements IdentityClient {
 
   private error(error: unknown, refused: 'auth/invalid-credentials' | 'auth/invalid-grant'): AuthError {
     if (error instanceof AuthError) return error;
-    const e = error as SdkError;
-    const meta = { status: e?.status, code: e?.code };
+    const e = sdkError(error);
+    const meta = { status: e?.status, code: e?.code, ...categoryOf(error) };
     if (e?.name === 'RateLimitExceededException' || e?.status === 429) {
       return new AuthError('auth/rate-limited', 'WorkOS rate limit reached', meta);
     }
@@ -176,16 +243,17 @@ export class WorkOSIdentityClient implements IdentityClient {
   }
 
   async signInWithPassword(input: PasswordSignInInput): Promise<SignInResult> {
-    const w = await this.client();
     let res: AuthenticationResponse;
     try {
-      res = await w.userManagement.authenticateWithPassword({
-        clientId: this.config.clientId,
-        email: input.email,
-        password: input.password,
-        ipAddress: input.ipAddress,
-        userAgent: input.userAgent,
-      });
+      res = await this.call('authenticate.password', 'POST', (w) =>
+        w.userManagement.authenticateWithPassword({
+          clientId: this.config.clientId,
+          email: input.email,
+          password: input.password,
+          ipAddress: input.ipAddress,
+          userAgent: input.userAgent,
+        }),
+      );
     } catch (error) {
       return this.failure(error, 'auth/invalid-credentials');
     }
@@ -207,16 +275,17 @@ export class WorkOSIdentityClient implements IdentityClient {
   }
 
   async exchangeCode(input: CodeExchangeInput): Promise<SignInResult> {
-    const w = await this.client();
     let res: AuthenticationResponse;
     try {
-      res = await w.userManagement.authenticateWithCodeAndVerifier({
-        clientId: this.config.clientId,
-        code: input.code,
-        codeVerifier: input.codeVerifier,
-        ipAddress: input.ipAddress,
-        userAgent: input.userAgent,
-      });
+      res = await this.call('authenticate.code', 'POST', (w) =>
+        w.userManagement.authenticateWithCodeAndVerifier({
+          clientId: this.config.clientId,
+          code: input.code,
+          codeVerifier: input.codeVerifier,
+          ipAddress: input.ipAddress,
+          userAgent: input.userAgent,
+        }),
+      );
     } catch (error) {
       return this.failure(error, 'auth/invalid-grant');
     }
@@ -224,14 +293,15 @@ export class WorkOSIdentityClient implements IdentityClient {
   }
 
   async refresh(refreshToken: string, context: IdentityRequestContext = {}): Promise<TokenSet> {
-    const w = await this.client();
     try {
-      const res = await w.userManagement.authenticateWithRefreshToken({
-        clientId: this.config.clientId,
-        refreshToken,
-        ipAddress: context.ipAddress,
-        userAgent: context.userAgent,
-      });
+      const res = await this.call('authenticate.refreshToken', 'POST', (w) =>
+        w.userManagement.authenticateWithRefreshToken({
+          clientId: this.config.clientId,
+          refreshToken,
+          ipAddress: context.ipAddress,
+          userAgent: context.userAgent,
+        }),
+      );
       return tokens(res);
     } catch (error) {
       throw this.error(error, 'auth/invalid-grant');
@@ -241,29 +311,27 @@ export class WorkOSIdentityClient implements IdentityClient {
   async signOut(input: SignOutInput): Promise<void> {
     const { sessionId } = input;
     if (!sessionId) return; // WorkOS revokes sessions by id; a refresh token alone names none.
-    const w = await this.client();
     try {
-      await w.userManagement.revokeSession({ sessionId });
+      // Revoking a session twice is the same as once
+      await this.call('sessions.revoke', 'POST', (w) => w.userManagement.revokeSession({ sessionId }), false);
     } catch (error) {
-      if ((error as SdkError)?.status === 404) return; // Already gone.
+      if (sdkError(error)?.status === 404) return; // Already gone.
       throw this.error(error, 'auth/invalid-grant');
     }
   }
 
   async getUser(id: string): Promise<IdentityUser | null> {
-    const w = await this.client();
     try {
-      return toUser(await w.userManagement.getUser(id));
+      return toUser(await this.call('users.get', 'GET', (w) => w.userManagement.getUser(id)));
     } catch (error) {
-      if ((error as SdkError)?.status === 404) return null;
+      if (sdkError(error)?.status === 404) return null;
       throw this.error(error, 'auth/invalid-grant');
     }
   }
 
   async findUserByEmail(email: string): Promise<IdentityUser | null> {
-    const w = await this.client();
     try {
-      const page = await w.userManagement.listUsers({ email, limit: 1 });
+      const page = await this.call('users.list', 'GET', (w) => w.userManagement.listUsers({ email, limit: 1 }));
       const match = page.data.find((u) => u.email.toLowerCase() === email.toLowerCase());
       return match ? toUser(match) : null;
     } catch (error) {
@@ -272,15 +340,16 @@ export class WorkOSIdentityClient implements IdentityClient {
   }
 
   async createUser(input: CreateIdentityUserInput): Promise<IdentityUser> {
-    const w = await this.client();
     try {
-      const created = await w.userManagement.createUser({
-        email: input.email,
-        emailVerified: input.emailVerified,
-        password: input.password,
-        name: input.name,
-        externalId: input.externalId,
-      });
+      const created = await this.call('users.create', 'POST', (w) =>
+        w.userManagement.createUser({
+          email: input.email,
+          emailVerified: input.emailVerified,
+          password: input.password,
+          name: input.name,
+          externalId: input.externalId,
+        }),
+      );
       return toUser(created);
     } catch (error) {
       throw this.error(error, 'auth/invalid-grant');
@@ -288,11 +357,10 @@ export class WorkOSIdentityClient implements IdentityClient {
   }
 
   async deleteUser(id: string): Promise<void> {
-    const w = await this.client();
     try {
-      await w.userManagement.deleteUser(id);
+      await this.call('users.delete', 'DELETE', (w) => w.userManagement.deleteUser(id));
     } catch (error) {
-      if ((error as SdkError)?.status === 404) return;
+      if (sdkError(error)?.status === 404) return;
       throw this.error(error, 'auth/invalid-grant');
     }
   }
@@ -312,43 +380,39 @@ export class WorkOSIdentityClient implements IdentityClient {
   }
 
   async sendPasswordReset(email: string): Promise<EmailDelivery<{ token: string; url?: string; expiresAt?: number }>> {
-    const w = await this.client();
     try {
-      const reset = await w.userManagement.createPasswordReset({ email });
+      const reset = await this.call('passwordResets.create', 'POST', (w) => w.userManagement.createPasswordReset({ email }));
       if (!this.appSendsEmails) return { deliveredBy: 'provider' };
       return { deliveredBy: 'app', token: reset.passwordResetToken, url: reset.passwordResetUrl, expiresAt: Date.parse(reset.expiresAt) || undefined };
     } catch (error) {
-      if ((error as SdkError)?.status === 404) return { deliveredBy: 'nobody' }; // answered as for an account
+      if (sdkError(error)?.status === 404) return { deliveredBy: 'nobody' }; // answered as for an account
       throw this.error(error, 'auth/invalid-grant');
     }
   }
 
   async resetPassword(input: { token: string; password: string }): Promise<IdentityUser> {
-    const w = await this.client();
     try {
-      const { user } = await w.userManagement.resetPassword({ token: input.token, newPassword: input.password });
+      const { user } = await this.call('passwordResets.confirm', 'POST', (w) => w.userManagement.resetPassword({ token: input.token, newPassword: input.password }));
       return toUser(user);
     } catch (error) {
       // A used or unknown token is a 404 (`password_reset_token_not_found`), not a failure of WorkOS.
-      const e = error as SdkError;
-      if (e?.status === 404) throw new AuthError('auth/invalid-grant', 'WorkOS refused the reset: the token is used or unknown', { status: 404, code: e.code });
+      const e = sdkError(error);
+      if (e?.status === 404) throw new AuthError('auth/invalid-grant', 'WorkOS refused the reset: the token is used or unknown', { status: 404, code: e.code, ...categoryOf(error) });
       throw this.error(error, 'auth/invalid-grant');
     }
   }
 
   async setPassword(userId: string, password: string): Promise<void> {
-    const w = await this.client();
     try {
-      await w.userManagement.updateUser({ userId, password });
+      await this.call('users.update', 'PUT', (w) => w.userManagement.updateUser({ userId, password }));
     } catch (error) {
       throw this.error(error, 'auth/invalid-grant');
     }
   }
 
   async startEmailCode(email: string, context: IdentityRequestContext = {}): Promise<EmailDelivery<{ code: string; expiresAt?: number }>> {
-    const w = await this.client();
     try {
-      const magic = await w.userManagement.createMagicAuth({ email, ipAddress: context.ipAddress, userAgent: context.userAgent });
+      const magic = await this.call('magicAuth.create', 'POST', (w) => w.userManagement.createMagicAuth({ email, ipAddress: context.ipAddress, userAgent: context.userAgent }));
       if (!this.appSendsEmails) return { deliveredBy: 'provider' };
       return { deliveredBy: 'app', code: magic.code, expiresAt: Date.parse(magic.expiresAt) || undefined };
     } catch (error) {
@@ -357,9 +421,11 @@ export class WorkOSIdentityClient implements IdentityClient {
   }
 
   async signInWithEmailCode(input: EmailCodeInput): Promise<SignInResult> {
-    const w = await this.client();
     return this.signedIn(
-      () => w.userManagement.authenticateWithMagicAuth({ clientId: this.config.clientId, email: input.email, code: input.code, ipAddress: input.ipAddress, userAgent: input.userAgent }),
+      () =>
+        this.call('authenticate.magicAuth', 'POST', (w) =>
+          w.userManagement.authenticateWithMagicAuth({ clientId: this.config.clientId, email: input.email, code: input.code, ipAddress: input.ipAddress, userAgent: input.userAgent }),
+        ),
       'auth/invalid-grant',
     );
   }
@@ -369,25 +435,25 @@ export class WorkOSIdentityClient implements IdentityClient {
     if (pending.reason !== 'email-verification' || !id) {
       throw new AuthError('auth/not-supported', 'No email verification is pending for this sign-in');
     }
-    const w = await this.client();
     try {
-      return (await w.userManagement.getEmailVerification(id)).code;
+      return (await this.call('emailVerifications.get', 'GET', (w) => w.userManagement.getEmailVerification(id))).code;
     } catch (error) {
       throw this.error(error, 'auth/invalid-grant');
     }
   }
 
   async verifyEmailAndSignIn(input: VerifyEmailInput): Promise<SignInResult> {
-    const w = await this.client();
     return this.signedIn(
       () =>
-        w.userManagement.authenticateWithEmailVerification({
-          clientId: this.config.clientId,
-          code: input.code,
-          pendingAuthenticationToken: input.pendingToken,
-          ipAddress: input.ipAddress,
-          userAgent: input.userAgent,
-        }),
+        this.call('authenticate.emailVerification', 'POST', (w) =>
+          w.userManagement.authenticateWithEmailVerification({
+            clientId: this.config.clientId,
+            code: input.code,
+            pendingAuthenticationToken: input.pendingToken,
+            ipAddress: input.ipAddress,
+            userAgent: input.userAgent,
+          }),
+        ),
       'auth/invalid-grant',
     );
   }

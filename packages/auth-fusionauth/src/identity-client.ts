@@ -1,6 +1,7 @@
 import { createCipheriv, createDecipheriv, hkdfSync, randomBytes } from 'node:crypto';
 import { decodeJwt } from 'jose';
 import { AuthError } from '@mariachi/core';
+import { ProviderError, callProvider, categoryForStatus, parseRetryAfter } from '@mariachi/integrations';
 import type {
   AuthorizationUrlInput,
   CodeExchangeInput,
@@ -16,6 +17,8 @@ import type {
   TokenSet,
   VerifyEmailInput,
 } from '@mariachi/auth';
+import { type FusionauthOperation, provider } from './generated';
+import type { FusionAuthDeps } from './provider-fetch';
 
 export interface FusionAuthIdentityClientConfig {
   /** FusionAuth's base URL (e.g. `https://auth.example.com`). */
@@ -101,6 +104,11 @@ function fusionAuthErrors(body: Record<string, any>): { codes: string[]; message
   };
 }
 
+/** The first of FusionAuth's error codes (`[blank]loginId`, `[TrustTokenRequired]`), for the span. Never its message. */
+function providerCode(body: Record<string, any>): string | undefined {
+  return fusionAuthErrors(body).codes.find((code) => /^\[[A-Za-z]+\][A-Za-z.]*$/.test(code));
+}
+
 /**
  * What a sign-in held at `email-verification` carries in its `pendingToken`: FusionAuth's
  * verification id, the user, and (when the app sends the email) the one-time code. Sealed, so a
@@ -122,20 +130,30 @@ const SEALED_PREFIX = 'fa1.';
  * `IdentityClient` on FusionAuth's APIs: the Login API for password sign-in, OAuth for social
  * sign-in and refresh, and the User API for lookups. Matches what an app did by hand against
  * FusionAuth, so it can move onto `IdentityClient` before switching providers.
+ *
+ * Every call goes through `callProvider`: one CLIENT span (`fusionauth users.login`, `fusionauth users.get`),
+ * metrics, and retries of rate limits and outages (a POST or PATCH only of a rate limit, since FusionAuth
+ * takes no idempotency key). The port's methods carry no context, so the spans have no tenant.
  */
 export class FusionAuthIdentityClient implements IdentityClient {
   readonly provider = 'fusionauth';
 
   private readonly base: string;
+  private readonly host: string;
   private readonly http: typeof fetch;
   private readonly sealKey: Buffer;
 
-  constructor(private readonly config: FusionAuthIdentityClientConfig) {
+  constructor(
+    private readonly config: FusionAuthIdentityClientConfig,
+    /** The tracer and metrics for the calls, from the container. Without them, spans go through `@opentelemetry/api` when it's installed. */
+    private readonly deps: FusionAuthDeps = {},
+  ) {
     for (const k of ['serverUrl', 'apiKey', 'applicationId', 'clientId', 'clientSecret'] as const) {
       if (!config[k]) throw new AuthError('auth/invalid-config', `FusionAuth: \`${k}\` is required`);
     }
     this.base = config.serverUrl.replace(/\/+$/, '');
-    this.http = config.fetch ?? fetch;
+    this.host = hostname(this.base);
+    this.http = deps.fetch ?? config.fetch ?? fetch;
     // Seals held verifications' pending tokens; a new client secret voids the ones outstanding.
     this.sealKey = Buffer.from(hkdfSync('sha256', config.clientSecret, 'mariachi/auth-fusionauth', 'held email verification', 32));
   }
@@ -169,8 +187,13 @@ export class FusionAuthIdentityClient implements IdentityClient {
     }
   }
 
+  /**
+   * One call, through `callProvider`. FusionAuth's answer comes back whatever its status, as before: the callers
+   * read 212, 404 and the rest themselves. A status that isn't 2xx still fails the span, with its category.
+   */
   private async call(
-    method: string,
+    operation: FusionauthOperation,
+    method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
     path: string,
     opts: { json?: unknown; form?: Record<string, string>; ip?: string } = {},
   ): Promise<{ status: number; body: Record<string, any> }> {
@@ -188,32 +211,45 @@ export class FusionAuthIdentityClient implements IdentityClient {
       }
     }
     if (opts.ip) headers['X-Forwarded-For'] = opts.ip;
-    let res: Response;
+    let answer: { status: number; body: Record<string, any> } | undefined;
     try {
-      res = await this.http(`${this.base}${path}`, { method, headers, body });
+      return await callProvider(
+        null,
+        { integration: provider.id, operation, category: provider.category, server: this.host, method },
+        async (attempt) => {
+          answer = undefined;
+          const res = await this.http(`${this.base}${path}`, { method, headers, body });
+          attempt.setStatusCode(res.status);
+          answer = { status: res.status, body: await readBody(res) };
+          if (!res.ok) {
+            const category = categoryForStatus(res.status);
+            throw new ProviderError(`${provider.id}/${category}`, `FusionAuth ${operation} answered ${res.status}`, {
+              category,
+              status: res.status,
+              providerCode: providerCode(answer.body),
+              retryAfterMs: parseRetryAfter(res.headers.get('retry-after')),
+            });
+          }
+          return answer;
+        },
+        // FusionAuth takes no idempotency key: a POST or PATCH is retried only when it was rate limited
+        { ...this.deps, retry: { unsafe: method === 'POST' || method === 'PATCH', ...this.deps.retry } },
+      );
     } catch (error) {
-      throw new AuthError('auth/identity-provider', `FusionAuth request failed: ${(error as Error).message}`);
+      if (error instanceof ProviderError && answer) return answer;
+      throw new AuthError('auth/identity-provider', `FusionAuth request failed: ${(error as Error).message}`, error instanceof ProviderError ? { category: error.category } : undefined);
     }
-    const text = await res.text();
-    let parsed: Record<string, any> = {};
-    if (text) {
-      try {
-        parsed = JSON.parse(text);
-      } catch {
-        parsed = { text };
-      }
-    }
-    return { status: res.status, body: parsed };
   }
 
   private fail(status: number, what: string, refused: 'auth/invalid-credentials' | 'auth/invalid-grant'): AuthError {
-    if (status === 429) return new AuthError('auth/rate-limited', 'FusionAuth rate limit reached', { status });
-    if (status >= 400 && status < 500) return new AuthError(refused, `FusionAuth refused ${what} (${status})`, { status });
-    return new AuthError('auth/identity-provider', `FusionAuth ${what} failed (${status})`, { status });
+    const meta = { status, ...(status >= 400 ? { category: categoryForStatus(status) } : {}) };
+    if (status === 429) return new AuthError('auth/rate-limited', 'FusionAuth rate limit reached', meta);
+    if (status >= 400 && status < 500) return new AuthError(refused, `FusionAuth refused ${what} (${status})`, meta);
+    return new AuthError('auth/identity-provider', `FusionAuth ${what} failed (${status})`, meta);
   }
 
   async signInWithPassword(input: PasswordSignInInput): Promise<SignInResult> {
-    const { status, body } = await this.call('POST', '/api/login', {
+    const { status, body } = await this.call('users.login', 'POST', '/api/login', {
       json: { loginId: input.email, password: input.password, applicationId: this.config.applicationId, ipAddress: input.ipAddress },
       ip: input.ipAddress,
     });
@@ -258,7 +294,7 @@ export class FusionAuthIdentityClient implements IdentityClient {
     let held: HeldVerification = { v: current, u: body.user.id, e: address };
     if (this.appSendsEmails) {
       const query = new URLSearchParams({ email: address, applicationId: this.config.applicationId, sendVerifyEmail: 'false' });
-      const res = await this.call('PUT', `/api/user/verify-email?${query}`);
+      const res = await this.call('emailVerification.start', 'PUT', `/api/user/verify-email?${query}`);
       if (res.status !== 200 || typeof res.body.verificationId !== 'string') throw this.fail(res.status, 'the email verification start', 'auth/invalid-grant');
       // The docs name the code `verificationOneTimeCode`; FusionAuth (1.71) replies with `oneTimeCode`.
       const code = res.body.oneTimeCode ?? res.body.verificationOneTimeCode;
@@ -282,8 +318,8 @@ export class FusionAuthIdentityClient implements IdentityClient {
     return url.toString();
   }
 
-  private async token(form: Record<string, string>, what: string, ip?: string): Promise<Record<string, any>> {
-    const { status, body } = await this.call('POST', '/oauth2/token', {
+  private async token(operation: 'tokens.exchangeCode' | 'tokens.refresh', form: Record<string, string>, what: string, ip?: string): Promise<Record<string, any>> {
+    const { status, body } = await this.call(operation, 'POST', '/oauth2/token', {
       form: { client_id: this.config.clientId, client_secret: this.config.clientSecret, ...form },
       ip,
     });
@@ -293,6 +329,7 @@ export class FusionAuthIdentityClient implements IdentityClient {
 
   async exchangeCode(input: CodeExchangeInput): Promise<SignInResult> {
     const body = await this.token(
+      'tokens.exchangeCode',
       { grant_type: 'authorization_code', code: input.code, code_verifier: input.codeVerifier, redirect_uri: input.redirectUri },
       'the code exchange',
       input.ipAddress,
@@ -308,7 +345,7 @@ export class FusionAuthIdentityClient implements IdentityClient {
   }
 
   async refresh(refreshToken: string, context: IdentityRequestContext = {}): Promise<TokenSet> {
-    const body = await this.token({ grant_type: 'refresh_token', refresh_token: refreshToken }, 'the refresh', context.ipAddress);
+    const body = await this.token('tokens.refresh', { grant_type: 'refresh_token', refresh_token: refreshToken }, 'the refresh', context.ipAddress);
     return { accessToken: body.access_token, refreshToken: body.refresh_token ?? refreshToken, ...session(body.access_token) };
   }
 
@@ -319,27 +356,27 @@ export class FusionAuthIdentityClient implements IdentityClient {
         ? `/api/jwt/refresh/${encodeURIComponent(input.sessionId)}`
         : null;
     if (!path) return;
-    const { status } = await this.call('DELETE', path);
+    const { status } = await this.call('tokens.revoke', 'DELETE', path);
     // 404: already revoked or expired; signed out all the same.
     if (status !== 200 && status !== 404) throw this.fail(status, 'the refresh token revoke', 'auth/invalid-grant');
   }
 
   async getUser(id: string): Promise<IdentityUser | null> {
-    const { status, body } = await this.call('GET', `/api/user/${encodeURIComponent(id)}`);
+    const { status, body } = await this.call('users.get', 'GET', `/api/user/${encodeURIComponent(id)}`);
     if (status === 404) return null;
     if (status !== 200 || !body.user) throw this.fail(status, 'the user lookup', 'auth/invalid-grant');
     return toUser(body.user);
   }
 
   async findUserByEmail(email: string): Promise<IdentityUser | null> {
-    const { status, body } = await this.call('GET', `/api/user?email=${encodeURIComponent(email)}`);
+    const { status, body } = await this.call('users.byEmail', 'GET', `/api/user?email=${encodeURIComponent(email)}`);
     if (status === 404) return null;
     if (status !== 200 || !body.user) throw this.fail(status, 'the user lookup', 'auth/invalid-grant');
     return toUser(body.user);
   }
 
   async createUser(input: CreateIdentityUserInput): Promise<IdentityUser> {
-    const { status, body } = await this.call('POST', '/api/user/registration', {
+    const { status, body } = await this.call('users.create', 'POST', '/api/user/registration', {
       json: {
         user: {
           email: input.email,
@@ -358,7 +395,7 @@ export class FusionAuthIdentityClient implements IdentityClient {
   }
 
   async deleteUser(id: string): Promise<void> {
-    const { status } = await this.call('DELETE', `/api/user/${encodeURIComponent(id)}?hardDelete=true`);
+    const { status } = await this.call('users.delete', 'DELETE', `/api/user/${encodeURIComponent(id)}?hardDelete=true`);
     if (status !== 200 && status !== 404) throw this.fail(status, 'the user deletion', 'auth/invalid-grant');
   }
 
@@ -369,7 +406,7 @@ export class FusionAuthIdentityClient implements IdentityClient {
    */
   async sendPasswordReset(email: string): Promise<EmailDelivery<{ token: string; url?: string; expiresAt?: number }>> {
     const app = this.appSendsEmails;
-    const { status, body } = await this.call('POST', '/api/user/forgot-password', {
+    const { status, body } = await this.call('passwords.forgot', 'POST', '/api/user/forgot-password', {
       json: { loginId: email, applicationId: this.config.applicationId, sendForgotPasswordEmail: !app },
     });
     if (status === 404) return { deliveredBy: 'nobody' }; // answered as for an account
@@ -388,7 +425,7 @@ export class FusionAuthIdentityClient implements IdentityClient {
    * with `noJWT`, names the user without issuing tokens (FusionAuth records it as a login).
    */
   async resetPassword(input: { token: string; password: string }): Promise<IdentityUser> {
-    const changed = await this.call('POST', '/api/user/change-password', { json: { changePasswordId: input.token, password: input.password } });
+    const changed = await this.call('passwords.change', 'POST', '/api/user/change-password', { json: { changePasswordId: input.token, password: input.password } });
     if (changed.status === 404) throw new AuthError('auth/invalid-grant', 'FusionAuth refused the reset: the token is used, expired or unknown', { status: 404 });
     if (changed.status === 400) {
       const { codes, message } = fusionAuthErrors(changed.body);
@@ -400,7 +437,7 @@ export class FusionAuthIdentityClient implements IdentityClient {
     }
     if (changed.status !== 200 || typeof changed.body.oneTimePassword !== 'string') throw this.fail(changed.status, 'the password reset', 'auth/invalid-grant');
 
-    const { status, body } = await this.call('POST', '/api/login', {
+    const { status, body } = await this.call('users.login', 'POST', '/api/login', {
       json: { oneTimePassword: changed.body.oneTimePassword, applicationId: this.config.applicationId, noJWT: true },
     });
     if (status === 429) throw this.fail(status, 'the login after the reset', 'auth/invalid-grant');
@@ -409,20 +446,20 @@ export class FusionAuthIdentityClient implements IdentityClient {
   }
 
   async setPassword(userId: string, password: string): Promise<void> {
-    const { status } = await this.call('PATCH', `/api/user/${encodeURIComponent(userId)}`, { json: { user: { password } } });
+    const { status } = await this.call('users.update', 'PATCH', `/api/user/${encodeURIComponent(userId)}`, { json: { user: { password } } });
     if (status !== 200) throw this.fail(status, 'the password change', 'auth/invalid-grant');
   }
 
   /** FusionAuth's passwordless API: the app sends the code. */
   async startEmailCode(email: string): Promise<EmailDelivery<{ code: string; expiresAt?: number }>> {
-    const { status, body } = await this.call('POST', '/api/passwordless/start', { json: { loginId: email, applicationId: this.config.applicationId } });
+    const { status, body } = await this.call('passwordless.start', 'POST', '/api/passwordless/start', { json: { loginId: email, applicationId: this.config.applicationId } });
     if (status === 404) return { deliveredBy: 'nobody' };
     if (status !== 200 || typeof body.code !== 'string') throw this.fail(status, 'the passwordless start', 'auth/invalid-grant');
     return { deliveredBy: 'app', code: body.code };
   }
 
   async signInWithEmailCode(input: EmailCodeInput): Promise<SignInResult> {
-    const { status, body } = await this.call('POST', '/api/passwordless/login', { json: { code: input.code, ipAddress: input.ipAddress }, ip: input.ipAddress });
+    const { status, body } = await this.call('passwordless.login', 'POST', '/api/passwordless/login', { json: { code: input.code, ipAddress: input.ipAddress }, ip: input.ipAddress });
     if (status === 404) throw new AuthError('auth/invalid-grant', 'The code is wrong or expired', { status });
     return this.loginResult(status, body, input.email, 'the passwordless login');
   }
@@ -452,7 +489,7 @@ export class FusionAuthIdentityClient implements IdentityClient {
    */
   async verifyEmailAndSignIn(input: VerifyEmailInput): Promise<SignInResult> {
     const held = this.heldFrom(input.pendingToken);
-    const verified = await this.call('POST', '/api/user/verify-email', { json: { verificationId: held.v, oneTimeCode: input.code }, ip: input.ipAddress });
+    const verified = await this.call('emailVerification.verify', 'POST', '/api/user/verify-email', { json: { verificationId: held.v, oneTimeCode: input.code }, ip: input.ipAddress });
     // 400: a wrong code (`[invalid]verificationId`) or none; 404: used, replaced or expired.
     if (verified.status === 400 || verified.status === 404) {
       throw new AuthError('auth/invalid-grant', 'The code is wrong or expired', { status: verified.status, errors: fusionAuthErrors(verified.body).codes });
@@ -460,18 +497,38 @@ export class FusionAuthIdentityClient implements IdentityClient {
     if (verified.status === 403) throw new AuthError('auth/not-supported', "Email verification is off for FusionAuth's tenant", { status: 403 });
     if (verified.status !== 200) throw this.fail(verified.status, 'the email verification', 'auth/invalid-grant');
 
-    const start = await this.call('POST', '/api/passwordless/start', { json: { loginId: held.e, applicationId: this.config.applicationId } });
+    const start = await this.call('passwordless.start', 'POST', '/api/passwordless/start', { json: { loginId: held.e, applicationId: this.config.applicationId } });
     if (start.status === 400 && fusionAuthErrors(start.body).codes.includes('[disabled]applicationId')) {
       throw new AuthError('auth/not-supported', "The email is verified, but signing in after it needs passwordless login enabled on FusionAuth's application", { status: 400 });
     }
     if (start.status === 404) throw new AuthError('auth/invalid-grant', 'The email is verified, but its user is gone', { status: 404 });
     if (start.status !== 200 || typeof start.body.code !== 'string') throw this.fail(start.status, 'the sign-in after verification', 'auth/invalid-grant');
 
-    const { status, body } = await this.call('POST', '/api/passwordless/login', { json: { code: start.body.code, ipAddress: input.ipAddress }, ip: input.ipAddress });
+    const { status, body } = await this.call('passwordless.login', 'POST', '/api/passwordless/login', { json: { code: start.body.code, ipAddress: input.ipAddress }, ip: input.ipAddress });
     const result = await this.loginResult(status, body, held.e, 'the sign-in after verification');
     if (result.status === 'signed-in' && result.user.id !== held.u) {
       throw new AuthError('auth/identity-provider', 'FusionAuth signed in another user than the one it verified');
     }
     return result;
+  }
+}
+
+/** FusionAuth's answer as JSON, `{ text }` when it isn't, `{}` when empty. */
+async function readBody(res: Response): Promise<Record<string, any>> {
+  const text = await res.text();
+  if (!text) return {};
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { text };
+  }
+}
+
+/** The host the spans name. A `serverUrl` that isn't a URL fails on its first call, as it always has. */
+function hostname(base: string): string {
+  try {
+    return new URL(base).hostname;
+  } catch {
+    return 'fusionauth';
   }
 }

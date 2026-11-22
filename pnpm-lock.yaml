@@ -467,6 +467,9 @@ importers:
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
+      '@mariachi/integrations':
+        specifier: workspace:*
+        version: link:../integrations
       '@mariachi/server':
         specifier: workspace:*
         version: link:../server
@@ -476,7 +479,13 @@ importers:
       svix:
         specifier: ^1
         version: 1.86.0
+      zod:
+        specifier: ^3.24
+        version: 3.25.76
     devDependencies:
+      '@mariachi/testing':
+        specifier: workspace:*
+        version: link:../testing
       vitest:
         specifier: ^3
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.11)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
@@ -489,10 +498,19 @@ importers:
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
+      '@mariachi/integrations':
+        specifier: workspace:*
+        version: link:../integrations
       jose:
         specifier: ^6
         version: 6.2.1
+      zod:
+        specifier: ^3.24
+        version: 3.25.76
     devDependencies:
+      '@mariachi/testing':
+        specifier: workspace:*
+        version: link:../testing
       tsup:
         specifier: ^8
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
@@ -511,10 +529,19 @@ importers:
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
+      '@mariachi/integrations':
+        specifier: workspace:*
+        version: link:../integrations
       jose:
         specifier: ^6
         version: 6.2.1
+      zod:
+        specifier: ^3.24
+        version: 3.25.76
     devDependencies:
+      '@mariachi/testing':
+        specifier: workspace:*
+        version: link:../testing
       tsup:
         specifier: ^8
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
@@ -533,10 +560,19 @@ importers:
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
+      '@mariachi/integrations':
+        specifier: workspace:*
+        version: link:../integrations
       jose:
         specifier: ^6
         version: 6.2.1
+      zod:
+        specifier: ^3.24
+        version: 3.25.76
     devDependencies:
+      '@mariachi/testing':
+        specifier: workspace:*
+        version: link:../testing
       tsup:
         specifier: ^8
         version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
@@ -555,10 +591,19 @@ importers:
       '@mariachi/core':
         specifier: workspace:*
         version: link:../core
+      '@mariachi/integrations':
+        specifier: workspace:*
+        version: link:../integrations
       jose:
         specifier: ^6
         version: 6.2.1
+      zod:
+        specifier: ^3.24
+        version: 3.25.76
     devDependencies:
+      '@mariachi/testing':
+        specifier: workspace:*
+        version: link:../testing
       '@workos-inc/node':
         specifier: ^11
         version: 11.0.0

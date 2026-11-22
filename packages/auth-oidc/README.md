@@ -111,3 +111,14 @@ check a claim only access tokens carry in `validate`.
 
 `validate` runs last, only on a token whose signature, issuer, audience and times already hold;
 throw an `Error` with the reason to refuse it.
+
+## What each call records
+
+Discovery and the keys are fetched through `callProvider` from `@mariachi/integrations`: one CLIENT
+span each, `oidc discovery.get` and `oidc jwks.get`, with the issuer's host, the method, the status
+and, on failure, the error category; rate limits and outages are retried. Checking a token against
+keys in hand calls nothing. The spans never carry a token, a claim or a URL, and have no tenant
+(`verify` has no context). Pass the container's tracer and metrics as `createOidcAuth(config, { tracer, metrics })`;
+an adapter built on this one passes its own id (`{ integration: 'auth0' }`) to name the spans.
+The operations and settings are in [contract.json](./contract.json).
+
