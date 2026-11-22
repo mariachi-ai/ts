@@ -90,6 +90,8 @@ class JobRunController extends BaseController {
 - **`start()` declares every registered job and schedule** (`PUT /definitions`). That replaces the
   queue's set, so a schedule removed from the code stops. Crons are five fields; a seconds field is
   refused where it is registered (`jobs/invalid-schedule`).
+- **Calls to the queue never follow a redirect** (`redirect: 'error'`), which would carry the key
+  elsewhere: a 3xx is `jobs/unavailable`.
 - **`enqueue`** sends the data with the caller's context (trace, tenant, user), at most 64 KiB of JSON
   (`jobs/payload-too-large`); `dedupKey`, `delay` (in whole seconds) and `priority` go with it.
   `cancel` is true for a run not yet started.
@@ -97,14 +99,17 @@ class JobRunController extends BaseController {
   (429, with `retryAfterMs` in its details), `jobs/unavailable` (5xx, a timeout or no connection) and
   `jobs/rejected` (any other 4xx). The details carry the status and the queue's own error code, never
   the key or a body.
-- **`handleJobRun` checks `Jobs-Signature` against the raw body first** (HMAC-SHA256 over
-  `<t>.<body>`, either of two `v1` values during a rotation, `t` within 300 seconds), then runs the
-  attempt. It answers `200` (done, or a run id already finished), `422` (a body or job that can't
+- **`handleJobRun` checks `Jobs-Signature` first** (HMAC-SHA256 over
+  `<t>.<Jobs-Run-Id>.<Jobs-Run-Attempt>.<raw body>`, either of two `v1` values during a rotation, `t`
+  within 300 seconds), so neither run header can be changed under a signed body; a missing or
+  ill-formed run header is a bad signature. Then it runs the attempt. It answers `200` (done, or a run id already finished), `422` (a body or job that can't
   work), `409` (a non-retryable error), `429` with `Retry-After` (an error carrying `retryAfterMs`, or
   the same run still going here), `401` (a bad signature) or `500` (retry). The answer's `outcome` is
   the error's code, never its message.
-- **Finished run ids** are kept so a repeat isn't run twice. The default keeps the last 10,000 in
-  memory; an app with several instances passes a shared `FinishedRuns` (`has`, `add`) as
+- **Finished run ids** are kept so a repeat isn't run twice. The default keeps the last 10,000 in one
+  process's memory: it is lost on restart and not shared between instances, so a repeat delivered
+  after a restart, or to another instance, runs again. An app that restarts mid-delivery or runs
+  several instances passes a shared `FinishedRuns` (`has`, `add`; a table or Redis) as
   `new HttpJobBackend(config, logger, { finishedRuns })`.
 - **The queue keeps failed runs.** `listDeadLetters()` is empty and `retryDeadLetter` throws
   `jobs/not-supported`: look at and retry failed runs on the queue.

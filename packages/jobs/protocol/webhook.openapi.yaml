@@ -21,9 +21,10 @@ webhooks:
         **The app checks the signature** before anything else (`Jobs-Signature`), against the raw body:
         1. Read `t` and each `v1` from the header.
         2. Refuse it when `t` is more than 300 seconds from the app's clock, either way.
-        3. Compute the lowercase hex HMAC-SHA256 of the string `<t>.<raw body>`, keyed with the UTF-8 bytes of
-           `JOBS_HTTP_SIGNING_SECRET`, and compare it with each `v1` in constant time. One match is enough.
-           While the secret is being rotated, there are two `v1` values, one per secret.
+        3. Compute the lowercase hex HMAC-SHA256 of the string `<t>.<Jobs-Run-Id>.<Jobs-Run-Attempt>.<raw body>`,
+           keyed with the UTF-8 bytes of `JOBS_HTTP_SIGNING_SECRET`, and compare it with each `v1` in constant
+           time. One match is enough. While the secret is being rotated, there are two `v1` values, one per
+           secret. A missing or ill-formed `Jobs-Run-Id` or `Jobs-Run-Attempt` is a bad signature.
         4. Then parse the body.
 
         **The app refuses a run id it has already finished:** it keeps finished `Jobs-Run-Id`s, and answers
@@ -45,27 +46,30 @@ webhooks:
           description: This attempt's number, from 1. A `429` answer doesn't use one up.
           schema: { type: string, pattern: '^[1-9][0-9]{0,2}$' }
           examples:
-            second: { value: '2' }
+            first: { value: '1' }
         - name: Jobs-Signature
           in: header
           required: true
           description: |
             `t=<Unix seconds>,v1=<64 lowercase hex>`, with a second `,v1=<hex>` during a rotation of the signing
-            secret. See `x-test-vectors` for exact values.
+            secret, over `<t>.<Jobs-Run-Id>.<Jobs-Run-Attempt>.<raw body>`. See `x-test-vectors` for exact values
+            (run `run_01HFQ8Z3J6Y2K9V4T7N5M1C0BD`, attempt `1`).
           schema: { type: string, pattern: '^t=[0-9]{1,12}(,v1=[0-9a-f]{64}){1,2}$' }
           examples:
             one:
-              value: t=1763805000,v1=257258d3318259029c52715ba25142e761124a73ea69019a62733757bb18cc00
+              value: t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8
             rotating:
-              value: t=1763805000,v1=257258d3318259029c52715ba25142e761124a73ea69019a62733757bb18cc00,v1=500dd7cc1a967b0ffdadfac33f4dcfde3a00bade383edb9e58f5c85bdae43b0b
+              value: t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8,v1=e27ccb87659148443268badf41dd7ca786ba01c8ddfd159911414c703ee27205
       x-test-vectors:
         - summary: An example run, signed with one secret, then during a rotation with two
           secrets: [example-signing-secret-new, example-signing-secret-old]
           timestamp: 1763805000
+          runId: run_01HFQ8Z3J6Y2K9V4T7N5M1C0BD
+          attempt: '1'
           body: '{"job":"make-thumbnails","data":{"uploadId":"u_42"},"trigger":"enqueue","scheduledFor":null}'
           signatures:
-            - t=1763805000,v1=257258d3318259029c52715ba25142e761124a73ea69019a62733757bb18cc00
-            - t=1763805000,v1=257258d3318259029c52715ba25142e761124a73ea69019a62733757bb18cc00,v1=500dd7cc1a967b0ffdadfac33f4dcfde3a00bade383edb9e58f5c85bdae43b0b
+            - t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8
+            - t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8,v1=e27ccb87659148443268badf41dd7ca786ba01c8ddfd159911414c703ee27205
       requestBody:
         required: true
         content:

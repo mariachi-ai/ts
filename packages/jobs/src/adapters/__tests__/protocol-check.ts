@@ -43,6 +43,8 @@ export function requestSchemaFor(method: string, path: string): string | undefin
 export interface RunVector {
   secrets: string[];
   timestamp: number;
+  runId: string;
+  attempt: string;
   body: string;
   signatures: string[];
 }

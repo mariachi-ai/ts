@@ -34,6 +34,8 @@ function queue(answers: Array<() => Response> = []) {
     const body = init?.body ? JSON.parse(String(init.body)) : undefined;
     const method = init?.method ?? 'GET';
     sent.push({ method, path: url.pathname, headers: new Headers(init?.headers), body });
+    // Every call refuses to follow a redirect, which would carry the key elsewhere
+    expect(init?.redirect).toBe('error');
     const schema = requestSchemaFor(method, url.pathname);
     if (schema) expectSchema('app-api', schema, body);
     const next = answers.shift();
@@ -60,7 +62,7 @@ function signed(body: unknown, opts: { runId?: string; attempt?: string; t?: num
   const t = opts.t ?? NOW / 1000;
   return {
     headers: {
-      'Jobs-Signature': signJobRun(opts.secrets ?? [SECRET], raw, t),
+      'Jobs-Signature': signJobRun(opts.secrets ?? [SECRET], { runId: opts.runId ?? RUN_ID, attempt: opts.attempt ?? '1' }, raw, t),
       'jobs-run-id': opts.runId ?? RUN_ID,
       'Jobs-Run-Attempt': opts.attempt ?? '1',
     },
@@ -73,14 +75,15 @@ const runBody = (job: string, data: unknown) => ({ job, data, trigger: 'enqueue'
 describe('the run signature', () => {
   it('matches the protocol test vectors, one secret and two during a rotation', () => {
     for (const v of runVectors) {
-      expect(signJobRun([v.secrets[0] as string], v.body, v.timestamp)).toBe(v.signatures[0]);
-      expect(signJobRun(v.secrets, v.body, v.timestamp)).toBe(v.signatures[1]);
+      const run = { runId: v.runId, attempt: v.attempt };
+      expect(signJobRun([v.secrets[0] as string], run, v.body, v.timestamp)).toBe(v.signatures[0]);
+      expect(signJobRun(v.secrets, run, v.body, v.timestamp)).toBe(v.signatures[1]);
       for (const secret of v.secrets) {
-        expect(verifyJobRunSignature(secret, v.signatures[1], v.body, v.timestamp)).toBe(true);
+        expect(verifyJobRunSignature(secret, v.signatures[1], run, v.body, v.timestamp)).toBe(true);
       }
-      expect(verifyJobRunSignature(v.secrets[0] as string, v.signatures[0], v.body, v.timestamp)).toBe(true);
+      expect(verifyJobRunSignature(v.secrets[0] as string, v.signatures[0], run, v.body, v.timestamp)).toBe(true);
       // The old secret alone is not in a one-secret header
-      expect(verifyJobRunSignature(v.secrets[1] as string, v.signatures[0], v.body, v.timestamp)).toBe(false);
+      expect(verifyJobRunSignature(v.secrets[1] as string, v.signatures[0], run, v.body, v.timestamp)).toBe(false);
     }
   });
 
@@ -88,12 +91,27 @@ describe('the run signature', () => {
     const v = runVectors[0];
     if (!v) throw new Error('no vectors');
     const sig = v.signatures[0];
-    expect(verifyJobRunSignature(v.secrets[0] as string, sig, v.body, v.timestamp + 300)).toBe(true);
-    expect(verifyJobRunSignature(v.secrets[0] as string, sig, v.body, v.timestamp + 301)).toBe(false);
-    expect(verifyJobRunSignature(v.secrets[0] as string, sig, v.body, v.timestamp - 301)).toBe(false);
-    expect(verifyJobRunSignature(v.secrets[0] as string, sig, `${v.body} `, v.timestamp)).toBe(false);
-    expect(verifyJobRunSignature(v.secrets[0] as string, 'garbage', v.body, v.timestamp)).toBe(false);
-    expect(verifyJobRunSignature('', sig, v.body, v.timestamp)).toBe(false);
+    const run = { runId: v.runId, attempt: v.attempt };
+    expect(verifyJobRunSignature(v.secrets[0] as string, sig, run, v.body, v.timestamp + 300)).toBe(true);
+    expect(verifyJobRunSignature(v.secrets[0] as string, sig, run, v.body, v.timestamp + 301)).toBe(false);
+    expect(verifyJobRunSignature(v.secrets[0] as string, sig, run, v.body, v.timestamp - 301)).toBe(false);
+    expect(verifyJobRunSignature(v.secrets[0] as string, sig, run, `${v.body} `, v.timestamp)).toBe(false);
+    expect(verifyJobRunSignature(v.secrets[0] as string, 'garbage', run, v.body, v.timestamp)).toBe(false);
+    expect(verifyJobRunSignature('', sig, run, v.body, v.timestamp)).toBe(false);
+  });
+
+  it('covers the run headers: the same body and signature under another run id or attempt is refused', () => {
+    const v = runVectors[0];
+    if (!v) throw new Error('no vectors');
+    const secret = v.secrets[0] as string;
+    const sig = v.signatures[0];
+    expect(verifyJobRunSignature(secret, sig, { runId: v.runId, attempt: v.attempt }, v.body, v.timestamp)).toBe(true);
+    expect(verifyJobRunSignature(secret, sig, { runId: 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0BE', attempt: v.attempt }, v.body, v.timestamp)).toBe(false);
+    expect(verifyJobRunSignature(secret, sig, { runId: v.runId, attempt: '2' }, v.body, v.timestamp)).toBe(false);
+    // A missing or ill-formed run header is a bad signature too
+    expect(verifyJobRunSignature(secret, sig, { runId: v.runId }, v.body, v.timestamp)).toBe(false);
+    expect(verifyJobRunSignature(secret, sig, { runId: 'run_nope', attempt: v.attempt }, v.body, v.timestamp)).toBe(false);
+    expect(verifyJobRunSignature(secret, sig, undefined, v.body, v.timestamp)).toBe(false);
   });
 });
 
@@ -243,7 +261,31 @@ describe('HttpJobBackend runs (POST /_jobs/run)', () => {
     const tampered = signed(runBody('j', null), { runId: 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0B4' });
     expect((await b.handleRun({ ...tampered, rawBody: Buffer.from('not json at all') })).status).toBe(401);
     expect((await b.handleRun({ headers: {}, rawBody: Buffer.from('{}') })).status).toBe(401);
+    const original = signed(runBody('j', null), { runId: 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0B5', attempt: '1' });
+    const { 'Jobs-Run-Attempt': _dropped, ...noAttempt } = original.headers;
+    expect(await b.handleRun({ ...original, headers: noAttempt })).toMatchObject({ status: 401, body: { outcome: 'bad signature' } });
     expect(runs).toBe(1);
+  });
+
+  // The same body and signature, delivered under other run headers: the signature covers them
+  const replay = async (change: Record<string, string>) => {
+    let runs = 0;
+    const b = await started((b) => b.registerJob(defineJob({ name: 'j', schema: z.unknown(), handler: async () => void runs++ })));
+    const original = signed(runBody('j', null), { runId: 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0B5', attempt: '1' });
+    const res = await b.handleRun({ ...original, headers: { ...original.headers, ...change } });
+    return { res, runs };
+  };
+
+  it('refuses a signed run replayed under another run id', async () => {
+    const { res, runs } = await replay({ 'jobs-run-id': 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0B6' });
+    expect(res).toMatchObject({ status: 401, body: { outcome: 'bad signature' } });
+    expect(runs).toBe(0);
+  });
+
+  it('refuses a signed run replayed as another attempt', async () => {
+    const { res, runs } = await replay({ 'Jobs-Run-Attempt': '2' });
+    expect(res).toMatchObject({ status: 401, body: { outcome: 'bad signature' } });
+    expect(runs).toBe(0);
   });
 
   it('answers 422 for a body or job that cannot work, 409 for a non-retryable failure, 429 for later and 500 to retry', async () => {

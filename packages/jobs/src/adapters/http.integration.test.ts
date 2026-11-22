@@ -73,7 +73,7 @@ class StandInQueue {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
-          'jobs-signature': signJobRun([SECRET], raw, Math.floor(Date.now() / 1000)),
+          'jobs-signature': signJobRun([SECRET], { runId, attempt: String(attempt) }, raw, Math.floor(Date.now() / 1000)),
           'jobs-run-id': runId,
           'jobs-run-attempt': String(attempt),
         },
@@ -134,6 +134,28 @@ afterAll(async () => {
 });
 
 describe('the http job backend against a queue over HTTP', () => {
+  it('refuses a 3xx from the queue without following it, so the key goes nowhere else', async () => {
+    const followed: string[] = [];
+    const elsewhere = createServer((req, res) => {
+      followed.push(String(req.headers.authorization));
+      json(res, 202, { runId: 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0ZY', state: 'queued', deduped: false });
+    });
+    const elsewhereUrl = await listen(elsewhere);
+    const redirecting = createServer((_req, res) => {
+      res.writeHead(307, { location: `${elsewhereUrl}/v1/runs` });
+      res.end();
+    });
+    const redirectingUrl = await listen(redirecting);
+    try {
+      const b = new HttpJobBackend({ httpUrl: `${redirectingUrl}/v1`, httpKey: KEY, httpSigningSecret: SECRET }, silent);
+      await expect(b.enqueue('make-thumbnails', {})).rejects.toMatchObject({ code: 'jobs/unavailable' });
+      expect(followed).toEqual([]);
+    } finally {
+      await new Promise((r) => redirecting.close(r));
+      await new Promise((r) => elsewhere.close(r));
+    }
+  });
+
   it('declares its jobs and schedules at start', () => {
     expect(queue.declared.jobs.map((j) => j.name)).toEqual(['make-thumbnails', 'flaky']);
     expect(queue.declared.schedules).toEqual([{ name: 'morning', cron: '0 8 * * *', tz: 'UTC', job: 'make-thumbnails', data: { uploadId: 'daily' } }]);
@@ -166,7 +188,7 @@ describe('the http job backend against a queue over HTTP', () => {
   it('refuses a run with a bad signature over HTTP', async () => {
     const res = await fetch(`${queue.appUrl}/_jobs/run`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json', 'jobs-signature': signJobRun(['wrong-secret'], '{}', Math.floor(Date.now() / 1000)), 'jobs-run-id': 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0ZZ', 'jobs-run-attempt': '1' },
+      headers: { 'content-type': 'application/json', 'jobs-signature': signJobRun(['wrong-secret'], { runId: 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0ZZ', attempt: '1' }, '{}', Math.floor(Date.now() / 1000)), 'jobs-run-id': 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0ZZ', 'jobs-run-attempt': '1' },
       body: '{}',
     });
     expect(res.status).toBe(401);

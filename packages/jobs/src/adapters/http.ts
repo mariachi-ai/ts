@@ -19,8 +19,9 @@ import { verifyJobRunSignature } from './http-signature';
 
 /**
  * The run ids this app has finished, so a repeated `POST /_jobs/run` for one is answered without
- * running it again. The default keeps the last 10,000 in memory, in this process: an app with several
- * instances behind one address passes one they share (a table, Redis).
+ * running it again. The default (`memoryFinishedRuns`) keeps the last 10,000 in one process's memory:
+ * it is lost on restart and not shared between instances, so an app that restarts mid-delivery or runs
+ * several instances behind one address passes a shared one (a table, Redis).
  */
 export interface FinishedRuns {
   has(runId: string): Promise<boolean>;
@@ -297,6 +298,8 @@ export class HttpJobBackend implements JobQueue, JobWorker, JobScheduler {
           ...(body === undefined ? {} : { 'content-type': 'application/json' }),
         },
         body: body === undefined ? undefined : JSON.stringify(body),
+        // A redirect would carry the key somewhere else: refuse it
+        redirect: 'error',
         signal: AbortSignal.timeout(this.timeoutMs),
       });
     } catch (error) {
@@ -331,12 +334,14 @@ export class HttpJobBackend implements JobQueue, JobWorker, JobScheduler {
   async handleRun(request: JobRunRequest): Promise<JobRunResponse> {
     const raw = request.rawBody ?? '';
     const nowSeconds = Math.floor(this.now() / 1000);
-    if (!verifyJobRunSignature(this.signingSecret, header(request.headers, 'jobs-signature'), raw, nowSeconds)) {
+    const signedRun = { runId: header(request.headers, 'jobs-run-id'), attempt: header(request.headers, 'jobs-run-attempt') };
+    // The signature covers both run headers, so a missing or ill-formed one is a bad signature
+    if (!verifyJobRunSignature(this.signingSecret, header(request.headers, 'jobs-signature'), signedRun, raw, nowSeconds)) {
       return answer(401, 'bad signature');
     }
-    const runId = RunIdSchema.safeParse(header(request.headers, 'jobs-run-id'));
-    const attemptHeader = AttemptSchema.safeParse(header(request.headers, 'jobs-run-attempt'));
-    if (!runId.success || !attemptHeader.success) return answer(422, 'jobs/invalid-run-headers');
+    const runId = RunIdSchema.safeParse(signedRun.runId);
+    const attemptHeader = AttemptSchema.safeParse(signedRun.attempt);
+    if (!runId.success || !attemptHeader.success) return answer(401, 'bad signature');
     let json: unknown;
     try {
       json = JSON.parse(typeof raw === 'string' ? raw : Buffer.from(raw).toString('utf8'));

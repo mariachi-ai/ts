@@ -12,9 +12,13 @@ A job backend for a remote queue spoken over HTTP: `createJobQueue({ adapter: 'h
   `JobsError` from the HTTP status (`jobs/unauthorized`, `jobs/rate-limited`, `jobs/unavailable`,
   `jobs/rejected`), carrying the queue's own code in its details.
 - `handleJobRun(backend, { headers, rawBody })` answers the queue's signed `POST /_jobs/run`: it checks
-  `Jobs-Signature` (HMAC-SHA256 over `<t>.<raw body>`, two values during a rotation, 300 s limit) before
-  anything else, answers a finished run id without running it again, and maps the outcome to 200, 409,
+  `Jobs-Signature` (HMAC-SHA256 over `<t>.<Jobs-Run-Id>.<Jobs-Run-Attempt>.<raw body>`, two values during a
+  rotation, 300 s limit) before anything else, so a missing, ill-formed or changed run header is a bad
+  signature, answers a finished run id without running it again, and maps the outcome to 200, 409,
   422, 429 (with `Retry-After`) or 500. `signJobRun` and `verifyJobRunSignature` are exported.
 - `@mariachi/config` reads `JOBS_ADAPTER`, `JOBS_HTTP_URL`, `JOBS_HTTP_KEY` and `JOBS_HTTP_SIGNING_SECRET`
   (both secrets redacted) into `config.jobs`, and refuses an `http://` `JOBS_HTTP_URL` other than
   localhost in production (`config/insecure-jobs-url`).
+- Calls to the queue refuse redirects (`redirect: 'error'`), so the key is never sent elsewhere. The default
+  `FinishedRuns` lives in one process's memory (lost on restart, not shared between instances); pass a
+  shared one for several instances.
