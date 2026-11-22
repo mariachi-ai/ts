@@ -27,6 +27,12 @@ type WorkOSUser = Awaited<ReturnType<WorkOSClient['userManagement']['getUser']>>
 type AuthenticationResponse = Awaited<ReturnType<WorkOSClient['userManagement']['authenticateWithPassword']>>;
 
 const DEFAULT_API_HOSTNAME = 'api.workos.com';
+/**
+ * The longest wait between attempts of an identity-client call: they hold a user's request (a sign-in) open, so a
+ * provider asking for a longer wait (`Retry-After`) fails at once as `auth/rate-limited`. `deps.retry.maxDelayMs`
+ * overrides it.
+ */
+const SIGN_IN_MAX_DELAY_MS = 2_000;
 const PENDING: Record<string, IdentityPendingReason> = {
   email_verification_required: 'email-verification',
   mfa_challenge: 'mfa',
@@ -198,7 +204,8 @@ export class WorkOSIdentityClient implements IdentityClient {
           throw sdkFailure(error, attempt);
         }
       },
-      { ...this.deps, retry: { unsafe, ...this.deps.retry } },
+      // These calls hold a user's request open, so a wait longer than SIGN_IN_MAX_DELAY_MS fails at once (auth/rate-limited)
+      { ...this.deps, retry: { unsafe, maxDelayMs: SIGN_IN_MAX_DELAY_MS, ...this.deps.retry } },
     );
   }
 

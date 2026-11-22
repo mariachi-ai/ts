@@ -4,6 +4,7 @@ import { SignJWT, exportJWK, generateKeyPair } from 'jose';
 import { describe, expect, it, vi } from 'vitest';
 import { WorkOSIdentityClient } from './identity-client';
 import { WorkOSAuthProvider } from './provider';
+import { fetchThrough } from './provider-fetch';
 
 const CONFIG = { apiKey: 'sk_test_unit', clientId: 'client_01TEST' };
 const noWait = { sleep: async () => {} };
@@ -122,5 +123,30 @@ describe('WorkOSAuthProvider calls', () => {
     expect(fetch.requests.map((r) => r.url.href)).toEqual(['https://api.workos.com/sso/jwks/client_01TEST']);
     expect(tracer.spans.map((s) => [s.name, s.attributes['server.address']])).toEqual([['workos jwks.get', 'api.workos.com']]);
     assertProviderSpans(tracer.spans);
+  });
+});
+
+describe('the deadline on WorkOS key fetches', () => {
+  it('stops waiting for a retry when the caller\'s signal fires, and fails at once on a long Retry-After', async () => {
+    for (const retryAfter of ['5', '120']) {
+      const limited = { status: 429, headers: { 'retry-after': retryAfter } };
+      const fetch = scriptedFetch(limited, limited);
+      const started = Date.now();
+      await expect(fetchThrough('jwks.get', 'https://keys.example.com/jwks', { signal: AbortSignal.timeout(50) }, { fetch })).rejects.toMatchObject({ category: 'rate-limited' });
+      expect(Date.now() - started).toBeLessThan(1_000);
+      expect(fetch.requests).toHaveLength(1);
+    }
+  });
+});
+
+describe('WorkOSIdentityClient waits', () => {
+  it('fails a rate-limited sign-in at once as auth/rate-limited when WorkOS asks for a long wait', async () => {
+    const limited = sdkError('RateLimitExceededException', { status: 429, retryAfter: 5 });
+    const authenticateWithPassword = vi.fn().mockRejectedValueOnce(limited).mockResolvedValueOnce({ user, accessToken, refreshToken: 'rt_1' });
+    const c = client({ authenticateWithPassword }, new TestTracer());
+    const started = Date.now();
+    await expect(c.signInWithPassword({ email: 'ada@example.org', password: 'pw' })).rejects.toMatchObject({ code: 'auth/rate-limited' });
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(authenticateWithPassword).toHaveBeenCalledTimes(1);
   });
 });

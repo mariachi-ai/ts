@@ -99,3 +99,16 @@ describe('the calls to the issuer', () => {
     assertProviderSpans(tracer.spans);
   });
 });
+
+describe('the deadline on OIDC key fetches', () => {
+  it('stops waiting for a retry when the caller\'s signal fires, and fails at once on a long Retry-After', async () => {
+    for (const retryAfter of ['5', '120']) {
+      const limited = { status: 429, headers: { 'retry-after': retryAfter } };
+      const fetch = scriptedFetch(limited, limited);
+      const started = Date.now();
+      await expect(fetchThrough('jwks.get', 'https://keys.example.com/jwks', { signal: AbortSignal.timeout(50) }, { fetch })).rejects.toMatchObject({ category: 'rate-limited' });
+      expect(Date.now() - started).toBeLessThan(1_000);
+      expect(fetch.requests).toHaveLength(1);
+    }
+  });
+});

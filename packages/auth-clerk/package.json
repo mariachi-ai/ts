@@ -16,7 +16,6 @@
       "ClerkWebhookController"
     ]
   },
-  "private": true,
   "type": "module",
   "exports": {
     ".": {
@@ -33,6 +32,9 @@
     "dist",
     "contract.json"
   ],
+  "publishConfig": {
+    "access": "public"
+  },
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",

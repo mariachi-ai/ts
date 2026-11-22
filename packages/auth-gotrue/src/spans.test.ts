@@ -3,6 +3,7 @@ import { TestTracer } from '@mariachi/testing';
 import { SignJWT, exportJWK, generateKeyPair } from 'jose';
 import { describe, expect, it } from 'vitest';
 import { GoTrueAuthProvider } from './provider';
+import { fetchThrough } from './provider-fetch';
 import { goTrueVerifiedEmail } from './verified-email';
 
 const url = 'https://project.example.co/auth/v1';
@@ -79,5 +80,18 @@ describe('goTrueVerifiedEmail calls', () => {
       ['gotrue users.get', 1, 'unauthorized'],
     ]);
     assertProviderSpans(tracer.spans);
+  });
+});
+
+describe('the deadline on GoTrue key fetches', () => {
+  it('stops waiting for a retry when the caller\'s signal fires, and fails at once on a long Retry-After', async () => {
+    for (const retryAfter of ['5', '120']) {
+      const limited = { status: 429, headers: { 'retry-after': retryAfter } };
+      const fetch = scriptedFetch(limited, limited);
+      const started = Date.now();
+      await expect(fetchThrough('jwks.get', 'https://keys.example.com/jwks', { signal: AbortSignal.timeout(50) }, { fetch })).rejects.toMatchObject({ category: 'rate-limited' });
+      expect(Date.now() - started).toBeLessThan(1_000);
+      expect(fetch.requests).toHaveLength(1);
+    }
   });
 });

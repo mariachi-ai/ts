@@ -6,6 +6,7 @@ import { SignJWT, exportJWK, generateKeyPair } from 'jose';
 import { describe, expect, it } from 'vitest';
 import { FusionAuthIdentityClient } from './identity-client';
 import { FusionAuthAuthProvider } from './provider';
+import { fetchThrough } from './provider-fetch';
 import { FusionAuthWebhookHandler } from './webhooks/handler';
 
 const CONFIG = { serverUrl: 'https://auth.example.org', apiKey: 'fa-api-key', applicationId: 'app-1', clientId: 'client-1', clientSecret: 'secret-1' };
@@ -123,5 +124,29 @@ describe('the key fetches', () => {
     expect(await handler.verify(raw, { 'x-fusionauth-signature-jwt': signature })).toMatchObject({ id: 'ev-1', type: 'user.created' });
     expect(tracer.spans.map((s) => s.name)).toEqual(['fusionauth jwks.get']);
     assertProviderSpans(tracer.spans);
+  });
+});
+
+describe('the deadline on FusionAuth key fetches', () => {
+  it('stops waiting for a retry when the caller\'s signal fires, and fails at once on a long Retry-After', async () => {
+    for (const retryAfter of ['5', '120']) {
+      const limited = { status: 429, headers: { 'retry-after': retryAfter } };
+      const fetch = scriptedFetch(limited, limited);
+      const started = Date.now();
+      await expect(fetchThrough('jwks.get', 'https://keys.example.com/jwks', { signal: AbortSignal.timeout(50) }, { fetch })).rejects.toMatchObject({ category: 'rate-limited' });
+      expect(Date.now() - started).toBeLessThan(1_000);
+      expect(fetch.requests).toHaveLength(1);
+    }
+  });
+});
+
+describe('FusionAuthIdentityClient waits', () => {
+  it('fails a rate-limited sign-in at once as auth/rate-limited when FusionAuth asks for a long wait', async () => {
+    const fetch = scriptedFetch({ status: 429, headers: { 'retry-after': '5' } }, { json: { token: jwt({ sub: 'fa-user-1' }), user: USER } });
+    const client = new FusionAuthIdentityClient(CONFIG, { fetch });
+    const started = Date.now();
+    await expect(client.signInWithPassword({ email: 'ada@example.org', password: 'pw' })).rejects.toMatchObject({ code: 'auth/rate-limited' });
+    expect(Date.now() - started).toBeLessThan(1_000);
+    expect(fetch.requests).toHaveLength(1);
   });
 });

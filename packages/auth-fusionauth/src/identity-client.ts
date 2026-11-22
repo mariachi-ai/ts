@@ -127,6 +127,13 @@ interface HeldVerification {
 const SEALED_PREFIX = 'fa1.';
 
 /**
+ * The longest wait between attempts of an identity-client call: they hold a user's request (a sign-in) open, so a
+ * provider asking for a longer wait (`Retry-After`) fails at once as `auth/rate-limited`. `deps.retry.maxDelayMs`
+ * overrides it.
+ */
+const SIGN_IN_MAX_DELAY_MS = 2_000;
+
+/**
  * `IdentityClient` on FusionAuth's APIs: the Login API for password sign-in, OAuth for social
  * sign-in and refresh, and the User API for lookups. Matches what an app did by hand against
  * FusionAuth, so it can move onto `IdentityClient` before switching providers.
@@ -232,8 +239,9 @@ export class FusionAuthIdentityClient implements IdentityClient {
           }
           return answer;
         },
-        // FusionAuth takes no idempotency key: a POST or PATCH is retried only when it was rate limited
-        { ...this.deps, retry: { unsafe: method === 'POST' || method === 'PATCH', ...this.deps.retry } },
+        // FusionAuth takes no idempotency key: a POST or PATCH is retried only when it was rate limited. These calls
+        // hold a user's request open, so a wait longer than SIGN_IN_MAX_DELAY_MS fails at once (auth/rate-limited)
+        { ...this.deps, retry: { unsafe: method === 'POST' || method === 'PATCH', maxDelayMs: SIGN_IN_MAX_DELAY_MS, ...this.deps.retry } },
       );
     } catch (error) {
       if (error instanceof ProviderError && answer) return answer;

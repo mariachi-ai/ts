@@ -153,7 +153,9 @@ Every call an auth package makes to its provider goes through `callProvider` fro
 `<provider> <operation>` (`workos authenticate.password`, `fusionauth users.get`, `clerk jwks.get`,
 `gotrue settings.get`, `oidc discovery.get`), the calls and duration metrics, and retries of
 `rate-limited` and `unavailable` failures (a POST or PATCH only of a rate limit, unless the provider
-takes an idempotency key). The spans carry the operation, the host, the method, the status and the
+takes an idempotency key). No retry waits past the caller's deadline (a key fetch's or discovery's
+timeout), and the identity clients' calls, which hold a user's request open, wait at most two seconds
+between attempts: a longer `Retry-After` fails at once as `auth/rate-limited`. The spans carry the operation, the host, the method, the status and the
 error category, never a body, a token, an email address, a user id or a URL. The operations are in
 each package's `contract.json`.
 

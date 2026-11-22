@@ -12,7 +12,8 @@ export interface GoTrueDeps extends ProviderDeps {
 /**
  * One GET to GoTrue through `callProvider`: a status that isn't 2xx is a `ProviderError` of its category
  * (`rate-limited` and `unavailable` are retried), and the answer is returned unread. `init.signal` is the deadline
- * for all the attempts together: once it has passed, the call fails at once as `<integration>/timeout`.
+ * for all the attempts together, the waits between them included: once it has passed, the call fails at once
+ * (`<integration>/timeout` during a fetch, the last failure during a wait).
  */
 export function fetchThrough(operation: GotrueOperation, url: string, init: RequestInit, deps: GoTrueDeps): Promise<Response> {
   const integration = provider.id;
@@ -42,7 +43,8 @@ export function fetchThrough(operation: GotrueOperation, url: string, init: Requ
       }
       return res;
     },
-    deps,
+    // The deadline bounds the waits between attempts too: no retry sleeps past it
+    { ...deps, signal: init.signal ?? deps.signal },
   );
 }
 

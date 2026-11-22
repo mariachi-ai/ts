@@ -9,8 +9,15 @@
 The five existing auth adapters call their providers through `callProvider`: one CLIENT span per call
 (`workos authenticate.password`, `fusionauth users.get`, `clerk jwks.get`, `gotrue settings.get`,
 `oidc discovery.get`), the calls and duration metrics, and retries of rate limits and outages (a
-POST or PATCH only of a rate limit). Nothing an app calls changes.
+POST or PATCH only of a rate limit). No method or signature an app calls changes, but the retries
+add latency where there was none: a rate-limited or unavailable call now waits and tries again
+(up to 10 seconds between attempts by default) before it fails.
 
+- Waits are bounded by the caller's deadline: key and discovery fetches pass their timeout signal
+  (`jose`'s JWKS timeout, discovery's five seconds, `goTrueVerifiedEmail`'s `timeoutMs`), so no retry
+  waits past it. The identity clients' calls (FusionAuth and WorkOS sign-in and users) hold a user's
+  request open, so they wait at most two seconds between attempts: a provider that asks for longer
+  (`Retry-After`) fails at once as `auth/rate-limited`. `deps.retry.maxDelayMs` overrides either.
 - Each factory and constructor takes an optional last argument, the container's tracer and metrics
   (`createWorkOSIdentityClient(config, { tracer, metrics })`); without it, spans go through
   `@opentelemetry/api` when it's installed.
