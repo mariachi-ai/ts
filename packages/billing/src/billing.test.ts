@@ -83,6 +83,21 @@ describe('billing webhooks', () => {
     return h.handle(undefined, Buffer.from(body), MemoryBillingAdapter.sign(body, SECRET));
   }
 
+  it("uses the adapter's own reading of its events, on delivery and on replay", async () => {
+    const seen: string[] = [];
+    const own = Object.assign(Object.create(adapter) as MemoryBillingAdapter, {
+      async normalizeWebhook(event: { id: string; type: string; createdAt: Date }) {
+        seen.push(event.type);
+        return [{ type: 'customer.deleted' as const, eventId: event.id, occurredAt: event.createdAt, tenantId: 't1', providerType: event.type, customerId: 'cus_1' }];
+      },
+    });
+    const h = createBillingWebhookHandler({ adapter: own, secret: SECRET, store, idempotency: new InMemoryIdempotencyStore(), onEvent: async (_c, e) => void received.push(e) }, deps);
+    const body = stripeEvent('evt_own', 'something.paddle_says', { id: 'x' }, 100);
+    expect(await h.handle(undefined, Buffer.from(body), MemoryBillingAdapter.sign(body, SECRET))).toMatchObject({ outcome: 'processed', events: ['customer.deleted'] });
+    expect((await h.replay(undefined, 'evt_own')).events).toEqual(['customer.deleted']);
+    expect(seen).toEqual(['something.paddle_says', 'something.paddle_says']);
+  });
+
   it('rejects bad signatures before touching state', async () => {
     const body = stripeEvent('evt_1', 'customer.subscription.created', subscriptionObject('active'), 100);
     await expect(handler().handle(undefined, body, MemoryBillingAdapter.sign(body, 'wrong'))).rejects.toMatchObject({

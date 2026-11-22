@@ -5,6 +5,10 @@ database: customers, subscriptions, plans, charges, refunds, invoices, disputes,
 credit ledger. Your code reads the mirror (fast, tenant-scoped, works when Stripe is slow) and Stripe
 webhooks keep it current.
 
+Stripe is the built-in adapter. A provider package (`@mariachi/billing-<provider>`) puts another
+provider behind the same port: the app picks the adapter in its composition root and the rest of
+this page holds, with the differences that package's README lists.
+
 ## Wire it
 
 ```ts
@@ -259,6 +263,9 @@ What the handler guarantees:
    `failed`, `ignored`), attempt count and payload. Fix the cause, then re-run a failed event with
    `stripeWebhooks.replay(ctx, eventId)`.
 
+An adapter whose provider's events aren't Stripe's reads them itself (`BillingAdapter.normalizeWebhook`)
+into the same normalized events, so the handler, the mirror and replay work the same.
+
 Handlers receive a `ctx` whose `tenantId` is the event's tenant (from `metadata.tenantId` or the
 mirrored customer). Normalized event types: `customer.synced`, `customer.deleted`,
 `subscription.synced`, `subscription.canceled`, `subscription.trial_will_end`, `invoice.paid`,
@@ -270,5 +277,7 @@ mirrored customer). Normalized event types: `customer.synced`, `customer.deleted
 `BillingError` codes include `billing/tenant-required`, `billing/idempotency-key-required`,
 `billing/invalid-input`, `billing/subscription-exists`, `billing/subscription-not-found`,
 `billing/insufficient-credits`, `billing/webhook-not-replayable` and `billing/webhook-not-found`.
+A port method the provider can't do fails with `billing/not-supported` and says what to use instead
+(Paddle makes subscriptions only from a checkout, so its `subscribe` does).
 Stripe errors are mapped by `mapStripeError`, and card declines keep Stripe's decline code in the
 metadata.
