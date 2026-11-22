@@ -6,6 +6,7 @@ export {
   RETRIED_CATEGORIES,
   categoryForStatus,
   parseRetryAfter,
+  parseRateLimitReset,
   type ErrorCategory,
   type ProviderErrorOptions,
 } from './provider-error';
