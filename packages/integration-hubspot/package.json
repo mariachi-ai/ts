@@ -1,0 +1,68 @@
+{
+  "name": "@mariachi/integration-hubspot",
+  "version": "0.0.0",
+  "description": "HubSpot CRM: contacts, companies, deals, notes and their associations, with signed webhooks and the three operations every Mariachi CRM shares.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/integration-hubspot"
+  },
+  "mariachi": {
+    "category": "providers",
+    "status": "alpha",
+    "useWhen": "Keeping contacts, companies and deals in a HubSpot account, or hearing when they change",
+    "entry": [
+      "createHubSpot",
+      "hubspotWebhookAuth",
+      "hubspotEventKey"
+    ]
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
+    "./contract.json": "./contract.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "contract.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "biome lint src",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariachi/core": "workspace:*",
+    "@mariachi/integrations": "workspace:*",
+    "@mariachi/server": "workspace:*",
+    "@mariachi/webhooks": "workspace:*",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@mariachi/testing": "workspace:*",
+    "tsup": "^8",
+    "typescript": "^5.7",
+    "vitest": "^3"
+  }
+}
