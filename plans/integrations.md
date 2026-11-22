@@ -1,8 +1,11 @@
 # Plan: integrations
 
-**Approved 2026-11-17. Not started.** Nothing in this plan exists in code yet: no
-`@mariachi/integration-*` package, no `callProvider`, no `contract.json`. Don't generate code that
-uses them. Work starts only when the maintainer says go.
+**Approved 2026-11-17. In progress, in open pull requests:** the foundation (`callProvider` in #123,
+contracts in #124, the webhook span in #125, connections in #152), the reference integration (Typeform,
+#126) and the provider packages stacked on it (#127 to #153). Until they merge, none of it is on main:
+don't generate code that uses `@mariachi/integration-*`, `callProvider` or `contract.json` from main.
+The open PRs cover more providers than [The list](#the-list) below; the list is brought up to date as
+they merge.
 
 Every third-party integration in Mariachi becomes a part of the same shape:
 
