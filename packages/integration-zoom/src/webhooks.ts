@@ -120,7 +120,8 @@ export function zoomEventType(payload: unknown): string | undefined {
 
 /**
  * What a delivery is deduplicated on: the event, when it happened, the meeting instance, and the participant
- * (someone joining twice is two events). All of it is inside the signed body.
+ * (someone joining twice is two events). All of it is inside the signed body. Returned as a SHA-256 digest, so no
+ * meeting or participant id reaches the logs.
  */
 function dedupKey(rawBody: Buffer): string | undefined {
   const body = parseJson(rawBody) as
@@ -130,7 +131,9 @@ function dedupKey(rawBody: Buffer): string | undefined {
   const object = body.payload?.object;
   const instance = object?.uuid ?? object?.id;
   const participant = object?.participant?.user_id ?? object?.participant?.participant_uuid ?? object?.participant?.id;
-  return [body.event, String(body.event_ts), instance === undefined ? '' : String(instance), participant === undefined ? '' : String(participant)].join(':');
+  const parts = [body.event, String(body.event_ts), instance === undefined ? '' : String(instance), participant === undefined ? '' : String(participant)];
+  // A digest, not the ids: the key is the delivery's `eventId`, which goes into every log line of the delivery
+  return `zoom:${createHash('sha256').update(parts.join('\n')).digest('hex')}`;
 }
 
 function list(secret: Secrets): string[] {

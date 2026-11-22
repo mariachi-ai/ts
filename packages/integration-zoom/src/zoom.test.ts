@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { createContext } from '@mariachi/core';
 import { checkSetting, settingsFromEnv } from '@mariachi/integrations';
 import { assertProviderSpans, scriptedFetch } from '@mariachi/integrations/testing';
@@ -242,7 +243,11 @@ describe('webhooks', () => {
       return auth.auth({ method: 'POST', headers: signed.headers, rawBody: Buffer.from(signed.rawBody), body, params: {}, query: {}, url: '/', routePath: '/', ip: '' }, { logger } as never);
     };
     const joined = (userId: string) => zoomEvent('meeting.participant_joined', { id: 1, uuid: 'uuid-1==', participant: { user_id: userId, user_name: 'Ada' } }, 1764601260000);
-    expect((await identity(joined('16778240')))?.eventId).toBe('meeting.participant_joined:1764601260000:uuid-1==:16778240');
+    const key = (await identity(joined('16778240')))?.eventId;
+    expect(key).toBe(`zoom:${createHash('sha256').update('meeting.participant_joined\n1764601260000\nuuid-1==\n16778240').digest('hex')}`);
+    // It goes into every log line of the delivery, so it names no meeting or participant
+    for (const id of ['uuid-1==', '16778240', 'Ada']) expect(key).not.toContain(id);
+    expect((await identity(joined('16778240')))?.eventId).toBe(key);
     expect((await identity(joined('16778241')))?.eventId).not.toBe((await identity(joined('16778240')))?.eventId);
   });
 

@@ -148,7 +148,8 @@ the events the app uses: `meeting.started`, `meeting.ended`, `meeting.participan
   before the route, so the app registers nothing for it.
 - **Duplicates:** Zoom retries a delivery that fails with a 5xx, up to three times. Each delivery
   is deduplicated (with the `WebhookServer`'s idempotency store) on what Zoom signs: the event,
-  its `event_ts`, the meeting instance's `uuid`, and the participant on participant events. Zoom
+  its `event_ts`, the meeting instance's `uuid`, and the participant on participant events, as a
+  SHA-256 digest so no id reaches the logs. Zoom
   doesn't document whether a retry keeps `event_ts`, so keep the job idempotent too: store by
   `uuid` (and the event).
 - **The body:** the meeting's `id` is always a number (Zoom sends text in some events), and a
