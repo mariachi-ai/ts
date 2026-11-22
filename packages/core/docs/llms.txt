@@ -32,7 +32,8 @@ finds the lines that have every word.
 - [feature-flags](./feature-flags.md): tenant overrides, rollouts, caching
 - [storage](./storage.md): files on S3 and compatible services, local disk or memory; signed URLs, browser uploads
 - [search](./search.md): typed indexes, filters and facets in Postgres, Typesense or memory; tenant scoping, reindexing
-- [integrations](./integrations.md): wrapping a third-party API: validated functions, retries, per-tenant credentials, inbound webhooks
+- [integrations](./integrations.md): calling a third-party provider: callProvider and providerRequest, error categories, retries, webhook signatures, testing
+- [integration-contracts](./integration-contracts.md): the contract.json every provider package starts from: settings, operations, errors, webhooks, and the span each call emits
 - [testing](./testing.md): doubles, contract suites, integration tests
 - [runbook](./runbook.md): running, deploying and configuring an app; developing the framework itself
 - [design](./design.md): the design library: presets, markup contract, overriding at any granularity, tokens

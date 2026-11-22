@@ -1,0 +1,449 @@
+{
+  "$id": "@mariachi/integrations/contract.schema.json",
+  "title": "Mariachi integration contract",
+  "$ref": "#/definitions/IntegrationContract",
+  "definitions": {
+    "IntegrationContract": {
+      "type": "object",
+      "properties": {
+        "$schema": {
+          "type": "string"
+        },
+        "provider": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "category": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]*$"
+            },
+            "server": {
+              "type": "string",
+              "minLength": 1
+            },
+            "baseUrl": {
+              "type": "string",
+              "format": "uri"
+            },
+            "docs": {
+              "type": "string",
+              "format": "uri"
+            }
+          },
+          "required": [
+            "id",
+            "name",
+            "category",
+            "server",
+            "docs"
+          ],
+          "additionalProperties": false
+        },
+        "settings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "key": {
+                "type": "string",
+                "pattern": "^[a-z][A-Za-z0-9]*$"
+              },
+              "env": {
+                "type": "string",
+                "pattern": "^[A-Z][A-Z0-9_]*$"
+              },
+              "label": {
+                "type": "string",
+                "minLength": 1
+              },
+              "meaning": {
+                "type": "string",
+                "minLength": 1
+              },
+              "secret": {
+                "type": "boolean"
+              },
+              "required": {
+                "type": "boolean"
+              },
+              "whereToFind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "public": {
+                "type": "boolean"
+              },
+              "environments": {
+                "type": "object",
+                "properties": {
+                  "test": {
+                    "type": "object",
+                    "properties": {
+                      "startsWith": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1
+                      },
+                      "notStartsWith": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1
+                      },
+                      "because": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  },
+                  "production": {
+                    "type": "object",
+                    "properties": {
+                      "startsWith": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1
+                      },
+                      "notStartsWith": {
+                        "type": "array",
+                        "items": {
+                          "type": "string",
+                          "minLength": 1
+                        },
+                        "minItems": 1
+                      },
+                      "because": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "additionalProperties": false
+                  }
+                },
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "key",
+              "env",
+              "label",
+              "meaning",
+              "secret",
+              "required",
+              "whereToFind"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "credentials": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "app"
+                }
+              },
+              "required": [
+                "kind"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "user"
+                },
+                "oauth": {
+                  "type": "object",
+                  "properties": {
+                    "authorizeUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "tokenUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "minItems": 1
+                    },
+                    "pkce": {
+                      "type": "boolean"
+                    },
+                    "refresh": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "authorizeUrl",
+                    "tokenUrl",
+                    "scopes",
+                    "refresh"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "kind",
+                "oauth"
+              ],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "kind": {
+                  "type": "string",
+                  "const": "app-or-user"
+                },
+                "oauth": {
+                  "type": "object",
+                  "properties": {
+                    "authorizeUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "tokenUrl": {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    "scopes": {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "minItems": 1
+                    },
+                    "pkce": {
+                      "type": "boolean"
+                    },
+                    "refresh": {
+                      "type": "boolean"
+                    }
+                  },
+                  "required": [
+                    "authorizeUrl",
+                    "tokenUrl",
+                    "scopes",
+                    "refresh"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "kind",
+                "oauth"
+              ],
+              "additionalProperties": false
+            }
+          ]
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^[a-z][A-Za-z0-9]*(\\.[a-z][A-Za-z0-9]*)+$"
+              },
+              "purpose": {
+                "type": "string",
+                "minLength": 1
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "PATCH",
+                  "DELETE"
+                ]
+              },
+              "path": {
+                "type": "string",
+                "pattern": "^\\/"
+              },
+              "idempotency": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "header": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "header"
+                    ],
+                    "additionalProperties": false
+                  },
+                  {
+                    "type": "string",
+                    "const": "natural"
+                  },
+                  {
+                    "type": "string",
+                    "const": "none"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "name",
+              "purpose",
+              "idempotency"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1
+        },
+        "errors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "providerCode": {
+                "type": "string",
+                "minLength": 1
+              },
+              "category": {
+                "type": "string",
+                "enum": [
+                  "unauthorized",
+                  "forbidden",
+                  "not-found",
+                  "invalid-request",
+                  "conflict",
+                  "rate-limited",
+                  "unavailable"
+                ]
+              },
+              "reason": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9-]*$"
+              }
+            },
+            "required": [
+              "providerCode",
+              "category",
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "webhooks": {
+          "type": "object",
+          "properties": {
+            "signature": {
+              "type": "object",
+              "properties": {
+                "scheme": {
+                  "type": "string",
+                  "enum": [
+                    "standard-webhooks",
+                    "hmac-sha1-hex",
+                    "hmac-sha256-hex",
+                    "hmac-sha256-base64",
+                    "hmac-sha256-timestamped",
+                    "jwt",
+                    "rsa-sha256-certificate",
+                    "basic-auth",
+                    "shared-secret",
+                    "none"
+                  ]
+                },
+                "header": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "secretSetting": {
+                  "type": "string",
+                  "pattern": "^[a-z][A-Za-z0-9]*$"
+                },
+                "description": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "scheme",
+                "description"
+              ],
+              "additionalProperties": false
+            },
+            "events": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "meaning": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "type",
+                  "meaning"
+                ],
+                "additionalProperties": false
+              },
+              "minItems": 1
+            }
+          },
+          "required": [
+            "signature",
+            "events"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "provider",
+        "settings",
+        "credentials",
+        "operations",
+        "errors"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
