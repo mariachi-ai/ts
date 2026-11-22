@@ -62,6 +62,13 @@ describe('CognitoAuthProvider', () => {
     await expect(auth.verify(await issuer.accessToken({ tenant_id: 'user.cognito.u-1' }))).rejects.toMatchObject({ code: 'auth/invalid-token' });
   });
 
+  it('refuses a custom attribute as tenantClaim unless the app says users cannot write it', async () => {
+    expect(() => createCognitoAuth({ ...pool, tenantClaim: 'custom:tenant_id' })).toThrow(expect.objectContaining({ name: 'ConfigError', code: 'cognito/user-writable-attribute' }));
+    const issuer = await cognitoTestIssuer(pool);
+    const auth = createCognitoAuth({ ...pool, tenantClaim: 'custom:tenant_id', trustCustomAttributes: true }, { jwks: issuer.jwks });
+    expect((await auth.verify(await issuer.accessToken({ 'custom:tenant_id': 't-1' }))).tenantId).toBe('t-1');
+  });
+
   it('checks its configuration, and has no webhooks', () => {
     expect(() => createCognitoAuth({ ...pool, userPoolId: 'nope' })).toThrow(expect.objectContaining({ code: 'auth/invalid-config' }));
     expect(() => createCognitoAuth({ ...pool, region: 'https://x' })).toThrow(expect.objectContaining({ code: 'auth/invalid-config' }));

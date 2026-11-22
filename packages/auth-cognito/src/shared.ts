@@ -1,4 +1,4 @@
-import { AuthError, MariachiError } from '@mariachi/core';
+import { AuthError, ConfigError, MariachiError } from '@mariachi/core';
 import { type FailureInfo, type ProviderDeps, mappedFailure } from '@mariachi/integrations';
 import { CognitoError } from './errors';
 import { errorMap, provider } from './generated';
@@ -18,6 +18,19 @@ export function idpHost(region: string): string {
 export function issuerOf(region: string, userPoolId: string): string {
   if (!/^[\w-]+_[0-9a-zA-Z]+$/.test(userPoolId)) throw new AuthError('auth/invalid-config', 'Cognito: `userPoolId` should look like us-east-1_EXAMPLE');
   return `https://${idpHost(region)}/${userPoolId}`;
+}
+
+/**
+ * Refuses a `custom:` attribute as `option` unless the app says users can't write it. Cognito lets a signed-in user
+ * change their own custom attributes (UpdateUserAttributes with their access token) unless the attribute is left out
+ * of every app client's write attributes, so a tenant or an app id read from one could be the user's own choice.
+ */
+export function assertTrustedAttribute(option: 'tenantClaim' | 'externalIdAttribute', name: string | undefined, trusted: boolean | undefined): void {
+  if (!name || !name.startsWith('custom:') || trusted === true) return;
+  throw new ConfigError(
+    'cognito/user-writable-attribute',
+    `Cognito: \`${option}\` names a custom attribute, which users can change themselves unless it is removed from every app client's write attributes (or set only by AdminCreateUser or a trigger). Do that, then pass \`trustCustomAttributes: true\``,
+  );
 }
 
 /** The managed login domain as an origin: `auth.example.com` and `https://auth.example.com/` both give `https://auth.example.com`. */

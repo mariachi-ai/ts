@@ -2,7 +2,7 @@ import { AuthError, loadOptionalPeer } from '@mariachi/core';
 import { type ProviderDeps, callProvider } from '@mariachi/integrations';
 import type { z } from 'zod';
 import { CognitoError } from './errors';
-import { type CognitoOperation, provider } from './generated';
+import { type CognitoOperation, operations, provider } from './generated';
 import { codeInfo, idpHost } from './shared';
 
 const SDK = '@aws-sdk/client-cognito-identity-provider';
@@ -49,6 +49,9 @@ export function cognitoAdmin(config: AdminConfig, deps: ProviderDeps & { adminCl
 
   return async function send<T>(operation: CognitoOperation, command: Command, input: object, schema: z.ZodType<T, z.ZodTypeDef, unknown>): Promise<T> {
     const loaded = load();
+    // A call Cognito can't recognise as a repeat (AdminCreateUser) isn't retried after a failure it may have acted on:
+    // a lost reply would make the retry fail with UsernameExistsException. Rate limits still are.
+    const callDeps = operations[operation].idempotency === 'none' ? { ...deps, retry: { ...deps.retry, unsafe: true } } : deps;
     return callProvider(
       null,
       { integration: provider.id, operation, category: provider.category, server, method: 'POST' },
@@ -76,7 +79,7 @@ export function cognitoAdmin(config: AdminConfig, deps: ProviderDeps & { adminCl
         }
         return parsed.data;
       },
-      deps,
+      callDeps,
     );
   };
 }

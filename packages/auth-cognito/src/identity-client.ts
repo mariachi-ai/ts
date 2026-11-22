@@ -22,7 +22,7 @@ import { CognitoError } from './errors';
 import { type CognitoConfig, type CognitoOperation, configSchema, provider } from './generated';
 import { type AuthenticationResult, CognitoUser, CreateUserResponse, InitiateAuthResponse, ListUsersResponse, TokenResponse } from './schemas';
 import { cognitoSecretHash } from './secret-hash';
-import { type CognitoDeps, domainOrigin, failure, idpHost, toAuthError } from './shared';
+import { type CognitoDeps, assertTrustedAttribute, domainOrigin, failure, idpHost, toAuthError } from './shared';
 
 export interface CognitoIdentityClientConfig extends CognitoConfig {
   /** OAuth scopes for managed login. Default `openid email profile` (`openid` is what returns an ID token). */
@@ -33,8 +33,17 @@ export interface CognitoIdentityClientConfig extends CognitoConfig {
    * named here.
    */
   identityProviders?: Partial<Record<'google' | 'github', string>>;
-  /** A custom attribute that holds the app's own id for the user, such as `custom:external_id`. */
+  /**
+   * A custom attribute that holds the app's own id for the user, such as `custom:external_id`. Users can write their
+   * own custom attributes by default, so a `custom:` one is refused unless `trustCustomAttributes` is set.
+   */
   externalIdAttribute?: string;
+  /**
+   * Confirms that the `custom:` attribute named by `externalIdAttribute` can't be written by users: it is removed from
+   * every app client's write attributes, or set only by AdminCreateUser or a trigger. Without it, a `custom:`
+   * `externalIdAttribute` throws `ConfigError` `cognito/user-writable-attribute`.
+   */
+  trustCustomAttributes?: boolean;
 }
 
 export interface CognitoIdentityDeps extends CognitoDeps {
@@ -90,6 +99,7 @@ export class CognitoIdentityClient implements IdentityClient {
     const parsed = configSchema.safeParse(config);
     if (!parsed.success) throw new AuthError('auth/invalid-config', `Cognito: ${parsed.error.issues.map((i) => `\`${i.path.join('.')}\` ${i.message}`).join('; ')}`);
     this.cfg = parsed.data;
+    assertTrustedAttribute('externalIdAttribute', config.externalIdAttribute, config.trustCustomAttributes);
     this.host = idpHost(this.cfg.region);
     this.origin = this.cfg.domain ? domainOrigin(this.cfg.domain) : undefined;
     this.admin = cognitoAdmin(this.cfg, deps);

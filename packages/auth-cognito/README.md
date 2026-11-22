@@ -52,6 +52,15 @@ their scopes, and `tenantClaim` names a claim for the tenant (Cognito has no org
 token generation trigger can add one). A token revoked at Cognito still verifies until it expires,
 so keep access tokens short-lived.
 
+**Custom attributes are user-writable by default.** A signed-in user can change their own custom
+attributes (UpdateUserAttributes with their access token) unless the attribute is removed from
+every app client's write attributes, so a `custom:` attribute that names a tenant or the app's id
+for the user could be the user's own choice. A `custom:` `tenantClaim` or `externalIdAttribute` is
+refused with `ConfigError` `cognito/user-writable-attribute` until the app passes
+`trustCustomAttributes: true`, after removing the attribute from every app client's
+WriteAttributes (or setting it only with AdminCreateUser or a trigger). A claim a pre token
+generation trigger adds, under a name that isn't `custom:`, needs no opt-in.
+
 **Signing in.** The same `IdentityClient` as every provider
 ([auth-and-providers.md](../core/docs/auth-and-providers.md#headless-sign-in-identityclient)):
 
@@ -73,7 +82,8 @@ reply.redirect(identity.logoutUrl({ logoutUri }));          // ends the managed 
   Cognito's `email_verified`.
 - Users are identified by `sub`. `createUser` makes one with the email as its username and without
   Cognito's invitation email; with a password, it's set permanent. `externalIdAttribute`
-  (`custom:external_id`) keeps the app's own id.
+  (`custom:external_id`, with `trustCustomAttributes: true`: see above) keeps the app's own id.
+  A create isn't retried after an outage (Cognito may have made the user); rate limits are.
 - With a client secret, password sign-in sends `SECRET_HASH` (`cognitoSecretHash`) and the token
   endpoints get it as Basic auth.
 - Errors are the port's `AuthError`s (`auth/invalid-credentials`, `auth/invalid-grant`,

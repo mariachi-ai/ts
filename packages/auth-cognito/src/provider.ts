@@ -5,7 +5,7 @@ import { providerRequest } from '@mariachi/integrations';
 import { CognitoError } from './errors';
 import { type CognitoConfig, provider } from './generated';
 import { Jwks } from './schemas';
-import { type CognitoDeps, failure, idpHost, issuerOf } from './shared';
+import { type CognitoDeps, assertTrustedAttribute, failure, idpHost, issuerOf } from './shared';
 
 export interface CognitoAuthConfig extends Pick<CognitoConfig, 'region' | 'userPoolId' | 'clientId'> {
   /**
@@ -15,9 +15,16 @@ export interface CognitoAuthConfig extends Pick<CognitoConfig, 'region' | 'userP
   tokenUse?: 'access' | 'id';
   /**
    * A claim that names the user's tenant, such as one a pre token generation trigger adds. Without it, `tenantId`
-   * is empty: Cognito has no organizations of its own.
+   * is empty: Cognito has no organizations of its own. A `custom:` attribute is refused unless `trustCustomAttributes`
+   * is set: users can write their own custom attributes by default.
    */
   tenantClaim?: string;
+  /**
+   * Confirms that the `custom:` attribute named by `tenantClaim` can't be written by users: it is removed from every
+   * app client's write attributes, or set only by AdminCreateUser or a trigger. Without it, a `custom:` `tenantClaim`
+   * throws `ConfigError` `cognito/user-writable-attribute`.
+   */
+  trustCustomAttributes?: boolean;
   /** Clock skew allowed on `exp`, `nbf` and `iat`, in seconds. Default 5. */
   clockToleranceSeconds?: number;
   /** How long fetched keys are trusted before they're fetched again, in ms. Default 10 minutes. */
@@ -48,7 +55,7 @@ export interface CognitoClaims extends JWTPayload {
  * token). Maps them onto `ResolvedIdentity`:
  *
  * - `sub` → `userId`; `cognito:groups` → `roles`; the access token's space-separated `scope` → `scopes`;
- * - `tenantClaim`, when set, → `tenantId`;
+ * - `tenantClaim`, when set, → `tenantId` (a `custom:` attribute only with `trustCustomAttributes`);
  * - the whole verified payload → `claims`.
  *
  * The keys are fetched through `callProvider` (span `cognito jwks.get`) and cached. A token revoked at Cognito (sign-out,
@@ -66,6 +73,7 @@ export class CognitoAuthProvider implements AuthProvider {
     deps: CognitoAuthDeps = {},
   ) {
     if (!config.clientId) throw new AuthError('auth/invalid-config', 'Cognito: `clientId` is required');
+    assertTrustedAttribute('tenantClaim', config.tenantClaim, config.trustCustomAttributes);
     this.issuer = issuerOf(config.region, config.userPoolId);
     this.tokenUse = config.tokenUse ?? 'access';
     const host = idpHost(config.region);

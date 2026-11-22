@@ -197,7 +197,7 @@ describe('users, through the admin API', () => {
   it('creates a user without the invitation, sets the password permanent, and stores the external id', async () => {
     const created = { User: { ...cognitoUser('u-3'), Attributes: [...cognitoUser('u-3').Attributes, { Name: 'custom:external_id', Value: 'app-3' }] } };
     const admin = scriptedAdmin(created, {});
-    const user = await createCognitoIdentityClient({ ...config, externalIdAttribute: 'custom:external_id' }, { adminClient: admin }).createUser({ email: 'ada@example.com', emailVerified: true, password: 'Pw-12345678', name: 'Ada', externalId: 'app-3' });
+    const user = await createCognitoIdentityClient({ ...config, externalIdAttribute: 'custom:external_id', trustCustomAttributes: true }, { adminClient: admin }).createUser({ email: 'ada@example.com', emailVerified: true, password: 'Pw-12345678', name: 'Ada', externalId: 'app-3' });
     expect(user).toMatchObject({ id: 'u-3', externalId: 'app-3' });
     expect(admin.sent).toEqual([
       {
@@ -218,6 +218,32 @@ describe('users, through the admin API', () => {
     expect([err.code, err.metadata.providerCode, err.metadata.category]).toEqual(['auth/invalid-grant', 'UsernameExistsException', 'conflict']);
     expect(err.message).not.toContain('echoes');
     await expect(createCognitoIdentityClient(config, { adminClient: scriptedAdmin() }).createUser({ email: 'a@b.co', emailVerified: false, externalId: 'x' })).rejects.toMatchObject({ code: 'auth/invalid-config' });
+  });
+
+  it("doesn't retry a create after an outage (Cognito may have made the user), but does retry a read", async () => {
+    const down = scriptedAdmin({ error: 'InternalErrorException', status: 500 }, cognitoUser('u-3'));
+    await expect(createCognitoIdentityClient(config, { adminClient: down, ...noWait }).createUser({ email: 'ada@example.com', emailVerified: false })).rejects.toBeDefined();
+    expect(down.sent.map((s) => s.command)).toEqual(['AdminCreateUserCommand']);
+
+    const sent: string[] = [];
+    const unreachable: CognitoAdminClient = {
+      async send(command) {
+        sent.push((command as { constructor: { name: string } }).constructor.name);
+        throw Object.assign(new Error('socket hang up'), { name: 'TimeoutError' });
+      },
+    };
+    await expect(createCognitoIdentityClient(config, { adminClient: unreachable, ...noWait }).createUser({ email: 'ada@example.com', emailVerified: false })).rejects.toBeDefined();
+    expect(sent).toEqual(['AdminCreateUserCommand']);
+
+    const flaky = scriptedAdmin({ error: 'InternalErrorException', status: 500 }, cognitoUser('u-1'));
+    expect((await createCognitoIdentityClient(config, { adminClient: flaky, ...noWait }).getUser('u-1'))?.id).toBe('u-1');
+    expect(flaky.sent.map((s) => s.command)).toEqual(['AdminGetUserCommand', 'AdminGetUserCommand']);
+  });
+
+  it('refuses a custom attribute as externalIdAttribute unless the app says users cannot write it', () => {
+    expect(() => createCognitoIdentityClient({ ...config, externalIdAttribute: 'custom:external_id' })).toThrow(expect.objectContaining({ name: 'ConfigError', code: 'cognito/user-writable-attribute' }));
+    expect(() => createCognitoIdentityClient({ ...config, externalIdAttribute: 'custom:external_id', trustCustomAttributes: false })).toThrow(expect.objectContaining({ code: 'cognito/user-writable-attribute' }));
+    expect(() => createCognitoIdentityClient({ ...config, externalIdAttribute: 'custom:external_id', trustCustomAttributes: true })).not.toThrow();
   });
 
   it('deletes by username, and treats a missing user as deleted', async () => {
