@@ -5,6 +5,7 @@ import { TypeformError } from './errors';
 import { type TypeformConfig, type TypeformOperation, configSchema, errorMap, provider } from './generated';
 import {
   Form,
+  FormIdInput,
   FormPage,
   type FormResponse,
   ListFormsInput,
@@ -13,6 +14,7 @@ import {
   ResponsePage,
   Webhook,
   WebhookList,
+  WebhookTagInput,
 } from './schemas';
 
 export interface TypeformDeps extends ProviderDeps {
@@ -51,7 +53,8 @@ export function createTypeform(config: TypeformConfig, deps: TypeformDeps = {}) 
       return call(ctx, 'forms.list', { method: 'GET', path: '/forms', query: { search: i.search, page: i.page, page_size: i.pageSize } }, FormPage);
     },
     /** One form, with its fields (each with its `ref`) and hidden fields. */
-    async get(ctx: Context, formId: string) {
+    async get(ctx: Context, input: FormIdInput) {
+      const { formId } = parse(FormIdInput, input);
       return call(ctx, 'forms.get', { method: 'GET', path: `/forms/${segment(formId)}` }, Form);
     },
   };
@@ -97,10 +100,13 @@ export function createTypeform(config: TypeformConfig, deps: TypeformDeps = {}) 
       if (!cfg.webhookSecret) throw new TypeformError('typeform/no-webhook-secret', 'Set the webhook secret (TYPEFORM_WEBHOOK_SECRET) before making a webhook', { category: 'invalid-request' });
       return call(ctx, 'webhooks.put', { method: 'PUT', path: `/forms/${segment(i.formId)}/webhooks/${segment(i.tag)}`, json: { url: i.url, enabled: i.enabled, secret: cfg.webhookSecret, verify_ssl: true } }, Webhook);
     },
-    async list(ctx: Context, formId: string) {
+    /** The form's webhooks, without their signing secrets. */
+    async list(ctx: Context, input: FormIdInput) {
+      const { formId } = parse(FormIdInput, input);
       return call(ctx, 'webhooks.list', { method: 'GET', path: `/forms/${segment(formId)}/webhooks` }, WebhookList).then((r) => r.items);
     },
-    async delete(ctx: Context, formId: string, tag: string) {
+    async delete(ctx: Context, input: WebhookTagInput) {
+      const { formId, tag } = parse(WebhookTagInput, input);
       return call(ctx, 'webhooks.delete', { method: 'DELETE', path: `/forms/${segment(formId)}/webhooks/${segment(tag)}` }, z.unknown()).then(() => undefined);
     },
   };

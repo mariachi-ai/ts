@@ -71,7 +71,9 @@ export class WebhookServer {
     this.built = true;
     // A sender checking that an address answers (Intercom asks with HEAD) gets an empty 200: nothing is read,
     // authenticated or dispatched, and nothing about the endpoint beyond its existence is told
+    // Fastify answers HEAD itself on a path that has a GET, so a second HEAD there would be a duplicate route
     const heads = new Set<string>();
+    for (const controller of this.controllers) for (const route of controller.routes()) if (route.method === 'GET') heads.add(route.path);
     for (const controller of this.controllers) {
       for (const route of controller.routes()) {
         if (route.method !== 'GET' && !heads.has(route.path)) {
