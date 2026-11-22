@@ -1,4 +1,4 @@
-import { StorageError } from '@mariachi/core';
+import { ConfigError, StorageError } from '@mariachi/core';
 
 const MAX_KEY_LENGTH = 1024;
 // biome-ignore lint/suspicious/noControlCharactersInRegex: rejecting control characters is the point
@@ -52,4 +52,24 @@ export function normalizePrefix(prefix: string | undefined): string {
   const trimmed = prefix.replace(/\/+$/, '');
   if (!trimmed) return '';
   return `${normalizeKey(trimmed)}/`;
+}
+
+/**
+ * The check behind `publicPrefix`: returns the key when it sits under the prefix, and throws
+ * `storage/not-public` otherwise. With no prefix every key passes.
+ */
+export function publicKey(key: string, prefix: string | undefined): string {
+  const k = normalizeKey(key);
+  const p = normalizePrefix(prefix);
+  if (p && !k.startsWith(p)) {
+    throw new StorageError('storage/not-public', `Only keys under ${p} have a public URL`);
+  }
+  return k;
+}
+
+/** Throws `storage/invalid-config` when `publicPrefix` is set without `publicBaseUrl`. */
+export function requirePublicBase(config: { publicPrefix?: string; publicBaseUrl?: string }): void {
+  if (normalizePrefix(config.publicPrefix) && !config.publicBaseUrl) {
+    throw new ConfigError('storage/invalid-config', 'publicPrefix needs publicBaseUrl (STORAGE_PUBLIC_BASE_URL)');
+  }
 }

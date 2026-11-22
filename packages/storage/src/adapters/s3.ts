@@ -8,7 +8,7 @@ const FEATURE = 'The S3 storage adapter';
 const s3 = (): typeof import('@aws-sdk/client-s3') => loadOptionalPeer('@aws-sdk/client-s3', FEATURE, import.meta.url);
 const presigner = (): typeof import('@aws-sdk/s3-request-presigner') => loadOptionalPeer('@aws-sdk/s3-request-presigner', FEATURE, import.meta.url);
 const multipart = (): typeof import('@aws-sdk/lib-storage') => loadOptionalPeer('@aws-sdk/lib-storage', FEATURE, import.meta.url);
-import { normalizeKey, normalizePrefix } from '../keys';
+import { normalizeKey, normalizePrefix, publicKey, requirePublicBase } from '../keys';
 import type {
   ListOptions,
   ListResult,
@@ -42,17 +42,21 @@ export class S3StorageAdapter implements StorageClient {
   private readonly useAcl: boolean;
   private readonly defaultAcl: string;
   private readonly publicBaseUrl: string;
+  private readonly publicPrefix?: string;
 
   constructor(config: StorageConfig, client?: S3Client) {
     if (!config.bucket || !config.region) {
       throw new ConfigError('storage/invalid-config', 'S3 adapter requires bucket and region');
     }
+    requirePublicBase(config);
+    this.publicPrefix = config.publicPrefix;
     this.client =
       client ??
       new (s3().S3Client)({
         region: config.region,
         endpoint: config.endpoint,
-        forcePathStyle: config.forcePathStyle,
+        // S3-compatible services (MinIO, R2, most others) want path-style addressing.
+        forcePathStyle: config.forcePathStyle ?? Boolean(config.endpoint),
         credentials: config.credentials,
       });
     this.bucket = config.bucket;
@@ -236,7 +240,7 @@ export class S3StorageAdapter implements StorageClient {
   }
 
   publicUrl(key: string): string {
-    return `${this.publicBaseUrl}/${this.fullKey(key).split('/').map(encodeURIComponent).join('/')}`;
+    return `${this.publicBaseUrl}/${this.fullKey(publicKey(key, this.publicPrefix)).split('/').map(encodeURIComponent).join('/')}`;
   }
 
   async isHealthy(): Promise<boolean> {

@@ -13,6 +13,7 @@
     "useWhen": "Storing uploads and files",
     "entry": [
       "createStorage",
+      "storageConfig",
       "DefaultStorage",
       "handleSignedLocalRequest"
     ]

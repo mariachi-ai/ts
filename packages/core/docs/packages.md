@@ -35,7 +35,7 @@
 | [`@mariachi/encryption`](../../encryption/README.md) | beta | Envelope encryption with key rotation (local keys, AWS KMS, GCP KMS). | Encrypting fields or blobs at rest | `createEncryption`, `LocalAdapter`, `AwsKmsAdapter`, `GcpKmsAdapter` |
 | `@mariachi/schema` | beta | Every framework table (users, tenants, auth, billing, audit, ...) in the DSL, for apps to include in their schema. | Adding framework-owned tables to your migrations | `usersTable`, `tenantsTable` |
 | [`@mariachi/search`](../../search/README.md) | beta | Full-text search on Postgres, Typesense or memory, with typed fields, alias-based reindexing and query analytics. | Search indexes over your data | `createSearch`, `createPostgresSearch`, `DefaultSearch`, `SearchIndexer` |
-| [`@mariachi/storage`](../../storage/README.md) | beta | Object storage (S3 and compatibles, local disk, memory) with path-safe keys, streaming, presigned uploads and signed URLs. | Storing uploads and files | `createStorage`, `DefaultStorage`, `handleSignedLocalRequest` |
+| [`@mariachi/storage`](../../storage/README.md) | beta | Object storage (S3 and compatibles, local disk, memory) with path-safe keys, streaming, presigned uploads and signed URLs. | Storing uploads and files | `createStorage`, `storageConfig`, `DefaultStorage`, `handleSignedLocalRequest` |
 
 ## Events, jobs and realtime
 

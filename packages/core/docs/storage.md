@@ -14,12 +14,18 @@ const client = createStorage(config.env === 'production'
 const storage = new DefaultStorage({ client, requireTenant: true }, instrumentation);
 ```
 
+Or from settings alone: `createStorage(storageConfig(config.storage))` reads `STORAGE_ADAPTER`,
+`STORAGE_BUCKET`, `STORAGE_REGION`, `STORAGE_ENDPOINT`, `STORAGE_ACCESS_KEY_ID`,
+`STORAGE_SECRET_ACCESS_KEY` and the rest, so any S3-compatible store works without code. An
+endpoint turns on path-style addressing.
+
 | Option | Adapters | Meaning |
 | --- | --- | --- |
 | `basePath` | all | Key prefix (S3, memory) or root directory (local). |
-| `bucket`, `region`, `endpoint`, `forcePathStyle`, `credentials` | s3 | `endpoint` + `forcePathStyle: true` for MinIO and most S3-compatible services. |
+| `bucket`, `region`, `endpoint`, `forcePathStyle`, `credentials` | s3 | `endpoint` for MinIO, R2 and other S3-compatible services; it defaults `forcePathStyle` to true. |
 | `useAcl`, `defaultAcl` | s3 | Send per-object ACLs. Off by default: most buckets enforce bucket-owner ownership. |
 | `publicBaseUrl` | s3, local | Base of `publicUrl` (a CDN, say). For local, the path where signed URLs are served. |
+| `publicPrefix` | s3, local | Only keys under this prefix (say `public`) get a `publicUrl`; others throw `storage/not-public`. Requires `publicBaseUrl`. |
 | `signingSecret` | local | HMAC secret for local signed URLs. Required for `signedUrl` and `signedUploadUrl`. |
 
 ## Keys

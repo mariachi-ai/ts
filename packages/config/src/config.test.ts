@@ -152,6 +152,35 @@ describe('loadConfig', () => {
     expect(() => loadConfig({}, { env: { LOG_PRETTY: 'sometimes' } })).toThrow(/LOG_PRETTY must be true or false/);
   });
 
+  it('reads an S3-compatible store from settings alone', () => {
+    const config = loadConfig(
+      {},
+      {
+        env: {
+          STORAGE_ADAPTER: 's3',
+          STORAGE_BUCKET: 'uploads',
+          STORAGE_REGION: 'auto',
+          STORAGE_ENDPOINT: 'https://acc.r2.example',
+          STORAGE_ACCESS_KEY_ID: 'key-id',
+          STORAGE_SECRET_ACCESS_KEY: 'key-secret',
+          STORAGE_PUBLIC_BASE_URL: 'https://cdn.example',
+          STORAGE_PUBLIC_PREFIX: 'public',
+        },
+      },
+    );
+    expect(config.storage).toMatchObject({
+      adapter: 's3',
+      bucket: 'uploads',
+      region: 'auto',
+      endpoint: 'https://acc.r2.example',
+      accessKeyId: 'key-id',
+      secretAccessKey: 'key-secret',
+      publicBaseUrl: 'https://cdn.example',
+      publicPrefix: 'public',
+    });
+    expect(() => loadConfig({}, { env: { STORAGE_ENDPOINT: 'not a url' } })).toThrow(ConfigError);
+  });
+
   describe('secrets in the loaded config', () => {
     const secrets = {
       DATABASE_URL: 'postgres://app:db-pass-0123456789@db.internal:5432/app',
@@ -160,6 +189,7 @@ describe('loadConfig', () => {
       SESSION_SECRET: 'session-secret-0123456789-0123456789',
       ENCRYPTION_KEY: 'encryption-key-0123456789-0123456789',
       STORAGE_SIGNING_SECRET: 'storage-signing-0123456789-0123456789',
+      STORAGE_SECRET_ACCESS_KEY: 'storage-secret-access-0123456789',
       STRIPE_SECRET_KEY: 'sk_live_stripe_0123456789',
       STRIPE_WEBHOOK_SECRET: 'whsec_stripe_0123456789',
       RESEND_API_KEY: 're_email_key_0123456789',

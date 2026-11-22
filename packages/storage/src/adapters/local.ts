@@ -5,7 +5,7 @@ import { pipeline } from 'node:stream/promises';
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { StorageError } from '@mariachi/core';
-import { normalizeKey, normalizePrefix } from '../keys';
+import { normalizeKey, normalizePrefix, publicKey, requirePublicBase } from '../keys';
 import type {
   ListOptions,
   ListResult,
@@ -38,8 +38,11 @@ export class LocalStorageAdapter implements StorageClient {
   private readonly root: string;
   private readonly signingSecret?: string;
   private readonly publicBaseUrl: string;
+  private readonly publicPrefix?: string;
 
-  constructor(config: Pick<StorageConfig, 'basePath' | 'signingSecret' | 'publicBaseUrl'> = {}) {
+  constructor(config: Pick<StorageConfig, 'basePath' | 'signingSecret' | 'publicBaseUrl' | 'publicPrefix'> = {}) {
+    requirePublicBase(config);
+    this.publicPrefix = config.publicPrefix;
     this.root = resolve(config.basePath ?? './storage');
     this.signingSecret = config.signingSecret;
     this.publicBaseUrl = (config.publicBaseUrl ?? '/storage').replace(/\/+$/, '');
@@ -231,7 +234,7 @@ export class LocalStorageAdapter implements StorageClient {
   }
 
   publicUrl(key: string): string {
-    return `${this.publicBaseUrl}/${normalizeKey(key).split('/').map(encodeURIComponent).join('/')}`;
+    return `${this.publicBaseUrl}/${publicKey(key, this.publicPrefix).split('/').map(encodeURIComponent).join('/')}`;
   }
 
   async isHealthy(): Promise<boolean> {
