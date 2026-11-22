@@ -1247,6 +1247,9 @@ importers:
       '@mariachi/integrations':
         specifier: workspace:*
         version: link:../integrations
+      '@mariachi/server':
+        specifier: workspace:*
+        version: link:../server
       '@mariachi/webhooks':
         specifier: workspace:*
         version: link:../webhooks
@@ -1254,9 +1257,6 @@ importers:
         specifier: ^3.24
         version: 3.25.76
     devDependencies:
-      '@mariachi/server':
-        specifier: workspace:*
-        version: link:../server
       '@mariachi/testing':
         specifier: workspace:*
         version: link:../testing
