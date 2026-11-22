@@ -1,0 +1,233 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "zoom",
+    "name": "Zoom",
+    "category": "meetings",
+    "server": "api.zoom.us",
+    "baseUrl": "https://api.zoom.us/v2",
+    "docs": "https://developers.zoom.us/docs/api/"
+  },
+  "settings": [
+    {
+      "key": "accountId",
+      "env": "ZOOM_ACCOUNT_ID",
+      "label": "Account ID",
+      "meaning": "The Zoom account the app acts in. Sent with every token request.",
+      "secret": false,
+      "required": true,
+      "whereToFind": "Zoom App Marketplace › Developers › Build an app › Server-to-Server OAuth app › App credentials. Zoom has no sandbox or test keys: use a separate app (or account) for test.",
+      "url": "https://developers.zoom.us/docs/internal-apps/create/"
+    },
+    {
+      "key": "clientId",
+      "env": "ZOOM_CLIENT_ID",
+      "label": "Client ID",
+      "meaning": "The Server-to-Server OAuth app's client id. Not a secret on its own, but only useful with the client secret.",
+      "secret": false,
+      "required": true,
+      "whereToFind": "The same app's App credentials page. The app must be activated (Activation) with its scopes added (Scopes) before it can get a token.",
+      "url": "https://developers.zoom.us/docs/internal-apps/s2s-oauth/"
+    },
+    {
+      "key": "clientSecret",
+      "env": "ZOOM_CLIENT_SECRET",
+      "label": "Client secret",
+      "meaning": "The Server-to-Server OAuth app's client secret: with the client id, it gets the account's access tokens.",
+      "secret": true,
+      "required": true,
+      "whereToFind": "The same app's App credentials page, under the client id.",
+      "url": "https://developers.zoom.us/docs/internal-apps/s2s-oauth/"
+    },
+    {
+      "key": "webhookSecretToken",
+      "env": "ZOOM_WEBHOOK_SECRET_TOKEN",
+      "label": "Webhook secret token",
+      "meaning": "Checks that a webhook came from Zoom, and answers Zoom's check that the endpoint is the app's. Only for receiving events.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "The same app's Feature page (Features › Access), with Event Subscriptions: the Secret Token.",
+      "url": "https://developers.zoom.us/docs/api/webhooks/"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "oauth.token",
+      "purpose": "Gets an access token by the account credentials grant: POST https://zoom.us/oauth/token?grant_type=account_credentials&account_id=<accountId> with Basic auth of the client id and secret. It lasts an hour and there is no refresh token: keep it until shortly before expires_in, then ask again. A new token doesn't invalidate the old one.",
+      "method": "POST",
+      "path": "/oauth/token",
+      "idempotency": "natural"
+    },
+    {
+      "name": "meetings.create",
+      "purpose": "Schedules a meeting hosted by a user (their id or email; a Server-to-Server app doesn't use `me`). Zoom takes no idempotency key, so it isn't retried after an outage: a retry could make a second meeting. Zoom allows 100 creates and updates per host per day (UTC).",
+      "method": "POST",
+      "path": "/users/{userId}/meetings",
+      "idempotency": "none"
+    },
+    {
+      "name": "meetings.get",
+      "purpose": "Reads one meeting by its id: its join link, time and settings. Also how the host's start link is read fresh, since it expires after two hours.",
+      "method": "GET",
+      "path": "/meetings/{meetingId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "meetings.update",
+      "purpose": "Changes a meeting's topic, time, duration or settings; fields left out are kept.",
+      "method": "PATCH",
+      "path": "/meetings/{meetingId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "meetings.delete",
+      "purpose": "Deletes a meeting, or one occurrence of a recurring one.",
+      "method": "DELETE",
+      "path": "/meetings/{meetingId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "meetings.list",
+      "purpose": "Lists a user's meetings (scheduled, live, upcoming or previous), a page at a time by next_page_token.",
+      "method": "GET",
+      "path": "/users/{userId}/meetings",
+      "idempotency": "natural"
+    },
+    {
+      "name": "pastMeetings.get",
+      "purpose": "Reads a meeting that has happened, by id (its latest instance) or by an instance's UUID: when it started and ended, and how many took part.",
+      "method": "GET",
+      "path": "/past_meetings/{meetingId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "pastMeetings.participants",
+      "purpose": "Lists who took part in a past meeting, a page at a time by next_page_token. Paid accounts only.",
+      "method": "GET",
+      "path": "/past_meetings/{meetingId}/participants",
+      "idempotency": "natural"
+    },
+    {
+      "name": "recordings.get",
+      "purpose": "Reads a meeting's cloud recordings, by id (its latest instance) or an instance's UUID: each file with its type and download URL.",
+      "method": "GET",
+      "path": "/meetings/{meetingId}/recordings",
+      "idempotency": "natural"
+    },
+    {
+      "name": "recordings.download",
+      "purpose": "Downloads a recording or transcript file from its download_url (on zoom.us), with the access token as a Bearer token. The URL may redirect.",
+      "method": "GET",
+      "idempotency": "natural"
+    },
+    {
+      "name": "transcripts.get",
+      "purpose": "Reads a meeting's transcript, by id (its latest instance) or an instance's UUID: whether it can be downloaded yet, and its download URL.",
+      "method": "GET",
+      "path": "/meetings/{meetingId}/transcript",
+      "idempotency": "natural"
+    },
+    {
+      "name": "users.get",
+      "purpose": "Reads one user of the account by id or email: their name, email, time zone and status.",
+      "method": "GET",
+      "path": "/users/{userId}",
+      "idempotency": "natural"
+    }
+  ],
+  "errors": [
+    {
+      "providerCode": "124",
+      "category": "unauthorized",
+      "reason": "invalid-token"
+    },
+    {
+      "providerCode": "200",
+      "category": "forbidden",
+      "reason": "no-permission"
+    },
+    {
+      "providerCode": "1001",
+      "category": "not-found",
+      "reason": "user-not-found"
+    },
+    {
+      "providerCode": "3001",
+      "category": "not-found",
+      "reason": "meeting-not-found"
+    },
+    {
+      "providerCode": "3161",
+      "category": "forbidden",
+      "reason": "hosting-not-allowed"
+    },
+    {
+      "providerCode": "3301",
+      "category": "not-found",
+      "reason": "no-recording"
+    },
+    {
+      "providerCode": "3322",
+      "category": "not-found",
+      "reason": "no-transcript"
+    },
+    {
+      "providerCode": "12702",
+      "category": "invalid-request",
+      "reason": "meeting-too-old"
+    }
+  ],
+  "webhooks": {
+    "signature": {
+      "scheme": "hmac-sha256-timestamped",
+      "header": "x-zm-signature",
+      "secretSetting": "webhookSecretToken",
+      "description": "x-zm-signature is v0= followed by the hex HMAC-SHA256, keyed with the secret token, of v0:<x-zm-request-timestamp>:<raw body>. The timestamp is Unix seconds; refuse one more than five minutes from now. Zoom first checks the endpoint with a signed POST whose body is {\"event\":\"endpoint.url_validation\",\"payload\":{\"plainToken\":\"…\"}}: answer within 3 seconds with 200 and {\"plainToken\":\"…\",\"encryptedToken\":<hex HMAC-SHA256 of plainToken, keyed with the secret token>}. Zoom repeats the check every 72 hours."
+    },
+    "events": [
+      {
+        "type": "endpoint.url_validation",
+        "meaning": "Zoom checking that the endpoint is the app's, when it's set and every 72 hours. Answered by the authenticator; never reaches the route."
+      },
+      {
+        "type": "meeting.created",
+        "meaning": "A meeting was scheduled."
+      },
+      {
+        "type": "meeting.updated",
+        "meaning": "A meeting's details changed."
+      },
+      {
+        "type": "meeting.deleted",
+        "meaning": "A meeting was deleted."
+      },
+      {
+        "type": "meeting.started",
+        "meaning": "The host started a meeting."
+      },
+      {
+        "type": "meeting.ended",
+        "meaning": "A meeting ended."
+      },
+      {
+        "type": "meeting.participant_joined",
+        "meaning": "Someone joined a meeting."
+      },
+      {
+        "type": "meeting.participant_left",
+        "meaning": "Someone left a meeting."
+      },
+      {
+        "type": "recording.completed",
+        "meaning": "A meeting's cloud recording files are ready to download."
+      },
+      {
+        "type": "recording.transcript_completed",
+        "meaning": "A cloud recording's audio transcript is ready to download."
+      }
+    ]
+  }
+}
