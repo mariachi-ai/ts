@@ -481,6 +481,43 @@ importers:
         specifier: ^3
         version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.11)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
 
+  packages/auth-entra:
+    dependencies:
+      '@mariachi/auth':
+        specifier: workspace:*
+        version: link:../auth
+      '@mariachi/core':
+        specifier: workspace:*
+        version: link:../core
+      '@mariachi/integrations':
+        specifier: workspace:*
+        version: link:../integrations
+      '@mariachi/server':
+        specifier: workspace:*
+        version: link:../server
+      '@mariachi/webhooks':
+        specifier: workspace:*
+        version: link:../webhooks
+      jose:
+        specifier: ^6
+        version: 6.2.1
+      zod:
+        specifier: ^3.24
+        version: 3.25.76
+    devDependencies:
+      '@mariachi/testing':
+        specifier: workspace:*
+        version: link:../testing
+      tsup:
+        specifier: ^8
+        version: 8.5.1(jiti@2.7.0)(postcss@8.5.31)(typescript@5.9.3)(yaml@2.9.1)
+      typescript:
+        specifier: ^5.7
+        version: 5.9.3
+      vitest:
+        specifier: ^3
+        version: 3.2.4(@types/debug@4.1.13)(@types/node@22.19.11)(jiti@2.7.0)(lightningcss@1.33.0)(yaml@2.9.1)
+
   packages/auth-fusionauth:
     dependencies:
       '@mariachi/auth':
@@ -1072,7 +1109,7 @@ importers:
     devDependencies:
       '@astrojs/check':
         specifier: ^0.9.11
-        version: 0.9.12(@emnapi/runtime@1.11.1)(prettier@3.8.1)(typescript@5.9.3)
+        version: 0.9.12(@emnapi/runtime@1.11.3)(prettier@3.8.1)(typescript@5.9.3)
       '@mariachi/ai':
         specifier: workspace:*
         version: link:../ai
@@ -8105,16 +8142,16 @@ snapshots:
       package-manager-detector: 1.9.0
       tinyexec: 1.3.1
 
-  '@astrojs/astro2tsx@0.1.3(@emnapi/runtime@1.11.1)':
+  '@astrojs/astro2tsx@0.1.3(@emnapi/runtime@1.11.3)':
     dependencies:
       '@emnapi/core': 1.11.3
-      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.1)
+      '@napi-rs/wasm-runtime': 1.2.4(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)
     transitivePeerDependencies:
       - '@emnapi/runtime'
 
-  '@astrojs/check@0.9.12(@emnapi/runtime@1.11.1)(prettier@3.8.1)(typescript@5.9.3)':
+  '@astrojs/check@0.9.12(@emnapi/runtime@1.11.3)(prettier@3.8.1)(typescript@5.9.3)':
     dependencies:
-      '@astrojs/language-server': 2.17.3(@emnapi/runtime@1.11.1)(prettier@3.8.1)(typescript@5.9.3)
+      '@astrojs/language-server': 2.17.3(@emnapi/runtime@1.11.3)(prettier@3.8.1)(typescript@5.9.3)
       chokidar: 5.0.0
       kleur: 4.1.5
       typescript: 5.9.3
@@ -8186,9 +8223,9 @@ snapshots:
       unified: 11.0.5
       yaml: 2.9.1
 
-  '@astrojs/language-server@2.17.3(@emnapi/runtime@1.11.1)(prettier@3.8.1)(typescript@5.9.3)':
+  '@astrojs/language-server@2.17.3(@emnapi/runtime@1.11.3)(prettier@3.8.1)(typescript@5.9.3)':
     dependencies:
-      '@astrojs/astro2tsx': 0.1.3(@emnapi/runtime@1.11.1)
+      '@astrojs/astro2tsx': 0.1.3(@emnapi/runtime@1.11.3)
       '@astrojs/yaml2ts': 0.2.4
       '@volar/kit': 2.4.28(typescript@5.9.3)
       '@volar/language-core': 2.4.28
@@ -9124,11 +9161,11 @@ snapshots:
   '@emnapi/runtime@1.11.1':
     dependencies:
       tslib: 2.8.1
+    optional: true
 
   '@emnapi/runtime@1.11.3':
     dependencies:
       tslib: 2.8.1
-    optional: true
 
   '@emnapi/wasi-threads@1.2.2':
     dependencies:
@@ -9662,10 +9699,10 @@ snapshots:
   '@msgpackr-extract/msgpackr-extract-win32-x64@3.0.3':
     optional: true
 
-  '@napi-rs/wasm-runtime@1.2.4(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.1)':
+  '@napi-rs/wasm-runtime@1.2.4(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)':
     dependencies:
       '@emnapi/core': 1.11.3
-      '@emnapi/runtime': 1.11.1
+      '@emnapi/runtime': 1.11.3
       '@tybys/wasm-util': 0.10.4
 
   '@napi-rs/wasm-runtime@1.2.5(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.1)':
