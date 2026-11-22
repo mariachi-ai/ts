@@ -188,7 +188,7 @@ describe('Connections: a token for each call', () => {
 
     // A client's operation, as the recipe writes it
     const api = async (input: string | URL | Request, init?: RequestInit) => {
-      const auth = (init?.headers as Record<string, string>).authorization;
+      const auth = new Headers(init?.headers).get('authorization');
       return new Response(JSON.stringify({ ok: auth === `Bearer ${credential.accessToken}` }), { status: 200 });
     };
     const out = await providerRequest(
@@ -211,6 +211,57 @@ describe('Connections: a token for each call', () => {
     // A job in the tenant may act for a connection by its id
     await expect(s.connections.resolve(as(null), { provider: 'acme', connectionId: connection.id })).resolves.toMatchObject({ connectionId: connection.id });
     await expect(s.connections.resolve(as(null), { provider: 'acme' })).rejects.toMatchObject({ code: 'integrations/user-required' });
+  });
+
+  it('gives a signed-in user only their own connection by id: another user’s is not found', async () => {
+    const s = setup();
+    const ada = await s.connect(as('ada'));
+    await s.connect(as('bob'));
+    const adas = await s.connections.resolve(as('ada'), { provider: 'acme' });
+    // The same error as an id that doesn't exist, so ids can't be probed
+    await expect(s.connections.resolve(as('bob'), { provider: 'acme', connectionId: ada.id })).rejects.toMatchObject({ code: 'integrations/connection-not-found', statusCode: 404 });
+    await expect(s.connections.resolve(as('bob'), { provider: 'acme', connectionId: crypto.randomUUID() })).rejects.toMatchObject({ code: 'integrations/connection-not-found' });
+    await expect(s.connections.invalidate(as('bob'), { accessToken: adas.accessToken, connectionId: ada.id })).rejects.toMatchObject({ code: 'integrations/connection-not-found' });
+    // Bob's attempt left ada's token alone
+    expect((await s.connections.resolve(as('ada'), { provider: 'acme', connectionId: ada.id })).accessToken).toBe(adas.accessToken);
+    expect(s.idp.log.refreshes).toBe(0);
+    // A context with no user still resolves and invalidates by id
+    await expect(s.connections.resolve(as(null), { provider: 'acme', connectionId: ada.id })).resolves.toMatchObject({ accessToken: adas.accessToken, connectionId: ada.id });
+    await s.connections.invalidate(as(null), adas);
+    expect((await s.connections.resolve(as('ada'), { provider: 'acme' })).accessToken).not.toBe(adas.accessToken);
+    expect(s.idp.log.refreshes).toBe(1);
+  });
+
+  it('uses a token that lives no longer than the margin for half its life before refreshing it', async () => {
+    const s = setup({ expiresIn: 300 });
+    await s.connect(as('ada'));
+    const first = await s.connections.resolve(as('ada'), { provider: 'acme' });
+    s.clock.now += 149_000;
+    expect((await s.connections.resolve(as('ada'), { provider: 'acme' })).accessToken).toBe(first.accessToken);
+    expect(s.idp.log.refreshes).toBe(0);
+    s.clock.now += 2_000;
+    expect((await s.connections.resolve(as('ada'), { provider: 'acme' })).accessToken).not.toBe(first.accessToken);
+    expect(s.idp.log.refreshes).toBe(1);
+    // The refreshed token is fresh too: the next call doesn't refresh again
+    await s.connections.resolve(as('ada'), { provider: 'acme' });
+    expect(s.idp.log.refreshes).toBe(1);
+  });
+
+  it('keeps a rotated refresh token when the refresh answer has expires_in 0', async () => {
+    const options: StandInOptions = {};
+    const s = setup(options);
+    await s.connect(as('ada'));
+    options.expiresIn = 0;
+    s.clock.now += 3_600_000;
+    const refreshed = await s.connections.resolve(as('ada'), { provider: 'acme' });
+    expect(s.idp.accepts(refreshed.accessToken)).toBe(true);
+    // 0 is an unknown expiry
+    expect(s.store.rows()[0]!.expiresAt).toBeNull();
+    // The old refresh token is spent at the provider: the next refresh works only with the rotated one
+    await s.connections.invalidate(as('ada'), refreshed);
+    await expect(s.connections.resolve(as('ada'), { provider: 'acme' })).resolves.toMatchObject({ connectionId: refreshed.connectionId });
+    expect(s.idp.log.refreshes).toBe(2);
+    expect(s.store.rows()[0]!.status).toBe('active');
   });
 
   it('refreshes once the token is within the margin of expiring, and not before', async () => {

@@ -105,6 +105,7 @@ describe('DrizzleConnectionStore with Connections', () => {
       access_token: 'text',
       refresh_token: 'text',
       expires_at: 'timestamp with time zone',
+      issued_at: 'timestamp with time zone',
       status: 'text',
     });
     expect(await columns('integration_authorizations')).toMatchObject({ nonce_hash: 'text', code_verifier: 'text', expires_at: 'timestamp with time zone' });

@@ -32,13 +32,15 @@ export interface Connection {
 export interface StoredConnection extends Connection {
   accessToken: string | null;
   refreshToken: string | null;
+  /** When the current access token was issued, by the `Connections` clock: with `expiresAt`, its lifetime. */
+  issuedAt: Date | null;
 }
 
-export type NewConnection = Pick<StoredConnection, 'tenantId' | 'userId' | 'provider' | 'accountId' | 'scopes' | 'accessToken' | 'expiresAt'> & {
+export type NewConnection = Pick<StoredConnection, 'tenantId' | 'userId' | 'provider' | 'accountId' | 'scopes' | 'accessToken' | 'expiresAt' | 'issuedAt'> & {
   /** Left out, an existing connection keeps the refresh token it has (a new one gets none). */
   refreshToken?: string | null;
 };
-export type ConnectionPatch = Partial<Pick<StoredConnection, 'scopes' | 'accessToken' | 'refreshToken' | 'expiresAt' | 'status'>>;
+export type ConnectionPatch = Partial<Pick<StoredConnection, 'scopes' | 'accessToken' | 'refreshToken' | 'expiresAt' | 'issuedAt' | 'status'>>;
 
 /** An authorization in progress, between the redirect to the provider and its callback. */
 export interface PendingAuthorization {

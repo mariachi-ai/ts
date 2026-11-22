@@ -124,6 +124,7 @@ export class Connections implements CredentialResolver {
       // A reconnect that brings no refresh token (Google's, without prompt=consent) keeps the one stored
       ...(tokens.refresh_token ? { refreshToken: await this.seal(owner, 'refresh', tokens.refresh_token) } : {}),
       expiresAt: this.expiry(tokens),
+      issuedAt: new Date(now),
     });
     return view(saved);
   }
@@ -159,7 +160,7 @@ export class Connections implements CredentialResolver {
           ctx.logger.warn({ integration: current.provider, connection: current.id, code: (error as { code?: string }).code }, 'the provider did not confirm the revocation; the tokens are deleted here');
         }
       }
-      await this.config.store.updateConnection(ctx, current.id, { status: 'revoked', accessToken: null, refreshToken: null, expiresAt: null });
+      await this.config.store.updateConnection(ctx, current.id, { status: 'revoked', accessToken: null, refreshToken: null, expiresAt: null, issuedAt: null });
       return { revokedAtProvider };
     });
   }
@@ -169,8 +170,9 @@ export class Connections implements CredentialResolver {
    * it first when it expires within the margin (five minutes by default), once however many calls ask at the same
    * time. Fails with `integrations/connection-not-found` or `integrations/reconnect-required`.
    *
-   * A `connectionId` is looked up in the caller's tenant only. It is for the app's own code (a job acting for a
-   * connection it was given), never a value taken from a request without checking whose it is.
+   * A `connectionId` is looked up in the caller's tenant. With a signed-in user it must be that user's connection:
+   * another user's fails as `integrations/connection-not-found`, like one that doesn't exist, so ids can't be
+   * probed. A context with no user (a job, system work) resolves any connection in the tenant by its id.
    */
   async resolve(ctx: Context, request: CredentialRequest): Promise<Credential> {
     const provider = this.provider(request.provider);
@@ -178,7 +180,7 @@ export class Connections implements CredentialResolver {
     let row: StoredConnection | null;
     if (request.connectionId) {
       row = await this.config.store.getConnection(ctx, tenantId, request.connectionId);
-      if (row && row.provider !== provider.id) row = null;
+      if (row && (row.provider !== provider.id || !this.owns(ctx, row))) row = null;
     } else {
       if (!ctx.userId) throw new ConnectionError('integrations/user-required', 'A connection is resolved for a signed-in user, or by its id');
       row = await this.config.store.findConnection(ctx, tenantId, ctx.userId, provider.id);
@@ -191,12 +193,15 @@ export class Connections implements CredentialResolver {
 
   /**
    * The provider refused this connection's access token before it expired: the next `resolve` refreshes it (or,
-   * with no refresh token, asks for a reconnect). A token that was refreshed meanwhile is left alone.
+   * with no refresh token, asks for a reconnect). A token that was refreshed meanwhile is left alone. Like
+   * `resolve`, a signed-in user can invalidate only their own connection: another user's fails as
+   * `integrations/connection-not-found`.
    */
   async invalidate(ctx: Context, credential: Credential): Promise<void> {
     if (!credential.connectionId) return;
     const id = credential.connectionId;
     const row = await this.config.store.getConnection(ctx, ctx.tenantId || null, id);
+    if (row && !this.owns(ctx, row)) throw notFound();
     if (!row || row.status !== 'active') return;
     await this.config.store.lockConnection(ctx, id, async (current) => {
       if (!current?.accessToken || current.status !== 'active') return;
@@ -243,6 +248,7 @@ export class Connections implements CredentialResolver {
         // A provider that rotates refresh tokens sends a new one; one that doesn't, keeps the old one working
         ...(tokens.refresh_token ? { refreshToken: await this.seal(current, 'refresh', tokens.refresh_token) } : {}),
         expiresAt: this.expiry(tokens),
+        issuedAt: new Date(this.now()),
         ...(tokens.scope ? { scopes: grantedScopes(tokens, current.scopes) } : {}),
       });
       return { kind: 'ok', accessToken: tokens.access_token };
@@ -252,8 +258,21 @@ export class Connections implements CredentialResolver {
     return { accessToken: outcome.accessToken, connectionId };
   }
 
+  /** A signed-in user owns only their own connections; a context with no user (a job, system work) acts for any. */
+  private owns(ctx: Context, row: StoredConnection): boolean {
+    return !ctx.userId || row.userId === ctx.userId;
+  }
+
+  /**
+   * Whether the access token outlives the refresh margin. The margin is at most half the token's lifetime, so a
+   * token issued for less than the margin (five minutes) is still used for a while before it is refreshed.
+   */
   private fresh(row: StoredConnection): boolean {
-    return row.expiresAt === null || row.expiresAt.getTime() - this.margin > this.now();
+    if (row.expiresAt === null) return true;
+    const expiresAt = row.expiresAt.getTime();
+    const lifetime = row.issuedAt ? expiresAt - row.issuedAt.getTime() : Number.POSITIVE_INFINITY;
+    const margin = Math.max(0, Math.min(this.margin, lifetime / 2));
+    return expiresAt - margin > this.now();
   }
 
   private expiry(tokens: TokenResponse): Date | null {

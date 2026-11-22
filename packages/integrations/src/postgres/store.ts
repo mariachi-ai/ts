@@ -24,6 +24,7 @@ const toConnection = (row: ConnectionRow): StoredConnection => ({
   accessToken: row.accessToken ?? null,
   refreshToken: row.refreshToken ?? null,
   expiresAt: row.expiresAt ?? null,
+  issuedAt: row.issuedAt ?? null,
   status: row.status as ConnectionStatus,
   createdAt: row.createdAt,
   updatedAt: row.updatedAt,

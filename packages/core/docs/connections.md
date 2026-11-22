@@ -106,16 +106,20 @@ return providerRequest(
 
 - **Which connection:** the signed-in user's (`ctx.userId`) to that provider, or
   `{ provider, connectionId }` for one by its id. A job that acts for a user carries their `ctx`,
-  or the connection id it was given. A connection id is looked up in the caller's tenant only; never
-  take one from a request without checking it is the caller's.
+  or the connection id it was given. A connection id is looked up in the caller's tenant, and with a
+  signed-in user it must be that user's: another user's connection fails as
+  `integrations/connection-not-found`, like one that doesn't exist, so ids can't be probed. A
+  context with no user (a job, system work) resolves any connection in its tenant by id.
+  `invalidate` follows the same rule.
 - **The span:** `connection` becomes `mariachi.integration.connection`, the opaque connection id.
   Never the provider's account id.
-- **Refresh:** a token that expires within `refreshMarginMs` (five minutes) is refreshed first,
-  once however many calls ask at the same moment, in this process (one shared promise) and across
+- **Refresh:** a token that expires within `refreshMarginMs` (five minutes), or within half its
+  lifetime when it lives no longer than that, is refreshed first, once however many calls ask at the same moment, in this process (one shared promise) and across
   processes (a row lock in Postgres; the second finds the first's token). A provider that rotates
   refresh tokens hands out a new one each time, and it's stored before the lock is released, in a
   transaction of its own, so an app's rolled-back work can't lose it. The refresh is a call of its
-  own: span `<provider> oauth.refresh`.
+  own: span `<provider> oauth.refresh`. An `expires_in` of 0, or none, is an unknown expiry: the
+  token is used until the provider refuses it.
 - **A refused token:** when the provider answers `unauthorized` to a token that hadn't expired, call
   `deps.credentials.invalidate?.(ctx, credential)`; the next `resolve` refreshes it.
 

@@ -21,6 +21,7 @@ export function connectionStoreContract(name: string, makeStore: () => Connectio
       accessToken: 'mx1:access',
       refreshToken: 'mx1:refresh',
       expiresAt: new Date(Date.now() + 3_600_000),
+      issuedAt: new Date(),
       ...over,
     });
 
@@ -90,7 +91,9 @@ export function connectionStoreContract(name: string, makeStore: () => Connectio
       const store = await makeStore();
       const saved = await store.saveConnection(ctx, fresh());
       const expiresAt = new Date(Date.now() + 60_000);
-      const updated = await store.updateConnection(ctx, saved.id, { accessToken: 'mx1:new', expiresAt, scopes: ['read', 'write'] });
+      const issuedAt = new Date(Date.now() - 1_000);
+      const updated = await store.updateConnection(ctx, saved.id, { accessToken: 'mx1:new', expiresAt, issuedAt, scopes: ['read', 'write'] });
+      expect(updated?.issuedAt?.getTime()).toBe(issuedAt.getTime());
       expect(updated).toMatchObject({ accessToken: 'mx1:new', refreshToken: 'mx1:refresh', scopes: ['read', 'write'], status: 'active' });
       expect(updated?.expiresAt?.getTime()).toBe(expiresAt.getTime());
       expect(updated!.updatedAt.getTime()).toBeGreaterThanOrEqual(saved.updatedAt.getTime());

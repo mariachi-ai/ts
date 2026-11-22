@@ -103,7 +103,7 @@ export function standInProvider(options: StandInOptions = {}) {
 
   const fetchFn = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
-    const headers = Object.fromEntries(Object.entries((init?.headers as Record<string, string>) ?? {}).map(([k, v]) => [k.toLowerCase(), v]));
+    const headers = Object.fromEntries(new Headers(init?.headers).entries());
     const answer = await handle(init?.method ?? 'GET', url, headers, typeof init?.body === 'string' ? init.body : '');
     return new Response(answer.json === undefined ? null : JSON.stringify(answer.json), { status: answer.status, headers: answer.json === undefined ? {} : { 'content-type': 'application/json' } });
   }) as typeof fetch;

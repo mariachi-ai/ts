@@ -30,6 +30,8 @@ export const integrationConnectionsTable = defineTable(
     refreshToken: column.text(),
     /** When the access token stops working; null when the provider didn't say. */
     expiresAt:    column.timestamp(),
+    /** When the access token was issued; with `expiresAt`, its lifetime, which caps the refresh margin. */
+    issuedAt:     column.timestamp(),
     /** `active`, `needs-reconnect` or `revoked`. */
     status:       column.text().notNull().default('active'),
     createdAt:    column.timestamp().notNull().defaultNow(),

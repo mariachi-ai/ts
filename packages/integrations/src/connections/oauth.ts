@@ -75,7 +75,8 @@ export const TokenResponse = z
   .object({
     access_token: z.string().min(1),
     token_type: z.string().optional(),
-    expires_in: z.coerce.number().positive().optional(),
+    // 0 or absent: the provider didn't say when it expires. Refusing the answer would lose a rotated refresh token
+    expires_in: z.coerce.number().nonnegative().optional(),
     refresh_token: z.string().min(1).optional(),
     scope: z.string().optional(),
   })
