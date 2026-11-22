@@ -7,7 +7,8 @@ webhooks keep it current.
 
 Stripe is the built-in adapter. A provider package (`@mariachi/billing-<provider>`) puts another
 provider behind the same port: the app picks the adapter in its composition root and the rest of
-this page holds, with the differences that package's README lists.
+this page holds, with the differences that package's README lists. Paddle Billing's is
+[`@mariachi/billing-paddle`](../../billing-paddle/README.md).
 
 ## Wire it
 
