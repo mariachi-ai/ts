@@ -187,6 +187,18 @@ describe('OktaIdentityClient: users', () => {
     expect([err.code, fetch.requests.length]).toEqual(['auth/rate-limited', 3]);
   });
 
+  it("fails as auth/identity-provider when Okta can't be reached, on users and on sign-in", async () => {
+    const down = async (): Promise<Response> => {
+      throw new TypeError('fetch failed');
+    };
+    const identity = createOktaIdentityClient(config, { fetch: down, ...noWait });
+    const read = await identity.getUser('00u123').catch((e) => e);
+    const signIn = await identity.exchangeCode({ code: 'code1', codeVerifier: VERIFIER, redirectUri: 'https://app.test/callback' }).catch((e) => e);
+    for (const err of [read, signIn]) {
+      expect([err.name, err.code, err.cause.code]).toEqual(['AuthError', 'auth/identity-provider', 'okta/unavailable']);
+    }
+  });
+
   it('prefers the service app: a private_key_jwt assertion for a token it keeps, sent as Bearer', async () => {
     const service = await generateKeyPair('RS256', { extractable: true });
     const jwk = { ...(await exportJWK(service.privateKey)), kid: 'svc1', alg: 'RS256' };

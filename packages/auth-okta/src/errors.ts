@@ -13,10 +13,17 @@ export class OktaError extends ProviderError {
 /**
  * The auth port's error for a failed Okta call (`IdentityClient` promises `AuthError`s): `auth/rate-limited`,
  * `auth/invalid-grant` for a code, verifier or refresh token Okta refused, else `auth/identity-provider`. The
- * `OktaError` is its `cause`, and its category and Okta's code are in the metadata.
+ * `OktaError` is its `cause`, and its category and Okta's code are in the metadata. An Okta that can't be reached
+ * is a plain `ProviderError` (`okta/unavailable`), so the base class is tested; anything else that isn't already an
+ * `AuthError` becomes `auth/identity-provider` too, so the port only ever rejects with `AuthError`s.
  */
 export function toAuthError(error: unknown, refused: 'auth/invalid-grant' | 'auth/identity-provider' = 'auth/identity-provider'): unknown {
-  if (!(error instanceof OktaError)) return error;
+  if (error instanceof AuthError) return error;
+  if (!(error instanceof ProviderError)) {
+    const auth = new AuthError('auth/identity-provider', 'Okta request failed');
+    Object.defineProperty(auth, 'cause', { value: error, enumerable: false });
+    return auth;
+  }
   const meta = { category: error.category, providerCode: error.providerCode, status: error.status };
   let auth: AuthError;
   if (error.category === 'rate-limited') auth = new AuthError('auth/rate-limited', 'Okta rate limit reached', meta);
