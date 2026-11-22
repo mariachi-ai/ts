@@ -58,7 +58,8 @@ export function scriptedFetch(...responses: ScriptedResponse[]): typeof fetch & 
   const queue = [...responses];
   const fn = (async (input: string | URL | Request, init?: RequestInit) => {
     const url = new URL(typeof input === 'string' ? input : input instanceof URL ? input.href : input.url);
-    const headers = Object.fromEntries(Object.entries((init?.headers as Record<string, string>) ?? {}).map(([k, v]) => [k.toLowerCase(), v]));
+    // A Headers instance, a record or pairs: all read the same (Headers lowercases the names)
+    const headers = Object.fromEntries(new Headers(init?.headers).entries());
     const body = typeof init?.body === 'string' ? init.body : undefined;
     let json: unknown;
     try {
@@ -70,7 +71,8 @@ export function scriptedFetch(...responses: ScriptedResponse[]): typeof fetch & 
     const next = queue.shift();
     if (!next) throw new IntegrationError('integrations/unexpected-request', `unexpected request: ${init?.method ?? 'GET'} ${url.pathname}`);
     const text = next.json !== undefined ? JSON.stringify(next.json) : (next.text ?? '');
-    return new Response(next.status === 204 ? null : text, {
+    // A null-body status can't carry one
+    return new Response([204, 205, 304].includes(next.status ?? 200) ? null : text, {
       status: next.status ?? 200,
       headers: { ...(next.json !== undefined ? { 'content-type': 'application/json' } : {}), ...next.headers },
     });
