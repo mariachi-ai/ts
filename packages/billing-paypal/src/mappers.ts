@@ -1,6 +1,6 @@
 import type { Charge, Customer, Plan, Refund, Subscription, SubscriptionStatus } from '@mariachi/billing';
 import { fromPayPalAmount } from './money';
-import type { Capture, Order, PayPalPlan, PayPalSubscription, Refund as PayPalRefund } from './schemas';
+import type { Capture, Order, PayPalPlan, PayPalSubscription, Refund as PayPalRefund, Sale, SaleAmount, SaleRefund } from './schemas';
 
 /**
  * PayPal keeps no customer: the buyer signs in to PayPal for each payment or subscription. The adapter's
@@ -118,6 +118,54 @@ export function refundFromPayPal(refund: PayPalRefund, chargeId: string, reason:
     reason,
     status,
   };
+}
+
+/** A v1 amount in minor units, unsigned (a reversal's total is negative). */
+function fromSaleAmount(amount: SaleAmount | undefined): number {
+  return amount ? fromPayPalAmount({ currency_code: amount.currency, value: amount.total.trim().replace(/^-/, '') }) : 0;
+}
+
+function saleStatus(state: string): Charge['status'] {
+  switch (state) {
+    case 'completed':
+    case 'partially_refunded':
+    case 'refunded':
+    case 'reversed':
+      return 'succeeded';
+    case 'pending':
+      return 'pending';
+    default:
+      return 'failed';
+  }
+}
+
+/**
+ * A subscription payment (a v1 sale) as the billing port's `Charge`, keyed by the sale id, for the subscription's
+ * customer (`customerId`: the subscription's `custom_id`). A refunded or reversed sale is refunded in full; a
+ * partly refunded one by `refunded` (the refund at hand, as the sale doesn't say how much is refunded).
+ */
+export function chargeFromSale(sale: Sale, customerId: string, refunded = 0): Charge {
+  const amount = fromSaleAmount(sale.amount);
+  const status = saleStatus(sale.state);
+  return {
+    id: sale.id,
+    customerId,
+    tenantId: tenantOfCustomer(customerId),
+    amount,
+    amountRefunded: sale.state === 'refunded' || sale.state === 'reversed' ? amount : Math.min(refunded, amount),
+    currency: (sale.amount?.currency ?? '').toLowerCase(),
+    status,
+    description: null,
+    failureCode: status === 'failed' ? sale.state : null,
+    failureReason: null,
+    invoiceId: null,
+    metadata: {},
+  };
+}
+
+export function refundFromSaleRefund(refund: SaleRefund, chargeId: string, tenantId: string | null): Refund {
+  const status: Refund['status'] = refund.state === 'completed' ? 'succeeded' : refund.state === 'pending' ? 'pending' : refund.state === 'cancelled' ? 'canceled' : 'failed';
+  return { id: refund.id, chargeId, tenantId, amount: fromSaleAmount(refund.amount), currency: (refund.amount?.currency ?? '').toLowerCase(), reason: null, status };
 }
 
 function subscriptionStatus(sub: PayPalSubscription): SubscriptionStatus {

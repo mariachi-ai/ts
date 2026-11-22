@@ -116,6 +116,20 @@
       "idempotency": "natural"
     },
     {
+      "name": "sales.get",
+      "purpose": "Reads a subscription payment (a sale), with the subscription it paid for.",
+      "method": "GET",
+      "path": "/v1/payments/sale/{saleId}",
+      "idempotency": "natural"
+    },
+    {
+      "name": "saleRefunds.get",
+      "purpose": "Reads a refund of a subscription payment.",
+      "method": "GET",
+      "path": "/v1/payments/refund/{refundId}",
+      "idempotency": "natural"
+    },
+    {
       "name": "products.create",
       "purpose": "Creates a catalog product, which billing plans belong to.",
       "method": "POST",
@@ -240,6 +254,9 @@
       { "type": "PAYMENT.CAPTURE.DECLINED", "meaning": "A payment capture is declined." },
       { "type": "PAYMENT.CAPTURE.DENIED", "meaning": "A payment capture is denied." },
       { "type": "PAYMENT.CAPTURE.REFUNDED", "meaning": "A merchant refunds a payment capture." },
+      { "type": "PAYMENT.SALE.COMPLETED", "meaning": "A subscription payment (a sale) completes." },
+      { "type": "PAYMENT.SALE.REFUNDED", "meaning": "A merchant refunds a subscription payment." },
+      { "type": "PAYMENT.SALE.REVERSED", "meaning": "A subscription payment is reversed (a chargeback, or a payment PayPal takes back)." },
       { "type": "BILLING.SUBSCRIPTION.ACTIVATED", "meaning": "A subscription is activated." },
       { "type": "BILLING.SUBSCRIPTION.UPDATED", "meaning": "A subscription is updated." },
       { "type": "BILLING.SUBSCRIPTION.SUSPENDED", "meaning": "A subscription is suspended." },

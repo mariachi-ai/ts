@@ -180,16 +180,181 @@ describe('the billing webhook handler', () => {
     const event = payPalEvent('BILLING.SUBSCRIPTION.ACTIVATED', { id: sub.id, status: 'ACTIVE' });
     const { rawBody, headers } = signer.sign(event, { webhookId: WEBHOOK_ID });
 
-    expect(await handler.handle(undefined, rawBody, payPalSignature(headers))).toMatchObject({ eventId: event.id, outcome: 'processed', events: ['subscription.synced'] });
+    const eventId = `transmission:${headers['paypal-transmission-id']}`;
+    expect(await handler.handle(undefined, rawBody, payPalSignature(headers))).toMatchObject({ eventId, outcome: 'processed', events: ['subscription.synced'] });
     expect(await store.findSubscription(sub.id)).toMatchObject({ status: 'active', tenantId: 't1' });
     expect(seen).toEqual(['t1:active']);
-    // PayPal's retry of the same event, in a new transmission
-    const retry = signer.sign(event, { webhookId: WEBHOOK_ID });
-    expect((await handler.handle(undefined, retry.rawBody, payPalSignature(retry.headers))).outcome).toBe('duplicate');
-    expect((await handler.replay(undefined, event.id)).events).toEqual(['subscription.synced']);
+    // The same transmission again
+    expect((await handler.handle(undefined, rawBody, payPalSignature(headers))).outcome).toBe('duplicate');
+    expect((await handler.replay(undefined, eventId)).events).toEqual(['subscription.synced']);
 
     const forged = payPalWebhookSigner().sign(event, { webhookId: WEBHOOK_ID });
     await expect(handler.handle(undefined, forged.rawBody, payPalSignature({ ...forged.headers, 'paypal-cert-url': signer.certUrl }))).rejects.toMatchObject({ code: 'billing/webhook-invalid-signature' });
     await expect(handler.handle(undefined, rawBody, payPalSignature({}))).rejects.toMatchObject({ code: 'billing/webhook-invalid-signature' });
+  });
+});
+
+/**
+ * The body with `edit` applied and the four bytes after `pad` rewritten so its CRC32 is the original's, as an
+ * attacker would: PayPal's signature still matches. Returned as latin1, byte for byte.
+ */
+function sameCrc(rawBody: string, edit: (body: string) => string, pad: string): string {
+  const target = crc32(Buffer.from(rawBody));
+  for (let nonce = 0; nonce < 26 * 26; nonce++) {
+    const tweak = String.fromCharCode(97 + (nonce % 26), 97 + Math.floor(nonce / 26));
+    const buf = Buffer.from(edit(rawBody).replace(`${pad}zzzz`, `${pad}${tweak}zzzz`));
+    const offset = buf.indexOf(`${pad}${tweak}`) + pad.length + 2;
+    forceCrc(buf, offset, target);
+    // Bytes JSON.parse takes inside a string: no control character, quote or backslash
+    if ([...buf.subarray(offset, offset + 4)].every((byte) => byte >= 0x20 && byte !== 0x22 && byte !== 0x5c)) return buf.toString('latin1');
+  }
+  throw new Error('no CRC-preserving patch found');
+}
+
+// CRC32 is linear: four bytes can be set to give any CRC (the method of Nayuki's forcecrc32)
+const POLY = 0x104c11db7n;
+const degree = (x: bigint) => x.toString(2).length - 1;
+const reverse32 = (x: bigint) => {
+  let r = 0n;
+  for (let i = 0n; i < 32n; i++) r = (r << 1n) | ((x >> i) & 1n);
+  return r;
+};
+const mulMod = (a: bigint, b: bigint) => {
+  let [x, y, z] = [a, b, 0n];
+  for (; y; y >>= 1n) {
+    if (y & 1n) z ^= x;
+    x <<= 1n;
+    if ((x >> 32n) & 1n) x ^= POLY;
+  }
+  return z;
+};
+const powMod = (a: bigint, b: bigint) => {
+  let [x, y, z] = [a, b, 1n];
+  for (; y; y >>= 1n) {
+    if (y & 1n) z = mulMod(z, x);
+    x = mulMod(x, x);
+  }
+  return z;
+};
+const divMod = (a: bigint, y: bigint): [bigint, bigint] => {
+  if (!a) return [0n, 0n];
+  let x = a;
+  const yd = degree(y);
+  let z = 0n;
+  for (let i = degree(x) - yd; i >= 0; i--) {
+    if ((x >> BigInt(i + yd)) & 1n) {
+      x ^= y << BigInt(i);
+      z |= 1n << BigInt(i);
+    }
+  }
+  return [z, x];
+};
+const reciprocalMod = (value: bigint) => {
+  let [x, y, a, b] = [POLY, value, 0n, 1n];
+  while (y) {
+    const [q, r] = divMod(x, y);
+    [x, y, a, b] = [y, r, b, a ^ mulMod(q, b)];
+  }
+  return a;
+};
+function forceCrc(buf: Buffer, offset: number, target: number): void {
+  const delta = mulMod(reciprocalMod(powMod(2n, BigInt((buf.length - offset) * 8))), reverse32(BigInt(crc32(buf))) ^ reverse32(BigInt(target)));
+  const r = reverse32(delta);
+  for (let i = 0; i < 4; i++) buf[offset + i]! ^= Number((r >> BigInt(i * 8)) & 0xffn);
+}
+
+describe('replays', () => {
+  it('dedupes a replayed delivery whose body was altered to keep its CRC32, so its signature still matches', async () => {
+    const paypal = fakePayPal();
+    const plan = await paypal.plans.create(ctx, { productId: 'PROD-1', name: 'Pro', amount: 1_200, currency: 'usd', interval: 'month' });
+    const sub = await paypal.subscriptions.create(ctx, { planId: plan.id, customId: 'paypal:t1' });
+    paypal.approveSubscription(sub.id);
+    const sale = paypal.renewSubscription(sub.id);
+    const signer = payPalWebhookSigner();
+    const paid: string[] = [];
+    const handler = createBillingWebhookHandler(
+      {
+        adapter: createPayPalBillingAdapter(paypal, { webhookDeps: { fetch: signer.fetch } }),
+        secret: WEBHOOK_ID,
+        store: new MemoryBillingStore(),
+        idempotency: new InMemoryIdempotencyStore(),
+        on: { 'payment.succeeded': async (_c, e) => void paid.push(e.charge.id) },
+      },
+      { logger },
+    );
+    const event = { ...payPalEvent('PAYMENT.SALE.COMPLETED', sale), summary: 'Payment completed for USD 12.00 PAD-zzzz' };
+    const { rawBody, headers } = signer.sign(event, { webhookId: WEBHOOK_ID });
+    expect((await handler.handle(undefined, rawBody, payPalSignature(headers))).outcome).toBe('processed');
+
+    // Captured and replayed with a fresh event id in the body: PayPal's signature covers only the CRC32
+    const altered = sameCrc(rawBody, (b) => b.replace(event.id, `WH-${'X'.repeat(event.id.length - 3)}`), 'PAD-');
+    expect(crc32(Buffer.from(altered, 'latin1'))).toBe(crc32(Buffer.from(rawBody)));
+    expect(JSON.parse(altered).id).not.toBe(event.id);
+    const replayed = await handler.handle(undefined, Buffer.from(altered, 'latin1'), payPalSignature(headers));
+    expect(replayed).toMatchObject({ eventId: `transmission:${headers['paypal-transmission-id']}`, outcome: 'duplicate' });
+    expect(paid).toEqual([sale.id]);
+  });
+
+  it('refuses a transmission older than four days by default', async () => {
+    const signer = payPalWebhookSigner();
+    const adapter = createPayPalBillingAdapter(fakePayPal(), { webhookDeps: { fetch: signer.fetch } });
+    const event = payPalEvent('BILLING.SUBSCRIPTION.ACTIVATED', { id: 'I-1' });
+    const old = signer.sign(event, { webhookId: WEBHOOK_ID, transmissionTime: new Date(Date.now() - 5 * 86_400_000).toISOString() });
+    await expect(adapter.parseWebhook(old.rawBody, payPalSignature(old.headers), WEBHOOK_ID)).rejects.toMatchObject({ code: 'billing/webhook-invalid-signature' });
+    const late = signer.sign(event, { webhookId: WEBHOOK_ID, transmissionTime: new Date(Date.now() - 3 * 86_400_000).toISOString() });
+    expect((await adapter.parseWebhook(late.rawBody, payPalSignature(late.headers), WEBHOOK_ID)).id).toBe(`transmission:${late.headers['paypal-transmission-id']}`);
+    const anyAge = createPayPalBillingAdapter(fakePayPal(), { webhookDeps: { fetch: signer.fetch }, webhookToleranceSeconds: Number.POSITIVE_INFINITY });
+    expect((await anyAge.parseWebhook(old.rawBody, payPalSignature(old.headers), WEBHOOK_ID)).type).toBe('BILLING.SUBSCRIPTION.ACTIVATED');
+  });
+});
+
+describe('subscription payments', () => {
+  async function pastDue() {
+    const paypal = fakePayPal();
+    const plan = await paypal.plans.create(ctx, { productId: 'PROD-1', name: 'Pro', amount: 1_200, currency: 'usd', interval: 'month' });
+    const sub = await paypal.subscriptions.create(ctx, { planId: plan.id, customId: 'paypal:t1' });
+    paypal.approveSubscription(sub.id);
+    const store = new MemoryBillingStore();
+    paypal.subscriptions_.get(sub.id)!.billing_info = { failed_payments_count: 1, next_billing_time: new Date(Date.now() - 86_400_000).toISOString() };
+    const failed = payPalEvent('BILLING.SUBSCRIPTION.PAYMENT.FAILED', { id: sub.id, status: 'ACTIVE' });
+    failed.create_time = new Date(Date.now() - 60_000).toISOString();
+    await normalizePayPalEvent(ctx, failed, { paypal, store });
+    expect(await store.findSubscription(sub.id)).toMatchObject({ status: 'past_due' });
+    return { paypal, store, sub };
+  }
+
+  it('reports a completed sale as a renewal: the subscription synced (active again, period moved on) and payment.succeeded', async () => {
+    const { paypal, store, sub } = await pastDue();
+    const sale = paypal.renewSubscription(sub.id);
+    // The body says another amount: the sale as PayPal's API has it is what counts
+    const event = payPalEvent('PAYMENT.SALE.COMPLETED', { ...sale, amount: { total: '0.01', currency: 'USD' } });
+    const events = await normalizePayPalEvent(ctx, event, { paypal, store });
+    expect(events.map((e) => e.type)).toEqual(['subscription.synced', 'payment.succeeded']);
+    expect(events[0]).toMatchObject({ tenantId: 't1', previousStatus: 'past_due', subscription: { id: sub.id, status: 'active' } });
+    expect(events[1]).toMatchObject({ tenantId: 't1', charge: { id: sale.id, customerId: 'paypal:t1', amount: 1_200, currency: 'usd', status: 'succeeded' } });
+    const mirrored = await store.findSubscription(sub.id);
+    expect(mirrored).toMatchObject({ status: 'active' });
+    expect(mirrored!.currentPeriodEnd!.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('reports a refunded sale as charge.refunded, reading the refund again', async () => {
+    const { paypal, sub } = await pastDue();
+    const sale = paypal.renewSubscription(sub.id);
+    const refund = paypal.refundSale(sale.id, 500);
+    const events = await normalizePayPalEvent(ctx, payPalEvent('PAYMENT.SALE.REFUNDED', { ...refund, amount: { total: '12.00', currency: 'USD' } }), { paypal });
+    expect(events.map((e) => e.type)).toEqual(['subscription.synced', 'charge.refunded']);
+    expect(events[1]).toMatchObject({ tenantId: 't1', refund: { id: refund.id, chargeId: sale.id, amount: 500, status: 'succeeded' }, charge: { id: sale.id, amount: 1_200, amountRefunded: 500 } });
+  });
+
+  it('reports a reversed sale as charge.refunded in full, and ignores a sale that paid for no subscription', async () => {
+    const { paypal, sub } = await pastDue();
+    const sale = paypal.renewSubscription(sub.id);
+    paypal.sales_.get(sale.id)!.state = 'reversed';
+    const events = await normalizePayPalEvent(ctx, payPalEvent('PAYMENT.SALE.REVERSED', { id: sale.id, state: 'reversed' }), { paypal });
+    expect(events.map((e) => e.type)).toEqual(['subscription.synced', 'charge.refunded']);
+    expect(events[1]).toMatchObject({ refund: { id: `${sale.id}:reversed`, chargeId: sale.id, amount: 1_200 }, charge: { amountRefunded: 1_200 } });
+
+    paypal.sales_.set('S-OTHER', { id: 'S-OTHER', state: 'completed', amount: { total: '5.00', currency: 'USD' } });
+    expect(await normalizePayPalEvent(ctx, payPalEvent('PAYMENT.SALE.COMPLETED', { id: 'S-OTHER', billing_agreement_id: sub.id }), { paypal })).toEqual([]);
   });
 });

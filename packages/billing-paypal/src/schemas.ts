@@ -26,6 +26,30 @@ export interface Capture extends Open {
   create_time?: string;
   update_time?: string;
 }
+/** A v1 amount, as sales and their refunds carry it: `{ total: '12.00', currency: 'USD' }` (a reversal's total can be negative). */
+export interface SaleAmount extends Open {
+  total: string;
+  currency: string;
+}
+/** A subscription payment: PayPal's v1 sale. `billing_agreement_id` is the subscription it paid for. */
+export interface Sale extends Open {
+  id: string;
+  state: string;
+  amount?: SaleAmount;
+  billing_agreement_id?: string;
+  custom?: string;
+  create_time?: string;
+  update_time?: string;
+}
+/** A refund of a sale (v1). */
+export interface SaleRefund extends Open {
+  id: string;
+  state: string;
+  amount?: SaleAmount;
+  sale_id?: string;
+  billing_agreement_id?: string;
+  create_time?: string;
+}
 export interface Refund extends Open {
   id: string;
   status: string;
@@ -144,6 +168,29 @@ const RefundSchema = z
   })
   .passthrough();
 export const Refund: Schema<Refund> = RefundSchema;
+
+const SaleAmountSchema = z.object({ total: z.string(), currency: z.string() }).passthrough();
+export const Sale: Schema<Sale> = z
+  .object({
+    id: z.string(),
+    state: z.string(),
+    amount: SaleAmountSchema.optional(),
+    billing_agreement_id: z.string().optional(),
+    custom: z.string().optional(),
+    create_time: z.string().optional(),
+    update_time: z.string().optional(),
+  })
+  .passthrough();
+export const SaleRefund: Schema<SaleRefund> = z
+  .object({
+    id: z.string(),
+    state: z.string(),
+    amount: SaleAmountSchema.optional(),
+    sale_id: z.string().optional(),
+    billing_agreement_id: z.string().optional(),
+    create_time: z.string().optional(),
+  })
+  .passthrough();
 
 const PurchaseUnitSchema = z
   .object({

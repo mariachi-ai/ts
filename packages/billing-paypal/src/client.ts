@@ -27,6 +27,8 @@ import {
   RefundCaptureInput,
   ReviseResponse,
   ReviseSubscriptionInput,
+  Sale,
+  SaleRefund,
   SubscriptionActionInput,
 } from './schemas';
 
@@ -160,6 +162,11 @@ export function createPayPal(config: PayPalConfig, deps: PayPalDeps = {}) {
     /**
      * Captures an approved order. Check the capture's status (`purchase_units[0].payments.captures[0].status`)
      * before fulfilling: a completed order can hold a declined or pending capture.
+     *
+     * An order id from the browser can name any order: a buyer can create one of their own, with the tenant's
+     * `custom_id` and any amount, using the public client id. Before capturing, look the order up where the app
+     * recorded it (the billing mirror's charge, stored by order id when `billing.charge` made it) and check that
+     * PayPal's order has that amount and currency; checking only the `custom_id`'s tenant isn't enough.
      */
     async capture(ctx: Context | null, input: CaptureOrderInput) {
       const i = parse(CaptureOrderInput, input);
@@ -193,6 +200,19 @@ export function createPayPal(config: PayPalConfig, deps: PayPalDeps = {}) {
   const refunds = {
     async get(ctx: Context | null, refundId: string) {
       return call(ctx, 'refunds.get', { method: 'GET', path: `/v2/payments/refunds/${segment(refundId)}` }, Refund);
+    },
+  };
+
+  /** Subscription payments: PayPal bills a subscription as a v1 sale, whose `billing_agreement_id` is the subscription. */
+  const sales = {
+    async get(ctx: Context | null, saleId: string) {
+      return call(ctx, 'sales.get', { method: 'GET', path: `/v1/payments/sale/${segment(saleId)}` }, Sale);
+    },
+  };
+
+  const saleRefunds = {
+    async get(ctx: Context | null, refundId: string) {
+      return call(ctx, 'saleRefunds.get', { method: 'GET', path: `/v1/payments/refund/${segment(refundId)}` }, SaleRefund);
     },
   };
 
@@ -323,6 +343,8 @@ export function createPayPal(config: PayPalConfig, deps: PayPalDeps = {}) {
     orders,
     captures,
     refunds,
+    sales,
+    saleRefunds,
     products,
     plans,
     subscriptions,

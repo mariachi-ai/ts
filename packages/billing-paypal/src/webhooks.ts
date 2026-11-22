@@ -16,12 +16,18 @@ const CERT_HOSTS: Readonly<Record<PayPalEnvironment, readonly string[]>> = {
 const CERT_PATH = /^\/v1\/notifications\/certs\/[A-Za-z0-9-]{1,100}$/;
 const MAX_CACHED_CERTS = 32;
 
+/** The default `toleranceSeconds`: four days, past PayPal's 3 days of retries. */
+export const DEFAULT_PAYPAL_TOLERANCE_SECONDS = 4 * 24 * 60 * 60;
+
 export interface PayPalWebhookVerifierOptions {
   /** `PAYPAL_ENVIRONMENT`. Certificates are only fetched from that environment's PayPal API host. */
   environment: PayPalEnvironment;
   /**
-   * Refuse a delivery whose `PAYPAL-TRANSMISSION-TIME` is further than this from now, in seconds. Off by
-   * default: PayPal retries a delivery for up to 3 days and doesn't say whether a retry carries a new time.
+   * Refuse a delivery whose `PAYPAL-TRANSMISSION-TIME` is further than this from now, in seconds. Default
+   * `DEFAULT_PAYPAL_TOLERANCE_SECONDS`, four days: PayPal retries a delivery for up to 3 days and doesn't say
+   * whether a retry carries a new time, so the window is wide enough for every retry, and shorter than the 7 days
+   * the billing webhook handler remembers a transmission for, so a captured delivery can't be replayed once
+   * forgotten. `Infinity` turns the check off.
    */
   toleranceSeconds?: number;
 }
@@ -49,11 +55,13 @@ const SIGNATURE_HEADERS = ['paypal-transmission-id', 'paypal-transmission-time',
  * with the certificate at `PAYPAL-CERT-URL`. That URL must be `https://` on PayPal's API host for the
  * environment, under `/v1/notifications/certs/`, or it is refused before anything is fetched; the certificate is
  * downloaded through `providerRequest` (span `paypal webhookCerts.get`) the first time and cached until it
- * expires. Throws `webhooks/invalid-signature`; returns the signed transmission id.
+ * expires. A transmission older (or newer) than `toleranceSeconds`, four days by default, is refused. Throws
+ * `webhooks/invalid-signature`; returns the signed transmission id, the one id in a delivery its signature covers.
  */
 export class PayPalWebhookVerifier {
   private readonly certs = new Map<string, { key: KeyObject; validTo: number }>();
   private readonly clock: () => number;
+  private readonly toleranceMs: number;
 
   constructor(
     private readonly options: PayPalWebhookVerifierOptions,
@@ -61,6 +69,9 @@ export class PayPalWebhookVerifier {
   ) {
     if (!CERT_HOSTS[options.environment]) throw new AuthError('webhooks/invalid-secret', 'PayPal webhook: environment must be sandbox or live');
     this.clock = deps.clock ?? Date.now;
+    const tolerance = options.toleranceSeconds ?? DEFAULT_PAYPAL_TOLERANCE_SECONDS;
+    if (!(tolerance > 0)) throw new AuthError('webhooks/invalid-secret', 'PayPal webhook: toleranceSeconds must be positive');
+    this.toleranceMs = tolerance * 1000;
   }
 
   async verify(rawBody: Buffer | string, headers: WebhookHeaders, webhookId: string | string[]): Promise<{ transmissionId: string }> {
@@ -72,9 +83,9 @@ export class PayPalWebhookVerifier {
     const algorithm = headerValue(headers, 'paypal-auth-algo');
     if (!transmissionId || !transmissionTime || !signature || !certUrl) invalid('missing PayPal transmission headers');
     if (algorithm !== 'SHA256withRSA') invalid('unexpected PAYPAL-AUTH-ALGO');
-    if (this.options.toleranceSeconds !== undefined) {
+    if (Number.isFinite(this.toleranceMs)) {
       const at = Date.parse(transmissionTime);
-      if (Number.isNaN(at) || Math.abs(this.clock() - at) > this.options.toleranceSeconds * 1000) invalid('transmission time outside the tolerance');
+      if (Number.isNaN(at) || Math.abs(this.clock() - at) > this.toleranceMs) invalid('transmission time outside the tolerance');
     }
     const key = await this.certificateKey(this.checkedCertUrl(certUrl));
     const sig = Buffer.from(signature, 'base64');
@@ -190,8 +201,9 @@ export function payPalWebhookAuth(options: PayPalWebhookAuthOptions, deps?: PayP
 
 /**
  * A delivery's body: `{ id, event_type, create_time, resource_type, resource }`. PayPal retries a delivery that
- * isn't answered 2xx, so the same event (`id`) can arrive more than once: `normalizePayPalEvent` is safe to run
- * again, and anything else the job does should be keyed by `id`.
+ * isn't answered 2xx, so the same event can arrive more than once: `normalizePayPalEvent` is safe to run again.
+ * The body's `id` isn't signed (only a CRC32 of the body is), so key anything else the job does on the resource
+ * PayPal's API returns (the capture, sale or subscription id), not on `id`.
  */
 export const PayPalWebhookBody = PayPalWebhookEvent;
 

@@ -52,7 +52,10 @@ const REASONS = { cancel: 'Canceled by the merchant', pause: 'Paused by the merc
 export interface PayPalBillingAdapterOptions {
   /** For the webhook check's certificate download: the container's tracer and metrics, or a test `fetch`. */
   webhookDeps?: PayPalWebhookAuthDeps;
-  /** Refuse a delivery transmitted further than this from now, in seconds. Off by default (see `PayPalWebhookVerifier`). */
+  /**
+   * Refuse a delivery transmitted further than this from now, in seconds. Four days by default (see
+   * `PayPalWebhookVerifierOptions.toleranceSeconds`); `Infinity` turns it off.
+   */
   webhookToleranceSeconds?: number;
 }
 
@@ -250,11 +253,15 @@ export class PayPalBillingAdapter implements BillingAdapter {
 
   /**
    * Checks a delivery (`signature` is `payPalSignature(headers)`, `secret` the webhook id) and reads the event.
-   * `object` is the event's resource; `livemode` is whether the client is live, as PayPal's events don't say.
+   * Its `id` is `transmission:<PAYPAL-TRANSMISSION-ID>`, not the body's event id: PayPal signs the transmission id
+   * but covers the body only by a CRC32, which can be forged, so a captured delivery replayed with another event
+   * id in its body is still the same transmission, and `createBillingWebhookHandler` dedupes it. `object` is the
+   * event's resource; `livemode` is whether the client is live, as PayPal's events don't say.
    */
   async parseWebhook(rawBody: Buffer | string, signature: string, secret: string): Promise<ProviderEvent> {
+    let transmissionId: string;
     try {
-      await this.verifier.verify(rawBody, signatureHeaders(signature), secret);
+      ({ transmissionId } = await this.verifier.verify(rawBody, signatureHeaders(signature), secret));
     } catch (error) {
       if (error instanceof MariachiError && error.code === 'webhooks/invalid-signature') {
         throw new BillingError('billing/webhook-invalid-signature', 'PayPal webhook signature verification failed', { reason: error.message });
@@ -270,7 +277,7 @@ export class PayPalBillingAdapter implements BillingAdapter {
     const parsed = PayPalWebhookEvent.safeParse(json);
     if (!parsed.success) throw new BillingError('billing/invalid-input', 'The PayPal webhook body is not an event');
     const event = parsed.data;
-    return { id: event.id, type: event.event_type, createdAt: new Date(event.create_time), object: event.resource, livemode: this.client.environment === 'live' };
+    return { id: `transmission:${transmissionId}`, type: event.event_type, createdAt: new Date(event.create_time), object: event.resource, livemode: this.client.environment === 'live' };
   }
 
   /** The event as billing events, from PayPal's own state (read again from its API), mirrored into `store`. See `normalizePayPalEvent`. */

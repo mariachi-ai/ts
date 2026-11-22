@@ -9,13 +9,14 @@ export {
   payPalEventType,
   PayPalWebhookBody,
   crc32,
+  DEFAULT_PAYPAL_TOLERANCE_SECONDS,
   type PayPalWebhookAuthOptions,
   type PayPalWebhookVerifierOptions,
   type PayPalWebhookAuthDeps,
 } from './webhooks';
 export { normalizePayPalEvent, type NormalizePayPalEventOptions } from './events';
 export { toPayPalAmount, fromPayPalAmount, PAYPAL_CURRENCIES } from './money';
-export { chargeFromOrder, chargeFromCapture, subscriptionFromPayPal, planFromPayPal, refundFromPayPal, customerIdFor, tenantOfCustomer } from './mappers';
+export { chargeFromOrder, chargeFromCapture, chargeFromSale, subscriptionFromPayPal, planFromPayPal, refundFromPayPal, customerIdFor, tenantOfCustomer } from './mappers';
 export { provider, settings, envNames, operations, webhookEvents, type PaypalOperation as PayPalOperation } from './generated';
 export type {
   Capture,
@@ -25,6 +26,8 @@ export type {
   PayPalWebhookEvent,
   Product,
   Refund as PayPalRefund,
+  Sale as PayPalSale,
+  SaleRefund as PayPalSaleRefund,
   ReviseResponse,
   CreateOrderInput,
   CaptureOrderInput,

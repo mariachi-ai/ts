@@ -74,12 +74,22 @@ async createOrder(ctx: Context, input: { cartId: string; amount: number; email: 
 }
 
 async captureOrder(ctx: Context, orderId: string) {
-  // The order id comes from the browser: check it is this tenant's before capturing
-  if (chargeFromOrder(await paypal.orders.get(ctx, orderId)).tenantId !== ctx.tenantId) throw new NotFoundError('order', orderId);
+  // The order id comes from the browser, and anyone can create a PayPal order with your public client id,
+  // this tenant's custom_id and any amount. Capture only an order billing.charge made: the mirror stored it
+  // under the order id with its amount and currency (billingChargesTable from '@mariachi/billing/schema',
+  // read through your repository), and PayPal's order must still say the same
+  const mirrored = await charges.findById(ctx, orderId);                       // this tenant's billing_charges row
+  const order = chargeFromOrder(await paypal.orders.get(ctx, orderId));
+  if (!mirrored || mirrored.tenantId !== ctx.tenantId || order.tenantId !== ctx.tenantId || order.amount !== mirrored.amount || order.currency !== mirrored.currency) {
+    throw new NotFoundError('order', orderId);
+  }
   const charge = chargeFromOrder(await paypal.orders.capture(ctx, { orderId }));
   return { status: charge.status };                       // fulfil only on 'succeeded'; 'pending' settles by webhook
 }
 ```
+
+Checking the tenant alone isn't enough: a buyer could pay 0.01 on an order of their own with your
+`custom_id` and have it captured and fulfilled as the real one.
 
 ```html
 <!-- PayPal JavaScript SDK v6. Live: https://www.paypal.com/web-sdk/v6/core -->
@@ -138,7 +148,7 @@ const revision = await paypal.subscriptions.revise(ctx, { subscriptionId, planId
 
 ## Webhooks
 
-Through `@mariachi/billing`'s webhook handler, as Stripe's: it verifies, dedupes on the event id,
+Through `@mariachi/billing`'s webhook handler, as Stripe's: it verifies, dedupes on the signed transmission id,
 mirrors into the store, runs your handlers and keeps each event for `replay`. PayPal signs a
 delivery across several `PAYPAL-*` headers, so pass them as one string with `payPalSignature`, and
 the webhook id as the secret:
@@ -170,9 +180,16 @@ Subscribe the webhook to the events below in the Developer Dashboard. The adapte
 | `BILLING.SUBSCRIPTION.ACTIVATED`, `UPDATED`, `SUSPENDED` | `subscription.synced` |
 | `BILLING.SUBSCRIPTION.PAYMENT.FAILED` | `subscription.synced`, status `past_due` (PayPal has no invoices) |
 | `BILLING.SUBSCRIPTION.CANCELLED`, `EXPIRED` | `subscription.synced` and `subscription.canceled` |
+| `PAYMENT.SALE.COMPLETED` (each subscription payment: a renewal, or a retry that worked) | `subscription.synced` (the new `currentPeriodEnd`; `past_due` back to `active`) and `payment.succeeded` |
+| `PAYMENT.SALE.REFUNDED`, `PAYMENT.SALE.REVERSED` | `subscription.synced` and `charge.refunded` |
 
-Charges are keyed by the order id, as `billing.charge` returns them, and the tenant comes from the
-order's or subscription's `custom_id`.
+Charges are keyed by the order id, as `billing.charge` returns them; a subscription payment by its
+sale id. The tenant comes from the order's or subscription's `custom_id`; a sale's subscription is
+its `billing_agreement_id`, read from the sale as PayPal has it.
+
+**Event ids.** A billing event's `eventId` (and the handler's) is `transmission:<PAYPAL-TRANSMISSION-ID>`,
+the one id PayPal's signature covers; the body's `id` isn't signed. Key your own side effects on
+the charge, refund or subscription id, which `normalizeWebhook` reads from PayPal.
 
 **How a delivery is checked.** Locally, without a call to PayPal per delivery
 (`PayPalWebhookVerifier`): `PAYPAL-TRANSMISSION-SIG` is the RSA-SHA256 signature of
@@ -181,8 +198,10 @@ certificate at `PAYPAL-CERT-URL`. That URL must be `https://` on PayPal's API ho
 environment (`api.sandbox.paypal.com` or `api-m.sandbox.paypal.com` for sandbox, `api.paypal.com` or
 `api-m.paypal.com` for live) under `/v1/notifications/certs/`; anything else is refused before
 anything is fetched. The certificate is downloaded once (span `paypal webhookCerts.get`) and cached
-until it expires. `webhookToleranceSeconds` refuses old transmissions (off by default: PayPal
-retries a delivery for up to 3 days).
+until it expires. A transmission timed more than four days from now, either way, is refused
+(`webhookToleranceSeconds`, default `DEFAULT_PAYPAL_TOLERANCE_SECONDS`: wide enough for PayPal's 3
+days of retries, and inside the 7 days the handler remembers a transmission id, so a captured
+delivery can't be replayed once it is forgotten; `Infinity` turns it off).
 
 PayPal signs only a CRC32 of the body, which can be forged, so the body is never trusted on its
 own: `normalizeWebhook` reads the capture, refund or subscription the event names again from

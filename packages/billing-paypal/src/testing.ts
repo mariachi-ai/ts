@@ -7,7 +7,7 @@ import { generateKeyPairSync, randomUUID, sign as rsaSign } from 'node:crypto';
 import type { PayPal } from './client';
 import { PayPalError } from './errors';
 import { fromPayPalAmount, toPayPalAmount } from './money';
-import type { Capture, Order, PayPalPlan, PayPalSubscription, PayPalWebhookEvent, Product, Refund } from './schemas';
+import type { Capture, Order, PayPalPlan, PayPalSubscription, PayPalWebhookEvent, Product, Refund, Sale, SaleRefund } from './schemas';
 import { crc32 } from './webhooks';
 
 export interface FakePayPal extends PayPal {
@@ -17,10 +17,19 @@ export interface FakePayPal extends PayPal {
   products_: Map<string, Product>;
   plans_: Map<string, PayPalPlan>;
   subscriptions_: Map<string, PayPalSubscription>;
+  sales_: Map<string, Sale>;
+  saleRefunds_: Map<string, SaleRefund>;
   /** What the buyer does on PayPal: the order can now be captured. */
   approveOrder(orderId: string): void;
   /** What the subscriber does on PayPal: the subscription becomes ACTIVE. */
   approveSubscription(subscriptionId: string): void;
+  /**
+   * What PayPal does when a billing cycle is paid (a renewal, or a retry after a failed one): a completed sale for
+   * the plan's price, the subscription's last payment and next billing time moved on, its failed payments cleared.
+   */
+  renewSubscription(subscriptionId: string): Sale;
+  /** What a merchant's refund of a subscription payment does: a completed refund, in full or for `amount`. */
+  refundSale(saleId: string, amount?: number): SaleRefund;
 }
 
 const fail = (reason: string, category: PayPalError['category'], providerCode: string, status: number) =>
@@ -38,6 +47,8 @@ export function fakePayPal(seed: { plans?: PayPalPlan[] } = {}): FakePayPal {
   const products_ = new Map<string, Product>();
   const plans_ = new Map((seed.plans ?? []).map((p) => [p.id, p]));
   const subscriptions_ = new Map<string, PayPalSubscription>();
+  const sales_ = new Map<string, Sale>();
+  const saleRefunds_ = new Map<string, SaleRefund>();
   const keyed = new Map<string, unknown>();
   const once = <T>(key: string | undefined, make: () => T): T => {
     if (!key) return make();
@@ -60,11 +71,36 @@ export function fakePayPal(seed: { plans?: PayPalPlan[] } = {}): FakePayPal {
     products_,
     plans_,
     subscriptions_,
+    sales_,
+    saleRefunds_,
     approveOrder(orderId) {
       get(orders_, orderId).status = 'APPROVED';
     },
     approveSubscription(subscriptionId) {
       Object.assign(sub(subscriptionId), { status: 'ACTIVE', status_update_time: now(), billing_info: { failed_payments_count: 0, next_billing_time: new Date(Date.now() + 30 * 86_400_000).toISOString() } });
+    },
+    renewSubscription(subscriptionId) {
+      const s = sub(subscriptionId);
+      const price = get(plans_, s.plan_id!).billing_cycles?.find((c) => c.tenure_type === 'REGULAR')?.pricing_scheme?.fixed_price;
+      const total = toPayPalAmount(fromPayPalAmount(price!) * Number(s.quantity ?? 1), price!.currency_code);
+      const sale: Sale = { id: id('S'), state: 'completed', amount: { total: total.value, currency: total.currency_code }, billing_agreement_id: s.id, create_time: now(), update_time: now() };
+      sales_.set(sale.id, sale);
+      const after = new Date(Math.max(Date.parse(s.billing_info?.next_billing_time ?? now()), Date.now()) + 30 * 86_400_000).toISOString();
+      s.billing_info = { ...s.billing_info, failed_payments_count: 0, last_payment: { amount: total, time: sale.create_time }, next_billing_time: after };
+      return sale;
+    },
+    refundSale(saleId, amount) {
+      const sale = get(sales_, saleId);
+      const total = fromPayPalAmount({ currency_code: sale.amount!.currency, value: sale.amount!.total });
+      const done = [...saleRefunds_.values()].filter((r) => r.sale_id === saleId).reduce((n, r) => n + fromPayPalAmount({ currency_code: r.amount!.currency, value: r.amount!.total }), 0);
+      const value = amount ?? total - done;
+      if (done >= total) throw fail('capture-fully-refunded', 'conflict', 'CAPTURE_FULLY_REFUNDED', 422);
+      if (value + done > total) throw fail('refund-amount-exceeded', 'invalid-request', 'REFUND_AMOUNT_EXCEEDED', 422);
+      const money = toPayPalAmount(value, sale.amount!.currency);
+      const refund: SaleRefund = { id: id('SR'), state: 'completed', amount: { total: money.value, currency: money.currency_code }, sale_id: saleId, create_time: now() };
+      saleRefunds_.set(refund.id, refund);
+      sale.state = value + done === total ? 'refunded' : 'partially_refunded';
+      return refund;
     },
     orders: {
       async create(_ctx, input) {
@@ -129,6 +165,16 @@ export function fakePayPal(seed: { plans?: PayPalPlan[] } = {}): FakePayPal {
     refunds: {
       async get(_ctx, refundId) {
         return get(refunds_, refundId);
+      },
+    },
+    sales: {
+      async get(_ctx, saleId) {
+        return get(sales_, saleId);
+      },
+    },
+    saleRefunds: {
+      async get(_ctx, refundId) {
+        return get(saleRefunds_, refundId);
       },
     },
     products: {
@@ -237,7 +283,9 @@ export function payPalEvent(eventType: string, resource: object, resourceType?: 
     id: `WH-${randomUUID().slice(0, 17).toUpperCase()}`,
     event_type: eventType,
     create_time: new Date().toISOString(),
-    resource_type: resourceType ?? (eventType.startsWith('BILLING.SUBSCRIPTION') ? 'subscription' : eventType === 'PAYMENT.CAPTURE.REFUNDED' ? 'refund' : 'capture'),
+    resource_type:
+      resourceType ??
+      (eventType.startsWith('BILLING.SUBSCRIPTION') ? 'subscription' : eventType.endsWith('.REFUNDED') ? 'refund' : eventType.startsWith('PAYMENT.SALE') ? 'sale' : 'capture'),
     event_version: '1.0',
     resource: resource as Record<string, unknown>,
   };

@@ -140,6 +140,18 @@ export const operations = {
     path: '/v2/payments/refunds/{refundId}',
     idempotency: 'natural',
   },
+  'sales.get': {
+    purpose: 'Reads a subscription payment (a sale), with the subscription it paid for.',
+    method: 'GET',
+    path: '/v1/payments/sale/{saleId}',
+    idempotency: 'natural',
+  },
+  'saleRefunds.get': {
+    purpose: 'Reads a refund of a subscription payment.',
+    method: 'GET',
+    path: '/v1/payments/refund/{refundId}',
+    idempotency: 'natural',
+  },
   'products.create': {
     purpose: 'Creates a catalog product, which billing plans belong to.',
     method: 'POST',
@@ -336,5 +348,5 @@ export const webhookSignature = {
   secretSetting: 'webhookId',
   description: "PAYPAL-TRANSMISSION-SIG is the base64 RSA signature (PAYPAL-AUTH-ALGO: SHA256withRSA) of the string <PAYPAL-TRANSMISSION-ID>|<PAYPAL-TRANSMISSION-TIME>|<webhook id>|<CRC32 of the raw body, as an unsigned decimal>, made with the key of the X.509 certificate at PAYPAL-CERT-URL. The webhook id is not sent: it is the one the app's webhook was given. Fetch the certificate only from PayPal's API host for the environment (https, /v1/notifications/certs/<id>), and cache it. The body is covered only by its CRC32, so re-read the resource from the API before acting on money. PayPal retries a delivery that isn't answered 2xx, up to 25 times over 3 days.",
 } as const;
-export const webhookEvents = ['PAYMENT.CAPTURE.COMPLETED', 'PAYMENT.CAPTURE.DECLINED', 'PAYMENT.CAPTURE.DENIED', 'PAYMENT.CAPTURE.REFUNDED', 'BILLING.SUBSCRIPTION.ACTIVATED', 'BILLING.SUBSCRIPTION.UPDATED', 'BILLING.SUBSCRIPTION.SUSPENDED', 'BILLING.SUBSCRIPTION.CANCELLED', 'BILLING.SUBSCRIPTION.EXPIRED', 'BILLING.SUBSCRIPTION.PAYMENT.FAILED'] as const;
+export const webhookEvents = ['PAYMENT.CAPTURE.COMPLETED', 'PAYMENT.CAPTURE.DECLINED', 'PAYMENT.CAPTURE.DENIED', 'PAYMENT.CAPTURE.REFUNDED', 'PAYMENT.SALE.COMPLETED', 'PAYMENT.SALE.REFUNDED', 'PAYMENT.SALE.REVERSED', 'BILLING.SUBSCRIPTION.ACTIVATED', 'BILLING.SUBSCRIPTION.UPDATED', 'BILLING.SUBSCRIPTION.SUSPENDED', 'BILLING.SUBSCRIPTION.CANCELLED', 'BILLING.SUBSCRIPTION.EXPIRED', 'BILLING.SUBSCRIPTION.PAYMENT.FAILED'] as const;
 export type PaypalWebhookEvent = (typeof webhookEvents)[number];
