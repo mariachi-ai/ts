@@ -96,3 +96,14 @@ export function parseRetryAfter(value: string | null | undefined, now: number = 
   if (Number.isNaN(at)) return undefined;
   return Math.min(MAX, Math.max(0, at - now));
 }
+
+/**
+ * `X-RateLimit-Reset` in milliseconds from now, for providers that send it instead of `Retry-After` (Calendly,
+ * Pipedrive): seconds until the reset, or a Unix time in seconds when it's that large. Capped at five minutes.
+ */
+export function parseRateLimitReset(value: string | null | undefined, now: number = Date.now()): number | undefined {
+  if (!value || !/^\d+(\.\d+)?$/.test(value.trim())) return undefined;
+  const n = Number(value.trim());
+  const ms = n > 1_000_000_000 ? n * 1000 - now : n * 1000;
+  return Math.min(5 * 60_000, Math.max(0, Math.round(ms)));
+}
