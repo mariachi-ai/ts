@@ -27,11 +27,31 @@ export interface ProviderDeps {
   tracer?: TracerAdapter;
   /** From the container in a Mariachi app. Without one, no metrics are recorded. */
   metrics?: MetricsAdapter;
-  retry?: { attempts?: number; baseDelayMs?: number; maxDelayMs?: number };
+  retry?: {
+    attempts?: number;
+    baseDelayMs?: number;
+    /**
+     * The longest wait between attempts, 10 seconds by default. It bounds the computed backoff and a provider's own
+     * `Retry-After` alike: a provider that asks for a longer wait fails at once, with `retryAfterMs` on the error,
+     * so the app can reschedule the work instead of holding a request open.
+     */
+    maxDelayMs?: number;
+    /**
+     * The call isn't safe to repeat (a create with no idempotency key): only `rate-limited` is retried, since the
+     * provider refused it before doing anything. An outage or a dropped connection may come after the provider
+     * acted, so those fail at once. `providerRequest` sets this for a POST or PATCH without an idempotency key.
+     */
+    unsafe?: boolean;
+  };
+  /**
+   * The caller's deadline. No retry waits past it: when it fires during a wait, the last failure is thrown at once.
+   * Pass the signal the caller's own timeout uses (a JWKS fetch's, a request's).
+   */
+  signal?: AbortSignal;
   /** Record `mariachi.tenant_id` (the app's own tenant id) on spans. Off by default. */
   tenantAttribute?: boolean;
-  /** For tests: wait this long between attempts. */
-  sleep?: (ms: number) => Promise<void>;
+  /** For tests: wait this long between attempts. Resolves false (or rejects) when the wait was cut short by `signal`. */
+  sleep?: (ms: number, signal?: AbortSignal) => Promise<unknown>;
   /** For tests: the clock the duration is measured with. */
   now?: () => number;
 }
@@ -68,6 +88,22 @@ export const PROVIDER_METRICS = {
 } as const;
 
 const DEFAULT_ATTEMPTS = 3;
+const DEFAULT_MAX_DELAY_MS = 10_000;
+
+/** Waits `ms`, or less when `signal` fires first. True when the wait ran to the end. */
+function wait(ms: number, signal?: AbortSignal): Promise<boolean> {
+  if (signal?.aborted) return Promise.resolve(false);
+  return new Promise((resolve) => {
+    const done = (completed: boolean) => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', onAbort);
+      resolve(completed);
+    };
+    const onAbort = () => done(false);
+    const timer = setTimeout(() => done(true), ms);
+    signal?.addEventListener('abort', onAbort, { once: true });
+  });
+}
 
 /**
  * Runs one call to a provider: one CLIENT span named `<integration> <operation>`, the calls counter and the
@@ -89,8 +125,9 @@ export async function callProvider<T>(
 ): Promise<T> {
   const tracer = deps.tracer ?? openTelemetryTracer();
   const now = deps.now ?? Date.now;
-  const sleep = deps.sleep ?? ((ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms)));
+  const sleep = deps.sleep ?? wait;
   const maxAttempts = Math.max(1, deps.retry?.attempts ?? DEFAULT_ATTEMPTS);
+  const maxDelayMs = deps.retry?.maxDelayMs ?? DEFAULT_MAX_DELAY_MS;
   const span = tracer?.startSpan(`${call.integration} ${call.operation}`, baseAttributes(ctx, call, deps), { kind: 'client' });
   const started = now();
   let attempt = 0;
@@ -105,12 +142,17 @@ export async function callProvider<T>(
         return result;
       } catch (raw) {
         const error = asProviderError(raw, call);
-        const retryable = error instanceof ProviderError && RETRIED_CATEGORIES.has(error.category);
-        if (!retryable || attempt >= maxAttempts) throw error;
+        const retryable =
+          error instanceof ProviderError &&
+          !error.code.endsWith('/invalid-response') &&
+          (deps.retry?.unsafe ? error.category === 'rate-limited' : RETRIED_CATEGORIES.has(error.category));
+        if (!retryable || attempt >= maxAttempts || deps.signal?.aborted) throw error;
+        // A provider asking for a longer wait than the app allows: fail now; retryAfterMs tells the app when to try again
+        if (error.retryAfterMs !== undefined && error.retryAfterMs > maxDelayMs) throw error;
         const code = error.status ?? status;
         span?.addEvent?.('retry', { 'mariachi.integration.attempts': attempt, ...(code ? { 'http.response.status_code': code } : {}) });
-        const delay = error.retryAfterMs ?? computeRetryDelay({ backoff: 'exponential', baseDelayMs: deps.retry?.baseDelayMs ?? 200, maxDelayMs: deps.retry?.maxDelayMs ?? 10_000, jitter: true }, attempt - 1);
-        await sleep(delay);
+        const delay = error.retryAfterMs ?? computeRetryDelay({ backoff: 'exponential', baseDelayMs: deps.retry?.baseDelayMs ?? 200, maxDelayMs, jitter: true }, attempt - 1);
+        if ((await sleep(delay, deps.signal)) === false) throw error;
       }
     }
   } catch (error) {
