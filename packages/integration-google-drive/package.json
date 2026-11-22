@@ -1,0 +1,69 @@
+{
+  "name": "@mariachi/integration-google-drive",
+  "version": "0.0.0",
+  "description": "Google Drive: list, read, export, upload and share files, in the app's own Drive (a service account) or each user's (their token), and watch for changes.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/integration-google-drive"
+  },
+  "mariachi": {
+    "category": "providers",
+    "status": "alpha",
+    "useWhen": "Storing files in, or reading them from, Google Drive: the app's own shared drive or a user's Drive",
+    "entry": [
+      "createGoogleDrive",
+      "driveQuery",
+      "googleDriveChannelAuth"
+    ]
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
+    "./contract.json": "./contract.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "contract.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "biome lint src",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariachi/core": "workspace:*",
+    "@mariachi/integrations": "workspace:*",
+    "@mariachi/server": "workspace:*",
+    "@mariachi/webhooks": "workspace:*",
+    "jose": "^6",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@mariachi/testing": "workspace:*",
+    "tsup": "^8",
+    "typescript": "^5.7",
+    "vitest": "^3"
+  }
+}

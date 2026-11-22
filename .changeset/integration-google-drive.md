@@ -1,0 +1,5 @@
+---
+'@mariachi/integration-google-drive': minor
+---
+
+New `@mariachi/integration-google-drive`: Google Drive's files from one client, either the app's own Drive through a service account (a JWT signed with `jose` and exchanged for a cached access token; a shared drive or domain-wide delegation for storage) or each user's Drive through an `accessToken(ctx)` function the app supplies. It lists files with a query builder that escapes its values (`driveQuery`), reads metadata, downloads, exports Google Docs and Sheets (PDF, CSV…), uploads (multipart up to 5 MB, resumable above), creates folders, moves, trashes, deletes and shares, and pages through `all`. Changes are watched through push channels (`channels.start` / `stop`, `channelNeedsRenewal` for the renewal job), received with `googleDriveChannelAuth` comparing `X-Goog-Channel-Token` in constant time, and read with `changes.since` from a stored page token. Every call goes through `callProvider`; Drive's 403 rate limits are read by reason and retried. A fake and a notification builder are in `/testing`.
