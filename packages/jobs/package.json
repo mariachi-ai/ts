@@ -15,7 +15,8 @@
       "createJobQueue",
       "defineJob",
       "DefaultJobs",
-      "createPostgresJobQueue"
+      "createPostgresJobQueue",
+      "HttpJobBackend"
     ]
   },
   "type": "module",
@@ -34,13 +35,15 @@
       "types": "./dist/postgres.d.ts",
       "import": "./dist/postgres.js",
       "require": "./dist/postgres.cjs"
-    }
+    },
+    "./protocol/*": "./protocol/*"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "protocol"
   ],
   "publishConfig": {
     "access": "public"
@@ -83,6 +86,8 @@
     "vitest": "^3",
     "@mariachi/database-postgres": "workspace:*",
     "drizzle-orm": "^0.38",
-    "bullmq": "^5"
+    "bullmq": "^5",
+    "ajv": "^8.18.0",
+    "yaml": "^2.9.1"
   }
 }

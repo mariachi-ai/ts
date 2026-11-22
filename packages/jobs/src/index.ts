@@ -22,4 +22,14 @@ export { JOB_PRIORITY_VALUES } from './types';
 export { toEnvelope as toJobContextEnvelope } from './envelope';
 export { BullMQAdapter } from './adapters/bullmq';
 export { MemoryJobAdapter } from './adapters/memory';
+export {
+  HttpJobBackend,
+  handleJobRun,
+  memoryFinishedRuns,
+  type FinishedRuns,
+  type HttpJobBackendOptions,
+  type JobRunRequest,
+  type JobRunResponse,
+} from './adapters/http';
+export { signJobRun, verifyJobRunSignature, RUN_SIGNATURE_TOLERANCE_SECONDS } from './adapters/http-signature';
 export { Jobs, DefaultJobs, type JobsEnqueueOptions } from './jobs';

@@ -152,6 +152,21 @@ describe('loadConfig', () => {
     expect(() => loadConfig({}, { env: { LOG_PRETTY: 'sometimes' } })).toThrow(/LOG_PRETTY must be true or false/);
   });
 
+  it('reads the http job backend settings, and wants https for them in production', () => {
+    const env = {
+      JOBS_ADAPTER: 'http',
+      JOBS_HTTP_URL: 'https://queue.example/v1',
+      JOBS_HTTP_KEY: 'key',
+      JOBS_HTTP_SIGNING_SECRET: 'signing',
+    };
+    expect(loadConfig({}, { env }).jobs).toMatchObject({ adapter: 'http', httpUrl: 'https://queue.example/v1', httpKey: 'key', httpSigningSecret: 'signing' });
+    expect(() => loadConfig({}, { env: { ...env, JOBS_HTTP_URL: 'not a url' } })).toThrow(ConfigError);
+    const prod = (url: string) => () => loadConfig({}, { env: { ...env, ENV: 'production', JOBS_HTTP_URL: url } });
+    expect(prod('http://queue.internal/v1')).toThrow(expect.objectContaining({ code: 'config/insecure-jobs-url' }));
+    expect(prod('http://127.0.0.1:7140/v1')).not.toThrow();
+    expect(prod('https://queue.example/v1')).not.toThrow();
+  });
+
   describe('secrets in the loaded config', () => {
     const secrets = {
       DATABASE_URL: 'postgres://app:db-pass-0123456789@db.internal:5432/app',
@@ -160,6 +175,8 @@ describe('loadConfig', () => {
       SESSION_SECRET: 'session-secret-0123456789-0123456789',
       ENCRYPTION_KEY: 'encryption-key-0123456789-0123456789',
       STORAGE_SIGNING_SECRET: 'storage-signing-0123456789-0123456789',
+      JOBS_HTTP_KEY: 'jobs-http-key-0123456789',
+      JOBS_HTTP_SIGNING_SECRET: 'jobs-signing-secret-0123456789',
       STRIPE_SECRET_KEY: 'sk_live_stripe_0123456789',
       STRIPE_WEBHOOK_SECRET: 'whsec_stripe_0123456789',
       RESEND_API_KEY: 're_email_key_0123456789',
@@ -191,7 +208,7 @@ describe('loadConfig', () => {
       clean(json);
       clean(JSON.stringify({ config }));
       clean(JSON.stringify(config.auth));
-      clean(JSON.stringify([config.billing, config.email, config.ai, config.search, config.storage, config.encryption]));
+      clean(JSON.stringify([config.billing, config.email, config.ai, config.search, config.storage, config.encryption, config.jobs]));
       // Shown as redacted, not dropped, and what isn't secret stays readable
       const shown = JSON.parse(json);
       expect(shown.auth).toMatchObject({ jwtSecret: REDACTED, sessionSecret: REDACTED, jwtExpiresIn: '1h' });

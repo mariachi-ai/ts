@@ -110,6 +110,12 @@ export function buildConfigFromEnv(env: Env = process.env): AppConfigInput {
       keyVersion: num(env.ENCRYPTION_KEY_VERSION, 'ENCRYPTION_KEY_VERSION'),
       kmsKeyId: env.ENCRYPTION_KMS_KEY_ID,
     }),
+    jobs: compact({
+      adapter: env.JOBS_ADAPTER,
+      httpUrl: env.JOBS_HTTP_URL,
+      httpKey: env.JOBS_HTTP_KEY,
+      httpSigningSecret: env.JOBS_HTTP_SIGNING_SECRET,
+    }),
     storage: compact({
       adapter: env.STORAGE_ADAPTER,
       bucket: env.STORAGE_BUCKET ?? env.S3_BUCKET,

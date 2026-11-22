@@ -62,6 +62,21 @@ export const AppConfigSchema = z.object({
       kmsKeyId: z.string().optional(),
     })
     .optional(),
+  /**
+   * The job backend's settings. `adapter` (`JOBS_ADAPTER`) is the app's to act on; the http backend
+   * (`adapter: 'http'`) reads the rest.
+   */
+  jobs: z
+    .object({
+      adapter: z.string().optional(),
+      /** The remote queue's API, ending in `/v1` (`JOBS_HTTP_URL`). */
+      httpUrl: z.string().url().optional(),
+      /** Sent to the queue as a Bearer token (`JOBS_HTTP_KEY`). */
+      httpKey: secret(z.string().min(1)).optional(),
+      /** Checks the queue's signature on `POST /_jobs/run` (`JOBS_HTTP_SIGNING_SECRET`). */
+      httpSigningSecret: secret(z.string().min(1)).optional(),
+    })
+    .optional(),
   storage: z
     .object({
       adapter: z.string().default('local'),

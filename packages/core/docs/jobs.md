@@ -1,6 +1,6 @@
 # Jobs
 
-Background work in Postgres or on BullMQ (Redis), or in memory for tests. Use a job when work should
+Background work in Postgres or on BullMQ (Redis), on a remote queue over HTTP, or in memory for tests. Use a job when work should
 leave the request path, run later or on a schedule, or needs retries that survive a restart.
 
 ## Which queue
@@ -59,6 +59,55 @@ What to know when you run it:
   waiting in a copied database, and every schedule, runs in both: side effects that leave the
   machine (email, webhooks, payments) happen twice unless the copy's queue is emptied or its
   handlers check where they are.
+
+## A remote queue over HTTP
+
+`createJobQueue({ adapter: 'http', httpUrl, httpKey, httpSigningSecret }, logger)` hands jobs to a
+queue that runs elsewhere and calls the app back for each attempt. The protocol is two OpenAPI 3.1
+documents shipped in the package, `@mariachi/jobs/protocol/app-api.openapi.yaml` (what the app calls)
+and `@mariachi/jobs/protocol/webhook.openapi.yaml` (what the queue calls), with signature test
+vectors. A queue that implements them works with this backend.
+
+```ts
+const queue = createJobQueue({ adapter: 'http', httpUrl: config.jobs.httpUrl, httpKey: config.jobs.httpKey, httpSigningSecret: config.jobs.httpSigningSecret }, logger);
+const jobs = new DefaultJobs({ queue }, instrumentation);
+
+// The queue calls POST /_jobs/run at the app's root: hand it the raw body as it came
+class JobRunController extends BaseController {
+  readonly prefix = '';
+  init(): void {
+    this.post('/_jobs/run', { root: true, auth: false }, async (ctx) => {
+      const answer = await handleJobRun(queue as HttpJobBackend, { headers: ctx.request.headers, rawBody: ctx.request.rawBody });
+      return httpResponse(answer.status, answer.body, answer.headers);
+    });
+  }
+}
+```
+
+- **Settings:** `JOBS_HTTP_URL` (ends in `/v1`; https in production unless it is localhost),
+  `JOBS_HTTP_KEY` (sent as a Bearer token, opaque to the app) and `JOBS_HTTP_SIGNING_SECRET`, read
+  into `config.jobs`. `JOBS_ADAPTER` is there for the app to choose with.
+- **`start()` declares every registered job and schedule** (`PUT /definitions`). That replaces the
+  queue's set, so a schedule removed from the code stops. Crons are five fields; a seconds field is
+  refused where it is registered (`jobs/invalid-schedule`).
+- **`enqueue`** sends the data with the caller's context (trace, tenant, user), at most 64 KiB of JSON
+  (`jobs/payload-too-large`); `dedupKey`, `delay` (in whole seconds) and `priority` go with it.
+  `cancel` is true for a run not yet started.
+- **A refusal is a `JobsError` from the status:** `jobs/unauthorized` (401, 403), `jobs/rate-limited`
+  (429, with `retryAfterMs` in its details), `jobs/unavailable` (5xx, a timeout or no connection) and
+  `jobs/rejected` (any other 4xx). The details carry the status and the queue's own error code, never
+  the key or a body.
+- **`handleJobRun` checks `Jobs-Signature` against the raw body first** (HMAC-SHA256 over
+  `<t>.<body>`, either of two `v1` values during a rotation, `t` within 300 seconds), then runs the
+  attempt. It answers `200` (done, or a run id already finished), `422` (a body or job that can't
+  work), `409` (a non-retryable error), `429` with `Retry-After` (an error carrying `retryAfterMs`, or
+  the same run still going here), `401` (a bad signature) or `500` (retry). The answer's `outcome` is
+  the error's code, never its message.
+- **Finished run ids** are kept so a repeat isn't run twice. The default keeps the last 10,000 in
+  memory; an app with several instances passes a shared `FinishedRuns` (`has`, `add`) as
+  `new HttpJobBackend(config, logger, { finishedRuns })`.
+- **The queue keeps failed runs.** `listDeadLetters()` is empty and `retryDeadLetter` throws
+  `jobs/not-supported`: look at and retry failed runs on the queue.
 
 ## Define and register
 

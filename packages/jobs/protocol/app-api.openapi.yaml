@@ -1,0 +1,371 @@
+openapi: 3.1.0
+# Mariachi jobs over HTTP, v1: the API an app calls on a remote job queue.
+# Versioned and kept stable: a change is a new version (/v2 and a new document), never an edit of this one.
+info:
+  title: Mariachi jobs over HTTP, the queue's API
+  version: v1
+  summary: Declare an app's jobs and schedules, enqueue runs, and read or cancel one.
+  description: |
+    What `@mariachi/jobs`' `http` backend calls on a remote queue. The app's settings give the base URL
+    (`JOBS_HTTP_URL`, which already ends in `/v1`) and the key (`JOBS_HTTP_KEY`).
+
+    - **Every call** carries `Authorization: Bearer <JOBS_HTTP_KEY>`. The key is opaque to the app.
+    - **Every refusal** has one shape, `{ "error": { "code", "message", "retryAfterSeconds"? } }`. The codes are
+      the queue's own; the app acts on the HTTP status and `Retry-After`, and keeps the code for diagnosis.
+    - **Payload sizes** are counted as the UTF-8 bytes of the JSON of `data`: at most 65,536 (64 KiB).
+    - **Two extensions** carry what JSON Schema can't: `x-max-json-bytes` (that cap, on a value) and
+      `x-unique-by` (no two items with the same value of that property, on an array).
+security:
+  - jobsKey: []
+paths:
+  /v1/definitions:
+    put:
+      operationId: putDefinitions
+      summary: Declare the app's jobs and schedules
+      description: |
+        Called at the app's start. **Replaces the whole set:** a job or schedule not in the body is removed, and
+        a removed schedule stops at once. Calling it twice with the same body changes nothing.
+
+        - A schedule's `job` must be one of `jobs`.
+        - `cron` is five fields (minute to day of week), so nothing runs more often than once a minute.
+        - A `timeoutSeconds` above the queue's limit per run may be lowered to it; the answer says what's kept.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DefinitionsRequest' }
+            examples:
+              simple:
+                value:
+                  jobs:
+                    - { name: make-thumbnails, retries: 3 }
+                    - { name: send-reminders }
+                  schedules:
+                    - { name: send-reminders, cron: '0 8 * * *', tz: Europe/Berlin, job: send-reminders }
+              empty:
+                summary: An app with nothing to declare (removes every job and schedule)
+                value: { jobs: [], schedules: [] }
+      responses:
+        '200':
+          description: What's now declared, with defaults filled in, and each schedule's next run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DefinitionsResponse' }
+        '400': { $ref: '#/components/responses/Refused' }
+        '401': { $ref: '#/components/responses/Refused' }
+        '402': { $ref: '#/components/responses/Refused' }
+        '403': { $ref: '#/components/responses/Refused' }
+        '404': { $ref: '#/components/responses/Refused' }
+        '413': { $ref: '#/components/responses/Refused' }
+        '422': { $ref: '#/components/responses/Refused' }
+        '429': { $ref: '#/components/responses/TooMany' }
+        '503': { $ref: '#/components/responses/Refused' }
+  /v1/runs:
+    post:
+      operationId: enqueueRun
+      summary: Enqueue one run
+      description: |
+        Hands one run of a declared job to the queue, and answers at once.
+
+        - `delaySeconds` or `runAt` (not both) makes it due later; without either it's due now.
+        - **`dedupKey`:** a second enqueue with the same key, while the first is queued or running, answers the
+          first's `runId` and current state with `deduped: true`, and enqueues nothing. Once the first has ended,
+          the key is free again.
+        - `priority`: 1 is first; the default is 3. Among due runs, a lower number starts first.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EnqueueRequest' }
+            examples:
+              simple:
+                value: { job: make-thumbnails, data: { uploadId: u_42 }, dedupKey: u_42 }
+              later:
+                value: { job: send-reminders, data: null, delaySeconds: 600, priority: 1 }
+      responses:
+        '202':
+          description: Queued, or the same run as an earlier enqueue with this `dedupKey`.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnqueueResponse' }
+              examples:
+                queued:
+                  value: { runId: run_01HFQ8Z3J6Y2K9V4T7N5M1C0BD, state: queued, deduped: false }
+        '400': { $ref: '#/components/responses/Refused' }
+        '401': { $ref: '#/components/responses/Refused' }
+        '402': { $ref: '#/components/responses/Refused' }
+        '403': { $ref: '#/components/responses/Refused' }
+        '404': { $ref: '#/components/responses/Refused' }
+        '413': { $ref: '#/components/responses/Refused' }
+        '422': { $ref: '#/components/responses/Refused' }
+        '429': { $ref: '#/components/responses/TooMany' }
+        '503': { $ref: '#/components/responses/Refused' }
+  /v1/runs/{runId}:
+    parameters:
+      - $ref: '#/components/parameters/RunId'
+    get:
+      operationId: getRun
+      summary: A run's state
+      responses:
+        '200':
+          description: The run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunState' }
+        '401': { $ref: '#/components/responses/Refused' }
+        '403': { $ref: '#/components/responses/Refused' }
+        '404': { $ref: '#/components/responses/Refused' }
+        '429': { $ref: '#/components/responses/TooMany' }
+        '503': { $ref: '#/components/responses/Refused' }
+    delete:
+      operationId: cancelRun
+      summary: Cancel a run not yet started
+      description: |
+        Cancels a queued or held run. Cancelling one that's already cancelled answers the same again; one that's
+        running or has ended is a `409`.
+      responses:
+        '200':
+          description: Cancelled.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CancelResponse' }
+        '401': { $ref: '#/components/responses/Refused' }
+        '403': { $ref: '#/components/responses/Refused' }
+        '404': { $ref: '#/components/responses/Refused' }
+        '409': { $ref: '#/components/responses/Refused' }
+        '429': { $ref: '#/components/responses/TooMany' }
+        '503': { $ref: '#/components/responses/Refused' }
+components:
+  securitySchemes:
+    jobsKey:
+      type: http
+      scheme: bearer
+      description: The app's key, `JOBS_HTTP_KEY`. Opaque to the app.
+  parameters:
+    RunId:
+      name: runId
+      in: path
+      required: true
+      schema: { $ref: '#/components/schemas/RunId' }
+  headers:
+    RetryAfter:
+      description: Seconds to wait, the same as the body's `retryAfterSeconds`.
+      schema: { type: integer, minimum: 1 }
+  responses:
+    Refused:
+      description: |
+        `400` the body doesn't match this document; `401` no key, or a bad one; `402` the queue's budget is used
+        up; `403` the key may not be used from here, or the queue is paused; `404` no such run (or the queue isn't
+        set up); `409` the run can't be cancelled; `413` `data` is over 65,536 bytes; `422` a declaration or
+        enqueue that can't work (an unknown job, a bad cron); `503` try again shortly.
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    TooMany:
+      description: Too many calls (with `Retry-After`), or a cap reached (without; retrying won't help soon).
+      headers:
+        Retry-After: { $ref: '#/components/headers/RetryAfter' }
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+  schemas:
+    Name:
+      description: A job's or a schedule's name, as the app's code has it.
+      type: string
+      pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$'
+    RunId:
+      description: '`run_` and a ULID. The same on every attempt of a run.'
+      type: string
+      pattern: '^run_[0-9A-HJKMNP-TV-Z]{26}$'
+    Backoff:
+      description: |
+        The wait before a retry. `exponential` is 2^attempt × `delaySeconds`, with jitter, capped at 1 hour; `linear`
+        is attempt × `delaySeconds`; `fixed` is `delaySeconds`.
+      type: object
+      additionalProperties: false
+      required: [type, delaySeconds]
+      properties:
+        type: { type: string, enum: [exponential, linear, fixed] }
+        delaySeconds: { type: integer, minimum: 1, maximum: 3600 }
+    WebhookHeader:
+      description: A header a webhook trigger passes on only when the job names it.
+      type: string
+      enum: [authorization, cookie]
+    JobDefinition:
+      type: object
+      additionalProperties: false
+      required: [name]
+      properties:
+        name: { $ref: '#/components/schemas/Name' }
+        retries:
+          description: Retries after the first attempt, so a run has at most `retries + 1` attempts. Default 2.
+          type: integer
+          minimum: 0
+          maximum: 10
+        backoff: { $ref: '#/components/schemas/Backoff' }
+        timeoutSeconds:
+          description: An attempt with no answer in this time is failed.
+          type: integer
+          minimum: 1
+          maximum: 900
+        webhookHeaders:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/WebhookHeader' }
+    ScheduleDefinition:
+      type: object
+      additionalProperties: false
+      required: [name, cron, tz, job]
+      properties:
+        name: { $ref: '#/components/schemas/Name' }
+        cron:
+          description: Five fields, minute to day of week.
+          type: string
+          maxLength: 200
+        tz:
+          description: An IANA time zone, such as `Europe/Berlin` or `UTC`.
+          type: string
+          minLength: 1
+          maxLength: 64
+        job: { $ref: '#/components/schemas/Name' }
+        data:
+          description: A fixed payload for each run, at most 65,536 bytes of JSON. Default null.
+          x-max-json-bytes: 65536
+        overlap:
+          description: |
+            When the previous run is still queued or running: `skip` (the default) records a skipped run; `queue`
+            waits for it, with at most one waiting.
+          type: string
+          enum: [skip, queue]
+    DefinitionsRequest:
+      type: object
+      additionalProperties: false
+      required: [jobs, schedules]
+      properties:
+        jobs:
+          type: array
+          maxItems: 500
+          x-unique-by: name
+          items: { $ref: '#/components/schemas/JobDefinition' }
+        schedules:
+          type: array
+          maxItems: 500
+          x-unique-by: name
+          items: { $ref: '#/components/schemas/ScheduleDefinition' }
+    DeclaredJob:
+      type: object
+      additionalProperties: false
+      required: [name, retries, backoff, timeoutSeconds, webhookHeaders]
+      properties:
+        name: { $ref: '#/components/schemas/Name' }
+        retries: { type: integer, minimum: 0, maximum: 10 }
+        backoff: { $ref: '#/components/schemas/Backoff' }
+        timeoutSeconds: { type: integer, minimum: 1, maximum: 900 }
+        webhookHeaders:
+          type: array
+          uniqueItems: true
+          items: { $ref: '#/components/schemas/WebhookHeader' }
+    DeclaredSchedule:
+      type: object
+      additionalProperties: false
+      required: [name, cron, tz, job, data, overlap]
+      properties:
+        name: { $ref: '#/components/schemas/Name' }
+        cron: { type: string }
+        tz: { type: string }
+        job: { $ref: '#/components/schemas/Name' }
+        data: {}
+        overlap: { type: string, enum: [skip, queue] }
+    DefinitionsResponse:
+      type: object
+      additionalProperties: false
+      required: [jobs, schedules, nextRuns]
+      properties:
+        jobs:
+          type: array
+          items: { $ref: '#/components/schemas/DeclaredJob' }
+        schedules:
+          type: array
+          items: { $ref: '#/components/schemas/DeclaredSchedule' }
+        nextRuns:
+          description: Each schedule's next run, by name. Null when it doesn't fire on its own.
+          type: object
+          propertyNames: { $ref: '#/components/schemas/Name' }
+          additionalProperties:
+            type: [string, 'null']
+            format: date-time
+    EnqueueRequest:
+      type: object
+      additionalProperties: false
+      required: [job, data]
+      properties:
+        job: { $ref: '#/components/schemas/Name' }
+        data:
+          description: Any JSON, at most 65,536 bytes. Bigger things go in the app's database, and `data` carries their id.
+          x-max-json-bytes: 65536
+        delaySeconds:
+          description: Due this many seconds from now (at most 30 days).
+          type: integer
+          minimum: 0
+          maximum: 2592000
+        runAt:
+          description: Due at this time (at most 30 days ahead; a time past is due now).
+          type: string
+          format: date-time
+        dedupKey:
+          type: string
+          minLength: 1
+          maxLength: 200
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+      not:
+        required: [delaySeconds, runAt]
+    EnqueueResponse:
+      type: object
+      additionalProperties: false
+      required: [runId, state, deduped]
+      properties:
+        runId: { $ref: '#/components/schemas/RunId' }
+        state:
+          type: string
+          enum: [queued, running]
+        deduped: { type: boolean }
+    RunStateName:
+      description: |
+        `queued`, `held` and `running` are live. A run ends `succeeded`, `failed` (the app answered 409 or 422: no
+        retry), `dead` (out of attempts), `cancelled` or `skipped` (a schedule's run while its previous one was
+        still going).
+      type: string
+      enum: [queued, held, running, succeeded, failed, dead, cancelled, skipped]
+    RunState:
+      type: object
+      additionalProperties: false
+      required: [runId, state, attempt]
+      properties:
+        runId: { $ref: '#/components/schemas/RunId' }
+        state: { $ref: '#/components/schemas/RunStateName' }
+        attempt: { type: integer, minimum: 0 }
+        outcome: { type: string, maxLength: 200 }
+        finishedAt: { type: string, format: date-time }
+    CancelResponse:
+      type: object
+      additionalProperties: false
+      required: [state]
+      properties:
+        state: { const: cancelled }
+    Error:
+      description: The one error shape. The `code` is the queue's own.
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code: { type: string, minLength: 1, maxLength: 100 }
+            message: { type: string, minLength: 1, maxLength: 500 }
+            retryAfterSeconds: { type: integer, minimum: 1 }
