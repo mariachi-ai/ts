@@ -24,7 +24,9 @@ webhooks:
         3. Compute the lowercase hex HMAC-SHA256 of the string `<t>.<Jobs-Run-Id>.<Jobs-Run-Attempt>.<raw body>`,
            keyed with the UTF-8 bytes of `JOBS_HTTP_SIGNING_SECRET`, and compare it with each `v1` in constant
            time. One match is enough. While the secret is being rotated, there are two `v1` values, one per
-           secret. A missing or ill-formed `Jobs-Run-Id` or `Jobs-Run-Attempt` is a bad signature.
+           secret. Before computing it, check `Jobs-Run-Id` against `^run_[0-9A-HJKMNP-TV-Z]{26}$` and
+           `Jobs-Run-Attempt` against `^[1-9][0-9]{0,2}$`: a missing or ill-formed one is a bad signature.
+           Neither can then contain a `.`, so the signed string reads only one way.
         4. Then parse the body.
 
         **The app refuses a run id it has already finished:** it keeps finished `Jobs-Run-Id`s, and answers
@@ -63,6 +65,8 @@ webhooks:
       x-test-vectors:
         - summary: An example run, signed with one secret, then during a rotation with two
           secrets: [example-signing-secret-new, example-signing-secret-old]
+          # `refused`: the first signature sent under other run headers must fail; `passing` is the v1 that
+          # would check there, with the first secret.
           timestamp: 1763805000
           runId: run_01HFQ8Z3J6Y2K9V4T7N5M1C0BD
           attempt: '1'
@@ -70,6 +74,17 @@ webhooks:
           signatures:
             - t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8
             - t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8,v1=e27ccb87659148443268badf41dd7ca786ba01c8ddfd159911414c703ee27205
+          refused:
+            - summary: The first signature, the same body, under another run id
+              runId: run_01HFQ8Z3J6Y2K9V4T7N5M1C0BE
+              attempt: '1'
+              header: t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8
+              passing: e93e93751acf7602981251ed877ee6966fdf8ebfe1c438f5892cbd067751b1e3
+            - summary: The first signature, the same body, as another attempt
+              runId: run_01HFQ8Z3J6Y2K9V4T7N5M1C0BD
+              attempt: '2'
+              header: t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8
+              passing: f051edb385c76d41e051f0edf4b6201f3e7d71c39cb697783bd8ae7df1d2f54c
       requestBody:
         required: true
         content:

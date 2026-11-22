@@ -1,3 +1,4 @@
+import { createHmac } from 'node:crypto';
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import { JobsError, MariachiError, createContext } from '@mariachi/core';
@@ -98,6 +99,40 @@ describe('the run signature', () => {
     expect(verifyJobRunSignature(v.secrets[0] as string, sig, run, `${v.body} `, v.timestamp)).toBe(false);
     expect(verifyJobRunSignature(v.secrets[0] as string, 'garbage', run, v.body, v.timestamp)).toBe(false);
     expect(verifyJobRunSignature('', sig, run, v.body, v.timestamp)).toBe(false);
+  });
+
+  it('refuses the protocol refused vectors, and their passing signatures pass', () => {
+    for (const v of runVectors) {
+      expect(v.refused.length).toBeGreaterThan(0);
+      for (const r of v.refused) {
+        const run = { runId: r.runId, attempt: r.attempt };
+        expect(verifyJobRunSignature(v.secrets[0] as string, r.header, run, v.body, v.timestamp), r.summary).toBe(false);
+        expect(verifyJobRunSignature(v.secrets[0] as string, `t=${v.timestamp},v1=${r.passing}`, run, v.body, v.timestamp), r.summary).toBe(true);
+        expect(signJobRun([v.secrets[0] as string], run, v.body, v.timestamp)).toBe(`t=${v.timestamp},v1=${r.passing}`);
+      }
+    }
+  });
+
+  it('refuses run headers that do not match their patterns, before any HMAC, even if signed as given', () => {
+    const v = runVectors[0];
+    if (!v) throw new Error('no vectors');
+    const secret = v.secrets[0] as string;
+    const badIds = ['run_01HFQ8Z3J6Y2K9V4T7N5M1C0B', 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0BDX', 'run_01hfq8z3j6y2k9v4t7n5m1c0bd', 'run_01HFQ8Z3J6Y2K9V4T7N5M1C0BI', 'run_01HFQ8Z3J6Y2K9V4T7N5M1C.BD', 'RUN_01HFQ8Z3J6Y2K9V4T7N5M1C0BD', ''];
+    const badAttempts = ['0', '01', '1000', '1.2', '-1', ' 1', ''];
+    // A queue could compute an HMAC over any strings: the verifier must refuse these headers regardless
+    const forged = (runId: string, attempt: string) => {
+      const mac = createHmac('sha256', secret).update(`${v.timestamp}.${runId}.${attempt}.`).update(v.body).digest('hex');
+      return `t=${v.timestamp},v1=${mac}`;
+    };
+    for (const runId of badIds) {
+      expect(verifyJobRunSignature(secret, forged(runId, '1'), { runId, attempt: '1' }, v.body, v.timestamp), runId).toBe(false);
+      expect(() => signJobRun([secret], { runId, attempt: '1' }, v.body, v.timestamp)).toThrow(expect.objectContaining({ code: 'jobs/invalid-signature-input' }));
+    }
+    for (const attempt of badAttempts) {
+      expect(verifyJobRunSignature(secret, forged(v.runId, attempt), { runId: v.runId, attempt }, v.body, v.timestamp), attempt).toBe(false);
+    }
+    // The control: the same forging with good headers does check
+    expect(verifyJobRunSignature(secret, forged(v.runId, '999'), { runId: v.runId, attempt: '999' }, v.body, v.timestamp)).toBe(true);
   });
 
   it('covers the run headers: the same body and signature under another run id or attempt is refused', () => {

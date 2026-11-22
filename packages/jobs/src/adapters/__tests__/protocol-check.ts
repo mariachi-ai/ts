@@ -47,6 +47,7 @@ export interface RunVector {
   attempt: string;
   body: string;
   signatures: string[];
+  refused: Array<{ summary: string; runId: string; attempt: string; header: string; passing: string }>;
 }
 
 export const runVectors = runCall.webhooks.run.post['x-test-vectors'] as RunVector[];
