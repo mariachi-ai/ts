@@ -2,9 +2,20 @@ import type { z } from 'zod';
 import type { Context } from '@mariachi/core';
 
 export interface JobConfig {
-  /** `bullmq` (Redis) or `memory`. The Postgres queue is `createPostgresJobQueue` from `@mariachi/jobs/postgres`. */
-  adapter: 'bullmq' | 'memory' | (string & {});
+  /**
+   * `bullmq` (Redis), `http` (a remote queue, `packages/jobs/protocol`) or `memory`. The Postgres
+   * queue is `createPostgresJobQueue` from `@mariachi/jobs/postgres`.
+   */
+  adapter: 'bullmq' | 'http' | 'memory' | (string & {});
   redisUrl?: string;
+  /** The remote queue's API, ending in `/v1` (`JOBS_HTTP_URL`). http only. */
+  httpUrl?: string;
+  /** Sent as `Authorization: Bearer` (`JOBS_HTTP_KEY`). http only. */
+  httpKey?: string;
+  /** Checks the queue's signature on `POST /_jobs/run` (`JOBS_HTTP_SIGNING_SECRET`). http only. */
+  httpSigningSecret?: string;
+  /** How long a call to the remote queue may take. Default 10s. http only. */
+  httpTimeoutMs?: number;
   prefix?: string;
   /** Queue name. Default `<prefix>-jobs`. */
   queue?: string;

@@ -54,6 +54,18 @@ function parse<T>(schema: z.ZodType<T, z.ZodTypeDef, unknown>, value: unknown, w
 
 let warnedNoEnvironment = false;
 
+const LOOPBACK_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/** In production the jobs key travels to the queue, so its URL must be https unless it is this machine. */
+function refuseCleartextJobsUrl(config: AppConfig): void {
+  const url = config.jobs?.httpUrl;
+  if (config.env !== 'production' || !url) return;
+  const parsed = new URL(url);
+  if (parsed.protocol === 'http:' && !LOOPBACK_HOSTS.has(parsed.hostname)) {
+    throw new ConfigError('config/insecure-jobs-url', 'JOBS_HTTP_URL must be https in production (http is allowed for localhost only)');
+  }
+}
+
 /**
  * Loads config from env (+ optional .env) merged with `overrides`, validates it, and caches it
  * so later `useConfig()` calls return the same object.
@@ -73,6 +85,7 @@ export function loadConfig(overrides?: AppConfigInput, options: LoadConfigOption
   }
   const merged = deepMerge(fromEnv as Record<string, unknown>, (overrides ?? {}) as Record<string, unknown>);
   const config = parse(AppConfigSchema, merged, 'configuration');
+  refuseCleartextJobsUrl(config);
 
   const read = options.env ? (k: string) => options.env?.[k] : readEnv;
   for (const [name, section] of sections) {

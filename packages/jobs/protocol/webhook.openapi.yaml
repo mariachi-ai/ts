@@ -1,0 +1,199 @@
+openapi: 3.1.0
+# Mariachi jobs over HTTP, v1: the signed run call a remote queue makes to the app.
+# Versioned and kept stable: a change is a new version (a new document, and `v2=` signatures), never an edit.
+info:
+  title: Mariachi jobs over HTTP, the run call
+  version: v1
+  summary: The signed POST /_jobs/run an app receives, one attempt of one run at a time.
+  description: |
+    The queue calls the app with one attempt of one run, signed with the app's `JOBS_HTTP_SIGNING_SECRET`.
+    `@mariachi/jobs`' `http` backend answers it (`handleRun`); an app off Mariachi writes the route itself.
+paths: {}
+webhooks:
+  run:
+    post:
+      operationId: runJob
+      summary: 'The app''s POST /_jobs/run: one attempt of one run'
+      x-path: /_jobs/run
+      description: |
+        The queue calls the app's own address (never a URL the app supplies) at `POST /_jobs/run`.
+
+        **The app checks the signature** before anything else (`Jobs-Signature`), against the raw body:
+        1. Read `t` and each `v1` from the header.
+        2. Refuse it when `t` is more than 300 seconds from the app's clock, either way.
+        3. Compute the lowercase hex HMAC-SHA256 of the string `<t>.<Jobs-Run-Id>.<Jobs-Run-Attempt>.<raw body>`,
+           keyed with the UTF-8 bytes of `JOBS_HTTP_SIGNING_SECRET`, and compare it with each `v1` in constant
+           time. One match is enough. While the secret is being rotated, there are two `v1` values, one per
+           secret. Before computing it, check `Jobs-Run-Id` against `^run_[0-9A-HJKMNP-TV-Z]{26}$` and
+           `Jobs-Run-Attempt` against `^[1-9][0-9]{0,2}$`: a missing or ill-formed one is a bad signature.
+           Neither can then contain a `.`, so the signed string reads only one way.
+        4. Then parse the body.
+
+        **The app refuses a run id it has already finished:** it keeps finished `Jobs-Run-Id`s, and answers
+        `200` to a repeat without running it again.
+
+        **The body is at most 65,536 bytes of `data`** for an enqueued or scheduled run. A webhook run's `data`
+        carries a body of up to 65,536 bytes in base64, so it can be about 88 KiB, plus its headers.
+      parameters:
+        - name: Jobs-Run-Id
+          in: header
+          required: true
+          description: The run's id, the same on every attempt.
+          schema: { type: string, pattern: '^run_[0-9A-HJKMNP-TV-Z]{26}$' }
+          examples:
+            one: { value: run_01HFQ8Z3J6Y2K9V4T7N5M1C0BD }
+        - name: Jobs-Run-Attempt
+          in: header
+          required: true
+          description: This attempt's number, from 1. A `429` answer doesn't use one up.
+          schema: { type: string, pattern: '^[1-9][0-9]{0,2}$' }
+          examples:
+            first: { value: '1' }
+        - name: Jobs-Signature
+          in: header
+          required: true
+          description: |
+            `t=<Unix seconds>,v1=<64 lowercase hex>`, with a second `,v1=<hex>` during a rotation of the signing
+            secret, over `<t>.<Jobs-Run-Id>.<Jobs-Run-Attempt>.<raw body>`. See `x-test-vectors` for exact values
+            (run `run_01HFQ8Z3J6Y2K9V4T7N5M1C0BD`, attempt `1`).
+          schema: { type: string, pattern: '^t=[0-9]{1,12}(,v1=[0-9a-f]{64}){1,2}$' }
+          examples:
+            one:
+              value: t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8
+            rotating:
+              value: t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8,v1=e27ccb87659148443268badf41dd7ca786ba01c8ddfd159911414c703ee27205
+      x-test-vectors:
+        - summary: An example run, signed with one secret, then during a rotation with two
+          secrets: [example-signing-secret-new, example-signing-secret-old]
+          # `refused`: the first signature sent under other run headers must fail; `passing` is the v1 that
+          # would check there, with the first secret.
+          timestamp: 1763805000
+          runId: run_01HFQ8Z3J6Y2K9V4T7N5M1C0BD
+          attempt: '1'
+          body: '{"job":"make-thumbnails","data":{"uploadId":"u_42"},"trigger":"enqueue","scheduledFor":null}'
+          signatures:
+            - t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8
+            - t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8,v1=e27ccb87659148443268badf41dd7ca786ba01c8ddfd159911414c703ee27205
+          refused:
+            - summary: The first signature, the same body, under another run id
+              runId: run_01HFQ8Z3J6Y2K9V4T7N5M1C0BE
+              attempt: '1'
+              header: t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8
+              passing: e93e93751acf7602981251ed877ee6966fdf8ebfe1c438f5892cbd067751b1e3
+            - summary: The first signature, the same body, as another attempt
+              runId: run_01HFQ8Z3J6Y2K9V4T7N5M1C0BD
+              attempt: '2'
+              header: t=1763805000,v1=f3991ba2beb297fd5c043f28aaada5d37b585b75669234601164f062b02f75f8
+              passing: f051edb385c76d41e051f0edf4b6201f3e7d71c39cb697783bd8ae7df1d2f54c
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RunRequest' }
+            examples:
+              enqueued:
+                value: { job: make-thumbnails, data: { uploadId: u_42 }, trigger: enqueue, scheduledFor: null }
+              schedule:
+                value: { job: send-reminders, data: null, trigger: schedule, scheduledFor: '2026-11-23T07:00:00Z' }
+              webhook:
+                summary: A webhook trigger's run, its body byte for byte
+                value:
+                  job: payment-failed
+                  trigger: webhook
+                  scheduledFor: null
+                  data:
+                    headers:
+                      content-type: application/json
+                    contentType: application/json
+                    bodyBase64: eyJpZCI6ImV2dF8xIiwidHlwZSI6Imludm9pY2UucGF5bWVudF9mYWlsZWQifQ==
+      responses:
+        '2XX':
+          description: Done. A repeat of a run id the app has already finished is answered `200` and not run again.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunAnswer' }
+        '409':
+          description: Failed, with no retry. The input can't work (it conflicts with the app's state).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunAnswer' }
+        '422':
+          description: Failed, with no retry. The input can't work (it doesn't parse).
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunAnswer' }
+        '429':
+          description: |
+            Later. The run is due again after `Retry-After` (seconds, or an HTTP date; at most 1 hour is honoured,
+            and without one, 60 seconds), and this attempt isn't counted.
+          headers:
+            Retry-After:
+              required: false
+              schema: { type: string, minLength: 1 }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunAnswer' }
+        default:
+          description: |
+            Any other status (a bad signature's `401` too), a redirect, or no answer within the job's
+            `timeoutSeconds`: a failed attempt, retried with the job's backoff until it runs out of attempts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/RunAnswer' }
+components:
+  schemas:
+    WebhookData:
+      description: A webhook trigger's run data.
+      type: object
+      additionalProperties: false
+      required: [headers, contentType, bodyBase64]
+      properties:
+        headers:
+          description: The call's headers, filtered, by lowercase name. A repeated header's values are joined with `, `.
+          type: object
+          propertyNames: { type: string, pattern: "^[!#$%&'*+.^_`|~0-9a-z-]+$" }
+          additionalProperties: { type: string }
+        contentType:
+          description: The call's `Content-Type`, or null when it had none.
+          type: [string, 'null']
+        bodyBase64:
+          description: The body, byte for byte, in standard base64 with padding. Empty for no body.
+          type: string
+          maxLength: 87384
+          pattern: '^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$'
+    RunRequest:
+      type: object
+      additionalProperties: false
+      required: [job, data, trigger, scheduledFor]
+      properties:
+        job:
+          type: string
+          pattern: '^[A-Za-z0-9][A-Za-z0-9._:-]{0,99}$'
+        data:
+          description: What was enqueued, the schedule's fixed data, or for `webhook`, a `WebhookData`.
+        trigger:
+          description: |
+            `enqueue` (the queue's API), `schedule`, `webhook`, `manual` (run by hand) or `retry` (a run that
+            failed or died, run again by hand).
+          type: string
+          enum: [enqueue, schedule, webhook, manual, retry]
+        scheduledFor:
+          description: For `schedule`, the due time it fires for; otherwise null.
+          type: [string, 'null']
+          format: date-time
+      allOf:
+        - if:
+            properties: { trigger: { const: webhook } }
+          then:
+            properties: { data: { $ref: '#/components/schemas/WebhookData' } }
+        - if:
+            properties: { trigger: { const: schedule } }
+          then:
+            properties: { scheduledFor: { type: string } }
+          else:
+            properties: { scheduledFor: { type: 'null' } }
+    RunAnswer:
+      description: Optional. An `outcome` is kept as the run's short reason; anything else in the answer is ignored.
+      type: object
+      properties:
+        outcome: { type: string, maxLength: 200 }
