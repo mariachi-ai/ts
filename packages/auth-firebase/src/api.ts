@@ -79,13 +79,14 @@ export function createFirebaseApi(config: FirebaseApiConfig, deps: FirebaseDeps 
   const project = `/projects/${encodeURIComponent(projectId)}`;
 
   function call<T>(ctx: Context | null, operation: FirebaseOperation, request: Omit<ProviderRequest, 'method'>, schema: z.ZodType<T, z.ZodTypeDef, unknown>): Promise<T> {
-    // A call Firebase can't recognise as a repeat (a sign-in, a sign-up, an email sent) is made once.
+    // A call Firebase can't recognise as a repeat (a sign-in, a sign-up, an email sent) is made once. The others are
+    // POSTs that are safe to repeat (a lookup, a refresh, a delete), so an outage is retried for them too.
     const once = operations[operation].idempotency === 'none';
     return providerRequest(
       ctx,
       { integration: provider.id, operation, category: provider.category, server: new URL(request.url).host },
       { method: 'POST', ...request },
-      { schema, error: FirebaseError, failure, deps: once ? { ...deps, retry: { ...deps.retry, attempts: 1 } } : deps },
+      { schema, error: FirebaseError, failure, deps: once ? { ...deps, retry: { ...deps.retry, attempts: 1 } } : { ...deps, retry: { unsafe: false, ...deps.retry } } },
     );
   }
 
