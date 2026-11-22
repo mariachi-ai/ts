@@ -52,7 +52,8 @@ Every operation takes `ctx` first and makes one span (`mailchimp members.upsert`
 named by email address; the client hashes it into Mailchimp's id (`subscriberHash(email)`, the
 MD5 of the lowercased address), so `Ada@Example.com` and `ada@example.com` are one contact. A
 failure is a `MailchimpError` with a category: only `rate-limited` and `unavailable` are
-retried, and the client already did. The codes an app acts on:
+retried, and the client already did; a POST or PATCH (Mailchimp takes no idempotency key) only
+after a rate limit, since an outage may come after Mailchimp acted. The codes an app acts on:
 
 | Code | Means |
 | --- | --- |
