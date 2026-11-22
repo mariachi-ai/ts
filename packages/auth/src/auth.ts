@@ -24,7 +24,6 @@ export abstract class Auth implements Instrumentable {
       try {
         const identity = await this.authentication.verify(token);
         span?.setAttribute('identityType', identity.identityType);
-        span?.setAttribute('userId', identity.userId);
         this.metrics?.increment('auth.authenticate.success', 1, { type: identity.identityType });
         this.logger.info({ traceId: ctx.traceId, userId: identity.userId, type: identity.identityType }, 'Authentication succeeded');
         return identity;
@@ -62,7 +61,7 @@ export abstract class Auth implements Instrumentable {
   }
 
   async sign(ctx: Context, payload: IdentityPayload, expiresIn?: string | number): Promise<string> {
-    return withSpan(this.tracer, 'auth.sign', { userId: payload.userId }, async () => {
+    return withSpan(this.tracer, 'auth.sign', {}, async () => {
       return this.authentication.sign(payload, expiresIn);
     });
   }
