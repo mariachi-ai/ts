@@ -31,7 +31,7 @@ describe('the client', () => {
 
   it("calls the EU data center when it's set", async () => {
     const fetch = scriptedFetch({ json: { id: 'abc', title: 'Signup', fields: [], hidden: [] } });
-    await createTypeform({ ...config, apiBaseUrl: 'https://api.eu.typeform.com/' }, { fetch }).forms.get(ctx, 'abc');
+    await createTypeform({ ...config, apiBaseUrl: 'https://api.eu.typeform.com/' }, { fetch }).forms.get(ctx, { formId: 'abc' });
     expect(fetch.requests[0]!.url.href).toBe('https://api.eu.typeform.com/forms/abc');
   });
 
@@ -53,7 +53,7 @@ describe('the client', () => {
 
   it("fails as a TypeformError with Typeform's code, retrying only rate limits", async () => {
     const fetch = scriptedFetch({ status: 429, headers: { 'retry-after': '0' } }, { status: 404, json: { code: 'FORM_NOT_FOUND', description: 'nope' } });
-    const err = await createTypeform(config, { fetch, ...noWait }).forms.get(ctx, 'gone').catch((e) => e);
+    const err = await createTypeform(config, { fetch, ...noWait }).forms.get(ctx, { formId: 'gone' }).catch((e) => e);
     expect(err).toBeInstanceOf(TypeformError);
     expect([err.code, err.category, err.providerCode, fetch.requests.length]).toEqual(['typeform/not-found', 'not-found', 'FORM_NOT_FOUND', 2]);
     expect(err.message).not.toContain('nope');
@@ -123,6 +123,39 @@ describe('the fake', () => {
   it('stands in for the client in an app’s tests', async () => {
     const fake = fakeTypeform({ forms: [{ id: 'f', title: 'Signup', fields: [], hidden: [] }], responses: { f: [typeformResponse({ token: 'old', submitted_at: '2026-01-01T00:00:00Z' }), typeformResponse({ token: 'new' })] } });
     expect((await fake.responses.list(ctx, { formId: 'f' })).items.map((r) => r.token)).toEqual(['new', 'old']);
-    await expect(fake.forms.get(ctx, 'nope')).rejects.toMatchObject({ code: 'not-found' });
+    // The fake fails as the client does: the same class, code and category
+    const missing = await fake.forms.get(ctx, { formId: 'nope' }).catch((e) => e);
+    expect(missing).toBeInstanceOf(TypeformError);
+    expect(missing).toMatchObject({ code: 'typeform/not-found', category: 'not-found' });
+  });
+
+  it('refuses to make a webhook without a secret, as the client does', async () => {
+    const form = { id: 'f', title: 'Signup', fields: [], hidden: [] };
+    await expect(fakeTypeform({ forms: [form] }).webhooks.put(ctx, { formId: 'f', tag: 'app', url: 'https://app.test/hooks/typeform' })).rejects.toMatchObject({
+      code: 'typeform/no-webhook-secret',
+    });
+    const fake = fakeTypeform({ forms: [form], webhookSecret: 's3cret' });
+    await fake.webhooks.put(ctx, { formId: 'f', tag: 'app', url: 'https://app.test/hooks/typeform' });
+    expect((await fake.webhooks.list(ctx, { formId: 'f' })).map((w) => w.tag)).toEqual(['app']);
+  });
+});
+
+describe('inputs and secrets', () => {
+  it('checks every operation input before anything is sent: an empty form id never lists the account', async () => {
+    const fetch = scriptedFetch();
+    const typeform = createTypeform(config, { fetch });
+    await expect(typeform.forms.get(ctx, { formId: '' })).rejects.toMatchObject({ code: 'validation/invalid-input' });
+    await expect(typeform.webhooks.delete(ctx, { formId: 'f', tag: '' })).rejects.toMatchObject({ code: 'validation/invalid-input' });
+    expect(fetch.requests).toHaveLength(0);
+  });
+
+  it("never hands a webhook's signing secret back to the app", async () => {
+    const hook = { id: 'wh', form_id: 'f', tag: 'app', url: 'https://app.test/hooks/typeform', enabled: true, verify_ssl: true, secret: 's3cret' };
+    const fetch = scriptedFetch({ json: hook }, { json: { items: [hook] } });
+    const typeform = createTypeform({ ...config, webhookSecret: 's3cret' }, { fetch });
+    const made = await typeform.webhooks.put(ctx, { formId: 'f', tag: 'app', url: hook.url });
+    const listed = await typeform.webhooks.list(ctx, { formId: 'f' });
+    expect(JSON.stringify([made, listed])).not.toContain('s3cret');
+    expect(made).toMatchObject({ tag: 'app', enabled: true });
   });
 });
