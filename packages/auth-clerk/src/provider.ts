@@ -69,6 +69,8 @@ export class ClerkAuthProvider implements AuthProvider {
   private readonly clerk: ClerkClient;
   private readonly config: ClerkConfig;
   private keys?: { byKid: Map<string, JsonWebKey>; fetchedAt: number };
+  /** The last key fetch that failed, and when: within the cooldown it fails again without calling Clerk. */
+  private failed?: { error: unknown; at: number };
   private loading?: Promise<Map<string, JsonWebKey>>;
 
   constructor(
@@ -108,6 +110,10 @@ export class ClerkAuthProvider implements AuthProvider {
     const fresh = keys !== undefined && now - keys.fetchedAt < KEYS_MAX_AGE_MS;
     if (fresh && keys.byKid.has(kid)) return keys.byKid.get(kid) as JsonWebKey;
     // An unknown key refetches, but not more than once per cooldown: a made-up kid can't make every request call Clerk
+    if (!(fresh && now - keys.fetchedAt < KEYS_COOLDOWN_MS) && this.failed && now - this.failed.at < KEYS_COOLDOWN_MS) {
+      // Nor can an outage: a fetch that just failed fails again until the cooldown is over
+      throw this.failed.error;
+    }
     const byKid = fresh && now - keys.fetchedAt < KEYS_COOLDOWN_MS ? keys.byKid : await this.loadKeys();
     const key = byKid.get(kid);
     if (!key) throw new AuthError('auth/invalid-token', "the token is signed with a key the instance's JWKS doesn't have");
@@ -125,7 +131,12 @@ export class ClerkAuthProvider implements AuthProvider {
       .then(({ keys }) => {
         const byKid = new Map(keys.map((key) => [key.kid, key as JsonWebKey]));
         this.keys = { byKid, fetchedAt: Date.now() };
+        this.failed = undefined;
         return byKid;
+      })
+      .catch((error: unknown) => {
+        this.failed = { error, at: Date.now() };
+        throw error;
       })
       .finally(() => {
         this.loading = undefined;

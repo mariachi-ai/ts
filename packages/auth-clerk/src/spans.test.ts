@@ -72,6 +72,16 @@ describe('ClerkAuthProvider key fetches', () => {
     expect(fetch.requests).toHaveLength(1);
   });
 
+  it('waits out the cooldown after a key fetch that failed: an outage costs one fetch, not one per request', async () => {
+    const fetch = scriptedFetch({ status: 503 }, { status: 503 }, { status: 503 });
+    const clerk = new ClerkAuthProvider(config, { fetch, ...noWait });
+    await expect(clerk.verify(sessionToken())).rejects.toMatchObject({ code: 'auth/invalid-token' });
+    const calls = fetch.requests.length;
+    await expect(clerk.verify(sessionToken())).rejects.toMatchObject({ code: 'auth/invalid-token' });
+    await expect(clerk.verify(sessionToken())).rejects.toMatchObject({ code: 'auth/invalid-token' });
+    expect(fetch.requests).toHaveLength(calls);
+  });
+
   it('calls nothing with a local JWT key', async () => {
     const pem = publicKey.export({ format: 'pem', type: 'spki' }).toString();
     const tracer = new TestTracer();
