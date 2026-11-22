@@ -4,6 +4,8 @@ import { goTrueVerifiedEmail } from './verified-email';
 const ADA = '0b9d4c53-8f0a-4d0e-9a63-5c2f1e7b3a41';
 const CONFIRMED = { id: ADA, email: 'ada@example.com', email_confirmed_at: '2026-11-01T10:00:00Z' };
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } });
+/** A service-role JWT (legacy Supabase, or a self-hosted GoTrue's): sent as the bearer token too. */
+const SERVICE_ROLE_JWT = 'eyJhbGciOiJIUzI1NiJ9.eyJyb2xlIjoic2VydmljZV9yb2xlIn0.c2lnbmF0dXJl';
 const withClaims = (claims: Record<string, unknown>) => ({ identity: { claims } });
 
 /** A stand-in for GoTrue: `/settings` and `/admin/users/:id`. */
@@ -29,13 +31,23 @@ describe('goTrueVerifiedEmail', () => {
 
   it('never reads user_metadata: what the user wrote about themselves is not an answer', async () => {
     const { calls, fetcher } = gotrue({ user: () => json({ id: ADA, email: 'ada@example.com', email_confirmed_at: null, user_metadata: { email_verified: true } }) });
-    const read = goTrueVerifiedEmail({ url: 'http://gotrue.test/auth/v1/', serviceKey: 'service-key', fetch: fetcher });
+    const read = goTrueVerifiedEmail({ url: 'http://gotrue.test/auth/v1/', serviceKey: SERVICE_ROLE_JWT, fetch: fetcher });
     const answer = await read(withClaims({ sub: ADA, email: 'ada@example.com', user_metadata: { email_verified: true, email: 'ceo@example.com' } }));
     expect(answer).toEqual({ email: 'ada@example.com', verified: false });
-    const headers = { accept: 'application/json', authorization: 'Bearer service-key', apikey: 'service-key' };
+    const headers = { accept: 'application/json', authorization: `Bearer ${SERVICE_ROLE_JWT}`, apikey: SERVICE_ROLE_JWT };
     expect(calls).toEqual([
       { url: 'http://gotrue.test/auth/v1/settings', headers },
       { url: `http://gotrue.test/auth/v1/admin/users/${ADA}`, headers },
+    ]);
+  });
+
+  it("sends Supabase's secret key on apikey only: it isn't a JWT, and on Authorization the platform refuses it", async () => {
+    const { calls, fetcher } = gotrue();
+    const read = goTrueVerifiedEmail({ url: 'https://abcdefghijklmnopqrst.supabase.co/auth/v1', serviceKey: 'sb_secret_123', fetch: fetcher });
+    expect(await read(withClaims({ sub: ADA, email: 'ada@example.com' }))).toEqual({ email: 'ada@example.com', verified: true });
+    expect(calls.map((c) => c.headers)).toEqual([
+      { accept: 'application/json', apikey: 'sb_secret_123' },
+      { accept: 'application/json', apikey: 'sb_secret_123' },
     ]);
   });
 

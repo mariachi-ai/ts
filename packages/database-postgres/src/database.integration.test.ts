@@ -133,3 +133,23 @@ describe('DrizzleRepository against Postgres', () => {
     expect(await database.isHealthy()).toBe(true);
   });
 });
+
+describe('prepared statements', () => {
+  // One connection, so the statement and the check share a session
+  async function preparedAfterQuery(prepare: boolean | undefined): Promise<number> {
+    const db = createPostgresDatabase({ url: await startPostgres(), poolMax: 1, ...(prepare === undefined ? {} : { prepare }) });
+    await db.connect();
+    try {
+      await db.adapter.raw`select ${1}::int as one`;
+      const [row] = await db.adapter.raw<{ n: number }[]>`select count(*)::int as n from pg_prepared_statements`;
+      return row!.n;
+    } finally {
+      await db.disconnect();
+    }
+  }
+
+  it('are named by default, and not at all with prepare: false (a pooler in transaction mode)', async () => {
+    expect(await preparedAfterQuery(undefined)).toBeGreaterThan(0);
+    expect(await preparedAfterQuery(false)).toBe(0);
+  });
+});

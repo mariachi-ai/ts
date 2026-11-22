@@ -50,6 +50,7 @@ finds the lines that have every word.
 - [recipes/add-webhook-endpoint](./recipes/add-webhook-endpoint.md): receive deliveries, verify the signature, acknowledge fast, process in a job
 - [recipes/add-integration](./recipes/add-integration.md): a third-party integration with `@mariachi/integrations`, file by file
 - [recipes/wiring-and-bootstrap](./recipes/wiring-and-bootstrap.md): the composition root, step by step
+- [recipes/use-supabase](./recipes/use-supabase.md): an app whose database, auth and files live in Supabase: each port wired to the project, connection strings, RLS, what stays in the browser
 - [recipes/add-design-component](./recipes/add-design-component.md): a new component in `@mariachi/design`, readable by every preset
 - [recipes/add-design-preset](./recipes/add-design-preset.md): a new built-in preset in `@mariachi/design`
 

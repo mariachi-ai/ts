@@ -1,0 +1,69 @@
+{
+  "name": "@mariachi/integration-supabase",
+  "version": "0.0.0",
+  "description": "Supabase: Edge Functions, Auth's admin API and signed Auth Hooks, and the settings that point database-postgres, auth-gotrue and storage at a project.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mariachi-ai/ts.git",
+    "directory": "packages/integration-supabase"
+  },
+  "mariachi": {
+    "category": "providers",
+    "status": "alpha",
+    "useWhen": "An app whose database, auth or storage live in a Supabase project, or that calls its Edge Functions",
+    "entry": [
+      "createSupabase",
+      "supabaseAuthHookAuth",
+      "supabaseDatabaseConfig",
+      "supabaseAuthConfig",
+      "supabaseStorageConfig"
+    ]
+  },
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.ts",
+      "import": "./dist/testing.js",
+      "require": "./dist/testing.cjs"
+    },
+    "./contract.json": "./contract.json"
+  },
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist",
+    "contract.json",
+    "README.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist",
+    "lint": "biome lint src",
+    "test:unit": "vitest run --passWithNoTests",
+    "test:integration": "vitest run --config vitest.integration.config.ts --passWithNoTests",
+    "test": "vitest run --passWithNoTests"
+  },
+  "dependencies": {
+    "@mariachi/core": "workspace:*",
+    "@mariachi/integrations": "workspace:*",
+    "@mariachi/webhooks": "workspace:*",
+    "zod": "^3.24"
+  },
+  "devDependencies": {
+    "@mariachi/testing": "workspace:*",
+    "tsup": "^8",
+    "typescript": "^5.7",
+    "vitest": "^3"
+  }
+}

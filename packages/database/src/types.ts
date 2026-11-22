@@ -20,6 +20,12 @@ export interface DatabaseConfig {
   /** `require` for managed Postgres; `false` for local. */
   ssl?: boolean | 'require' | 'prefer';
   applicationName?: string;
+  /**
+   * Use named prepared statements. Default true. Set false behind a pooler in transaction mode that
+   * doesn't keep them (Supabase's shared pooler on port 6543, PgBouncer before 1.21): each statement
+   * can land on a different server connection, which never saw it prepared.
+   */
+  prepare?: boolean;
 }
 
 export interface DatabaseAdapter {
