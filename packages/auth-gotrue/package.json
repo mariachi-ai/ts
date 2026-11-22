@@ -22,13 +22,15 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
-    }
+    },
+    "./contract.json": "./contract.json"
   },
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
-    "dist"
+    "dist",
+    "contract.json"
   ],
   "publishConfig": {
     "access": "public"
@@ -46,11 +48,14 @@
   "dependencies": {
     "@mariachi/auth": "workspace:*",
     "@mariachi/core": "workspace:*",
-    "jose": "^6"
+    "@mariachi/integrations": "workspace:*",
+    "jose": "^6",
+    "zod": "^3.24"
   },
   "devDependencies": {
-    "typescript": "^5.7",
+    "@mariachi/testing": "workspace:*",
     "tsup": "^8",
+    "typescript": "^5.7",
     "vitest": "^3"
   }
 }

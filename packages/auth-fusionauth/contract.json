@@ -1,0 +1,145 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "fusionauth",
+    "name": "FusionAuth",
+    "category": "auth",
+    "server": "{serverUrl}",
+    "docs": "https://fusionauth.io/docs/apis/"
+  },
+  "settings": [
+    {
+      "key": "serverUrl",
+      "env": "FUSIONAUTH_URL",
+      "label": "Server URL",
+      "meaning": "FusionAuth's base URL, such as https://auth.example.com. Its APIs, OAuth endpoints and keys (/.well-known/jwks.json) are under it.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "The address your FusionAuth instance is served at (FusionAuth Cloud: the deployment's URL). Test is another instance or tenant, with its own keys.",
+      "url": "https://fusionauth.io/docs/get-started/core-concepts/tenants"
+    },
+    {
+      "key": "apiKey",
+      "env": "FUSIONAUTH_API_KEY",
+      "label": "API key",
+      "meaning": "Authenticates the backend to the User, Login, Registration, Passwordless and JWT APIs. Give it only those endpoints.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Settings › API Keys › Add: limit it to /api/user, /api/user/registration, /api/login, /api/passwordless, /api/user/verify-email, /api/user/forgot-password, /api/user/change-password and /api/jwt/refresh.",
+      "url": "https://fusionauth.io/docs/apis/authentication#managing-api-keys"
+    },
+    {
+      "key": "applicationId",
+      "env": "FUSIONAUTH_APPLICATION_ID",
+      "label": "Application ID",
+      "meaning": "The application users sign in to and are registered for.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Applications › [your application] › Id.",
+      "url": "https://fusionauth.io/docs/get-started/core-concepts/applications"
+    },
+    {
+      "key": "clientId",
+      "env": "FUSIONAUTH_CLIENT_ID",
+      "label": "Client ID",
+      "meaning": "The application's OAuth client id: the audience of its access tokens. Usually the application id.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "Applications › [your application] › OAuth › Client Id.",
+      "url": "https://fusionauth.io/docs/get-started/core-concepts/applications#oauth"
+    },
+    {
+      "key": "clientSecret",
+      "env": "FUSIONAUTH_CLIENT_SECRET",
+      "label": "Client secret",
+      "meaning": "Authenticates the backend for the code exchange and refresh at /oauth2/token.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Applications › [your application] › OAuth › Client secret.",
+      "url": "https://fusionauth.io/docs/get-started/core-concepts/applications#oauth"
+    },
+    {
+      "key": "tenantId",
+      "env": "FUSIONAUTH_TENANT_ID",
+      "label": "Tenant ID",
+      "meaning": "The tenant users are created in, when the API key isn't limited to one (sent as X-FusionAuth-TenantId).",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Tenants › [your tenant] › Id.",
+      "url": "https://fusionauth.io/docs/apis/authentication#making-an-api-request-using-a-tenant-id"
+    },
+    {
+      "key": "issuer",
+      "env": "FUSIONAUTH_ISSUER",
+      "label": "Issuer",
+      "meaning": "The iss every token must carry: the tenant's Issuer setting (acme.com unless changed, not the server URL).",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Tenants › [your tenant] › General › Issuer.",
+      "url": "https://fusionauth.io/docs/get-started/core-concepts/tenants#general"
+    },
+    {
+      "key": "webhookSecret",
+      "env": "FUSIONAUTH_WEBHOOK_SECRET",
+      "label": "Webhook signing secret",
+      "meaning": "The HMAC key webhooks are signed with, when the webhook's signing key is an HMAC key. Without it, the signature is checked against the server's published keys.",
+      "secret": true,
+      "required": false,
+      "whereToFind": "Settings › Webhooks › [your webhook] › Security › Signature: the signing key, from Settings › Key Master.",
+      "url": "https://fusionauth.io/docs/extend/events-and-webhooks/signing"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    { "name": "users.login", "purpose": "Signs a user in with their login id and password, or with a one-time password (after a password change). 212, 213 and 242 answer a pending sign-in.", "method": "POST", "path": "/api/login", "idempotency": "none" },
+    { "name": "tokens.exchangeCode", "purpose": "Exchanges the authorization code from FusionAuth's hosted login, with its PKCE verifier, for tokens.", "method": "POST", "path": "/oauth2/token", "idempotency": "none" },
+    { "name": "tokens.refresh", "purpose": "Exchanges a refresh token for a new access token.", "method": "POST", "path": "/oauth2/token", "idempotency": "none" },
+    { "name": "tokens.revoke", "purpose": "Revokes a refresh token (by the token, or by its id: the session).", "method": "DELETE", "path": "/api/jwt/refresh", "idempotency": "natural" },
+    { "name": "users.get", "purpose": "Reads one user by id.", "method": "GET", "path": "/api/user/{id}", "idempotency": "natural" },
+    { "name": "users.byEmail", "purpose": "Reads the user with this email address.", "method": "GET", "path": "/api/user", "idempotency": "natural" },
+    { "name": "users.create", "purpose": "Creates a user and registers them for the application.", "method": "POST", "path": "/api/user/registration", "idempotency": "none" },
+    { "name": "users.update", "purpose": "Updates a user: here, sets their password.", "method": "PATCH", "path": "/api/user/{id}", "idempotency": "natural" },
+    { "name": "users.delete", "purpose": "Deletes a user for good.", "method": "DELETE", "path": "/api/user/{id}", "idempotency": "natural" },
+    { "name": "passwords.forgot", "purpose": "Starts a password reset: FusionAuth emails the link, or returns its changePasswordId for the app to send.", "method": "POST", "path": "/api/user/forgot-password", "idempotency": "none" },
+    { "name": "passwords.change", "purpose": "Sets a new password with a changePasswordId.", "method": "POST", "path": "/api/user/change-password", "idempotency": "none" },
+    { "name": "emailVerification.start", "purpose": "Starts a new email verification without FusionAuth's email, for the app to send its code.", "method": "PUT", "path": "/api/user/verify-email", "idempotency": "none" },
+    { "name": "emailVerification.verify", "purpose": "Completes an email verification with its id and one-time code.", "method": "POST", "path": "/api/user/verify-email", "idempotency": "none" },
+    { "name": "passwordless.start", "purpose": "Starts a passwordless sign-in and returns its code, for the app to send.", "method": "POST", "path": "/api/passwordless/start", "idempotency": "none" },
+    { "name": "passwordless.login", "purpose": "Signs a user in with a passwordless code.", "method": "POST", "path": "/api/passwordless/login", "idempotency": "none" },
+    { "name": "jwks.get", "purpose": "Reads the server's signing keys, for tokens and asymmetrically signed webhooks: when none are cached, when the cache expires, and when a token names a key not yet seen.", "method": "GET", "path": "/.well-known/jwks.json", "idempotency": "natural" }
+  ],
+  "errors": [],
+  "webhooks": {
+    "signature": {
+      "scheme": "jwt",
+      "header": "X-FusionAuth-Signature-JWT",
+      "secretSetting": "webhookSecret",
+      "description": "The header is a JWT signed with the webhook's signing key (HS256/384/512 with the HMAC secret, or RSA/EC with a key from the server's JWKS). Verify it, refuse it when older than five minutes, and compare its request_body_sha256 claim with the base64 SHA-256 of the raw body."
+    },
+    "events": [
+      { "type": "user.create", "meaning": "A user was created." },
+      { "type": "user.update", "meaning": "A user was changed." },
+      { "type": "user.delete", "meaning": "A user was deleted." },
+      { "type": "user.deactivate", "meaning": "A user was deactivated." },
+      { "type": "user.reactivate", "meaning": "A user was reactivated." },
+      { "type": "user.registration.create", "meaning": "A user was registered for an application." },
+      { "type": "user.registration.update", "meaning": "A registration was changed." },
+      { "type": "user.registration.delete", "meaning": "A registration was removed." },
+      { "type": "user.login.success", "meaning": "A user signed in." },
+      { "type": "jwt.refresh-token.revoke", "meaning": "Refresh tokens were revoked: a sign-out." },
+      { "type": "group.create", "meaning": "A group was created." },
+      { "type": "group.update", "meaning": "A group was changed." },
+      { "type": "group.delete", "meaning": "A group was deleted." },
+      { "type": "group.member.add", "meaning": "Users were added to a group." },
+      { "type": "group.member.update", "meaning": "A group's members were changed." },
+      { "type": "group.member.remove", "meaning": "Users were removed from a group." }
+    ]
+  }
+}

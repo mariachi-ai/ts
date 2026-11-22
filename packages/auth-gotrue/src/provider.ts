@@ -1,5 +1,7 @@
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { createRemoteJWKSet, customFetch, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import { AuthError, isReservedTenantId } from '@mariachi/core';
+import { ProviderError } from '@mariachi/integrations';
+import { type GoTrueDeps, fetchThrough, jwksFetch } from './provider-fetch';
 import type { AuthProvider, AuthProviderWebhookConfig, ResolvedIdentity } from '@mariachi/auth';
 import type { AsymmetricAlgorithm, GoTrueConfig, GoTrueJwtPayload } from './types';
 import { GoTrueWebhookHandler } from './webhooks/handler';
@@ -28,6 +30,10 @@ function strings(v: unknown): string[] {
  *   → `claims`, which `createAuthMiddleware` and the API facade pass on to tenancy's `jwt-claim` strategy.
  *
  * The issuer is `issuer`, else `url`, else (with `discoverIssuer`) the one GoTrue's discovery document names.
+ *
+ * The keys and the discovery document are fetched through `callProvider`: one CLIENT span each (`gotrue jwks.get`,
+ * `gotrue discovery.get`), with retries of rate limits and outages. Checking a token against keys in hand calls
+ * nothing. `verify` has no context, so the spans have no tenant.
  */
 export class GoTrueAuthProvider implements AuthProvider {
   readonly name = 'gotrue';
@@ -45,7 +51,12 @@ export class GoTrueAuthProvider implements AuthProvider {
   private readonly orgRoleClaim: string;
   private readonly clockTolerance: number;
 
-  constructor(private readonly config: GoTrueConfig, jwks?: JWTVerifyGetKey) {
+  constructor(
+    private readonly config: GoTrueConfig,
+    jwks?: JWTVerifyGetKey,
+    /** The tracer and metrics for the calls to GoTrue. Without them, spans go through `@opentelemetry/api` when it's installed. */
+    private readonly deps: GoTrueDeps = {},
+  ) {
     if (!config.url) throw new AuthError('auth/invalid-config', 'GoTrue: `url` is required');
     const base = trimSlash(config.url);
     this.algorithms = config.algorithms?.length ? config.algorithms : ['ES256'];
@@ -67,6 +78,7 @@ export class GoTrueAuthProvider implements AuthProvider {
       createRemoteJWKSet(new URL(config.jwksUrl ?? `${base}/.well-known/jwks.json`), {
         cacheMaxAge: config.jwksCacheMaxAgeMs ?? 60_000,
         cooldownDuration: config.jwksCooldownMs ?? 5_000,
+        [customFetch]: jwksFetch(deps),
       });
   }
 
@@ -83,7 +95,9 @@ export class GoTrueAuthProvider implements AuthProvider {
       });
       payload = result.payload as GoTrueJwtPayload;
     } catch (error) {
-      throw new AuthError('auth/invalid-token', `GoTrue token verification failed: ${(error as Error).message}`);
+      // A key fetch that failed keeps its status and category; the token itself was never checked
+      const provider = error instanceof ProviderError ? { status: error.status, category: error.category } : undefined;
+      throw new AuthError('auth/invalid-token', `GoTrue token verification failed: ${(error as Error).message}`, provider);
     }
     return this.toIdentity(payload);
   }
@@ -101,12 +115,13 @@ export class GoTrueAuthProvider implements AuthProvider {
     const url = `${this.base}/.well-known/openid-configuration`;
     let doc: { issuer?: unknown } | null = null;
     try {
-      const res = await fetch(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(5_000) });
-      if (res.ok) doc = (await res.json()) as { issuer?: unknown } | null;
-      else throw new AuthError('auth/invalid-token', `GoTrue discovery failed: ${url} answered ${res.status}`);
+      const res = await fetchThrough('discovery.get', url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(5_000) }, this.deps);
+      doc = (await res.json()) as { issuer?: unknown } | null;
     } catch (error) {
-      if (error instanceof AuthError) throw error;
-      throw new AuthError('auth/invalid-token', `GoTrue discovery failed: ${(error as Error).message}`);
+      if (error instanceof ProviderError && error.status !== undefined) {
+        throw new AuthError('auth/invalid-token', `GoTrue discovery failed: ${url} answered ${error.status}`, { status: error.status, category: error.category });
+      }
+      throw new AuthError('auth/invalid-token', `GoTrue discovery failed: ${(error as Error).message}`, error instanceof ProviderError ? { category: error.category } : undefined);
     }
     const issuer = doc?.issuer;
     if (typeof issuer !== 'string' || !issuer) {

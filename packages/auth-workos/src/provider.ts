@@ -1,5 +1,7 @@
-import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { createRemoteJWKSet, customFetch, jwtVerify, type JWTVerifyGetKey } from 'jose';
 import { AuthError, isReservedTenantId } from '@mariachi/core';
+import { ProviderError } from '@mariachi/integrations';
+import { type WorkOSDeps, jwksFetch } from './provider-fetch';
 import type { AuthProvider, AuthProviderWebhookConfig, ResolvedIdentity } from '@mariachi/auth';
 import type { AsymmetricAlgorithm, WorkOSConfig, WorkOSJwtPayload } from './types';
 import { WorkOSWebhookHandler } from './webhooks/handler';
@@ -24,6 +26,10 @@ function strings(v: unknown): string[] {
  * AuthKit session tokens carry no `aud`, so by default the token must name this environment in
  * `client_id` instead. Tokens AuthKit issues as an OAuth server (MCP) are checked with that
  * server's JWKS, issuer and audience (see `WorkOSConfig`).
+ *
+ * The keys are fetched through `callProvider`, one `workos jwks.get` CLIENT span each time, with
+ * retries of rate limits and outages; checking a token against keys in hand calls nothing.
+ * `verify` has no context, so the spans have no tenant.
  */
 export class WorkOSAuthProvider implements AuthProvider {
   readonly name = 'workos';
@@ -34,7 +40,12 @@ export class WorkOSAuthProvider implements AuthProvider {
   private readonly requireClientId: boolean;
   private readonly clockTolerance: number;
 
-  constructor(private readonly config: WorkOSConfig, jwks?: JWTVerifyGetKey) {
+  constructor(
+    private readonly config: WorkOSConfig,
+    jwks?: JWTVerifyGetKey,
+    /** The tracer and metrics for the key fetches. Without them, spans go through `@opentelemetry/api` when it's installed. */
+    deps: WorkOSDeps = {},
+  ) {
     if (!config.clientId) throw new AuthError('auth/invalid-config', 'WorkOS: `clientId` is required');
     const host = config.apiHostname ?? DEFAULT_API_HOSTNAME;
     this.algorithms = config.algorithms?.length ? config.algorithms : ['RS256'];
@@ -49,6 +60,7 @@ export class WorkOSAuthProvider implements AuthProvider {
       createRemoteJWKSet(new URL(config.jwksUrl ?? `https://${host}/sso/jwks/${config.clientId}`), {
         cacheMaxAge: config.jwksCacheMaxAgeMs ?? 600_000,
         cooldownDuration: config.jwksCooldownMs ?? 30_000,
+        [customFetch]: jwksFetch(deps),
       });
   }
 
@@ -64,7 +76,9 @@ export class WorkOSAuthProvider implements AuthProvider {
       });
       payload = result.payload as WorkOSJwtPayload;
     } catch (error) {
-      throw new AuthError('auth/invalid-token', `WorkOS token verification failed: ${(error as Error).message}`);
+      // A key fetch that failed keeps its status and category; the token itself was never checked
+      const provider = error instanceof ProviderError ? { status: error.status, category: error.category } : undefined;
+      throw new AuthError('auth/invalid-token', `WorkOS token verification failed: ${(error as Error).message}`, provider);
     }
     if (this.requireClientId && payload.client_id !== undefined && payload.client_id !== this.config.clientId) {
       throw new AuthError('auth/invalid-token', 'WorkOS token verification failed: issued for another client');

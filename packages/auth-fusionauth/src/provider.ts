@@ -1,10 +1,12 @@
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, customFetch, jwtVerify } from 'jose';
 import { AuthError, isReservedTenantId } from '@mariachi/core';
+import { ProviderError } from '@mariachi/integrations';
 import type {
   AuthProvider,
   AuthProviderWebhookConfig,
   ResolvedIdentity,
 } from '@mariachi/auth';
+import { type FusionAuthDeps, jwksFetch } from './provider-fetch';
 import type { FusionAuthConfig } from './types';
 import { FusionAuthWebhookHandler } from './webhooks/handler';
 
@@ -19,13 +21,22 @@ interface FusionAuthJwtPayload {
   sid?: string;
 }
 
+/**
+ * Verifies FusionAuth access tokens against the server's keys (`/.well-known/jwks.json`). The keys are fetched
+ * through `callProvider`, one `fusionauth jwks.get` CLIENT span each time, with retries of rate limits and outages;
+ * checking a token against keys in hand calls nothing. `verify` has no context, so the spans have no tenant.
+ */
 export class FusionAuthAuthProvider implements AuthProvider {
   readonly name = 'fusionauth';
 
   private readonly jwks: ReturnType<typeof createRemoteJWKSet>;
   private readonly config: FusionAuthConfig;
 
-  constructor(config: FusionAuthConfig) {
+  constructor(
+    config: FusionAuthConfig,
+    /** The tracer and metrics for the key fetches. Without them, spans go through `@opentelemetry/api` when it's installed. */
+    private readonly deps: FusionAuthDeps = {},
+  ) {
     this.config = config;
     if (!config.issuer) {
       const message = 'FusionAuth: no `issuer` configured, so the tokens\' `iss` is not checked (the audience still is). Set it to the tenant\'s Issuer.';
@@ -34,7 +45,7 @@ export class FusionAuthAuthProvider implements AuthProvider {
     }
     const baseUrl = config.serverUrl.replace(/\/$/, '');
     const jwksUrl = new URL('/.well-known/jwks.json', baseUrl);
-    this.jwks = createRemoteJWKSet(jwksUrl);
+    this.jwks = createRemoteJWKSet(jwksUrl, { [customFetch]: jwksFetch(deps) });
   }
 
   async verify(token: string): Promise<ResolvedIdentity> {
@@ -62,17 +73,23 @@ export class FusionAuthAuthProvider implements AuthProvider {
         claims: { ...payload },
       };
     } catch (error) {
+      // A key fetch that failed keeps its status and category; the token itself was never checked
+      const provider = error instanceof ProviderError ? { status: error.status, category: error.category } : undefined;
       throw new AuthError(
         'auth/invalid-token',
         `FusionAuth token verification failed: ${(error as Error).message}`,
+        provider,
       );
     }
   }
 
   createWebhookHandler(config: AuthProviderWebhookConfig): FusionAuthWebhookHandler {
-    return new FusionAuthWebhookHandler({
-      serverUrl: this.config.serverUrl,
-      secret: config.secret,
-    });
+    return new FusionAuthWebhookHandler(
+      {
+        serverUrl: this.config.serverUrl,
+        secret: config.secret,
+      },
+      this.deps,
+    );
   }
 }

@@ -237,7 +237,8 @@ describe('FusionAuthIdentityClient', () => {
     ])('maps %s (%s) to %s', async (_name, status, body, code) => {
       const { client, calls } = fakeFetch(() => ({ status, body }));
       await expect(client.resetPassword({ token: 'cp-1', password: 'pw' })).rejects.toMatchObject({ code });
-      expect(calls).toHaveLength(1);
+      // No sign-in after a refused change; a rate-limited one is retried (FusionAuth did nothing), the rest aren't
+      expect(calls.map((c) => c.url)).toEqual(Array(status === 429 ? 3 : 1).fill('https://auth.example.org/api/user/change-password'));
     });
 
     it("says what FusionAuth refused about the password, with its error codes", async () => {

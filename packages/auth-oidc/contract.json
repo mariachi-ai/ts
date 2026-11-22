@@ -1,0 +1,75 @@
+{
+  "$schema": "../integrations/contract.schema.json",
+  "provider": {
+    "id": "oidc",
+    "name": "OpenID Connect",
+    "category": "auth",
+    "server": "{issuer}",
+    "docs": "https://openid.net/specs/openid-connect-discovery-1_0.html"
+  },
+  "settings": [
+    {
+      "key": "issuer",
+      "env": "OIDC_ISSUER",
+      "label": "Issuer",
+      "meaning": "The issuer exactly as tokens carry it in iss, trailing slash included. Its discovery document is at <issuer>/.well-known/openid-configuration. https:// only, except on the local machine.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "The provider's OpenID Connect settings (the Issuer or Authority URL), or the iss claim of one of its tokens. Test and live are usually separate issuers (another tenant, realm or pool).",
+      "url": "https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata"
+    },
+    {
+      "key": "audience",
+      "env": "OIDC_AUDIENCE",
+      "label": "Audience",
+      "meaning": "The aud a token must carry: the API's identifier, or the client id when access tokens are issued to it.",
+      "secret": false,
+      "required": true,
+      "public": true,
+      "whereToFind": "The API (resource server) registered at the provider: its identifier or Application ID URI; or the application's client id.",
+      "url": "https://openid.net/specs/openid-connect-core-1_0.html#IDToken"
+    },
+    {
+      "key": "jwksUrl",
+      "env": "OIDC_JWKS_URL",
+      "label": "JWKS URL",
+      "meaning": "Where the signing keys are, to skip discovery. https:// only, except on the local machine.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "The jwks_uri in the issuer's discovery document.",
+      "url": "https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata"
+    },
+    {
+      "key": "discoveryUrl",
+      "env": "OIDC_DISCOVERY_URL",
+      "label": "Discovery URL",
+      "meaning": "The discovery document, when it isn't at <issuer>/.well-known/openid-configuration (an internal address, say). It must still name the configured issuer.",
+      "secret": false,
+      "required": false,
+      "public": true,
+      "whereToFind": "Usually not needed. Otherwise the address the document is served at inside your network.",
+      "url": "https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig"
+    }
+  ],
+  "credentials": {
+    "kind": "app"
+  },
+  "operations": [
+    {
+      "name": "discovery.get",
+      "purpose": "Reads the issuer's discovery document, for its jwks_uri. Skipped when jwksUrl is set.",
+      "method": "GET",
+      "path": "/.well-known/openid-configuration",
+      "idempotency": "natural"
+    },
+    {
+      "name": "jwks.get",
+      "purpose": "Reads the issuer's signing keys from its jwks_uri: when none are cached, when the cache expires, and when a token names a key not yet seen (at most once per cooldown).",
+      "method": "GET",
+      "idempotency": "natural"
+    }
+  ],
+  "errors": []
+}

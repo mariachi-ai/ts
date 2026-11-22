@@ -146,6 +146,31 @@ await identity.signOut({ sessionId: tokens.sessionId, refreshToken });
 - **Emails**: `startEmailCode`, `pendingVerificationCode` and `sendPasswordReset` return what to email when the app sends its own (`{ deliveredBy: 'app', code | token }`), `{ deliveredBy: 'provider' }` when the provider does, and `{ deliveredBy: 'nobody' }` for an address with no account (answer as if there were one). Verified-first sign-up: `startEmailCode` → `signInWithEmailCode` (the code proves the inbox) → `setPassword`.
 - **FusionAuth** (`emailsSentBy: 'provider'` by default, or `'app'`): `sendPasswordReset`'s token is FusionAuth's `changePasswordId` (with `'provider'`, FusionAuth's forgot-password template can link to the app's page with `${changePasswordId}`), and `resetPassword` spends it on the [Change Password API](https://fusionauth.io/docs/apis/users/change-password) (FusionAuth ≥ 1.33), then names the user with the one-time password it returns ([Login API](https://fusionauth.io/docs/apis/login/authenticate-otp) with `noJWT`, which FusionAuth records as a login). A sign-in held at `email-verification` gets a `pendingToken` only when the tenant's email verification strategy is `FormField` (a code to type; FusionAuth ≥ 1.27): with `'provider'` it names the verification whose code FusionAuth emailed, with `'app'` the sign-in starts a new one without FusionAuth's email ([Resend Verification](https://fusionauth.io/docs/apis/users/resend-verification) with `sendVerifyEmail=false`, which ends the old code) and `pendingVerificationCode` returns its code. The token is sealed with a key derived from `clientSecret`. `verifyEmailAndSignIn` checks the code on the [Verify Email API](https://fusionauth.io/docs/apis/users/verify-email), then signs the user in through the [passwordless API](https://fusionauth.io/docs/apis/passwordless), so the application needs passwordless login enabled.
 
+## What each call to a provider records
+
+Every call an auth package makes to its provider goes through `callProvider` from
+`@mariachi/integrations` ([integrations.md](./integrations.md)): one CLIENT span named
+`<provider> <operation>` (`workos authenticate.password`, `fusionauth users.get`, `clerk jwks.get`,
+`gotrue settings.get`, `oidc discovery.get`), the calls and duration metrics, and retries of
+`rate-limited` and `unavailable` failures (a POST or PATCH only of a rate limit, unless the provider
+takes an idempotency key). No retry waits past the caller's deadline (a key fetch's or discovery's
+timeout), and the identity clients' calls, which hold a user's request open, wait at most two seconds
+between attempts: a longer `Retry-After` fails at once as `auth/rate-limited`. The spans carry the operation, the host, the method, the status and the
+error category, never a body, a token, an email address, a user id or a URL. The operations are in
+each package's `contract.json`.
+
+- **Fetching the keys is a call; checking a token is not.** `jwks.get` happens when the keys aren't
+  cached yet, when the cache expires, and when a token names a key not seen before. Clerk with
+  `CLERK_JWT_KEY` calls nothing.
+- **Errors stay the port's**: a failed call is an `AuthError` (`auth/invalid-token`,
+  `auth/identity-provider`, …) with the status and category in its metadata; the provider's
+  failure names the span.
+- **No tenant on these spans**: `AuthProvider.verify` and `IdentityClient`'s methods carry no
+  context.
+- Pass the container's tracer and metrics as the last argument of each factory
+  (`createWorkOSIdentityClient(config, { tracer, metrics })`); without them, spans go through
+  `@opentelemetry/api` when it's installed.
+
 ## Webhooks
 
 - **Auth webhook flow** — `createAuthWebhookDispatcher` (from `@mariachi/auth`) takes any `AuthWebhookHandler`. Clerk, FusionAuth, GoTrue and WorkOS each provide a handler via `provider.createWebhookHandler({ secret })`. The dispatcher verifies the webhook (using the handler), normalizes the event to `AuthWebhookEvent`, and calls communication procedures (e.g. `auth.user.created`). Same flow for every provider; only the verification and event parsing are provider-specific.
