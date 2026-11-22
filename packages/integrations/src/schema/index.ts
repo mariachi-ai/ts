@@ -40,7 +40,15 @@ export const integrationConnectionsTable = defineTable(
   {
     tenantColumn: false,
     softDeleteColumn: false,
-    indexes: [index('integration_connections_owner_idx').on('tenantId', 'userId', 'provider')],
+    indexes: [
+      index('integration_connections_owner_idx').on('tenantId', 'userId', 'provider'),
+      // One row per tenant, user, provider and account, enforced by the database. Tenant and account may be null,
+      // and nulls are distinct in a unique index, so each combination has its own partial index.
+      index('integration_connections_account_uniq').on('tenantId', 'userId', 'provider', 'accountId').unique().where('tenant_id IS NOT NULL AND account_id IS NOT NULL'),
+      index('integration_connections_account_notenant_uniq').on('userId', 'provider', 'accountId').unique().where('tenant_id IS NULL AND account_id IS NOT NULL'),
+      index('integration_connections_noaccount_uniq').on('tenantId', 'userId', 'provider').unique().where('tenant_id IS NOT NULL AND account_id IS NULL'),
+      index('integration_connections_noaccount_notenant_uniq').on('userId', 'provider').unique().where('tenant_id IS NULL AND account_id IS NULL'),
+    ],
   },
 );
 

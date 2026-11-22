@@ -109,8 +109,9 @@ return providerRequest(
   or the connection id it was given. A connection id is looked up in the caller's tenant, and with a
   signed-in user it must be that user's: another user's connection fails as
   `integrations/connection-not-found`, like one that doesn't exist, so ids can't be probed. A
-  context with no user (a job, system work) resolves any connection in its tenant by id.
-  `invalidate` follows the same rule.
+  context with no user (a job, system work) resolves any connection in its tenant by id, so a
+  connection id that came from a request must never be resolved in a context with no user: resolve it
+  as the signed-in user, or check whose it is first. `invalidate` follows the same rule.
 - **The span:** `connection` becomes `mariachi.integration.connection`, the opaque connection id.
   Never the provider's account id.
 - **Refresh:** a token that expires within `refreshMarginMs` (five minutes), or within half its
@@ -122,6 +123,11 @@ return providerRequest(
   token is used until the provider refuses it.
 - **A refused token:** when the provider answers `unauthorized` to a token that hadn't expired, call
   `deps.credentials.invalidate?.(ctx, credential)`; the next `resolve` refreshes it.
+
+**Key rotation isn't supported yet.** Tokens are encrypted under the key that was current when they
+were stored, and decrypt only while that key stays in the keyring. A refresh token that the provider
+never rotates stays under its old key, and there is no sweep yet to re-encrypt it. Keep old keys in
+the keyring until every connection has been refreshed or reconnected.
 
 An app that keeps end users' credentials somewhere else implements `CredentialResolver` itself:
 `resolve(ctx, { provider, connectionId? })` returns `{ accessToken, connectionId? }`.

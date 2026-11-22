@@ -110,4 +110,17 @@ describe('DrizzleConnectionStore with Connections', () => {
     });
     expect(await columns('integration_authorizations')).toMatchObject({ nonce_hash: 'text', code_verifier: 'text', expires_at: 'timestamp with time zone' });
   });
+
+  it('refuses a second row for the same tenant, user, provider and account, with or without a tenant or an account', async () => {
+    const insert = (tenant: string | null, account: string | null) =>
+      database.db.execute(
+        sql`insert into integration_connections (tenant_id, user_id, provider, account_id, scopes) values (${tenant}, 'uniq-user', 'uniq-provider', ${account}, '[]'::jsonb)`,
+      );
+    for (const [tenant, account] of [['t-uniq', 'acct'], [null, 'acct'], ['t-uniq', null], [null, null]] as const) {
+      await insert(tenant, account);
+      await expect(insert(tenant, account), `${tenant} ${account}`).rejects.toThrow(/unique|duplicate/i);
+    }
+    // Another account of the same user is a row of its own
+    await expect(insert('t-uniq', 'acct-2')).resolves.toBeDefined();
+  });
 });
