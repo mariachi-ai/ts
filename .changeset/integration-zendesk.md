@@ -1,0 +1,5 @@
+---
+"@mariachi/integration-zendesk": minor
+---
+
+New: `@mariachi/integration-zendesk`, for Zendesk. `chatIdentity` signs the user as a messaging JWT (HS256 with the messaging key) and `widgetSnippet` puts the messaging Web Widget on a page with them signed in, through a setup script the app serves (pages run no inline script) that passes the visitor's cookie choice, fetches a fresh token when one expires and signs the widget out after the user leaves; `zendeskCsp` widens the page's policy for Zendesk's hosts. The Support API signs in with an OAuth client (client credentials asking for `ZENDESK_OAUTH_SCOPE`, `read write` by default, the token kept and renewed) or a legacy API token: `users`, `organizations` (create or update by external id), `tickets` (create with an `Idempotency-Key`, get, update, list a user's, search), `comments` (list, add) and `events.track` for a user's timeline, plus `upsertContact` and `trackEvent`. `zendeskWebhookAuth` checks Zendesk's timestamped webhook signature and dedupes on the signed event id. A fake for tests. Built from its `contract.json`.
