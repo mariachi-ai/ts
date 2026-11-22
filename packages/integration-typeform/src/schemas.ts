@@ -83,7 +83,17 @@ export const Webhook = z
     enabled: z.boolean(),
     verify_ssl: z.boolean().optional(),
   })
-  .passthrough();
+  .passthrough()
+  // Typeform sends the webhook's signing secret back: it never reaches app code, where it would be easy to log
+  .transform(({ secret: _secret, ...webhook }: { secret?: unknown } & Record<string, unknown>) => webhook as Omit<typeof webhook, 'secret'>);
+
+/** A form, named by its id. */
+export const FormIdInput = z.object({ formId: z.string().min(1) });
+export type FormIdInput = z.input<typeof FormIdInput>;
+
+/** One of a form's webhooks, named by its tag. */
+export const WebhookTagInput = FormIdInput.extend({ tag: z.string().min(1) });
+export type WebhookTagInput = z.input<typeof WebhookTagInput>;
 export type Webhook = z.infer<typeof Webhook>;
 
 export const WebhookList = z.object({ items: z.array(Webhook) }).passthrough();
