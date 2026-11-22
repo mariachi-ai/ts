@@ -51,6 +51,7 @@ describe('mariachi list on a project made by mariachi init', () => {
     expect(notes.map((r) => `${r.method} ${r.path} ${r.auth?.join('|')} ${r.procedures.join(',')}`)).toEqual([
       'POST /api/notes session notes.create',
       'GET /api/notes session notes.list',
+      'GET /api/notes/search session notes.search',
       'GET /api/notes/:id session notes.get',
       'PATCH /api/notes/:id session notes.update',
       'DELETE /api/notes/:id session notes.delete',
@@ -61,7 +62,7 @@ describe('mariachi list on a project made by mariachi init', () => {
     expect(listed.routes.filter((r) => r.kind === 'health').map((r) => r.path)).toEqual(['/api/health/live', '/api/health/ready', '/api/health/startup']);
     expect(listed.routes.find((r) => r.kind === 'openapi')).toMatchObject({ path: '/api/openapi.json', auth: [] });
 
-    expect(listed.procedures.map((p) => p.name)).toEqual(['notes.create', 'notes.get', 'notes.list', 'notes.update', 'notes.delete']);
+    expect(listed.procedures.map((p) => p.name)).toEqual(['notes.create', 'notes.get', 'notes.list', 'notes.search', 'notes.update', 'notes.delete']);
     expect(listed.procedures[0]).toMatchObject({
       input: '{ name: string }',
       service: 'notes',
@@ -100,7 +101,7 @@ describe('mariachi list on a project made by mariachi init', () => {
   it('connects to nothing: it lists with no DATABASE_URL or JWT_SECRET', async () => {
     const env = { ...process.env, DATABASE_URL: 'postgres://nobody@127.0.0.1:1/none', JWT_SECRET: '', FORCE_COLOR: '0' };
     const { stdout } = await run(process.execPath, [CLI, 'list', 'procedures', '--json'], { cwd: project, env });
-    expect((JSON.parse(stdout) as Listed).procedures).toHaveLength(5);
+    expect((JSON.parse(stdout) as Listed).procedures).toHaveLength(6);
   }, 60_000);
 });
 
