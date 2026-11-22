@@ -30,7 +30,8 @@ export function createContact(ctx: Context, input: { email: string }, deps: Acme
 
 - **The span:** one CLIENT span named `<integration> <operation>` (`acme contacts.create`). It
   carries only the attributes in `PROVIDER_SPAN_ATTRIBUTES`: the integration, the operation, its
-  category, the host, the method, the status, the error's type and category, and the attempts.
+  category, the host, the method, the status, the error's type and category, the attempts, and the
+  end user's connection when one was used.
   Never a URL, a body, a key, an amount, an address or a provider's id. `deps.tracer` comes from the
   container; without one, spans go through `@opentelemetry/api` when it's installed.
 - **Metrics:** `mariachi.integration.calls` and `mariachi.integration.duration` (ms), labelled with
@@ -60,6 +61,14 @@ Through `@mariachi/webhooks`' `WebhookServer`, as every webhook is
 the raw body, dedupes, logs with secrets redacted, and hands the delivery to a job. An integration
 package exports the authenticator for its provider's scheme (`typeformWebhookAuth(secret)`) and the
 Zod schema of its payloads, so a controller is a few lines.
+
+## An end user's own account
+
+When each end user connects their own account (their CRM, their Drive), the client calls the
+provider with that user's OAuth token. `Connections` keeps the tokens encrypted in the app's
+database, refreshes them before they expire and revokes them on disconnect, and it is a
+`CredentialResolver`: the client takes it as `deps.credentials`, asks it for each call, and passes
+the connection's id to the span as `connection`. See [connections.md](./connections.md).
 
 ## Testing an integration
 

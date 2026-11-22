@@ -1,7 +1,7 @@
 {
   "name": "@mariachi/integrations",
   "version": "0.1.1",
-  "description": "Third-party providers, one way: every call through callProvider (one span, metrics, retries on rate limits), typed errors by category, contracts, a callable registry and per-tenant credentials.",
+  "description": "Third-party providers, one way: every call through callProvider (one span, metrics, retries on rate limits), typed errors by category, contracts, a callable registry, per-tenant credentials, and end users' OAuth connections, encrypted and refreshed.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mariachi-ai/ts.git",
@@ -19,7 +19,11 @@
       "settingsFromEnv",
       "defineIntegrationFn",
       "IntegrationRegistry",
-      "resolveTenantCredential"
+      "resolveTenantCredential",
+      "Connections",
+      "oauthProvider",
+      "DrizzleConnectionStore",
+      "ConnectionsController"
     ]
   },
   "type": "module",
@@ -28,6 +32,21 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js",
+      "require": "./dist/schema.cjs"
+    },
+    "./postgres": {
+      "types": "./dist/postgres.d.ts",
+      "import": "./dist/postgres.js",
+      "require": "./dist/postgres.cjs"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "import": "./dist/http.js",
+      "require": "./dist/http.cjs"
     },
     "./testing": {
       "types": "./dist/testing.d.ts",
@@ -63,22 +82,40 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
+    "@mariachi/communication": "workspace:*",
     "@mariachi/core": "workspace:*",
+    "@mariachi/database": "workspace:*",
     "zod": "^3.24",
     "zod-to-json-schema": "^3.24"
   },
   "devDependencies": {
+    "@mariachi/api-facade": "workspace:*",
+    "@mariachi/database-postgres": "workspace:*",
+    "@mariachi/encryption": "workspace:*",
     "@mariachi/testing": "workspace:*",
     "@opentelemetry/api": "^1",
+    "drizzle-orm": "^0.38",
     "typescript": "^5.7",
     "tsup": "^8",
     "vitest": "^3"
   },
   "peerDependencies": {
-    "@opentelemetry/api": "^1"
+    "@mariachi/api-facade": "workspace:>=0.0.5 <1",
+    "@mariachi/database-postgres": "workspace:>=0.0.5 <1",
+    "@opentelemetry/api": "^1",
+    "drizzle-orm": "^0.38"
   },
   "peerDependenciesMeta": {
+    "@mariachi/api-facade": {
+      "optional": true
+    },
+    "@mariachi/database-postgres": {
+      "optional": true
+    },
     "@opentelemetry/api": {
+      "optional": true
+    },
+    "drizzle-orm": {
       "optional": true
     }
   }

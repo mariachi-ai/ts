@@ -34,6 +34,7 @@ only point here.
 - [search.md](./search.md): typed indexes, filters and facets in Postgres, Typesense or memory; tenant scoping, reindexing
 - [integrations.md](./integrations.md): calling a third-party provider: callProvider and providerRequest, error categories, retries, webhook signatures, testing
 - [integration-contracts.md](./integration-contracts.md): the contract.json every provider package starts from: settings, operations, errors, webhooks, and the span each call emits
+- [connections.md](./connections.md): an end user's own account at a provider: OAuth with PKCE, tokens encrypted in the app's database, refresh, revoke, and the credential resolver a client takes
 - [testing.md](./testing.md): doubles, contract suites, integration tests
 - [runbook.md](./runbook.md): running, deploying and configuring an app; developing the framework itself
 - [design.md](./design.md): the design library: presets, markup contract, overriding at any granularity, tokens

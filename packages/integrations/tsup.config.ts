@@ -1,7 +1,15 @@
 import { defineConfig } from 'tsup';
 
 export default defineConfig({
-  entry: ['src/index.ts', 'src/testing.ts', 'src/codegen.ts'],
+  entry: {
+    index: 'src/index.ts',
+    testing: 'src/testing.ts',
+    codegen: 'src/codegen.ts',
+    schema: 'src/schema/index.ts',
+    postgres: 'src/postgres/index.ts',
+    http: 'src/http/index.ts',
+  },
+  external: ['@mariachi/database-postgres', 'drizzle-orm', '@mariachi/api-facade'],
   format: ['esm', 'cjs'],
   dts: true,
   clean: true,

@@ -38,6 +38,9 @@ whose licence forbids it, never another product's code. The format is in
   Each with its method, path and idempotency. Never one app's workflow.
 - **Errors:** the provider's codes an app would act on differently, mapped to a category.
 - **Webhooks:** the signature scheme, exactly, and the events.
+- **Per-user providers:** when each end user connects their own account, `credentials` is `user`
+  (or `app-or-user`) with the `oauth` endpoints, scopes and `revokeUrl`, and the OAuth client id
+  and secret are settings (`<PROVIDER>_CLIENT_ID`, `<PROVIDER>_CLIENT_SECRET`).
 
 Then:
 
@@ -94,6 +97,13 @@ export type Acme = ReturnType<typeof createAcme>;
 - **`failure(status, body)`** reads the provider's error code into `providerCode` and maps it with
   `mappedFailure(errorMap, code)`. Never keep the provider's message: it can echo the input.
 - **Idempotency keys** on every create and charge the provider takes them for.
+- **Per-user providers** take `deps.credentials`, a `CredentialResolver`, and ask it in `call`
+  for each operation instead of reading a token from config: `const credential = await
+  deps.credentials.resolve(ctx, { provider: provider.id })`, then `Bearer ${credential.accessToken}`
+  and `connection: credential.connectionId` on the call, so the span carries
+  `mariachi.integration.connection`. On an `unauthorized` failure, call
+  `deps.credentials.invalidate?.(ctx, credential)`. The app gives it `Connections`
+  ([connections.md](../connections.md)); never store or refresh a user's token in the package.
 - **Paging:** `list` returns one page; add an `all` async generator where an app usually wants
   everything.
 - **No SDK** unless it carries real weight (signing, streaming). Then it's an optional peer loaded
@@ -122,6 +132,8 @@ app's workflow.
 - `scriptedFetch` from `@mariachi/integrations/testing` answers the client's requests: no test
   calls the provider.
 - `assertProviderSpans(tracer.spans)` on every test that makes a call.
+- A per-user provider's tests give it a `CredentialResolver` that returns a fixed token and
+  connection id, and check the connection id is on the span.
 - A webhook test posts a signed delivery to a `WebhookServer` with `inject`, and a forged one.
 - `src/testing.ts` exports a fake with the client's type, for the app's own tests, and a builder for
   signed deliveries.

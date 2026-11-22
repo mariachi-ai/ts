@@ -34,6 +34,7 @@ finds the lines that have every word.
 - [search](./search.md): typed indexes, filters and facets in Postgres, Typesense or memory; tenant scoping, reindexing
 - [integrations](./integrations.md): calling a third-party provider: callProvider and providerRequest, error categories, retries, webhook signatures, testing
 - [integration-contracts](./integration-contracts.md): the contract.json every provider package starts from: settings, operations, errors, webhooks, and the span each call emits
+- [connections](./connections.md): an end user's own account at a provider: OAuth with PKCE, tokens encrypted in the app's database, refresh, revoke, and the credential resolver a client takes
 - [testing](./testing.md): doubles, contract suites, integration tests
 - [runbook](./runbook.md): running, deploying and configuring an app; developing the framework itself
 - [design](./design.md): the design library: presets, markup contract, overriding at any granularity, tokens
