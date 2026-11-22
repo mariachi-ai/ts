@@ -375,10 +375,12 @@
                   "type": "string",
                   "enum": [
                     "standard-webhooks",
+                    "hmac-sha1-hex",
                     "hmac-sha256-hex",
                     "hmac-sha256-base64",
                     "hmac-sha256-timestamped",
                     "jwt",
+                    "rsa-sha256-certificate",
                     "basic-auth",
                     "shared-secret",
                     "none"
