@@ -1,5 +1,5 @@
 import { type Context, fromZodError } from '@mariachi/core';
-import { type FailureInfo, type ProviderDeps, type ProviderRequest, mappedFailure, providerRequest } from '@mariachi/integrations';
+import { type ErrorCategory, type FailureInfo, type ProviderDeps, type ProviderRequest, type ProviderRequestOptions, mappedFailure, providerRequest } from '@mariachi/integrations';
 import { z } from 'zod';
 import { ASSOCIATION_TYPES } from './associations';
 import { HubSpotError } from './errors';
@@ -47,13 +47,19 @@ export function createHubSpot(config: HubspotConfig, deps: HubSpotDeps = {}) {
   const base = provider.baseUrl;
   const server = provider.server;
 
-  function call<T>(ctx: Context, operation: HubspotOperation, request: Omit<ProviderRequest, 'url' | 'headers'> & { path: string }, schema: z.ZodType<T, z.ZodTypeDef, unknown>): Promise<T> {
+  function call<T>(
+    ctx: Context,
+    operation: HubspotOperation,
+    request: Omit<ProviderRequest, 'url' | 'headers'> & { path: string },
+    schema: z.ZodType<T, z.ZodTypeDef, unknown>,
+    failureInBody?: ProviderRequestOptions<T>['failureInBody'],
+  ): Promise<T> {
     const { path, ...rest } = request;
     return providerRequest(
       ctx,
       { integration: provider.id, operation, category: provider.category, server },
       { ...rest, url: `${base}${path}`, headers: { authorization: `Bearer ${cfg.accessToken}` } },
-      { schema, error: HubSpotError, failure, deps },
+      { schema, error: HubSpotError, failure, failureInBody, deps },
     );
   }
 
@@ -104,12 +110,13 @@ export function createHubSpot(config: HubspotConfig, deps: HubSpotDeps = {}) {
     },
     /**
      * Creates or updates up to 100 contacts, each matched by email, in one call; each result's `new` says which.
-     * Unlike search then create, two of these racing for one email don't make two contacts.
+     * Unlike search then create, two of these racing for one email don't make two contacts. When none of them
+     * worked (HubSpot's 207 with no results), it fails with the category of HubSpot's first error.
      */
     async upsertByEmail(ctx: Context, input: UpsertContactsInput) {
       const i = parse(UpsertContactsInput, input);
       const inputs = i.contacts.map((c) => ({ id: c.email, idProperty: 'email', properties: wire({ email: c.email, ...c.properties }) }));
-      return call(ctx, 'contacts.batchUpsert', { method: 'POST', path: '/crm/v3/objects/contacts/batch/upsert', json: { inputs } }, UpsertBatch);
+      return call(ctx, 'contacts.batchUpsert', { method: 'POST', path: '/crm/v3/objects/contacts/batch/upsert', json: { inputs } }, UpsertBatch, batchFailure);
     },
   };
 
@@ -195,11 +202,8 @@ export function createHubSpot(config: HubspotConfig, deps: HubSpotDeps = {}) {
       const properties = { firstname: i.firstName, lastname: i.lastName, phone: i.phone, company: i.company, ...i.properties };
       const batch = await contacts.upsertByEmail(ctx, { contacts: [{ email: i.email, properties: defined(properties) }] });
       const result = batch.results.at(0);
-      if (!result) {
-        const code = batch.errors?.[0]?.category;
-        const mapped = mappedFailure(errorMap, code);
-        throw new HubSpotError(`hubspot/${mapped?.reason ?? 'upsert-failed'}`, "HubSpot didn't create or update the contact", { category: mapped?.category ?? 'invalid-request', providerCode: code });
-      }
+      // A batch with no results and no errors: batchFailure had nothing to report, but there's no contact either
+      if (!result) throw new HubSpotError('hubspot/upsert-failed', "HubSpot didn't create or update the contact", { category: 'invalid-request' });
       return { id: result.id, created: result.new };
     },
 
@@ -247,6 +251,20 @@ function failure(_status: number, body: unknown): FailureInfo | undefined {
   const code = typeof body === 'object' && body !== null && typeof (body as { category?: unknown }).category === 'string' ? (body as { category: string }).category : undefined;
   const mapped = mappedFailure(errorMap, code);
   return { providerCode: code, ...(mapped ? { category: mapped.category, reason: mapped.reason } : {}) };
+}
+
+/**
+ * A batch call that did nothing answers 207 (a 2xx) with `results: []` and `errors`: that's a failure, with the
+ * category of the first error, so the span and the metrics say so. A partial batch (some results) isn't.
+ */
+function batchFailure(body: unknown): (FailureInfo & { category: ErrorCategory }) | undefined {
+  const b = body as { results?: unknown; errors?: unknown } | null;
+  if (typeof b !== 'object' || b === null || !Array.isArray(b.results) || b.results.length > 0) return undefined;
+  if (!Array.isArray(b.errors) || b.errors.length === 0) return undefined;
+  const first = b.errors[0] as { category?: unknown } | null;
+  const code = typeof first?.category === 'string' ? first.category : undefined;
+  const mapped = mappedFailure(errorMap, code);
+  return { category: mapped?.category ?? 'invalid-request', reason: mapped?.reason ?? 'upsert-failed', providerCode: code };
 }
 
 /** HubSpot keeps every property as text: numbers and booleans are sent as strings, and `null` (clear it) as "". */

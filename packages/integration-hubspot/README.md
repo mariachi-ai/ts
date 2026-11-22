@@ -85,6 +85,8 @@ In HubSpot:
 
 - `upsertContactByEmail` is one batch upsert matched by email (`contacts.batchUpsert`), so two
   racing calls make one contact. `company` is the contact's company-name text, not an association.
+  A batch HubSpot did nothing with (a 207 with only `errors`) fails like an error answer, with the
+  first error's category, and its span and metrics count it as a failure.
 - `createDeal` sets `dealname`, `amount`, `deal_currency_code` (a currency the account has set up)
   and `dealstage`, and associates the contact and the company (as its primary company). Without a
   `stage` it reads the pipelines and uses the first stage of the first one.

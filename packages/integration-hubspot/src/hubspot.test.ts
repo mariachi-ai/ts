@@ -31,10 +31,22 @@ describe('the same three in every CRM', () => {
 
   it('upsertContactByEmail fails with the category HubSpot gave when the batch did nothing', async () => {
     const fetch = scriptedFetch({ status: 207, json: { status: 'COMPLETE', results: [], numErrors: 1, errors: [{ status: 'error', category: 'VALIDATION_ERROR', message: 'ada@example.com is bad' }] } });
-    const err = await createHubSpot(config, { fetch }).upsertContactByEmail(ctx, { email: 'ada@example.com' }).catch((e) => e);
+    const tracer = new TestTracer();
+    const err = await createHubSpot(config, { fetch, tracer }).upsertContactByEmail(ctx, { email: 'ada@example.com' }).catch((e) => e);
     expect(err).toBeInstanceOf(HubSpotError);
     expect([err.code, err.category, err.providerCode]).toEqual(['hubspot/invalid-properties', 'invalid-request', 'VALIDATION_ERROR']);
     expect(err.message).not.toContain('ada@');
+    // The span says it failed: a 207 is a 2xx, but this batch did nothing
+    expect(tracer.spans).toHaveLength(1);
+    expect(tracer.spans[0]).toMatchObject({ ended: true, status: { status: 'error' } });
+    expect(tracer.spans[0]!.attributes).toMatchObject({ 'error.type': 'VALIDATION_ERROR', 'mariachi.integration.error_category': 'invalid-request' });
+    assertProviderSpans(tracer.spans);
+  });
+
+  it('upsertContactByEmail fails as invalid-request with an error HubSpot has no reason for', async () => {
+    const fetch = scriptedFetch({ status: 207, json: { status: 'COMPLETE', results: [], errors: [{ status: 'error', category: 'SOMETHING_NEW' }] } });
+    const err = await createHubSpot(config, { fetch }).upsertContactByEmail(ctx, { email: 'ada@example.com' }).catch((e) => e);
+    expect([err.code, err.category, err.providerCode]).toEqual(['hubspot/upsert-failed', 'invalid-request', 'SOMETHING_NEW']);
   });
 
   it('createDeal sends the deal properties and associates the contact and primary company', async () => {
