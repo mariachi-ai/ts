@@ -47,6 +47,16 @@ export const settings: readonly SettingDescriptor[] = [
     url: 'https://developer.zendesk.com/api-reference/ticketing/oauth/grant_type_tokens/',
   },
   {
+    key: 'oauthScope',
+    env: 'ZENDESK_OAUTH_SCOPE',
+    label: 'OAuth scope',
+    meaning: "The scopes the OAuth client's access tokens ask for, separated by spaces. read write when unset, which covers every operation here; narrow it (such as tickets:read tickets:write users:read users:write organizations:write) only if the app uses fewer.",
+    secret: false,
+    required: false,
+    whereToFind: "Your choice, from Zendesk's OAuth scopes: read, write, or a resource's own such as tickets:write. Zendesk refuses a token request without one.",
+    url: 'https://developer.zendesk.com/api-reference/ticketing/oauth/oauth_tokens/#scopes',
+  },
+  {
     key: 'email',
     env: 'ZENDESK_EMAIL',
     label: "API token's agent email",
@@ -124,6 +134,7 @@ export const configSchema = z.object({
   subdomain: z.string().min(1),
   clientId: z.string().min(1).optional(),
   clientSecret: z.string().min(1).optional(),
+  oauthScope: z.string().min(1).optional(),
   email: z.string().min(1).optional(),
   apiToken: z.string().min(1).optional(),
   widgetKey: z.string().min(1).optional(),
@@ -139,6 +150,7 @@ export const envNames = {
   subdomain: 'ZENDESK_SUBDOMAIN',
   clientId: 'ZENDESK_CLIENT_ID',
   clientSecret: 'ZENDESK_CLIENT_SECRET',
+  oauthScope: 'ZENDESK_OAUTH_SCOPE',
   email: 'ZENDESK_EMAIL',
   apiToken: 'ZENDESK_API_TOKEN',
   widgetKey: 'ZENDESK_WIDGET_KEY',
@@ -155,7 +167,7 @@ export const credentials = {
 /** The operations, by name: the span name is `<provider> <operation>`. */
 export const operations = {
   'oauth.token': {
-    purpose: "Gets an access token for the Support API with the OAuth client's identifier and secret (grant_type client_credentials).",
+    purpose: "Gets an access token for the Support API with the OAuth client's identifier and secret (grant_type client_credentials), asking for ZENDESK_OAUTH_SCOPE (read write by default).",
     method: 'POST',
     path: '/oauth/tokens',
     idempotency: 'natural',

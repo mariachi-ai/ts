@@ -35,7 +35,7 @@ describe('the Support API', () => {
 
     const [tok, create] = fetch.requests;
     expect([tok!.method, tok!.url.href, tok!.headers.authorization]).toEqual(['POST', 'https://acme.zendesk.com/oauth/tokens', undefined]);
-    expect(Object.fromEntries(new URLSearchParams(tok!.body))).toEqual({ grant_type: 'client_credentials', client_id: 'mariachi_app', client_secret: 'cs-test' });
+    expect(Object.fromEntries(new URLSearchParams(tok!.body))).toEqual({ grant_type: 'client_credentials', client_id: 'mariachi_app', client_secret: 'cs-test', scope: 'read write' });
     expect(create!.url.href).toBe('https://acme.zendesk.com/api/v2/users/create_or_update');
     expect(create!.headers.authorization).toBe('Bearer at-1');
     expect(create!.json).toEqual({ user: { external_id: 'u_1', email: 'ada@example.com', name: 'Ada', user_fields: { plan: 'pro' } } });
@@ -46,6 +46,12 @@ describe('the Support API', () => {
       ['zendesk users.createOrUpdate', 'client', 'acme.zendesk.com'],
     ]);
     assertProviderSpans(tracer.spans);
+  });
+
+  it('asks for ZENDESK_OAUTH_SCOPE when it is set', async () => {
+    const fetch = scriptedFetch(token, { json: { user: user() } });
+    await createZendesk({ ...oauth, oauthScope: 'users:read tickets:write' }, { fetch }).users.get(ctx, 42);
+    expect(new URLSearchParams(fetch.requests[0]!.body).get('scope')).toBe('users:read tickets:write');
   });
 
   it('uses a legacy API token as Basic <email>/token:<token> when no OAuth client is set', async () => {

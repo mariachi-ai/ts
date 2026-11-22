@@ -14,6 +14,7 @@ run in a sandbox. The contract is in [contract.json](./contract.json).
 | `ZENDESK_SUBDOMAIN` | `acme` for `https://acme.zendesk.com` (public) | The account's address |
 | `ZENDESK_CLIENT_ID` | The OAuth client the server signs in with | Admin Center › Apps and integrations › APIs › OAuth clients › Add OAuth client, kind **Confidential**: Identifier |
 | `ZENDESK_CLIENT_SECRET` | Its secret (secret) | The same page: Secret, shown once when saved |
+| `ZENDESK_OAUTH_SCOPE` | The scopes its access tokens ask for, space-separated (optional, `read write` by default, which covers every operation here) | Your choice of Zendesk's OAuth scopes, such as `tickets:write users:read` |
 | `ZENDESK_EMAIL`, `ZENDESK_API_TOKEN` | Legacy: an agent's email and API token (secret), used only without an OAuth client | Admin Center › Apps and integrations › APIs › API tokens |
 | `ZENDESK_WIDGET_KEY` | Which Web Widget pages load (public) | Admin Center › Channels › Messaging and social › Messaging › your widget › Installation: the `key=` in the snippet |
 | `ZENDESK_MESSAGING_KEY_ID` | The signing key's ID, for signed-in users | Admin Center › Account › Security › End user authentication › Messaging › Create key |
@@ -27,7 +28,8 @@ users need the messaging key.
 
 **API tokens are on their way out.** Zendesk stopped issuing new ones on October 27, 2026 (new
 accounts since July 28, 2026 never had them) and turns all of them off on April 30, 2027. Use an
-OAuth client: the package gets an access token with the client credentials grant and fetches a new
+OAuth client: the package gets an access token with the client credentials grant, asking for
+`ZENDESK_OAUTH_SCOPE` (`read write` unless set; Zendesk refuses a request without a scope), and fetches a new
 one before it expires. Requests act as the admin who made the client, so make it as a dedicated
 agent if who did what matters in the audit log.
 

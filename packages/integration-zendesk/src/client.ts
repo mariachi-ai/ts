@@ -40,6 +40,8 @@ export interface ZendeskDeps extends ProviderDeps {
 
 /** An access token is fetched again this long before it expires. */
 const TOKEN_MARGIN_MS = 60_000;
+/** The scopes an access token asks for when ZENDESK_OAUTH_SCOPE is unset: enough for every operation here. */
+const DEFAULT_OAUTH_SCOPE = 'read write';
 /** How long a messaging JWT lasts by default. Zendesk advises short-lived ones. */
 const DEFAULT_IDENTITY_TTL_SECONDS = 600;
 
@@ -115,12 +117,14 @@ export function createZendesk(config: ZendeskConfig, deps: ZendeskDeps = {}) {
     if (cfg.clientId && cfg.clientSecret) {
       if (cached && cached.expiresAt - TOKEN_MARGIN_MS > Date.now()) return Promise.resolve(`Bearer ${cached.value}`);
       const { clientId, clientSecret } = cfg;
+      // Zendesk refuses a token request without a scope ("You must specify a scope")
+      const scope = cfg.oauthScope?.trim() || DEFAULT_OAUTH_SCOPE;
       pending ??= (async () => {
         const started = Date.now();
         const res = await call(
           ctx,
           'oauth.token',
-          { method: 'POST', path: '/oauth/tokens', form: { grant_type: 'client_credentials', client_id: clientId, client_secret: clientSecret } },
+          { method: 'POST', path: '/oauth/tokens', form: { grant_type: 'client_credentials', client_id: clientId, client_secret: clientSecret, scope } },
           AccessTokenResponse,
           // No Authorization header: the client's secret is the credential
           undefined,
