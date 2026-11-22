@@ -68,6 +68,13 @@ export const AppConfigSchema = z.object({
       bucket: z.string().optional(),
       region: z.string().optional(),
       basePath: z.string().optional(),
+      /** An S3-compatible service's URL (`STORAGE_ENDPOINT`), such as R2 or MinIO. Path-style addressing follows. */
+      endpoint: z.string().url().optional(),
+      /** Static S3 credentials (`STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY`); without them the AWS SDK finds its own. */
+      accessKeyId: secret(z.string()).optional(),
+      secretAccessKey: secret(z.string()).optional(),
+      /** When set (`STORAGE_PUBLIC_PREFIX`, e.g. `public`), `publicUrl` refuses keys outside this prefix. */
+      publicPrefix: z.string().optional(),
       /** Signs the local adapter's URLs (`STORAGE_SIGNING_SECRET`). */
       signingSecret: secret(z.string().min(32)).optional(),
       /** Where public objects are served from, e.g. a CDN or `/api/storage` (`STORAGE_PUBLIC_BASE_URL`). */

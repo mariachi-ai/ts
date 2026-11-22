@@ -3,8 +3,10 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { CreateBucketCommand, S3Client } from '@aws-sdk/client-s3';
 import { startMinio, stopAll } from '../../../../test/setup';
 import { S3StorageAdapter } from './s3';
+import { createStorage, storageConfig } from '../index';
 
 let storage: S3StorageAdapter;
+let fromSettings: S3StorageAdapter;
 
 beforeAll(async () => {
   const minio = await startMinio();
@@ -14,6 +16,10 @@ beforeAll(async () => {
   await admin.send(new CreateBucketCommand({ Bucket: bucket }));
   admin.destroy();
   storage = new S3StorageAdapter({ adapter: 's3', bucket, region: 'us-east-1', endpoint: minio.endpoint, forcePathStyle: true, credentials, basePath: 'app' });
+  // Only what the environment gives: no forcePathStyle, keys as two settings.
+  fromSettings = createStorage(
+    storageConfig({ adapter: 's3', bucket, region: 'us-east-1', endpoint: minio.endpoint, accessKeyId: minio.accessKeyId, secretAccessKey: minio.secretAccessKey }),
+  ) as S3StorageAdapter;
 }, 300_000);
 
 afterAll(async () => {
@@ -21,6 +27,12 @@ afterAll(async () => {
 });
 
 describe('S3StorageAdapter (MinIO)', () => {
+  it('works from settings alone: endpoint and keys, path-style by default', async () => {
+    await fromSettings.put('settings.txt', 'from settings', { contentType: 'text/plain' });
+    expect((await fromSettings.get('settings.txt'))?.toString()).toBe('from settings');
+    expect(await fromSettings.isHealthy()).toBe(true);
+  });
+
   it('streams a multipart upload larger than one part', async () => {
     const chunk = Buffer.alloc(1024 * 1024, 7);
     const body = Readable.from((function* () { for (let i = 0; i < 12; i++) yield chunk; })());

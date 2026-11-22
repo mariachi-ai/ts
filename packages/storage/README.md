@@ -14,6 +14,7 @@ Guide: [storage.md](../core/docs/storage.md)
 | Export | Purpose |
 | --- | --- |
 | `createStorage(config)` | `S3StorageAdapter`, `LocalStorageAdapter` or `MemoryStorageAdapter` |
+| `storageConfig(config.storage)` | The settings `@mariachi/config` reads, as a `createStorage` config |
 | `DefaultStorage` | `put`, `putValidated`, `putStream`, `get`, `getStream`, `getOrThrow`, `head`, `exists`, `delete`, `copy`, `move`, `list`, `signedUrl`, `signedUploadUrl`, `publicUrl`, `key`, `tenantKey` |
 | `handleSignedLocalRequest(adapter, request)` | Serves local signed URLs from a controller |
 | `normalizeKey`, `buildKey`, `sniffContentType`, `contentMatchesType` | Key safety and content sniffing |
@@ -25,10 +26,13 @@ Guide: [storage.md](../core/docs/storage.md)
 | `adapter` | `STORAGE_ADAPTER` | | `'s3'`, `'local'` or `'memory'` |
 | `basePath` | `STORAGE_BASE_PATH` | all | Key prefix, or the local root directory |
 | `bucket`, `region` | `STORAGE_BUCKET`, `STORAGE_REGION`/`AWS_REGION` | s3 | Required for S3 |
-| `endpoint`, `forcePathStyle`, `credentials` | | s3 | For S3-compatible services |
+| `endpoint` | `STORAGE_ENDPOINT` | s3 | An S3-compatible service; `forcePathStyle` then defaults to true |
+| `credentials` | `STORAGE_ACCESS_KEY_ID`, `STORAGE_SECRET_ACCESS_KEY` | s3 | Both or neither; without them the AWS SDK finds its own |
+| `forcePathStyle` | | s3 | Path-style addressing |
 | `useAcl`, `defaultAcl` | | s3 | Per-object ACLs, off by default |
-| `publicBaseUrl` | | s3, local | CDN base, or where local signed URLs are served |
-| `signingSecret` | | local | Required for local signed URLs |
+| `publicBaseUrl` | `STORAGE_PUBLIC_BASE_URL` | s3, local | CDN base, or where local signed URLs are served |
+| `publicPrefix` | `STORAGE_PUBLIC_PREFIX` | s3, local | Only keys under it get a `publicUrl` (`storage/not-public`); needs `publicBaseUrl`. It limits which links get built; the bucket or CDN policy must expose only this prefix |
+| `signingSecret` | `STORAGE_SIGNING_SECRET` | local | Required for local signed URLs |
 
 `DefaultStorage` also takes `requireTenant` (refuse `tenantKey` without `ctx.tenantId`). Errors are
 `StorageError`.

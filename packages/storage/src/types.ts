@@ -17,6 +17,11 @@ export interface StorageConfig {
   defaultAcl?: CannedAcl;
   /** Base URL for public objects, e.g. a CDN. Defaults to the virtual-hosted S3 URL. */
   publicBaseUrl?: string;
+  /**
+   * Only keys under this prefix (e.g. `public`) have a public URL: `publicUrl` refuses the rest
+   * with `storage/not-public`. Setting it makes `publicBaseUrl` required (s3, local).
+   */
+  publicPrefix?: string;
 
   // local
   /** Secret used to sign local URLs. Required for `signedUrl` on the local adapter. */
