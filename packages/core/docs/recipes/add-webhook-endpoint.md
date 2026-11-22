@@ -50,6 +50,13 @@ named `<provider> webhook`, with `mariachi.integration` and, when the route sets
 `eventType: (payload) => payload.type`, `mariachi.integration.event`. Its status says whether the
 delivery was accepted. Nothing from the body, the headers or the URL is recorded.
 
+**A sender's endpoint check.** Some senders check an endpoint before they deliver to it: Microsoft
+Graph posts a `validationToken` to echo, Okta sends a `GET` with a challenge. The authenticator
+answers it in `handshake(req, ctx)`, which runs before `auth` and returns the response (or nothing,
+for an ordinary delivery). A sender that signs its check is verified there too. The check never
+reaches the route, a procedure or a job. A `HEAD` to a route's address (Intercom's check) is answered with an empty
+200, before anything else.
+
 ## 1. Verify the signature
 
 `@mariachi/webhooks` ships the common schemes, so there's usually no class to write:
